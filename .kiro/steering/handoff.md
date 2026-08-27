@@ -35,23 +35,26 @@ deployment, not assumed: the public page renders, login succeeds, and the compan
 1,834 rows. `ADMIN_PASSWORD_HASH` and `ADMIN_SESSION_SECRET` are correct there; `ADMIN_TOTP_SECRET` has
 been removed, so the second factor is off.
 
-**Publishing is not configured yet, and fails closed.** `GCC_DATA_STORE` is empty, so the Publish tab
-shows the "refusing to guess" banner instead of writing anywhere — the intended behaviour, confirmed by
-reading the live banner text. Admin edits therefore cannot go live until the GitHub token is in place.
+**Publishing works, proven against the real repository.** A round trip was run through the deployed
+admin: edit one field, diff against the branch, publish, and the commit appears on `main` authored by
+the token's identity, touching only `data/dataset.json` and only the two lines expected — the edited
+field plus the server-stamped `generatedAt`. Nothing else in the tree moved, so the base-tree logic does
+not drop files. Republishing the same state is refused with a 409 against the live store, and the Vercel
+rebuild picked the change up, so the whole chain — publish, commit, rebuild, serve — is verified. The
+edit was reverted, so the data is where it started; the two `data: publish from admin` commits in history
+are that test.
 
-**One path remains unexercised:** a publish through the GitHub store. Everything else is covered by one
-of the two suites or verified against the deployment.
+**Nothing is left unexercised.** Every path is covered by one of the two suites or verified against the
+live deployment.
 
 ## Next action
 
-**Finish publishing, then the Screen 2 metric catalogue.**
+**The Screen 2 metric catalogue, then the screens.** Setup is finished; this is a build session now.
 
-1. Publishing: see the blockers. It is two variables and a redeploy away, and nothing else in admin is
-   worth trusting until an edit can actually reach the live site.
-2. Metric catalogue. Needs a pass over `docs/brief.md` to turn the four internal lenses (supply, speed,
+1. Metric catalogue. Needs a pass over `docs/brief.md` to turn the four internal lenses (supply, speed,
    place, cost) into a schema before any form exists. The lens names are a filing system, not UI
    labels. Then the admin forms, reusing the draft-then-publish flow.
-3. Screen 1, then Screen 2. Design skills run before markup on each, per `skill-router.md`.
+2. Screen 1, then Screen 2. Design skills run before markup on each, per `skill-router.md`.
    `src/app/page.tsx` is a scaffold placeholder that Screen 1 replaces wholesale.
 
 Screen 1's data is in place: `matchPeers`, `largestInIndustry`, `nationalScale` and `cityDensity` in
@@ -59,23 +62,19 @@ Screen 1's data is in place: `matchPeers`, `largestInIndustry`, `nationalScale` 
 
 ## Blocked / needs the user
 
-1. **Turn on publishing.** A fine-grained GitHub token with `contents: read and write` on this repo, set
-   as `GCC_GITHUB_TOKEN`, plus `GCC_DATA_STORE=github` and `GCC_GITHUB_REPO=GeeteshRanjan/GCC-Landscape`,
-   then a redeploy. Never `fs` on a serverless host. The other `GCC_GITHUB_*` variables can stay empty;
-   the code defaults the branch and path. Walked through with the user; waiting on the token.
-2. **Then one real publish, watched.** The GitHub write path has never run against a real repository.
-   Change one field, check the diff, publish, confirm the commit appears, change it back. Token scope and
-   branch protection both fail in ways that only surface on a real attempt.
-3. **Screen 2 metric values** — hundreds, no spreadsheet behind them. Forms first, then the values.
-4. **Function-per-company data** — for the common-functions block. A hardcoded common function set is
+1. **Screen 2 metric values** — hundreds, no spreadsheet behind them. Forms first, then the values.
+2. **Function-per-company data** — for the common-functions block. A hardcoded common function set is
    permitted by the brief and is the likely answer.
-5. **Hosting details** — which ansr.com page hosts the iframe, and who adds the embed snippet. Allowed
+3. **Hosting details** — which ansr.com page hosts the iframe, and who adds the embed snippet. Allowed
    origins are `ansr.com` and `*.ansr.com` in `next.config.ts`; correct them when known.
 
 ## Open decisions, not yet made
 
-- **Whether to switch on `ADMIN_TOTP_SECRET`.** Built, RFC 6238 verified. Both rate-limit budgets are
-  per-process, so on a multi-instance host it is the only real bound on distributed guessing.
+- **Whether to switch on `ADMIN_TOTP_SECRET`.** Built, RFC 6238 verified, currently removed. Both
+  rate-limit budgets are per-process, so on Vercel's instances it is the only real bound on distributed
+  guessing. Only enable it while able to test a code immediately — see the Auth row in `project.md`.
+- **The `GCC_GITHUB_TOKEN` expiry date is not recorded anywhere.** When it lapses, publishing returns a
+  401 that looks like a bug. Worth putting in a calendar.
 - **Whether the browser suite runs in CI.** Needs a Chromium download and about a minute.
 - **Thin peer sets stay as they are.** Electrical & Electronics returns two peers, shortfall three.
   Never padding is the invariant; the count is a baseline figure. Revisit when Screen 1 exists.
