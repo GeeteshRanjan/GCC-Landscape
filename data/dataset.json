@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generatedAt": "2026-08-27T03:14:15.346Z",
+  "generatedAt": "2026-08-27T07:59:16.453Z",
   "source": "Consolidated_GCC_India_Database_2026_New.xlsx",
   "taxonomy": {
     "industries": [
@@ -128,7 +128,7 @@
       "hqCountry": "USA",
       "industry": "Manufacturing",
       "revenueBand": "Above $20 Bn",
-      "establishedYear": 2021,
+      "establishedYear": 2020,
       "cities": [
         "Bengaluru"
       ],
