@@ -7,9 +7,9 @@ rather than the present, delete it.
 
 ## Where we are
 
-**Data layer, admin foundation and the test suite are all built and verified.** Next.js 16 +
+**Data layer, admin foundation and the test suites are built, verified, and pushed.** Next.js 16 +
 TypeScript + Tailwind v4 + shadcn/ui at the repo root, theme generated from `assets/brand/tokens.css`.
-All 1834 companies in `data/dataset.json`.
+All 1834 companies in `data/dataset.json`. Neither public screen exists yet.
 
 Six commands, all green, plus `tsc --noEmit` and `brand_lint.py`:
 
@@ -26,17 +26,17 @@ TOTP code, rate limited on two budgets — five per IP and twenty per process. E
 draft, autosaved to localStorage, with a banner on every tab. Publish validates the whole dataset,
 diffs it against what the write will land on, then commits.
 
+**Git works end to end.** `main` is pushed and tracking; the repo is private. The macOS keychain
+already holds a usable GitHub credential — set in Xcode's system gitconfig, not the global one, which
+is why it is easy to miss — so pushes need no setup. Commit identity is set **repo-locally** to the
+GitHub noreply address; the global config is deliberately still unset.
+
 **Two paths remain unexercised:** a publish through the GitHub store, and TOTP in a live deployment.
 Everything else is covered by one of the two suites.
 
-**Git:** first commit pushed to `main`. The repo is private and empty apart from that commit; the
-macOS keychain already holds a working GitHub credential, so pushes need no further setup. Commit
-identity is set repo-locally to the GitHub noreply address — the global config is deliberately
-untouched.
-
 ## Next action
 
-**Get the first commit out, then the Screen 2 metric catalogue.**
+**Screen 2 metric catalogue, then the screens.**
 
 1. Metric catalogue. Needs a pass over `docs/brief.md` to turn the four internal lenses (supply, speed,
    place, cost) into a schema before any form exists. The lens names are a filing system, not UI
@@ -53,6 +53,7 @@ block has no source.
 1. **`GCC_GITHUB_TOKEN` for admin publishing.** The keychain credential covers `git push`, but the app
    cannot read it — the publish path needs a fine-grained token with `contents: read and write` on this
    repo, in the environment. Until then `GCC_DATA_STORE` stays `fs` and publishing writes locally.
+   Worth one real publish through admin once it is set, to shake out token scope and branch protection.
 2. **`.env.local` holds a throwaway password** set during verification, not one you chose. Replace it:
    `npm run admin:hash`, then paste both lines over the existing ones.
 3. **Screen 2 metric values** — hundreds, no spreadsheet behind them. Forms first, then the values.
@@ -67,6 +68,8 @@ block has no source.
   vectors, opt-in, currently unset. Both rate-limit budgets are per-process, so a second factor is the
   only thing that bounds a distributed guessing attempt. Recommended before this is reachable publicly.
 - **Whether the browser suite runs in CI.** It needs a Chromium download and about a minute.
+- **Whether Vercel is connected to the repo yet.** Nobody has checked. Publishing through the GitHub
+  store assumes a push triggers a rebuild, so that assumption needs confirming before it is relied on.
 - **Thin peer sets stay as they are for now.** Electrical & Electronics returns two peers, shortfall
   three. Never padding is the invariant; the count is a baseline figure, so revising it later is one
   `--accept`. Revisit when Screen 1 exists.
@@ -91,6 +94,9 @@ the ones that only bite while working on the code.
 - **`ADMIN_PASSWORD_HASH` uses `:` and base64url, not `$` and base64.** dotenv expands `$N` as a
   variable reference, so a `$`-separated hash arrives truncated and a correct password fails with no
   useful signal.
+- **`git ls-remote` on an empty repo prints nothing and exits 2.** That is success with no refs, not a
+  missing repo. A private repo also 404s to an unauthenticated browser. Check the exit code and stderr
+  before concluding a remote does not exist.
 - The session cookie is `Secure`, so a Node-side HTTP client will not send it over plain http even on
   localhost — `curl` and Playwright's `page.request` both fail this way while the browser succeeds.
   Issue admin API calls from inside the page.
