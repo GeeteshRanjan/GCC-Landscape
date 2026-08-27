@@ -27,6 +27,13 @@ export const dynamic = "force-dynamic";
  * One message for every failure. With a second factor configured it must not say
  * which of the two was wrong — that would tell someone holding a leaked password
  * that they only need the phone, and vice versa.
+ *
+ * The two 401 branches are indistinguishable to an attacker but not to an
+ * operator, and that is deliberate: a wrong password carries `remainingAttempts`,
+ * a misconfigured environment does not. A 401 with no attempt counter means the
+ * server never got as far as checking the password — the usual cause is
+ * environment variables that were added but never deployed. The real reason is in
+ * the server log, never in the response.
  */
 function genericFailure(): string {
   return isTotpRequired()
