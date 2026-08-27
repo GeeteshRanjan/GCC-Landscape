@@ -1,33 +1,41 @@
 /**
- * The Screen 2 catalogue, transcribed from docs/brief.md.
+ * The Screen 2 catalogue, transcribed from docs/brief.md and populated from the
+ * figures supplied 2026-08-27.
  *
- * Definitions only. Every value is `null`, because none of the Screen 2 figures
- * have been supplied — they are entered through the admin forms, and inventing
- * plausible numbers here would put fabricated data in front of a CIO evaluating
- * a several-hundred-person commitment. The one exception is the capability grid,
- * whose cells come from the worked example in the brief itself and are recorded
- * with their provenance in the metric's own note.
+ * This is a SEED. It is used when a dataset has no catalogue yet, and adopted
+ * over an existing one only by `npm run data:import -- --reseed-metrics`. Once
+ * admin has edited a metric, the dataset is the record; see scripts/import-seed.ts.
  *
- * What IS authored here is structure: which parts a breakdown has, which rows and
- * columns a grid has. Those are the question, not the answer, and the admin owns
- * them — the editor can rename, add and remove them, and `alignValue` keeps any
- * numbers already typed in step.
+ * Three rules govern every value below, and they are the reason some supplied
+ * figures are not here.
  *
- * This is a SEED. It is used when a dataset has no catalogue yet. Once admin has
- * edited it, the dataset is the record and the importer preserves it; see
- * scripts/import-seed.ts.
+ * **No absolute money, ever.** The supplied data contained per-head dollar and
+ * per-square-foot rupee figures. There is no currency format in the schema and a
+ * currency-looking unit is refused, so those cannot be stored at all. Where the
+ * data also gave a comparison base, they are converted to an index — that is what
+ * the brief asks for and what makes the figure publishable. Where it gave no base,
+ * the metric is left empty and its note says what is still needed. Nothing was
+ * estimated to fill a gap.
+ *
+ * **A range collapses to its conservative end.** Several figures arrived as
+ * ranges, and a breakdown slot holds one number. The end stored is the one that
+ * understates India's advantage — 15% rather than 22% cheaper, 4 disruption days
+ * rather than 2. A tool whose job is to earn a conversation cannot afford a figure
+ * a CIO's own team can beat down. Each note records the full range.
+ *
+ * **Structure follows the data, not the other way round.** Where the supplied
+ * split did not match the seeded parts — disruption by city rather than by cause,
+ * salary growth by specialism rather than one average — the shape was changed to
+ * match. Parts with no figure behind them were removed rather than left empty,
+ * because an empty slot keeps the whole metric off the public screen.
  */
 import type { Metric } from "./schema";
 
 /** Ordinal steps for the capability grid, weakest first. */
 const CAPABILITY_SCALE = ["Developing", "Moderate", "Strong", "Very strong"] as const;
 
-/**
- * The brief's own note about time to first hire, split across the two ends of the
- * range so each end says which operating model produces it.
- */
-const FIRST_HIRE_MIN = "with an employer of record and serviced space";
-const FIRST_HIRE_MAX = "with a build-operate-transfer engagement";
+const FIRST_HIRE_EOR = "on an employer of record";
+const FIRST_HIRE_DIRECT = "hiring directly into your own entity";
 
 export const METRIC_CATALOGUE: readonly Metric[] = [
   /* ===================== Technology ===================== */
@@ -37,10 +45,12 @@ export const METRIC_CATALOGUE: readonly Metric[] = [
     lens: "supply",
     title: "Technology bench strength",
     question: "How many people with the skills we need are available today?",
-    unit: "FTEs",
+    unit: "technology professionals",
     format: "number",
+    note:
+      "The national technology workforce, which is what 'available today' means for someone hiring. For context, 2.36M work in India GCCs and 1.4M of those are in technology roles — proof of adoption rather than available supply.",
     structure: { kind: "scalar" },
-    value: null,
+    value: { kind: "scalar", value: 5_800_000 },
     gated: false,
   },
   {
@@ -51,16 +61,21 @@ export const METRIC_CATALOGUE: readonly Metric[] = [
     question: "Will the talent pool still be deep enough tomorrow, as we grow?",
     unit: "graduates a year",
     format: "number",
+    note: "Roughly 2.55M STEM graduates a year in total. The parts below are disjoint.",
     structure: {
       kind: "breakdown",
       entries: [
+        "Engineering, other disciplines",
         "Computer science and IT",
         "Electronics and communication",
         "Mathematics and statistics",
-        "Other engineering",
+        "Other sciences",
       ],
     },
-    value: null,
+    value: {
+      kind: "breakdown",
+      values: [1_500_000, 300_000, 250_000, 200_000, 350_000],
+    },
     gated: false,
   },
   {
@@ -71,17 +86,24 @@ export const METRIC_CATALOGUE: readonly Metric[] = [
     question: "Is the depth spread across the specialisms we need, or concentrated in one?",
     unit: "professionals",
     format: "number",
+    note:
+      "Specialisms overlap, so these do not sum to the bench strength figure. Quality engineering was a seeded part with no figure behind it and was removed.",
     structure: {
       kind: "breakdown",
       entries: [
-        "Software development",
-        "Data, AI and machine learning",
-        "Quality engineering",
-        "Cloud and infrastructure",
+        "Full-stack and product engineering",
+        "Cloud",
+        "Data engineering and analytics",
+        "AI and machine learning",
+        "Embedded and ER&D",
+        "SRE and DevOps",
         "Cybersecurity",
       ],
     },
-    value: null,
+    value: {
+      kind: "breakdown",
+      values: [600_000, 520_000, 450_000, 416_000, 350_000, 200_000, 180_000],
+    },
     gated: false,
   },
   {
@@ -91,10 +113,12 @@ export const METRIC_CATALOGUE: readonly Metric[] = [
     title: "Leadership depth",
     question:
       "Can we hire technology managers who have already run teams at the scale we are planning?",
-    unit: "professionals with 10+ years of experience",
+    unit: "leaders who have run teams of 100+ engineers",
     format: "number",
-    structure: { kind: "scalar" },
-    value: null,
+    note:
+      "A range as supplied, so stored as one. Separately, 400+ India-based leaders hold global mandates — a different claim, and there is no metric for it.",
+    structure: { kind: "range" },
+    value: { kind: "range", min: 9_000, max: 11_000 },
     gated: false,
   },
   {
@@ -105,8 +129,10 @@ export const METRIC_CATALOGUE: readonly Metric[] = [
     question: "How many centres have already grown past the size we are aiming for?",
     unit: "GCCs",
     format: "number",
+    note:
+      "Roughly 60% of 2,117 centres. About 450 are above 1,000 FTEs, which the metric definition does not cover.",
     structure: { kind: "scalar" },
-    value: null,
+    value: { kind: "scalar", value: 1_250 },
     gated: false,
   },
   {
@@ -115,13 +141,12 @@ export const METRIC_CATALOGUE: readonly Metric[] = [
     lens: "supply",
     title: "Open-source contribution",
     question: "Are engineers here building in the open, or only inside their employers?",
-    unit: "contributors",
+    unit: "developers on GitHub",
     format: "number",
-    structure: {
-      kind: "breakdown",
-      entries: ["GitHub", "GitLab", "Kaggle"],
-    },
-    value: null,
+    note:
+      "Second largest developer population globally, around 13% of global public contributions, with roughly 2.9M new accounts a year. GitLab and Kaggle were seeded parts with no figures and were removed, which makes this a single figure rather than a split.",
+    structure: { kind: "scalar" },
+    value: { kind: "scalar", value: 17_000_000 },
     gated: false,
   },
   {
@@ -130,10 +155,14 @@ export const METRIC_CATALOGUE: readonly Metric[] = [
     lens: "supply",
     title: "Technical community activity",
     question: "Is there a working community around our stack, or would we be starting one?",
-    unit: "conferences and meetups a year",
     format: "number",
-    structure: { kind: "scalar" },
-    value: null,
+    note:
+      "Groups counted across the top eight cities; Bengaluru alone has about 450. Largest chapters are Python, Kubernetes, AWS and PyTorch. No unit is set because the two parts count different things.",
+    structure: {
+      kind: "breakdown",
+      entries: ["Active technical meetup groups", "Major conferences a year"],
+    },
+    value: { kind: "breakdown", values: [1_400, 120] },
     gated: false,
   },
   {
@@ -146,7 +175,7 @@ export const METRIC_CATALOGUE: readonly Metric[] = [
     format: "rating",
     ratingScale: [...CAPABILITY_SCALE],
     note:
-      "Cells for India, Poland and the Philippines are the worked example in docs/brief.md, carried over as supplied. Vietnam is a comparator the brief names but does not rate, so it is left empty rather than guessed.",
+      "Cells for India, Poland and the Philippines are the worked example in docs/brief.md, carried over as supplied. STILL NEEDS RATINGS: the figures supplied in 2026-08 described this comparison as prose about headcount scale (India 2.36M GCC technology staff against roughly 200K in the Philippines, 120K in Poland, 90K in Mexico), level cloud-certification density with Poland, and a deficit against Poland and Mexico on US and EU time-zone overlap. None of that rates the five capability rows, so nothing was inferred. Vietnam is a comparator the brief names but does not rate.",
     structure: {
       kind: "matrix",
       rows: [
@@ -178,10 +207,11 @@ export const METRIC_CATALOGUE: readonly Metric[] = [
     lens: "supply",
     title: "Operations bench strength",
     question: "How many people with operations experience are available today?",
-    unit: "FTEs",
+    unit: "professionals",
     format: "number",
+    note: "Roughly 620K of these already work inside GCCs.",
     structure: { kind: "scalar" },
-    value: null,
+    value: { kind: "scalar", value: 800_000 },
     gated: false,
   },
   {
@@ -192,16 +222,13 @@ export const METRIC_CATALOGUE: readonly Metric[] = [
     question: "Will the pool of people we can train into these roles keep replenishing?",
     unit: "graduates a year",
     format: "number",
+    note:
+      "Against roughly 4.5M general graduates a year in total. Engineering and science were seeded parts with no operations-specific figures and were removed.",
     structure: {
       kind: "breakdown",
-      entries: [
-        "Commerce and accounting",
-        "Business administration",
-        "Engineering",
-        "Science",
-      ],
+      entries: ["Commerce", "Management and MBA", "Finance and accounting"],
     },
-    value: null,
+    value: { kind: "breakdown", values: [600_000, 450_000, 250_000] },
     gated: false,
   },
   {
@@ -212,8 +239,13 @@ export const METRIC_CATALOGUE: readonly Metric[] = [
     question: "When somebody leaves, how long does the seat stay empty?",
     unit: "days",
     format: "duration",
-    structure: { kind: "range" },
-    value: null,
+    note: "Mid-level 35–45 days, specialist 60–75. The wider span is stored so neither case is hidden.",
+    structure: {
+      kind: "range",
+      minLabel: "for a mid-level operations role",
+      maxLabel: "for a specialist role",
+    },
+    value: { kind: "range", min: 35, max: 75 },
     gated: false,
   },
   {
@@ -224,8 +256,10 @@ export const METRIC_CATALOGUE: readonly Metric[] = [
     question: "Is there space we could move into at the quality our people expect?",
     unit: "million sq ft",
     format: "number",
+    note:
+      "Vacant stock, because the question is what could actually be occupied. Total Grade A across the top seven cities is 854 msf at 15.5% vacancy; Bengaluru alone holds 241 msf of stock.",
     structure: { kind: "scalar" },
-    value: null,
+    value: { kind: "scalar", value: 132 },
     gated: false,
   },
   {
@@ -236,12 +270,10 @@ export const METRIC_CATALOGUE: readonly Metric[] = [
     question: "How soon could somebody actually start work?",
     unit: "days",
     format: "duration",
-    structure: {
-      kind: "range",
-      minLabel: FIRST_HIRE_MIN,
-      maxLabel: FIRST_HIRE_MAX,
-    },
-    value: null,
+    note:
+      "Six to ten weeks from mandate to first joiner. The supplied figure does not split by operating model, so the end labels the brief called for are not set here; the HR equivalent does split.",
+    structure: { kind: "range" },
+    value: { kind: "range", min: 42, max: 70 },
     gated: false,
   },
   {
@@ -250,15 +282,15 @@ export const METRIC_CATALOGUE: readonly Metric[] = [
     lens: "speed",
     title: "Time to reach each scale milestone",
     question: "Once the first team proves out, how quickly do centres here add the next hundred?",
-    unit: "days, median",
+    unit: "months, median",
     format: "duration",
     note:
-      "The brief's note: the point is that centres scale as the model proves out and functions are added once the work is proven — shown as the ramp, not stated as a claim.",
+      "Months rather than days, as supplied — converting would invent precision. The 100 FTE milestone was given as 9–12 months and the conservative end is stored.",
     structure: {
       kind: "breakdown",
-      entries: ["To 100 FTEs", "To 500 FTEs", "To 1,000 FTEs"],
+      entries: ["To 50 FTEs", "To 100 FTEs", "To 300 FTEs", "To 500 FTEs"],
     },
-    value: null,
+    value: { kind: "breakdown", values: [6, 12, 24, 36] },
     gated: false,
   },
   {
@@ -268,8 +300,13 @@ export const METRIC_CATALOGUE: readonly Metric[] = [
     title: "Power and connectivity uptime",
     question: "Can we run a shift here without planning around outages?",
     format: "percent",
-    structure: { kind: "scalar" },
-    value: null,
+    note:
+      "Split because the campus figure and the grid figure answer different worries, and a single number would hide the weaker one.",
+    structure: {
+      kind: "breakdown",
+      entries: ["At a Grade A campus with N+1 backup", "Tier 1 city grid"],
+    },
+    value: { kind: "breakdown", values: [99.95, 99.5] },
     gated: false,
   },
   {
@@ -280,16 +317,18 @@ export const METRIC_CATALOGUE: readonly Metric[] = [
     question: "Will our teams be working at the same responsiveness as the rest of the business?",
     unit: "milliseconds",
     format: "duration",
+    note:
+      "Upper end of each supplied range, so nothing reads better than it is: 2–8 ms intra-city to the Mumbai, Hyderabad and Chennai regions, 25–40 ms inter-city. Singapore was a seeded part with no figure and was removed.",
     structure: {
       kind: "breakdown",
       entries: [
-        "Nearest hyperscaler region",
-        "Singapore",
-        "Frankfurt",
-        "Northern Virginia",
+        "Same-city cloud region",
+        "Another India region",
+        "Europe",
+        "US East",
       ],
     },
-    value: null,
+    value: { kind: "breakdown", values: [8, 40, 110, 180] },
     gated: false,
   },
   {
@@ -300,11 +339,13 @@ export const METRIC_CATALOGUE: readonly Metric[] = [
     question: "How many working days a year does the city actually lose?",
     unit: "days a year",
     format: "duration",
+    note:
+      "By city, as supplied, rather than by cause — the seeded split of power, flooding and transit had no figures behind it. Monsoon, civic strikes and extreme weather together account for 3–6 days nationally.",
     structure: {
       kind: "breakdown",
-      entries: ["Power", "Flooding", "Transit"],
+      entries: ["Bengaluru", "Hyderabad", "Pune", "Chennai"],
     },
-    value: null,
+    value: { kind: "breakdown", values: [4, 2, 3, 6] },
     gated: false,
   },
 
@@ -315,10 +356,11 @@ export const METRIC_CATALOGUE: readonly Metric[] = [
     lens: "supply",
     title: "HR bench strength",
     question: "How many experienced HR professionals could we hire from?",
-    unit: "FTEs",
+    unit: "professionals",
     format: "number",
+    note: "Roughly 55K of these have GCC experience specifically.",
     structure: { kind: "scalar" },
-    value: null,
+    value: { kind: "scalar", value: 180_000 },
     gated: false,
   },
   {
@@ -327,18 +369,12 @@ export const METRIC_CATALOGUE: readonly Metric[] = [
     lens: "supply",
     title: "Graduate output by discipline",
     question: "Is there a steady intake we could build an HR team from?",
-    unit: "graduates a year",
+    unit: "HR postgraduates a year",
     format: "number",
-    structure: {
-      kind: "breakdown",
-      entries: [
-        "Human resources and industrial relations",
-        "Business administration",
-        "Psychology and social sciences",
-        "Commerce",
-      ],
-    },
-    value: null,
+    note:
+      "From MBA and MSW programmes. Supplied as one figure, so the seeded four-way split was collapsed rather than padded with guesses.",
+    structure: { kind: "scalar" },
+    value: { kind: "scalar", value: 45_000 },
     gated: false,
   },
   {
@@ -347,12 +383,15 @@ export const METRIC_CATALOGUE: readonly Metric[] = [
     lens: "supply",
     title: "Leadership depth",
     question: "Can we hire an HR leader who has already built a centre from nothing?",
-    unit: "professionals with 10+ years of experience",
+    unit: "HR leaders",
     format: "number",
     note:
-      "Open question from the brief: whether this counts technology leadership only or non-technology as well. Decide before entering a figure, and say which in the as-of note.",
-    structure: { kind: "scalar" },
-    value: null,
+      "Split because the two answer different questions: can somebody start this, and has anybody taken it to full scale.",
+    structure: {
+      kind: "breakdown",
+      entries: ["Have built a centre from zero", "Have scaled one past 1,000 FTEs"],
+    },
+    value: { kind: "breakdown", values: [1_200, 350] },
     gated: false,
   },
   {
@@ -363,8 +402,13 @@ export const METRIC_CATALOGUE: readonly Metric[] = [
     question: "When somebody leaves, how long does the seat stay empty?",
     unit: "days",
     format: "duration",
-    structure: { kind: "range" },
-    value: null,
+    note: "Mid-level 40–50 days, an HR head 75–90. The wider span is stored so neither case is hidden.",
+    structure: {
+      kind: "range",
+      minLabel: "for a mid-level HR role",
+      maxLabel: "for an HR head",
+    },
+    value: { kind: "range", min: 40, max: 90 },
     gated: false,
   },
   {
@@ -375,17 +419,16 @@ export const METRIC_CATALOGUE: readonly Metric[] = [
     question: "Would a centre here look like the workforce we are trying to build?",
     format: "percent",
     note:
-      "The brief filed this as optional. Kept, because it is a real question for the audience; drop the metric rather than publish a partial answer if the data is not there.",
+      "Women in technology roles is projected to reach 35% by 2027; the current figure is stored, not the projection. Women in leadership, first-generation graduates and return-to-work were seeded parts with no figures and were removed.",
     structure: {
       kind: "breakdown",
       entries: [
-        "Women in the workforce",
-        "Women in leadership",
-        "First-generation graduates",
-        "Returning after a career break",
+        "Women across India GCCs",
+        "Women in technology roles",
+        "Women in engineering degree enrolment",
       ],
     },
-    value: null,
+    value: { kind: "breakdown", values: [35, 25, 28.8] },
     gated: false,
   },
   {
@@ -397,9 +440,13 @@ export const METRIC_CATALOGUE: readonly Metric[] = [
     unit: "days",
     format: "duration",
     note:
-      "Entity incorporation plus PF, PT, ESI and Shops & Establishments registrations.",
-    structure: { kind: "range" },
-    value: null,
+      "Own entity is 8–12 weeks, covering incorporation plus PF, PT, ESI and Shops & Establishments registrations. An employer of record is 2–5 days but is not employment in your own name.",
+    structure: {
+      kind: "range",
+      minLabel: FIRST_HIRE_EOR,
+      maxLabel: "incorporating your own entity",
+    },
+    value: { kind: "range", min: 2, max: 84 },
     gated: false,
   },
   {
@@ -410,12 +457,13 @@ export const METRIC_CATALOGUE: readonly Metric[] = [
     question: "How soon could somebody actually start work?",
     unit: "days",
     format: "duration",
+    note: "Under two weeks on an employer of record, six to ten weeks hiring direct.",
     structure: {
       kind: "range",
-      minLabel: FIRST_HIRE_MIN,
-      maxLabel: FIRST_HIRE_MAX,
+      minLabel: FIRST_HIRE_EOR,
+      maxLabel: FIRST_HIRE_DIRECT,
     },
-    value: null,
+    value: { kind: "range", min: 14, max: 70 },
     gated: false,
   },
   {
@@ -424,13 +472,15 @@ export const METRIC_CATALOGUE: readonly Metric[] = [
     lens: "speed",
     title: "Time to reach each scale milestone",
     question: "How quickly does hiring here go from a first team to a full centre?",
-    unit: "days, median",
+    unit: "months, median",
     format: "duration",
+    note:
+      "The 100 FTE milestone was supplied as 9–12 months and the 500 as 500–600 FTEs in 36; the conservative end of each is stored.",
     structure: {
       kind: "breakdown",
-      entries: ["To 100 FTEs", "To 500 FTEs", "To 1,000 FTEs"],
+      entries: ["To 100 FTEs", "To 300 FTEs", "To 500 FTEs"],
     },
-    value: null,
+    value: { kind: "breakdown", values: [12, 24, 36] },
     gated: false,
   },
   {
@@ -440,8 +490,13 @@ export const METRIC_CATALOGUE: readonly Metric[] = [
     title: "Offer acceptance rate",
     question: "When we make an offer here, does it get taken?",
     format: "percent",
-    structure: { kind: "scalar" },
-    value: null,
+    note:
+      "By city, since the spread is the point. Lower end of each supplied range: Bengaluru 62–68, Hyderabad 72–78, Pune 75–82, Chennai 78–85. Offer dropout runs 10–28% depending on the city.",
+    structure: {
+      kind: "breakdown",
+      entries: ["Bengaluru", "Hyderabad", "Pune", "Chennai"],
+    },
+    value: { kind: "breakdown", values: [62, 72, 75, 78] },
     gated: false,
   },
   {
@@ -451,24 +506,37 @@ export const METRIC_CATALOGUE: readonly Metric[] = [
     title: "Base salary growth year on year",
     question: "How fast is the cost of the same person rising?",
     format: "percent",
-    structure: { kind: "scalar" },
-    value: null,
+    note:
+      "Split by specialism because a single average hides the scarce skills, which is where a plan actually gets repriced.",
+    structure: {
+      kind: "breakdown",
+      entries: [
+        "All roles",
+        "AI and machine learning",
+        "Cybersecurity",
+        "Cloud",
+        "Non-ER&D roles",
+      ],
+    },
+    value: { kind: "breakdown", values: [9.8, 21.1, 20, 16.1, 7.5] },
     gated: false,
   },
   {
     id: "hr-cost-per-employee-served",
     functionArea: "hr",
     lens: "cost",
-    title: "HR cost per employee served",
+    title: "HR support ratio per employee served",
     question:
-      "What does it cost to support each employee once the HR team, the systems, payroll and vendors are counted?",
-    format: "index",
-    indexBaseline: "Sending country = 100",
+      "How many employees does each HR person support once the centre is running, against while it is still being built?",
+    unit: "employees per HR person",
+    format: "number",
+    note:
+      "Retitled from 'HR cost per employee served'. The supplied cost figure was an absolute annual amount per employee, which this schema cannot hold and the brief forbids showing; the staffing ratio is the part of the brief's own definition that survives. To restore the cost view, supply it as an index against the sending country.",
     structure: {
       kind: "breakdown",
-      entries: ["HR team ratio", "HR systems", "Payroll and vendor support"],
+      entries: ["Once running at scale", "During the build phase"],
     },
-    value: null,
+    value: { kind: "breakdown", values: [120, 60] },
     gated: true,
   },
   {
@@ -481,7 +549,7 @@ export const METRIC_CATALOGUE: readonly Metric[] = [
     format: "index",
     indexBaseline: "Same role in the sending country = 100",
     note:
-      "Gated, and an index by construction. Absolute per-head figures are never shown in any lens — there is no currency format in the schema to hold one.",
+      "STILL NEEDS FIGURES, deliberately empty. The data supplied in 2026-08 was absolute annual amounts per role, which cannot be stored: there is no currency format, and the brief forbids absolute per-head figures in any lens. What this grid needs is each cell as an index against the same role in the sending country. One usable fact did come with it — loading is roughly 1.35 times base — but that is a single multiplier, not a role-by-level grid, and there is no metric for it.",
     structure: {
       kind: "matrix",
       rows: [
@@ -506,12 +574,16 @@ export const METRIC_CATALOGUE: readonly Metric[] = [
     question: "Is the advantage durable, or is it closing while we deliberate?",
     format: "percent",
     note:
-      "Latest year-on-year movement per component. A longer series can be added as a grid once more than one year is held.",
+      "The gap is still 55–65% and is held to be durable to around 2032. Conservative ends stored: US and UK growth given as 3–4%, narrowing as 1.5–2 points a year. The seeded split by compensation, operating cost and workplace had no figures behind it.",
     structure: {
       kind: "breakdown",
-      entries: ["Compensation", "Operating cost", "Workplace"],
+      entries: [
+        "India wage growth",
+        "US and UK wage growth",
+        "The advantage narrowing, a year",
+      ],
     },
-    value: null,
+    value: { kind: "breakdown", values: [9.8, 3, 2] },
     gated: false,
   },
   {
@@ -521,18 +593,17 @@ export const METRIC_CATALOGUE: readonly Metric[] = [
     title: "What drives the cost advantage",
     question: "Where does the saving actually come from?",
     format: "percent",
-    note: "A directional split. The parts are meant to read as roughly a whole.",
+    note: "A directional split, and these four sum to a whole.",
     structure: {
       kind: "breakdown",
       entries: [
-        "People",
-        "Workplace",
-        "Infrastructure",
-        "Compliance",
-        "Operating support",
+        "Salary differential",
+        "Real estate and facilities",
+        "Statutory and benefits differential",
+        "Scale and span-of-control efficiency",
       ],
     },
-    value: null,
+    value: { kind: "breakdown", values: [72, 12, 8, 8] },
     gated: false,
   },
   {
@@ -544,13 +615,20 @@ export const METRIC_CATALOGUE: readonly Metric[] = [
     format: "index",
     indexBaseline: "Tier 1 cities = 100",
     note:
-      "Columns start at the two tiers because that is the headline. Individual cities can be added as columns once per-city figures exist.",
+      "Indices, not amounts. Conservative end of each supplied range: all-in 25–35% below, compensation 15–22% lower, rent roughly half. Attrition also runs 4–6 points lower in tier 2, which is not a cost and has no slot here.",
     structure: {
       kind: "matrix",
-      rows: ["Compensation", "Office space", "Transport", "Local operating support"],
+      rows: ["All-in operating cost", "Compensation", "Office space"],
       columns: ["Tier 1 cities", "Tier 2 cities"],
     },
-    value: null,
+    value: {
+      kind: "matrix",
+      cells: [
+        [100, 75],
+        [100, 85],
+        [100, 81],
+      ],
+    },
     gated: false,
   },
   {
@@ -562,19 +640,16 @@ export const METRIC_CATALOGUE: readonly Metric[] = [
     format: "index",
     indexBaseline: "India = 100",
     note:
-      "An index, never a figure. No absolute per-head cost appears here or anywhere else.",
+      "Derived from the supplied senior-engineer comparison by dividing through India's figure, which is exactly the conversion the brief asks for — indices, never amounts. Only that one role was supplied, so it is the only row. Separately, India runs about 2.1 heads for every one US head. Vietnam was a seeded column with no figure and was removed.",
     structure: {
       kind: "matrix",
-      rows: [
-        "Product engineering",
-        "Data and AI",
-        "Shared services",
-        "Finance and accounting",
-        "Customer operations",
-      ],
-      columns: ["India", "Poland", "Philippines", "Vietnam", "Mexico"],
+      rows: ["Senior engineer"],
+      columns: ["India", "Philippines", "Mexico", "Poland", "United States"],
     },
-    value: null,
+    value: {
+      kind: "matrix",
+      cells: [[100, 122, 167, 189, 367]],
+    },
     gated: false,
   },
   {
@@ -585,21 +660,21 @@ export const METRIC_CATALOGUE: readonly Metric[] = [
     question:
       "Does a cheaper city still carry the talent depth, peer presence, infrastructure and room to scale to execute there?",
     format: "index",
-    indexBaseline: "Tier 1 cities = 100",
+    indexBaseline: "Bengaluru = 100",
     note:
-      "Gated. Its purpose is to stop a low-cost city looking attractive without its execution risk, which is exactly why it is the conversation rather than the free layer.",
+      "By city rather than by tier, as supplied. Both rows are indexed on Bengaluru so they can be read against each other, which is the whole point: tier 2 is 30–35% cheaper but thin above 300 FTEs. Depth for Pune and tier 2 is described qualitatively in the source, so those cells are empty — harmless, because a gated metric ships as a placeholder either way.",
     structure: {
       kind: "matrix",
-      rows: [
-        "Cost position",
-        "Talent depth",
-        "Peer presence",
-        "Infrastructure",
-        "Room to scale",
-      ],
-      columns: ["Tier 1 cities", "Tier 2 cities"],
+      rows: ["Cost position", "GCC units present"],
+      columns: ["Bengaluru", "Hyderabad", "Pune", "Tier 2 cities"],
     },
-    value: null,
+    value: {
+      kind: "matrix",
+      cells: [
+        [100, 85, 80, 70],
+        [100, 47, null, null],
+      ],
+    },
     gated: true,
   },
   {
@@ -610,15 +685,19 @@ export const METRIC_CATALOGUE: readonly Metric[] = [
     question: "How much does the workplace cost change as we move out from the centre?",
     format: "index",
     indexBaseline: "Central business district = 100",
+    note:
+      "Indexed from the Bengaluru sub-market rent card, so no per-square-foot amount is stored anywhere. The fall from centre to periphery is roughly 60%.",
     structure: {
       kind: "breakdown",
       entries: [
         "Central business district",
+        "Secondary business district",
+        "Outer ring road",
         "Suburban technology park",
         "Peripheral campus",
       ],
     },
-    value: null,
+    value: { kind: "breakdown", values: [100, 93, 70, 45, 37] },
     gated: true,
   },
 ];

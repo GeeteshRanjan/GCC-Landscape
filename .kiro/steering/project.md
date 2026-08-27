@@ -186,6 +186,9 @@ has actually happened.
 **Seed:** `Consolidated_GCC_India_Database_2026_New.xlsx` — 1834 companies, 16 columns, one sheet.
 Profiled in `docs/data-audit.md`; read that before touching the schema.
 
+`exceljs` carries a moderate `uuid` advisory reachable only when *writing*; this is an offline,
+read-only script, and the version is pinned.
+
 **Excel is a seed, not a system of record.** It is imported once, cleaned and normalised on the way
 in, and after that **admin is the authoritative editor** — full row CRUD on companies, plus taxonomy,
 plus the Screen 2 metrics. The spreadsheet is never read again except to bulk-append a future batch
@@ -232,11 +235,24 @@ rebuilds companies and taxonomy from the spreadsheet, and would otherwise erase 
 metric values in a way that looks exactly like a normal import. `scripts/import-seed.ts` carries the
 existing `metrics` across untouched.
 
-**No invented metric values.** Every seeded metric ships with `value: null`. The audience is a CIO
-sizing a several-hundred-person commitment, so a plausible-looking placeholder figure is worse than an
-empty screen. An incomplete open metric is left off the public screen rather than rendered half-filled;
-a gated one is always included, because it has nothing to be missing. The one seeded value is the
-capability grid's worked example, which is in the brief itself.
+**No invented metric values, and no estimated ones.** The audience is a CIO sizing a
+several-hundred-person commitment, so a plausible-looking placeholder figure is worse than an empty
+screen. An incomplete open metric is left off the public screen rather than rendered half-filled; a
+gated one is always included, because it has nothing to be missing. Three rules govern the catalogue's
+values, and `docs/data-audit.md` records how each played out:
+
+- **Supplied money becomes an index, or nothing.** Absolute amounts cannot be stored — no currency
+  format exists — so where the source gave a comparison base they are divided through it, and where it
+  did not the metric stays empty with a `STILL NEEDS` note. Never estimated into place.
+- **A range collapses to the end that understates India's advantage.** A breakdown slot holds one
+  number, and a figure a client's own team can beat down costs more than it gains.
+- **Structure follows the data.** If the supplied split does not match the seeded parts, the shape
+  changes; parts with no figure are removed rather than left empty.
+
+**`npm run data:import -- --reseed-metrics` adopts the catalogue in code over the stored one.** The
+plain import preserves what is stored, which is right for a monthly spreadsheet append and wrong when
+the definitions themselves have changed in a commit. It is loud about what it discards, and the diff
+is the record.
 
 **Columns kept.** Company name, HQ country, revenue band, industry, establishment year, city list,
 FTE range, Fortune Global 500 flag, Forbes Global 2000 flag.
@@ -302,8 +318,8 @@ stopped being a check.
 **Known gaps** — tracked in `handoff.md`:
 - No per-company function list → the common-functions block has no source. The brief permits a
   hardcoded common function set.
-- Screen 2 metric **values**: 34 of 35 empty. The catalogue and the editing forms exist; the figures
-  are entered there. Every gated metric is empty too.
+- Screen 2 metric values: 32 of 35 complete. `hr-fully-loaded-cost` needs indices rather than the
+  amounts supplied; `tech-capability-comparison` needs Vietnam rated. See `docs/data-audit.md`.
 
 ## Architecture map
 

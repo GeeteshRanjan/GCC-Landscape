@@ -1,9 +1,10 @@
 /**
  * Seed importer: Consolidated_GCC_India_Database_2026_New.xlsx -> data/dataset.json
  *
- *   npm run data:import                  # import, diff against the current JSON, write
- *   npm run data:import -- --dry-run     # everything except the write
- *   npm run data:import -- --in <path>   # a later batch of new companies
+ *   npm run data:import                      # import, diff against the current JSON, write
+ *   npm run data:import -- --dry-run         # everything except the write
+ *   npm run data:import -- --in <path>       # a later batch of new companies
+ *   npm run data:import -- --reseed-metrics  # adopt the catalogue in code over the stored one
  *
  * The spreadsheet is a SEED, not a system of record. It is read once, cleaned on
  * the way in, and after that admin is the authoritative editor. This script is
@@ -63,13 +64,15 @@ type ColumnKey = keyof typeof COLUMNS;
 interface Args {
   input: string;
   dryRun: boolean;
+  reseedMetrics: boolean;
 }
 
 function parseArgs(argv: string[]): Args {
-  const args: Args = { input: DEFAULT_SOURCE, dryRun: false };
+  const args: Args = { input: DEFAULT_SOURCE, dryRun: false, reseedMetrics: false };
   for (let i = 0; i < argv.length; i += 1) {
     const arg = argv[i];
     if (arg === "--dry-run") args.dryRun = true;
+    else if (arg === "--reseed-metrics") args.reseedMetrics = true;
     else if (arg === "--in") {
       const next = argv[i + 1];
       if (!next) fail("--in needs a path");
@@ -310,14 +313,25 @@ async function main(): Promise<void> {
    * that work, and the erasure would look exactly like a normal re-import. The
    * seed is used only when there is no catalogue yet.
    */
-  const metrics = previous?.metrics?.length
-    ? previous.metrics
-    : seedMetricCatalogue();
-  console.log(
-    previous?.metrics?.length
-      ? `  keeping ${metrics.length} existing function metrics untouched`
-      : `  seeding ${metrics.length} function metrics from the catalogue`,
-  );
+  const hasExisting = Boolean(previous?.metrics?.length);
+  const metrics =
+    hasExisting && !args.reseedMetrics
+      ? (previous?.metrics as Dataset["metrics"])
+      : seedMetricCatalogue();
+
+  if (hasExisting && args.reseedMetrics) {
+    console.log(
+      `\n  --reseed-metrics: REPLACING ${previous?.metrics.length} existing function metrics with\n` +
+        `  the ${metrics.length} in src/data/metric-catalogue.ts. Any values entered through admin\n` +
+        `  and not also in the catalogue are discarded. The diff below is the record of what moved.`,
+    );
+  } else {
+    console.log(
+      hasExisting
+        ? `  keeping ${metrics.length} existing function metrics untouched`
+        : `  seeding ${metrics.length} function metrics from the catalogue`,
+    );
+  }
 
   const dataset: Dataset = {
     version: DATASET_VERSION,

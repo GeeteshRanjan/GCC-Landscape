@@ -543,14 +543,62 @@ describe("the seeded catalogue", () => {
     ]);
   });
 
-  it("carries no invented figures", () => {
+  it("holds no currency figure anywhere, in any field", () => {
     /**
-     * None of the Screen 2 values have been supplied, so the seed must not
-     * contain any — except the capability grid, whose cells are the worked
-     * example in the brief and are ordinal ratings rather than measurements.
+     * The invariant, checked against the whole serialized catalogue rather than
+     * field by field — including `note`, which is where a well-meaning
+     * transcription of the source data would land.
+     *
+     * The supplied figures did contain per-head dollar amounts and per-square-foot
+     * rupee rents. They are converted to indices where the source gave a base, and
+     * omitted where it did not.
      */
-    const withValues = METRIC_CATALOGUE.filter((m) => m.value !== null);
-    expect(withValues.map((m) => m.id)).toEqual(["tech-capability-comparison"]);
+    const serialized = JSON.stringify(METRIC_CATALOGUE);
+    for (const token of [
+      "USD",
+      "INR",
+      "₹",
+      "€",
+      "£",
+      "lakh",
+      "crore",
+      "per sq ft",
+    ]) {
+      expect(serialized).not.toContain(token);
+    }
+    expect(serialized).not.toMatch(/\$\s?\d/);
+  });
+
+  it("names the metrics still waiting on figures, rather than estimating them", () => {
+    // Empty is the honest state for a metric whose data arrived in a form this
+    // schema cannot hold. Filling it with a plausible number would be worse.
+    const empty = METRIC_CATALOGUE.filter((m) => m.value === null).map((m) => m.id);
+    expect(empty).toEqual(["hr-fully-loaded-cost"]);
+
+    const started = METRIC_CATALOGUE.filter(
+      (m) => m.value !== null && !isMetricComplete(m),
+    ).map((m) => m.id);
+    expect(started).toEqual([
+      // Vietnam is a comparator the brief names but does not rate.
+      "tech-capability-comparison",
+      // Depth for Pune and tier 2 is qualitative in the source. Harmless: a gated
+      // metric ships as a placeholder whether or not every cell is filled.
+      "fin-cost-vs-ecosystem-depth",
+    ]);
+  });
+
+  it("says in the note when a metric is deliberately unfinished", () => {
+    for (const id of ["hr-fully-loaded-cost", "tech-capability-comparison"]) {
+      const entry = METRIC_CATALOGUE.find((m) => m.id === id);
+      expect(entry?.note).toMatch(/STILL NEEDS/);
+    }
+  });
+
+  it("keeps every index readable by stating its base", () => {
+    for (const entry of METRIC_CATALOGUE.filter((m) => m.format === "index")) {
+      expect(entry.indexBaseline, entry.id).toBeTruthy();
+      expect(entry.indexBaseline, entry.id).toMatch(/100/);
+    }
   });
 
   it("leaves the comparator the brief names but does not rate unfilled", () => {

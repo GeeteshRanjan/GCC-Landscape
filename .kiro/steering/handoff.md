@@ -9,13 +9,15 @@ rather than the present, delete it.
 
 **Data layer, admin, the Screen 2 metric catalogue and both test suites are built and verified.**
 Next.js 16 + TypeScript + Tailwind v4 + shadcn/ui at the repo root, theme from `assets/brand/tokens.css`.
-1834 companies plus 35 metric definitions in `data/dataset.json`. Neither public screen exists yet.
+1834 companies plus 35 function metrics, 32 of them fully populated, in `data/dataset.json`. Neither
+public screen exists yet.
 
 Six commands, all green, plus `tsc --noEmit` and `brand_lint.py`:
 
 - `npm test` — 237 Vitest unit tests, under a second.
 - `npm run test:browser` — 75 Playwright tests against a real production build, about a minute.
-- `npm run data:import` — xlsx → JSON; `-- --dry-run` stops before the write. Preserves the catalogue.
+- `npm run data:import` — xlsx → JSON; `-- --dry-run` stops before the write. Preserves the stored
+  catalogue unless `-- --reseed-metrics` is passed.
 - `npm run data:verify` — invariants, then the profile figures in `data/verify-baseline.json`.
 - `npm run admin:hash` — mints the admin env values. TTY only.
 - `npm run build` — the portability test. Plain Node, no host-specific anything.
@@ -25,11 +27,9 @@ optional TOTP code, rate limited per IP and per process. Edits are a browser dra
 localStorage, with a banner on every tab. Publish validates the whole dataset, diffs it against what
 the write will land on, then commits.
 
-**Live at `gcc-landscape.vercel.app`, and the deployment is behind the working tree.** The whole metric
-catalogue is **uncommitted** — `HEAD` and `origin/main` are both at `f7ef709`, with 32 changed or new
-paths in the working tree. So the live admin still has three tabs and the live dataset has no `metrics`
-key. Commit and push to deploy it. No publish has been made from admin: the local store is `fs`, and
-the browser suite exercises publishing against its own fixture in `tests/browser/.tmp`.
+**Live at `gcc-landscape.vercel.app`**, deployed from `main`. No publish has been made from admin: the
+local store is `fs`, and the browser suite exercises publishing against its own fixture in
+`tests/browser/.tmp`.
 
 `main` tracks a private repo; the keychain holds a usable credential and commit identity is repo-local.
 
@@ -41,9 +41,9 @@ the browser suite exercises publishing against its own fixture in `tests/browser
 Screen 1's data is in place: `matchPeers`, `largestInIndustry`, `nationalScale` and `cityDensity` in
 `src/data/peers.ts` cover all four blocks plus the heatmap. Only common functions has no source.
 
-Screen 2's data layer is in place too, but **almost no values are entered**, so it will render mostly
-gated placeholders until the figures arrive. Consume it through `publicMetricsFor` — never
-`dataset.metrics` directly, or the gate is bypassed.
+Screen 2 now has real figures behind it — `publicMetricsFor` returns 7 technology, 9 operations, 12 HR
+and 6 finance metrics, so the screen can be designed against actual values rather than placeholders.
+Consume it through `publicMetricsFor` only; reading `dataset.metrics` bypasses the gate.
 
 ## Blocked / needs the user
 
@@ -51,11 +51,14 @@ gated placeholders until the figures arrive. Consume it through `publicMetricsFo
    transcript. `npm run admin:hash`, then update `ADMIN_PASSWORD_HASH` in Vercel and redeploy.
 2. **Record the `GCC_GITHUB_TOKEN` expiry in a calendar.** When it lapses, publishing starts failing
    with a GitHub 401 that reads like a bug rather than an expiry.
-3. **Screen 2 metric values** — 34 of 35 metrics are empty, including all four gated ones. The forms
-   are ready at `/admin/metrics`; this is data entry now, not development.
-4. **Review the seeded metric labels.** The discipline, segment and axis names are plausible starting
-   points, not supplied data. The admin owns them and can rename them; worth a read before any of them
-   reaches a visitor.
+3. **Two metrics still need figures.** `hr-fully-loaded-cost` was supplied as absolute amounts per
+   role, which cannot be stored — it needs each cell as an index against the same role in the sending
+   country. `tech-capability-comparison` needs Vietnam rated on the five capability rows.
+   `docs/data-audit.md` has the detail.
+4. **Confirm two judgement calls in the figures.** Technology bench strength is stored as the national
+   technology workforce rather than the GCC subset, and Grade A office stock as vacant rather than
+   total, because each matches its question — both are arguable. And no metric has an `asOf` date, so
+   every figure is currently undated on the public screen.
 5. **Function-per-company data** — for the common-functions block. A hardcoded common function set is
    permitted by the brief and is the likely answer.
 6. **Hosting details** — which ansr.com page hosts the iframe, and who adds the embed snippet. Allowed
@@ -74,7 +77,6 @@ gated placeholders until the figures arrive. Consume it through `publicMetricsFo
 - **Whether the browser suite runs in CI.** Needs a Chromium download and about a minute.
 - **Thin peer sets stay as they are.** Electrical & Electronics returns two peers, shortfall three.
   Never padding is the invariant. Revisit when Screen 1 exists.
-- `exceljs` has a moderate `uuid` advisory, reachable only when *writing*. Offline read-only script.
 - No ESLint. `tsc --noEmit`, `brand_lint.py` and the two suites are the checks.
 - No web font loaded; Inter comes via the token's fallback stack. Self-host it before visual work.
 

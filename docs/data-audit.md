@@ -234,21 +234,44 @@ capability supply across delivery locations, and the Optional diversity block is
 the workforce on offer). Nothing from the brief lost a home. **The lens is never a public label** —
 `publicMetric` strips the field, and the admin surface labels the groupings as internal.
 
-**Values entered: 1 of 35, and that is deliberate.** None of the Screen 2 figures have been supplied.
-Seeding plausible-looking numbers would put fabricated data in front of a CIO evaluating a
-several-hundred-person commitment, so every metric ships with `value: null` and is left off the
-public screen until it is filled. The single exception is `tech-capability-comparison`, whose India /
-Poland / Philippines cells are the worked example in the brief itself, carried over as supplied;
-Vietnam is a comparator the brief names but does not rate, so that column is empty and the metric
-therefore still counts as incomplete.
+**Values entered: 32 of 35 complete.** Figures were supplied 2026-08-27 and populated into the
+catalogue. Three are not complete, each for a stated reason:
+
+| Metric | State | Why |
+| --- | --- | --- |
+| `hr-fully-loaded-cost` | empty | Supplied as absolute annual amounts per role, which cannot be stored. Needs each cell as an index against the same role in the sending country. |
+| `tech-capability-comparison` | Vietnam column empty | The brief names Vietnam as a comparator but rates only India, Poland and the Philippines. The 2026-08 data described this comparison as prose about headcount scale, which does not rate the five capability rows. |
+| `fin-cost-vs-ecosystem-depth` | two depth cells empty | Depth for Pune and tier 2 is qualitative in the source. Harmless: a gated metric ships as a placeholder whether or not every cell is filled. |
+
+**No absolute money survived the import, and that is enforced rather than trusted.** The supplied
+data contained per-head dollar amounts and per-square-foot rupee rents. Where the source also gave a
+comparison base they were converted to an index — `fin-india-vs-hubs` divides the senior-engineer
+figures through India's to give `India 100, Philippines 122, Mexico 167, Poland 189, US 367`, and
+`fin-workplace-cost-gradient` indexes the Bengaluru rent card to `100 / 93 / 70 / 45 / 37`. Where it
+gave no base, the metric was left empty. A unit test asserts the serialized catalogue contains no
+currency token in any field, `note` included.
+
+**Ranges collapse to their conservative end.** Several figures arrived as ranges and a breakdown slot
+holds one number, so the end stored is the one that understates India's advantage: compensation 15%
+rather than 22% below tier 1, offer acceptance at the bottom of each city's band, latency at the top
+of each. Every affected metric records the full range in its note.
+
+**Structure followed the data where the two disagreed.** Disruption days are split by city rather
+than by cause, salary growth by specialism rather than one average, and uptime into campus versus
+grid — because that is how the figures arrived. Seeded parts with no figure behind them were removed
+rather than left empty, since an empty slot keeps the whole metric off the public screen. Two metrics
+collapsed from a breakdown to a single figure for the same reason (`tech-open-source-signal`,
+`hr-graduate-output`), and `hr-cost-per-employee-served` was retitled to the staffing ratio it can
+actually hold.
 
 **Four gated metrics**, matching the invariant list in `project.md`:
 `hr-cost-per-employee-served`, `hr-fully-loaded-cost`, `fin-cost-vs-ecosystem-depth`,
 `fin-workplace-cost-gradient`.
 
 **What a visitor would receive today**, measured through `publicMetricsFor` — the same function the
-public screens will call: `tech 0, operations 0, hr 2, finance 2`. The four are the gated ones, which
-always ship as a placeholder of the right shape; every open metric is still incomplete.
+public screens will call: `tech 7, operations 9, hr 12, finance 6`. Gated metrics always count,
+because they ship as a placeholder of the right shape; incomplete open ones do not, which is why
+Technology shows 7 of 8.
 
 `npm run data:verify` records all of the above as **profile figures, not invariants**. Entering a
 month of values is supposed to move them, so `-- --accept` is the correct response to a legitimate

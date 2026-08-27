@@ -83,7 +83,7 @@ test("entering a figure marks the draft dirty and survives a reload", async ({ p
 
 test("a metric edit survives moving between tabs", async ({ page }) => {
   await page.goto("/admin/metrics");
-  await openMetric(page, "Offer acceptance rate");
+  await openMetric(page, "Operations bench strength");
   await page.getByLabel("Figure").fill("84");
   await page.getByRole("button", { name: "Save to draft" }).click();
   await waitForDraftSaved(page);
@@ -92,19 +92,22 @@ test("a metric edit survives moving between tabs", async ({ page }) => {
   await expect(page.getByRole("heading", { name: "Companies", level: 1 })).toBeVisible();
   await page.getByRole("link", { name: "Metrics" }).click();
 
-  await openMetric(page, "Offer acceptance rate");
+  await openMetric(page, "Operations bench strength");
   await expect(page.getByLabel("Figure")).toHaveValue("84");
 });
 
-test("editing a figure back to empty clears the unpublished warning", async ({ page }) => {
+test("editing a figure back to its original clears the unpublished warning", async ({ page }) => {
   await page.goto("/admin/metrics");
   await openMetric(page, "Technology bench strength");
+  const original = await page.getByLabel("Figure").inputValue();
+  expect(original).not.toBe("");
+
   await page.getByLabel("Figure").fill("500");
   await page.getByRole("button", { name: "Save to draft" }).click();
   await expect(page.getByText("You have unpublished changes.")).toBeVisible();
 
   await openMetric(page, "Technology bench strength");
-  await page.getByLabel("Figure").fill("");
+  await page.getByLabel("Figure").fill(original);
   await page.getByRole("button", { name: "Save to draft" }).click();
 
   // Editing back to the original must clear the flag, not increment a counter.
@@ -112,7 +115,7 @@ test("editing a figure back to empty clears the unpublished warning", async ({ p
 });
 
 test.describe("a breakdown", () => {
-  const title = "Open-source contribution";
+  const title = "Technology ecosystem by specialism";
 
   test("keeps figures already typed when a part is added", async ({ page }) => {
     await page.goto("/admin/metrics");
@@ -125,16 +128,16 @@ test.describe("a breakdown", () => {
     // The two figures stay with their rows, and the new part arrives empty.
     await expect(page.getByLabel("Figure 1")).toHaveValue("120000");
     await expect(page.getByLabel("Figure 2")).toHaveValue("8000");
-    await expect(page.getByLabel("Figure 4")).toHaveValue("");
+    await expect(page.getByLabel("Figure 8")).toHaveValue("");
 
-    await page.getByLabel("Part 4").fill("Stack Overflow");
-    await page.getByLabel("Figure 4").fill("40000");
+    await page.getByLabel("Part 8").fill("Stack Overflow");
+    await page.getByLabel("Figure 8").fill("40000");
     await page.getByRole("button", { name: "Save to draft" }).click();
     await expect(page.getByRole("dialog")).toBeHidden();
 
     await openMetric(page, title);
-    await expect(page.getByLabel("Part 4")).toHaveValue("Stack Overflow");
-    await expect(page.getByLabel("Figure 4")).toHaveValue("40000");
+    await expect(page.getByLabel("Part 8")).toHaveValue("Stack Overflow");
+    await expect(page.getByLabel("Figure 8")).toHaveValue("40000");
   });
 
   test("keeps its figures when a part is renamed", async ({ page }) => {
@@ -152,20 +155,27 @@ test.describe("a breakdown", () => {
 
   test("cannot be cut below the two parts the schema requires", async ({ page }) => {
     await page.goto("/admin/metrics");
-    await openMetric(page, title);
+    // Technical community activity is the two-part metric, already at the floor.
+    await openMetric(page, "Technical community activity");
 
-    await page.getByRole("button", { name: "Remove part 3" }).click();
     // Disabled rather than allowed and then rejected at the publish gate.
     await expect(page.getByRole("button", { name: "Remove part 1" })).toBeDisabled();
+    await expect(page.getByRole("button", { name: "Remove part 2" })).toBeDisabled();
+
+    // Adding one frees them again, so the floor is a floor and not a freeze.
+    await page.getByRole("button", { name: "Add a part" }).click();
+    await expect(page.getByRole("button", { name: "Remove part 1" })).toBeEnabled();
   });
 
-  test("shows how much of it is entered, without publishing a partial one", async ({ page }) => {
+  test("reports a part-entered metric as such, so it is visibly unfinished", async ({ page }) => {
     await page.goto("/admin/metrics");
     await openMetric(page, title);
-    await page.getByLabel("Figure 1").fill("10");
+    // Emptying one slot is what a real gap looks like: the metric is no longer
+    // publishable, and the row has to say so rather than looking finished.
+    await page.getByLabel("Figure 1").fill("");
     await page.getByRole("button", { name: "Save to draft" }).click();
 
-    await expect(page.getByText("1 of 3 entered")).toBeVisible();
+    await expect(page.getByText("6 of 7 entered")).toBeVisible();
     // Part-entered is counted apart from complete and from empty.
     await expect(
       page.getByRole("term").filter({ hasText: "Part entered" }),

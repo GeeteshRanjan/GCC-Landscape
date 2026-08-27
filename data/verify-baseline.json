@@ -1,6 +1,6 @@
 {
   "describedAs": "1834 companies, from Consolidated_GCC_India_Database_2026_New.xlsx",
-  "recordedAt": "2026-08-27T09:20:26.306Z",
+  "recordedAt": "2026-08-27T16:00:24.380Z",
   "figures": {
     "companies": 1834,
     "industries": 24,
@@ -33,9 +33,9 @@
     ],
     "multi-city companies": 626,
     "metrics defined": 35,
-    "metrics with every figure entered": 0,
-    "metrics part entered": 1,
-    "metrics with no figures yet": 34,
+    "metrics with every figure entered": 32,
+    "metrics part entered": 2,
+    "metrics with no figures yet": 1,
     "gated metrics, by id": [
       "fin-cost-vs-ecosystem-depth",
       "fin-workplace-cost-gradient",
@@ -49,10 +49,10 @@
       "finance 6"
     ],
     "metrics a visitor would receive, per function area": [
-      "tech 0",
-      "operations 0",
-      "hr 2",
-      "finance 2"
+      "tech 7",
+      "operations 9",
+      "hr 12",
+      "finance 6"
     ],
     "industry + revenue band": 1683,
     "industry + revenue band +/- 1 step": 1795,
