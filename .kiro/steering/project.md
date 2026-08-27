@@ -119,6 +119,12 @@ used. Concretely:
   that has moved is how one publish silently reverts another. With nothing configured in production,
   publishing refuses to start rather than writing somewhere the next deploy discards.
 
+  **`GCC_DATA_STORE=fs` on a serverless host is the one setting that loses data silently.** It is the
+  obvious way to make the "publishing is unavailable" banner go away, and it is wrong: the filesystem
+  is ephemeral, so a publish validates, shows a correct diff, reports success, and is gone on the next
+  deploy. `fs` is for local development and for a self-hosted server with a real disk. Leaving the
+  variable unset on such a host is the safe state, and the banner is doing its job.
+
   **The read cache is invalidated by the file, not by the writer.** `dataset.ts` stamps each cached
   copy with the dataset's mtime and size and re-reads when either moves. Having the publish endpoint
   clear the cache is not sufficient and was measured not to work: a route handler and a layout can be

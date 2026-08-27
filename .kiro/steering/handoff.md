@@ -26,10 +26,14 @@ TOTP code, rate limited on two budgets — five per IP and twenty per process. E
 draft, autosaved to localStorage, with a banner on every tab. Publish validates the whole dataset,
 diffs it against what the write will land on, then commits.
 
-**Git works end to end.** `main` is pushed and tracking; the repo is private. The macOS keychain
-already holds a usable GitHub credential — set in Xcode's system gitconfig, not the global one, which
-is why it is easy to miss — so pushes need no setup. Commit identity is set **repo-locally** to the
+**Git works end to end.** `main` is pushed and tracking, the repo is private, and the macOS keychain
+holds a usable credential so pushes need no setup. Commit identity is set **repo-locally** to the
 GitHub noreply address; the global config is deliberately still unset.
+
+**Deployed on Vercel from `main`.** The build traces `data/dataset.json` into all three bundle types —
+public page, admin pages, publish route — checked in the `.nft.json` manifests rather than inferred
+from the config. **No environment variables are set yet**, so admin refuses every password there until
+they are; see the blockers.
 
 **Two paths remain unexercised:** a publish through the GitHub store, and TOTP in a live deployment.
 Everything else is covered by one of the two suites.
@@ -45,15 +49,18 @@ Everything else is covered by one of the two suites.
    `src/app/page.tsx` is a scaffold placeholder that Screen 1 replaces wholesale.
 
 Screen 1's data is entirely in place: `matchPeers`, `largestInIndustry`, `nationalScale` and
-`cityDensity` in `src/data/peers.ts` cover all four blocks plus the heatmap. Only the common-functions
-block has no source.
+`cityDensity` in `src/data/peers.ts` cover all four blocks plus the heatmap. Only common functions has
+no source.
 
 ## Blocked / needs the user
 
-1. **`GCC_GITHUB_TOKEN` for admin publishing.** The keychain credential covers `git push`, but the app
-   cannot read it — the publish path needs a fine-grained token with `contents: read and write` on this
-   repo, in the environment. Until then `GCC_DATA_STORE` stays `fs` and publishing writes locally.
-   Worth one real publish through admin once it is set, to shake out token scope and branch protection.
+1. **Vercel has no environment variables set.** `ADMIN_PASSWORD_HASH` and `ADMIN_SESSION_SECRET` are
+   required before admin works at all — without them login refuses every password and logs the real
+   reason server-side, which is indistinguishable from a wrong password to the person typing it. Run
+   `npm run admin:hash` and set both. Then, for publishing, `GCC_DATA_STORE=github` with
+   `GCC_GITHUB_REPO`, `GCC_GITHUB_BRANCH` and a fine-grained `GCC_GITHUB_TOKEN` carrying
+   `contents: read and write`. The keychain credential covers `git push` but the app cannot read it.
+   Worth one real publish once it is set, to shake out token scope and branch protection.
 2. **`.env.local` holds a throwaway password** set during verification, not one you chose. Replace it:
    `npm run admin:hash`, then paste both lines over the existing ones.
 3. **Screen 2 metric values** — hundreds, no spreadsheet behind them. Forms first, then the values.
@@ -67,16 +74,16 @@ block has no source.
 - **Whether to switch on `ADMIN_TOTP_SECRET`.** Built, verified against the published RFC 6238 test
   vectors, opt-in, currently unset. Both rate-limit budgets are per-process, so a second factor is the
   only thing that bounds a distributed guessing attempt. Recommended before this is reachable publicly.
-- **Whether the browser suite runs in CI.** It needs a Chromium download and about a minute.
-- **Whether Vercel is connected to the repo yet.** Nobody has checked. Publishing through the GitHub
-  store assumes a push triggers a rebuild, so that assumption needs confirming before it is relied on.
+- **Whether the browser suite runs in CI.** Needs a Chromium download and about a minute.
+- **Whether a push actually triggers a Vercel rebuild.** The deployment exists, but the publish design
+  depends on a commit rebuilding the app, and nobody has watched that happen end to end.
 - **Thin peer sets stay as they are for now.** Electrical & Electronics returns two peers, shortfall
-  three. Never padding is the invariant; the count is a baseline figure, so revising it later is one
+  three. Never padding is the invariant; the count is a baseline figure, so revising it is one
   `--accept`. Revisit when Screen 1 exists.
 - `data/dataset.json` is pretty-printed: 700 KB in the repo, 53 KB gzipped. Kept because a reviewable
   line-per-field diff is the whole reason there is no database.
 - `exceljs` carries a moderate `uuid` advisory reachable only when *writing*. devDependency, offline
-  script, read-only. Left pinned.
+  read-only script. Left pinned.
 - No ESLint. `tsc --noEmit`, `brand_lint.py` and the two suites are the checks.
 - No web font is loaded. Inter comes through the token's fallback stack; self-host it for visual work.
 - Lead capture stays out of scope; the CTA links out to a separate landing page.
@@ -91,9 +98,6 @@ the ones that only bite while working on the code.
 - **`server-only` throws outside a bundler's server graph**, which includes `tsx`. Anything a script
   imports cannot carry the marker: that is why `src/lib/admin/constants.ts` exists and why
   `password.ts` and `totp.ts` have none. Vitest gets past it by resolving the `react-server` condition.
-- **`ADMIN_PASSWORD_HASH` uses `:` and base64url, not `$` and base64.** dotenv expands `$N` as a
-  variable reference, so a `$`-separated hash arrives truncated and a correct password fails with no
-  useful signal.
 - **`git ls-remote` on an empty repo prints nothing and exits 2.** That is success with no refs, not a
   missing repo. A private repo also 404s to an unauthenticated browser. Check the exit code and stderr
   before concluding a remote does not exist.
@@ -110,8 +114,6 @@ the ones that only bite while working on the code.
   `aria-labelledby` so they are reachable and testable by role.
 - The whole dataset does reach the admin browser. That does not contradict "never ship the dataset to
   the browser" — that rule is about the public surface. `dataset.ts` stays `server-only`.
-- Renaming a taxonomy value must cascade into every company that referenced it, or the publish fails
-  referential integrity after the rename looked successful.
 - `/admin` is never framed, so it uses real routes, `min-h-dvh` and a sticky header. The public screens
   are iframed and may do none of that.
 - Browser specs are numbered and run in that order, one worker. `5-lockout.spec.ts` exhausts the
