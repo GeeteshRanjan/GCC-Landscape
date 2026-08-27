@@ -26,21 +26,22 @@ TOTP code, rate limited on two budgets — five per IP and twenty per process. E
 draft, autosaved to localStorage, with a banner on every tab. Publish validates the whole dataset,
 diffs it against what the write will land on, then commits.
 
-**Two paths remain unexercised:** a publish to a real GitHub repository, and TOTP in a live
-deployment. Everything else is covered by one of the two suites.
+**Two paths remain unexercised:** a publish through the GitHub store, and TOTP in a live deployment.
+Everything else is covered by one of the two suites.
 
-**Git:** `origin` is set (see the Deploy row in `project.md`). **Nothing is committed or pushed.**
+**Git:** first commit pushed to `main`. The repo is private and empty apart from that commit; the
+macOS keychain already holds a working GitHub credential, so pushes need no further setup. Commit
+identity is set repo-locally to the GitHub noreply address — the global config is deliberately
+untouched.
 
 ## Next action
 
 **Get the first commit out, then the Screen 2 metric catalogue.**
 
-1. First commit and push, once the blockers below clear. A secret sweep over everything that would be
-   tracked is clean, and `.env.local`, `.env` and both Playwright fixtures are confirmed gitignored.
-2. Metric catalogue. Needs a pass over `docs/brief.md` to turn the four internal lenses (supply, speed,
+1. Metric catalogue. Needs a pass over `docs/brief.md` to turn the four internal lenses (supply, speed,
    place, cost) into a schema before any form exists. The lens names are a filing system, not UI
    labels. Then the admin forms, reusing the draft-then-publish flow.
-3. Screen 1, then Screen 2. Design skills run before markup on each, per `skill-router.md`.
+2. Screen 1, then Screen 2. Design skills run before markup on each, per `skill-router.md`.
    `src/app/page.tsx` is a scaffold placeholder that Screen 1 replaces wholesale.
 
 Screen 1's data is entirely in place: `matchPeers`, `largestInIndustry`, `nationalScale` and
@@ -49,28 +50,19 @@ block has no source.
 
 ## Blocked / needs the user
 
-1. **The repo does not resolve.** `git ls-remote` returns nothing and the page is 404, so it is either
-   not created yet or private. Needs creating, or confirming as private.
-2. **No commit identity.** `user.name` and `user.email` are unset globally and locally. Not invented on
-   purpose: it is permanent in history and public if the repo is. A GitHub
-   `<id>+<username>@users.noreply.github.com` address is the recommendation.
-3. **No credentials to push.** No `gh` CLI, no SSH key, no credential helper, no stored token. Needs a
-   fine-grained token with `contents: read and write` on that one repo, or an SSH key. The same token
-   serves `GCC_GITHUB_TOKEN` for admin publishing.
-4. **`.env.local` holds a throwaway password** set during verification, not one you chose. Replace it:
+1. **`GCC_GITHUB_TOKEN` for admin publishing.** The keychain credential covers `git push`, but the app
+   cannot read it — the publish path needs a fine-grained token with `contents: read and write` on this
+   repo, in the environment. Until then `GCC_DATA_STORE` stays `fs` and publishing writes locally.
+2. **`.env.local` holds a throwaway password** set during verification, not one you chose. Replace it:
    `npm run admin:hash`, then paste both lines over the existing ones.
-5. **Screen 2 metric values** — hundreds, no spreadsheet behind them. Forms first, then the values.
-6. **Function-per-company data** — for the common-functions block. A hardcoded common function set is
+3. **Screen 2 metric values** — hundreds, no spreadsheet behind them. Forms first, then the values.
+4. **Function-per-company data** — for the common-functions block. A hardcoded common function set is
    permitted by the brief and is the likely answer.
-7. **Hosting details** — which ansr.com page hosts the iframe, and who adds the embed snippet. Allowed
+5. **Hosting details** — which ansr.com page hosts the iframe, and who adds the embed snippet. Allowed
    origins are `ansr.com` and `*.ansr.com` in `next.config.ts`; correct them when known.
 
 ## Open decisions, not yet made
 
-- **Whether to commit `.kiro/skills/`.** 300 files, 2.1 MB, three vendored upstream packs, exactly one
-  LICENSE between them. `.kiro/skill-sources.json` records each pack's repo and commit and the update
-  path is re-cloning, so the content is reproducible without being stored here. Recommendation: exclude
-  `.kiro/skills/`, keep `.kiro/steering/` and `.kiro/skill-sources.json`.
 - **Whether to switch on `ADMIN_TOTP_SECRET`.** Built, verified against the published RFC 6238 test
   vectors, opt-in, currently unset. Both rate-limit budgets are per-process, so a second factor is the
   only thing that bounds a distributed guessing attempt. Recommended before this is reachable publicly.
