@@ -17,7 +17,7 @@ Six commands, all green, plus `tsc --noEmit` and `brand_lint.py`:
 - `npm run test:browser` — 54 Playwright tests against a real production build, about a minute.
 - `npm run data:import` — xlsx → JSON. `-- --dry-run` stops before the write.
 - `npm run data:verify` — invariants, then the profile figures in `data/verify-baseline.json`.
-- `npm run admin:hash` — mints the admin env values. TTY only; `-- --secret` / `-- --totp` for one.
+- `npm run admin:hash` — mints the admin env values. TTY only.
 - `npm run build` — the portability test. Plain Node, no host-specific anything.
 
 **Admin is at `/admin`**, three tabs: Companies, Taxonomy, Publish. Single password plus an optional
