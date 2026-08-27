@@ -31,6 +31,7 @@ import path from "node:path";
 import process from "node:process";
 
 import { fteMidpoint, hasTier2Presence } from "../src/data/derive";
+import { SAMPLE_PROVENANCE } from "../src/data/metric-catalogue";
 import { metricProgress, publicMetricsFor } from "../src/data/metrics";
 import { SEED_REVENUE_BAND_ORDER } from "../src/data/normalize";
 import {
@@ -362,6 +363,23 @@ async function main(): Promise<void> {
    * function the public screens will call. A gated metric counts because it always
    * ships as a placeholder; an open one only counts once every slot is filled.
    */
+  /**
+   * How many figures are still illustrative. A profile figure rather than an
+   * invariant, because the number going down is the point — when it reaches zero
+   * the catalogue is real, and that shows up here as drift to accept rather than
+   * as something anyone has to remember to check.
+   */
+  profile(
+    "metrics still marked as sample data",
+    dataset.metrics.filter((m) => m.asOf === SAMPLE_PROVENANCE).length,
+    baseline,
+  );
+  profile(
+    "metrics with no provenance stated",
+    dataset.metrics.filter((m) => !m.asOf).length,
+    baseline,
+  );
+
   profile(
     "metrics a visitor would receive, per function area",
     METRIC_FUNCTIONS.map(

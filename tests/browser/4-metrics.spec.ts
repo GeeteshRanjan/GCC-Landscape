@@ -186,19 +186,25 @@ test.describe("a breakdown", () => {
 test.describe("a comparison grid", () => {
   const title = "Capability compared with other delivery locations";
 
-  test("carries the brief's worked example and leaves the unrated column empty", async ({ page }) => {
+  test("carries the worked example, and offers an unassessed option per cell", async ({ page }) => {
     await page.goto("/admin/metrics");
     await openMetric(page, title);
 
     await expect(
       page.getByLabel("Product engineering, India"),
     ).toHaveValue("Very strong");
-    // Vietnam is a comparator the brief names but does not rate. Left empty
-    // rather than guessed.
-    await expect(page.getByLabel("Product engineering, Vietnam")).toHaveValue("");
+    await expect(page.getByLabel("Product engineering, Vietnam")).toHaveValue("Moderate");
+    // Every cell can be returned to unassessed, so a rating nobody has made is
+    // expressible rather than forced into the nearest step.
     await expect(
       page.getByLabel("Product engineering, Vietnam").getByRole("option", { name: "Not assessed" }),
     ).toBeAttached();
+  });
+
+  test("says the figures are samples, on a field the visitor would also see", async ({ page }) => {
+    await page.goto("/admin/metrics");
+    await openMetric(page, title);
+    await expect(page.getByLabel("As of")).toHaveValue(/Sample/);
   });
 
   test("rates cells from the metric's own scale, not free text", async ({ page }) => {

@@ -234,22 +234,30 @@ capability supply across delivery locations, and the Optional diversity block is
 the workforce on offer). Nothing from the brief lost a home. **The lens is never a public label** —
 `publicMetric` strips the field, and the admin surface labels the groupings as internal.
 
-**Values entered: 32 of 35 complete.** Figures were supplied 2026-08-27 and populated into the
-catalogue. Three are not complete, each for a stated reason:
+**Values entered: all 35, and every one is illustrative.** The figures supplied 2026-08-27 were
+sample data, confirmed as such, to be replaced before launch. Rather than leave gaps that would read
+as bugs while the screens were built, every metric was populated — and every one is stamped
+`asOf: "Sample, not for publication"`.
 
-| Metric | State | Why |
-| --- | --- | --- |
-| `hr-fully-loaded-cost` | empty | Supplied as absolute annual amounts per role, which cannot be stored. Needs each cell as an index against the same role in the sending country. |
-| `tech-capability-comparison` | Vietnam column empty | The brief names Vietnam as a comparator but rates only India, Poland and the Philippines. The 2026-08 data described this comparison as prose about headcount scale, which does not rate the five capability rows. |
-| `fin-cost-vs-ecosystem-depth` | two depth cells empty | Depth for Pune and tier 2 is qualitative in the source. Harmless: a gated metric ships as a placeholder whether or not every cell is filled. |
+That stamp is the safeguard, not a comment. `asOf` is a **public** field: it renders beside the figure
+on Screen 2, so a sample number that escapes to a visitor arrives labelled rather than passed off as
+research. It is applied as a default in `seedMetricCatalogue`, so entering a real date on one metric
+clears it for that metric alone, and `data:verify` reports how many still carry it — the count reaching
+zero is the visible milestone.
+
+Three metrics were filled from judgement rather than from the supplied data, each recorded in its own
+note: Vietnam's column in the capability grid, the role-by-level grid in `hr-fully-loaded-cost`, and
+the depth row for Pune and tier 2 in `fin-cost-vs-ecosystem-depth`.
 
 **No absolute money survived the import, and that is enforced rather than trusted.** The supplied
 data contained per-head dollar amounts and per-square-foot rupee rents. Where the source also gave a
 comparison base they were converted to an index — `fin-india-vs-hubs` divides the senior-engineer
 figures through India's to give `India 100, Philippines 122, Mexico 167, Poland 189, US 367`, and
 `fin-workplace-cost-gradient` indexes the Bengaluru rent card to `100 / 93 / 70 / 45 / 37`. Where it
-gave no base, the metric was left empty. A unit test asserts the serialized catalogue contains no
-currency token in any field, `note` included.
+gave no base, the grid was filled with illustrative indices carrying the shape the real data must
+take. A unit test asserts the serialized catalogue contains no currency token in any field, `note`
+included. **This rule is not about data quality and does not relax when the samples are replaced** —
+the schema has no currency format, so an absolute per-head amount cannot be stored at all.
 
 **Ranges collapse to their conservative end.** Several figures arrived as ranges and a breakdown slot
 holds one number, so the end stored is the one that understates India's advantage: compensation 15%
@@ -269,9 +277,9 @@ actually hold.
 `fin-workplace-cost-gradient`.
 
 **What a visitor would receive today**, measured through `publicMetricsFor` — the same function the
-public screens will call: `tech 7, operations 9, hr 12, finance 6`. Gated metrics always count,
-because they ship as a placeholder of the right shape; incomplete open ones do not, which is why
-Technology shows 7 of 8.
+public screens will call: `tech 8, operations 9, hr 12, finance 6` — the whole catalogue, since
+nothing is incomplete. Gated metrics count too, because they ship as a placeholder of the right
+shape rather than not at all.
 
 `npm run data:verify` records all of the above as **profile figures, not invariants**. Entering a
 month of values is supposed to move them, so `-- --accept` is the correct response to a legitimate

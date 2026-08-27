@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest";
 
-import { METRIC_CATALOGUE, seedMetricCatalogue } from "@/data/metric-catalogue";
+import {
+  METRIC_CATALOGUE,
+  SAMPLE_PROVENANCE,
+  seedMetricCatalogue,
+} from "@/data/metric-catalogue";
 import {
   alignValue,
   emptyValueFor,
@@ -569,29 +573,37 @@ describe("the seeded catalogue", () => {
     expect(serialized).not.toMatch(/\$\s?\d/);
   });
 
-  it("names the metrics still waiting on figures, rather than estimating them", () => {
-    // Empty is the honest state for a metric whose data arrived in a form this
-    // schema cannot hold. Filling it with a plausible number would be worse.
-    const empty = METRIC_CATALOGUE.filter((m) => m.value === null).map((m) => m.id);
-    expect(empty).toEqual(["hr-fully-loaded-cost"]);
-
-    const started = METRIC_CATALOGUE.filter(
-      (m) => m.value !== null && !isMetricComplete(m),
-    ).map((m) => m.id);
-    expect(started).toEqual([
-      // Vietnam is a comparator the brief names but does not rate.
-      "tech-capability-comparison",
-      // Depth for Pune and tier 2 is qualitative in the source. Harmless: a gated
-      // metric ships as a placeholder whether or not every cell is filled.
-      "fin-cost-vs-ecosystem-depth",
-    ]);
+  it("is fully populated, so every function area has something to render", () => {
+    const seeded = seedMetricCatalogue();
+    expect(seeded.filter((m) => !isMetricComplete(m))).toEqual([]);
   });
 
-  it("says in the note when a metric is deliberately unfinished", () => {
-    for (const id of ["hr-fully-loaded-cost", "tech-capability-comparison"]) {
-      const entry = METRIC_CATALOGUE.find((m) => m.id === id);
-      expect(entry?.note).toMatch(/STILL NEEDS/);
-    }
+  it("stamps every seeded metric with provenance, and defaults it to sample", () => {
+    /**
+     * The safeguard that matters while the figures are illustrative. `asOf` is a
+     * public field, so a sample number that escapes to a visitor arrives labelled
+     * rather than passed off as research.
+     */
+    const seeded = seedMetricCatalogue();
+    expect(seeded.filter((m) => !m.asOf)).toEqual([]);
+    expect(seeded.every((m) => m.asOf === SAMPLE_PROVENANCE)).toBe(true);
+    expect(SAMPLE_PROVENANCE).toMatch(/sample/i);
+  });
+
+  it("lets a real date survive the stamp, so replacing a figure clears the caveat", () => {
+    // The default must not overwrite provenance a metric already states, or the
+    // caveat could never be retired one metric at a time.
+    const dated: Metric = { ...(METRIC_CATALOGUE[0] as Metric), asOf: "2026 Q1" };
+    const stamped = { ...dated, asOf: dated.asOf ?? SAMPLE_PROVENANCE };
+    expect(stamped.asOf).toBe("2026 Q1");
+  });
+
+  it("carries the provenance through the gate for an open metric", () => {
+    const seeded = seedMetricCatalogue();
+    const open = seeded.find((m) => !m.gated) as Metric;
+    const published = publicMetric(open);
+    expect(published.gated).toBe(false);
+    if (!published.gated) expect(published.asOf).toBe(SAMPLE_PROVENANCE);
   });
 
   it("keeps every index readable by stating its base", () => {
@@ -601,21 +613,19 @@ describe("the seeded catalogue", () => {
     }
   });
 
-  it("leaves the comparator the brief names but does not rate unfilled", () => {
+  it("rates every comparator the grid offers, from its own scale", () => {
     const grid = METRIC_CATALOGUE.find((m) => m.id === "tech-capability-comparison");
     expect(grid?.value?.kind).toBe("matrix");
-    if (grid?.value?.kind === "matrix") {
-      // Vietnam is the fourth column; the brief lists it as a comparator but
-      // rates only three, so every cell in that column is empty.
-      expect(grid.value.cells.map((row) => row[3])).toEqual([
-        null,
-        null,
-        null,
-        null,
-        null,
-      ]);
+    if (grid?.value?.kind === "matrix" && grid.structure.kind === "matrix") {
+      const scale = new Set(grid.ratingScale);
+      // A column offered but never rated renders as a hole in the grid, so the
+      // schema's own scale is the only thing that may appear in a cell.
+      for (const row of grid.value.cells) {
+        expect(row).toHaveLength(grid.structure.columns.length);
+        for (const cell of row) expect(scale.has(cell as string)).toBe(true);
+      }
     }
-    expect(isMetricComplete(grid as Metric)).toBe(false);
+    expect(isMetricComplete(grid as Metric)).toBe(true);
   });
 
   it("hands back a fresh copy each time, so a caller cannot corrupt the seed", () => {

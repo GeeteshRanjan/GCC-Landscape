@@ -9,19 +9,23 @@
  * Three rules govern every value below, and they are the reason some supplied
  * figures are not here.
  *
- * **No absolute money, ever.** The supplied data contained per-head dollar and
- * per-square-foot rupee figures. There is no currency format in the schema and a
- * currency-looking unit is refused, so those cannot be stored at all. Where the
- * data also gave a comparison base, they are converted to an index — that is what
- * the brief asks for and what makes the figure publishable. Where it gave no base,
- * the metric is left empty and its note says what is still needed. Nothing was
- * estimated to fill a gap.
+ * **Every figure here is illustrative and will be replaced.** `seedMetricCatalogue`
+ * stamps each one with `asOf: SAMPLE_PROVENANCE`, which is a public field, so a
+ * sample number that escapes to a visitor arrives labelled rather than passed off
+ * as research. That is the safeguard; the notes below are the explanation.
+ *
+ * **No absolute money, ever — and this one is not about data quality.** The
+ * supplied data contained per-head dollar and per-square-foot rupee figures. There
+ * is no currency format in the schema and a currency-looking unit is refused, so
+ * those cannot be stored whether they are real or sample. Cost is expressed as
+ * indices against a stated base, which is what the brief asks for and what makes a
+ * figure publishable at all. Replacing these samples does not relax that.
  *
  * **A range collapses to its conservative end.** Several figures arrived as
  * ranges, and a breakdown slot holds one number. The end stored is the one that
- * understates India's advantage — 15% rather than 22% cheaper, 4 disruption days
- * rather than 2. A tool whose job is to earn a conversation cannot afford a figure
- * a CIO's own team can beat down. Each note records the full range.
+ * understates India's advantage — 15% rather than 22% cheaper. A tool whose job is
+ * to earn a conversation cannot afford a figure a CIO's own team can beat down.
+ * Each note records the full range, and the rule should survive the samples.
  *
  * **Structure follows the data, not the other way round.** Where the supplied
  * split did not match the seeded parts — disruption by city rather than by cause,
@@ -30,6 +34,21 @@
  * because an empty slot keeps the whole metric off the public screen.
  */
 import type { Metric } from "./schema";
+
+/**
+ * Provenance stamped on every seeded metric.
+ *
+ * `asOf` is a PUBLIC field — it renders beside the figure — so this is the
+ * safeguard that matters: every number in the seed is illustrative, and if one
+ * ever reaches a visitor before it has been replaced, the visitor is told so
+ * rather than shown a fabricated figure presented as research. It clears itself
+ * the moment a real figure is entered with a real date, which is why it is a
+ * default rather than a hardcoded value on each entry.
+ *
+ * `npm run data:verify` counts how many metrics still carry it, so the number
+ * going to zero is a visible milestone rather than something to remember.
+ */
+export const SAMPLE_PROVENANCE = "Sample, not for publication";
 
 /** Ordinal steps for the capability grid, weakest first. */
 const CAPABILITY_SCALE = ["Developing", "Moderate", "Strong", "Very strong"] as const;
@@ -175,7 +194,7 @@ export const METRIC_CATALOGUE: readonly Metric[] = [
     format: "rating",
     ratingScale: [...CAPABILITY_SCALE],
     note:
-      "Cells for India, Poland and the Philippines are the worked example in docs/brief.md, carried over as supplied. STILL NEEDS RATINGS: the figures supplied in 2026-08 described this comparison as prose about headcount scale (India 2.36M GCC technology staff against roughly 200K in the Philippines, 120K in Poland, 90K in Mexico), level cloud-certification density with Poland, and a deficit against Poland and Mexico on US and EU time-zone overlap. None of that rates the five capability rows, so nothing was inferred. Vietnam is a comparator the brief names but does not rate.",
+      "India, Poland and the Philippines are the worked example in docs/brief.md. Vietnam is rated illustratively — the brief names it as a comparator but never rates it, and the supplied comparison was prose about headcount scale rather than capability. Vietnam reads as emerging: competitive on product engineering, thinner on AI and security. Replace with a real assessment before this ships.",
     structure: {
       kind: "matrix",
       rows: [
@@ -190,11 +209,11 @@ export const METRIC_CATALOGUE: readonly Metric[] = [
     value: {
       kind: "matrix",
       cells: [
-        ["Very strong", "Strong", "Developing", null],
-        ["Very strong", "Strong", "Developing", null],
-        ["Very strong", "Strong", "Moderate", null],
-        ["Strong", "Strong", "Moderate", null],
-        ["Very strong", "Strong", "Strong", null],
+        ["Very strong", "Strong", "Developing", "Moderate"],
+        ["Very strong", "Strong", "Developing", "Developing"],
+        ["Very strong", "Strong", "Moderate", "Moderate"],
+        ["Strong", "Strong", "Moderate", "Developing"],
+        ["Very strong", "Strong", "Strong", "Moderate"],
       ],
     },
     gated: false,
@@ -252,14 +271,17 @@ export const METRIC_CATALOGUE: readonly Metric[] = [
     id: "ops-grade-a-office-stock",
     functionArea: "operations",
     lens: "supply",
-    title: "Grade A office stock available",
+    title: "Grade A office stock",
     question: "Is there space we could move into at the quality our people expect?",
     unit: "million sq ft",
     format: "number",
     note:
-      "Vacant stock, because the question is what could actually be occupied. Total Grade A across the top seven cities is 854 msf at 15.5% vacancy; Bengaluru alone holds 241 msf of stock.",
-    structure: { kind: "scalar" },
-    value: { kind: "scalar", value: 132 },
+      "Both figures rather than a choice between them: total stock answers whether the market is deep, and vacant answers whether we could move in now. Across the top seven cities at 15.5% vacancy; Bengaluru alone holds 241 msf of the total.",
+    structure: {
+      kind: "breakdown",
+      entries: ["Total Grade A stock, top seven cities", "Vacant and available now"],
+    },
+    value: { kind: "breakdown", values: [854, 132] },
     gated: false,
   },
   {
@@ -549,7 +571,7 @@ export const METRIC_CATALOGUE: readonly Metric[] = [
     format: "index",
     indexBaseline: "Same role in the sending country = 100",
     note:
-      "STILL NEEDS FIGURES, deliberately empty. The data supplied in 2026-08 was absolute annual amounts per role, which cannot be stored: there is no currency format, and the brief forbids absolute per-head figures in any lens. What this grid needs is each cell as an index against the same role in the sending country. One usable fact did come with it — loading is roughly 1.35 times base — but that is a single multiplier, not a role-by-level grid, and there is no metric for it.",
+      "Indices only, never amounts — the supplied figures were absolute annual costs per role, which cannot be stored here and which the brief forbids showing in any lens. These cells are illustrative and carry the shape the real data must take: cheapest at the junior end, and the advantage narrowing steadily with seniority, because leadership is the scarce thing everywhere. Loading is roughly 1.35 times base, which is already inside these numbers rather than stated separately.",
     structure: {
       kind: "matrix",
       rows: [
@@ -561,7 +583,16 @@ export const METRIC_CATALOGUE: readonly Metric[] = [
       ],
       columns: ["Analyst", "Specialist", "Manager", "Senior manager", "Director"],
     },
-    value: null,
+    value: {
+      kind: "matrix",
+      cells: [
+        [22, 26, 31, 38, 46],
+        [18, 21, 26, 32, 40],
+        [20, 24, 29, 35, 43],
+        [19, 22, 27, 33, 41],
+        [24, 28, 35, 44, 55],
+      ],
+    },
     gated: true,
   },
 
@@ -662,7 +693,7 @@ export const METRIC_CATALOGUE: readonly Metric[] = [
     format: "index",
     indexBaseline: "Bengaluru = 100",
     note:
-      "By city rather than by tier, as supplied. Both rows are indexed on Bengaluru so they can be read against each other, which is the whole point: tier 2 is 30–35% cheaper but thin above 300 FTEs. Depth for Pune and tier 2 is described qualitatively in the source, so those cells are empty — harmless, because a gated metric ships as a placeholder either way.",
+      "By city rather than by tier, as supplied. Both rows are indexed on Bengaluru so they can be read against each other, which is the whole point: tier 2 is 30–35% cheaper but thin above 300 FTEs, so cost falls faster than depth. Pune and tier 2 depth are described only qualitatively in the source and are filled illustratively here.",
     structure: {
       kind: "matrix",
       rows: ["Cost position", "GCC units present"],
@@ -672,7 +703,7 @@ export const METRIC_CATALOGUE: readonly Metric[] = [
       kind: "matrix",
       cells: [
         [100, 85, 80, 70],
-        [100, 47, null, null],
+        [100, 47, 33, 12],
       ],
     },
     gated: true,
@@ -702,7 +733,13 @@ export const METRIC_CATALOGUE: readonly Metric[] = [
   },
 ];
 
-/** A fresh copy, so a caller mutating the result cannot corrupt the seed. */
+/**
+ * A fresh copy, so a caller mutating the result cannot corrupt the seed, with
+ * provenance stamped on anything that does not already state its own.
+ */
 export function seedMetricCatalogue(): Metric[] {
-  return structuredClone(METRIC_CATALOGUE) as Metric[];
+  return (structuredClone(METRIC_CATALOGUE) as Metric[]).map((metric) => ({
+    ...metric,
+    asOf: metric.asOf ?? SAMPLE_PROVENANCE,
+  }));
 }
