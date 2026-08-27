@@ -1,4 +1,4 @@
-import type { Company, Dataset, Taxonomy } from "./schema";
+import type { Company, Dataset, Metric, Taxonomy } from "./schema";
 
 /**
  * Dataset diff — one computation, two renderers.
@@ -47,6 +47,33 @@ export interface TaxonomyDiff {
   reordered: boolean;
 }
 
+/** One edited metric. `field` is a top-level metric key. */
+export interface MetricFieldChange {
+  field: keyof Metric;
+  before: unknown;
+  after: unknown;
+}
+
+export interface ChangedMetric {
+  id: string;
+  title: string;
+  changes: MetricFieldChange[];
+}
+
+/**
+ * The Screen 2 catalogue's changes, kept separate from the company ones.
+ *
+ * Separate because they are separate decisions being approved: an admin
+ * publishing a month of company rows and an admin publishing a batch of metric
+ * values are reviewing different things, and folding both into one "changed"
+ * count would hide whichever was smaller.
+ */
+export interface MetricsDiff {
+  added: Array<Pick<Metric, "id" | "title">>;
+  removed: Array<Pick<Metric, "id" | "title">>;
+  changed: ChangedMetric[];
+}
+
 export interface DatasetDiff {
   /** No previous dataset — a first import. */
   firstImport: boolean;
@@ -54,12 +81,19 @@ export interface DatasetDiff {
   removed: Array<Pick<Company, "id" | "name">>;
   changed: ChangedCompany[];
   taxonomy: TaxonomyDiff[];
+  metrics: MetricsDiff;
   /** Metadata that moves on every publish; called out so it is not mistaken for an edit. */
   generatedAtChanged: boolean;
   sourceChanged: boolean;
-  /** Company + taxonomy changes only. `generatedAt` moving is not a change. */
+  /** Company, taxonomy and metric changes. `generatedAt` moving is not a change. */
   isEmpty: boolean;
-  counts: { added: number; removed: number; changed: number; taxonomy: number };
+  counts: {
+    added: number;
+    removed: number;
+    changed: number;
+    taxonomy: number;
+    metrics: number;
+  };
 }
 
 const COMPANY_FIELDS: ReadonlyArray<keyof Company> = [
@@ -74,8 +108,62 @@ const COMPANY_FIELDS: ReadonlyArray<keyof Company> = [
   "forbesGlobal2000",
 ];
 
+/**
+ * Every metric field an admin can change. `id` is absent for the same reason it
+ * is absent from COMPANY_FIELDS: it identifies the row, so a change to it is an
+ * add plus a remove, not an edit.
+ */
+const METRIC_FIELDS: ReadonlyArray<keyof Metric> = [
+  "functionArea",
+  "lens",
+  "title",
+  "question",
+  "unit",
+  "format",
+  "ratingScale",
+  "indexBaseline",
+  "asOf",
+  "note",
+  "structure",
+  "value",
+  "gated",
+];
+
 function sameValue(a: unknown, b: unknown): boolean {
   return JSON.stringify(a) === JSON.stringify(b);
+}
+
+function diffMetrics(
+  next: readonly Metric[],
+  previous: readonly Metric[],
+): MetricsDiff {
+  const before = new Map(previous.map((m) => [m.id, m]));
+  const after = new Map(next.map((m) => [m.id, m]));
+
+  const added: MetricsDiff["added"] = [];
+  const changed: ChangedMetric[] = [];
+  for (const [id, metric] of after) {
+    const old = before.get(id);
+    if (!old) {
+      added.push({ id, title: metric.title });
+      continue;
+    }
+    const changes = METRIC_FIELDS.filter(
+      (field) => !sameValue(metric[field], old[field]),
+    ).map((field) => ({ field, before: old[field], after: metric[field] }));
+    if (changes.length > 0) changed.push({ id, title: metric.title, changes });
+  }
+
+  const removed: MetricsDiff["removed"] = [];
+  for (const [id, metric] of before) {
+    if (!after.has(id)) removed.push({ id, title: metric.title });
+  }
+
+  return { added, removed, changed };
+}
+
+function metricsCount(diff: MetricsDiff): number {
+  return diff.added.length + diff.removed.length + diff.changed.length;
 }
 
 export function diffDatasets(
@@ -94,6 +182,11 @@ export function diffDatasets(
         removed: [],
         reordered: false,
       })),
+      metrics: {
+        added: next.metrics.map((m) => ({ id: m.id, title: m.title })),
+        removed: [],
+        changed: [],
+      },
       generatedAtChanged: true,
       sourceChanged: true,
       isEmpty: false,
@@ -102,6 +195,7 @@ export function diffDatasets(
         removed: 0,
         changed: 0,
         taxonomy: TAXONOMY_KEYS.length,
+        metrics: next.metrics.length,
       },
     };
   }
@@ -150,11 +244,14 @@ export function diffDatasets(
     }
   }
 
+  const metrics = diffMetrics(next.metrics, previous.metrics);
+
   const counts = {
     added: added.length,
     removed: removed.length,
     changed: changed.length,
     taxonomy: taxonomy.length,
+    metrics: metricsCount(metrics),
   };
 
   return {
@@ -163,10 +260,16 @@ export function diffDatasets(
     removed,
     changed,
     taxonomy,
+    metrics,
     generatedAtChanged: next.generatedAt !== previous.generatedAt,
     sourceChanged: next.source !== previous.source,
     isEmpty:
-      counts.added + counts.removed + counts.changed + counts.taxonomy === 0,
+      counts.added +
+        counts.removed +
+        counts.changed +
+        counts.taxonomy +
+        counts.metrics ===
+      0,
     counts,
   };
 }
@@ -194,12 +297,79 @@ export function formatFieldValue(value: unknown): string {
   return String(value);
 }
 
+/** Human label for a metric field, for both renderers. */
+export const METRIC_FIELD_LABELS: Record<keyof Metric, string> = {
+  id: "Id",
+  functionArea: "Function",
+  lens: "Lens (internal)",
+  title: "Title",
+  question: "Question",
+  unit: "Unit",
+  format: "Format",
+  ratingScale: "Rating steps",
+  indexBaseline: "Index base",
+  asOf: "As of",
+  note: "Internal note",
+  structure: "Shape",
+  value: "Values",
+  gated: "Behind the gate",
+};
+
+/**
+ * A metric field, described rather than dumped.
+ *
+ * `structure` and `value` are nested objects, and `JSON.stringify` of a five by
+ * five grid is not something a reviewer reads — so the two that matter get a
+ * summary, and everything else falls through to the shared formatter.
+ */
+export function formatMetricFieldValue(
+  field: keyof Metric,
+  value: unknown,
+): string {
+  if (value === undefined) return "—";
+
+  if (field === "structure") {
+    const structure = value as Metric["structure"];
+    switch (structure.kind) {
+      case "scalar":
+        return "one number";
+      case "range":
+        return "a range";
+      case "breakdown":
+        return `${structure.entries.length} parts: ${structure.entries.join(", ")}`;
+      case "matrix":
+        return `${structure.rows.length} × ${structure.columns.length} grid: ${structure.rows.join(", ")} by ${structure.columns.join(", ")}`;
+    }
+  }
+
+  if (field === "value") {
+    if (value === null) return "not entered";
+    const entered = value as Metric["value"];
+    if (entered === null) return "not entered";
+    switch (entered.kind) {
+      case "scalar":
+        return String(entered.value);
+      case "range":
+        return `${entered.min}–${entered.max}`;
+      case "breakdown":
+        return entered.values.map((n) => (n === null ? "—" : String(n))).join(", ");
+      case "matrix":
+        return entered.cells
+          .map((row) => row.map((cell) => (cell === null ? "—" : String(cell))).join(" | "))
+          .join(" / ");
+    }
+  }
+
+  return formatFieldValue(value);
+}
+
 /** The console renderer. Kept here so the importer and admin cannot drift. */
 export function renderDiffText(diff: DatasetDiff): string {
   if (diff.firstImport) {
     return [
       "Diff: no existing dataset — this is the first import.",
       `  + ${diff.counts.added} companies`,
+      `  + ${diff.counts.metrics} metrics`,
     ].join("\n");
   }
 
@@ -238,7 +408,22 @@ export function renderDiffText(diff: DatasetDiff): string {
     lines.push(`  taxonomy.${entry.key}: ${parts.join(" ")}`);
   }
 
-  if (diff.isEmpty) lines.push("  no company or taxonomy changes");
+  sample(
+    "metrics added",
+    diff.metrics.added.map((m) => m.id),
+  );
+  sample(
+    "metrics removed",
+    diff.metrics.removed.map((m) => m.id),
+  );
+  sample(
+    "metrics changed",
+    diff.metrics.changed.map(
+      (m) => `${m.id} (${m.changes.map((c) => c.field).join(", ")})`,
+    ),
+  );
+
+  if (diff.isEmpty) lines.push("  no company, taxonomy or metric changes");
 
   return lines.join("\n");
 }

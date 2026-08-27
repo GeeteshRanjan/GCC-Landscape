@@ -1,12 +1,19 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  METRIC_FIELD_LABELS,
   TAXONOMY_LABELS,
   diffDatasets,
   formatFieldValue,
+  formatMetricFieldValue,
   renderDiffText,
 } from "@/data/diff";
-import { DATASET_VERSION, type Company, type Dataset } from "@/data/schema";
+import {
+  DATASET_VERSION,
+  type Company,
+  type Dataset,
+  type Metric,
+} from "@/data/schema";
 
 /**
  * The diff is the last thing standing between an admin and a bad commit, so what
@@ -46,6 +53,7 @@ function dataset(overrides: Partial<Dataset> = {}): Dataset {
       hqCountries: ["USA", "Japan"],
     },
     companies: [company()],
+    metrics: [],
     ...overrides,
   };
 }
@@ -55,7 +63,13 @@ describe("diffDatasets — no change", () => {
     const diff = diffDatasets(dataset(), dataset());
 
     expect(diff.isEmpty).toBe(true);
-    expect(diff.counts).toEqual({ added: 0, removed: 0, changed: 0, taxonomy: 0 });
+    expect(diff.counts).toEqual({
+      added: 0,
+      removed: 0,
+      changed: 0,
+      taxonomy: 0,
+      metrics: 0,
+    });
   });
 
   it("does not treat a new publish timestamp as a change", () => {
@@ -252,7 +266,7 @@ describe("renderDiffText", () => {
 
   it("says so plainly when there is nothing to report", () => {
     expect(renderDiffText(diffDatasets(dataset(), dataset()))).toContain(
-      "no company or taxonomy changes",
+      "no company, taxonomy or metric changes",
     );
   });
 
@@ -285,5 +299,168 @@ describe("formatFieldValue", () => {
     // `false` is a real Forbes/Fortune value; rendering it as "—" would make a
     // flag being switched off look like missing data.
     expect(formatFieldValue(false)).not.toBe("—");
+  });
+});
+
+describe("diffDatasets — function metrics", () => {
+  function metric(overrides: Partial<Metric> = {}): Metric {
+    return {
+      id: "tech-bench-strength",
+      functionArea: "tech",
+      lens: "supply",
+      title: "Technology bench strength",
+      question: "How many people are available?",
+      unit: "FTEs",
+      format: "number",
+      structure: { kind: "scalar" },
+      value: null,
+      gated: false,
+      ...overrides,
+    };
+  }
+
+  it("counts metric changes separately from company changes", () => {
+    // Separate because they are separate decisions being approved. Folding both
+    // into one "changed" count would hide whichever batch was smaller.
+    const diff = diffDatasets(
+      dataset({ metrics: [metric({ value: { kind: "scalar", value: 900_000 } })] }),
+      dataset({ metrics: [metric()] }),
+    );
+    expect(diff.counts).toEqual({
+      added: 0,
+      removed: 0,
+      changed: 0,
+      taxonomy: 0,
+      metrics: 1,
+    });
+    expect(diff.isEmpty).toBe(false);
+  });
+
+  it("treats entering a figure as a change worth publishing", () => {
+    const diff = diffDatasets(
+      dataset({ metrics: [metric({ value: { kind: "scalar", value: 5 } })] }),
+      dataset({ metrics: [metric()] }),
+    );
+    expect(diff.metrics.changed[0]?.changes.map((c) => c.field)).toEqual(["value"]);
+  });
+
+  it("reports an added and a removed metric", () => {
+    const diff = diffDatasets(
+      dataset({ metrics: [metric({ id: "new-one" })] }),
+      dataset({ metrics: [metric({ id: "old-one" })] }),
+    );
+    expect(diff.metrics.added.map((m) => m.id)).toEqual(["new-one"]);
+    expect(diff.metrics.removed.map((m) => m.id)).toEqual(["old-one"]);
+    expect(diff.counts.metrics).toBe(2);
+  });
+
+  it("catches a change in every editable metric field", () => {
+    const before = metric({
+      structure: { kind: "breakdown", entries: ["A", "B"] },
+      value: { kind: "breakdown", values: [1, 2] },
+    });
+    const after: Metric = {
+      ...before,
+      functionArea: "hr",
+      lens: "cost",
+      title: "Renamed",
+      question: "A different question?",
+      unit: "days",
+      format: "duration",
+      asOf: "2026 Q2",
+      note: "A note",
+      structure: { kind: "breakdown", entries: ["A", "C"] },
+      value: { kind: "breakdown", values: [1, 3] },
+      gated: true,
+    };
+    const fields = diffDatasets(
+      dataset({ metrics: [after] }),
+      dataset({ metrics: [before] }),
+    ).metrics.changed[0]?.changes.map((c) => c.field);
+    expect(fields).toEqual([
+      "functionArea",
+      "lens",
+      "title",
+      "question",
+      "unit",
+      "format",
+      "asOf",
+      "note",
+      "structure",
+      "value",
+      "gated",
+    ]);
+  });
+
+  it("does not report a metric that was rewritten to the same content", () => {
+    const diff = diffDatasets(
+      dataset({ metrics: [metric()] }),
+      dataset({ metrics: [metric()] }),
+    );
+    expect(diff.counts.metrics).toBe(0);
+    expect(diff.isEmpty).toBe(true);
+  });
+
+  it("counts the catalogue on a first import", () => {
+    const diff = diffDatasets(dataset({ metrics: [metric()] }), null);
+    expect(diff.counts.metrics).toBe(1);
+    expect(renderDiffText(diff)).toContain("+ 1 metrics");
+  });
+
+  it("names metric changes in the console output", () => {
+    const text = renderDiffText(
+      diffDatasets(
+        dataset({ metrics: [metric({ value: { kind: "scalar", value: 5 } })] }),
+        dataset({ metrics: [metric()] }),
+      ),
+    );
+    expect(text).toContain("metrics changed");
+    expect(text).toContain("tech-bench-strength (value)");
+  });
+});
+
+describe("formatMetricFieldValue", () => {
+  it("describes a shape rather than dumping it", () => {
+    expect(
+      formatMetricFieldValue("structure", { kind: "breakdown", entries: ["A", "B"] }),
+    ).toBe("2 parts: A, B");
+    expect(
+      formatMetricFieldValue("structure", {
+        kind: "matrix",
+        rows: ["R"],
+        columns: ["X", "Y"],
+      }),
+    ).toBe("1 × 2 grid: R by X, Y");
+    expect(formatMetricFieldValue("structure", { kind: "scalar" })).toBe("one number");
+  });
+
+  it("marks an empty slot rather than printing a zero for it", () => {
+    // A reviewer has to be able to tell "nobody filled this in" from "the
+    // answer is zero".
+    expect(
+      formatMetricFieldValue("value", { kind: "breakdown", values: [0, null] }),
+    ).toBe("0, —");
+  });
+
+  it("renders a grid a reviewer can read", () => {
+    expect(
+      formatMetricFieldValue("value", {
+        kind: "matrix",
+        cells: [
+          [1, null],
+          ["Strong", 2],
+        ],
+      }),
+    ).toBe("1 | — / Strong | 2");
+  });
+
+  it("says so when a metric has no figures at all", () => {
+    expect(formatMetricFieldValue("value", null)).toBe("not entered");
+  });
+
+  it("has a label for every metric field the diff can report", () => {
+    for (const field of Object.keys(METRIC_FIELD_LABELS) as Array<keyof Metric>) {
+      expect(METRIC_FIELD_LABELS[field]).toBeTruthy();
+    }
   });
 });

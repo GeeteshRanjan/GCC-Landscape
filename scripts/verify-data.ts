@@ -31,6 +31,7 @@ import path from "node:path";
 import process from "node:process";
 
 import { fteMidpoint, hasTier2Presence } from "../src/data/derive";
+import { metricProgress, publicMetricsFor } from "../src/data/metrics";
 import { SEED_REVENUE_BAND_ORDER } from "../src/data/normalize";
 import {
   DEFAULT_PEER_LIMIT,
@@ -41,7 +42,7 @@ import {
   matchPeers,
   nationalScale,
 } from "../src/data/peers";
-import type { Company, Dataset } from "../src/data/schema";
+import { METRIC_FUNCTIONS, type Company, type Dataset } from "../src/data/schema";
 import { createFsDataStore } from "../src/data/store/fs-store";
 
 const BASELINE_PATH = path.join(process.cwd(), "data", "verify-baseline.json");
@@ -320,6 +321,52 @@ async function main(): Promise<void> {
   profile(
     "multi-city companies",
     dataset.companies.filter((c) => c.cities.length > 1).length,
+    baseline,
+  );
+
+  /**
+   * The Screen 2 catalogue.
+   *
+   * These are profile figures, not invariants, and the distinction is the whole
+   * reason they can be here: an admin entering a month of values is SUPPOSED to
+   * move "metrics with every figure entered". An invariant that moved on every
+   * legitimate edit would be ignored within a week.
+   *
+   * The gated set is the exception worth watching. It is listed by id rather than
+   * counted, so a metric quietly losing its gate shows up as a named change in the
+   * baseline diff rather than as a number going down by one.
+   */
+  console.log("\nProfile — Screen 2 function metrics");
+  const metricStats = metricProgress(dataset.metrics);
+  profile("metrics defined", metricStats.total, baseline);
+  profile("metrics with every figure entered", metricStats.complete, baseline);
+  profile("metrics part entered", metricStats.partial, baseline);
+  profile("metrics with no figures yet", metricStats.empty, baseline);
+  profile(
+    "gated metrics, by id",
+    dataset.metrics.filter((m) => m.gated).map((m) => m.id).sort(),
+    baseline,
+  );
+  profile(
+    "metrics per function area",
+    METRIC_FUNCTIONS.map(
+      (area) => `${area} ${dataset.metrics.filter((m) => m.functionArea === area).length}`,
+    ),
+    baseline,
+  );
+
+  /**
+   * What a visitor would receive today, per function area.
+   *
+   * Measured through `publicMetricsFor`, so this figure is produced by the same
+   * function the public screens will call. A gated metric counts because it always
+   * ships as a placeholder; an open one only counts once every slot is filled.
+   */
+  profile(
+    "metrics a visitor would receive, per function area",
+    METRIC_FUNCTIONS.map(
+      (area) => `${area} ${publicMetricsFor(dataset.metrics, area).length}`,
+    ),
     baseline,
   );
 

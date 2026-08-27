@@ -64,6 +64,7 @@ function dataset(overrides: Partial<Dataset> = {}): Dataset {
         forbesGlobal2000: false,
       },
     ],
+    metrics: [],
     ...overrides,
   };
 }

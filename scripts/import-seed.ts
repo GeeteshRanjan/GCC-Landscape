@@ -21,6 +21,7 @@ import ExcelJS from "exceljs";
 
 import { hasTier2Presence, locationCount } from "../src/data/derive";
 import { diffDatasets, renderDiffText } from "../src/data/diff";
+import { seedMetricCatalogue } from "../src/data/metric-catalogue";
 import {
   SEED_REVENUE_BAND_ORDER,
   cleanText,
@@ -293,12 +294,38 @@ async function main(): Promise<void> {
     fail("import aborted; fix the source rows and re-run");
   }
 
+  const store = createFsDataStore();
+  let previous: Dataset | null = null;
+  try {
+    previous = await store.read();
+  } catch {
+    previous = null;
+  }
+
+  /**
+   * The Screen 2 catalogue is carried over from the existing dataset, untouched.
+   *
+   * It has no spreadsheet behind it — the values are typed into admin over
+   * months — so rebuilding it from the seed on every import would silently erase
+   * that work, and the erasure would look exactly like a normal re-import. The
+   * seed is used only when there is no catalogue yet.
+   */
+  const metrics = previous?.metrics?.length
+    ? previous.metrics
+    : seedMetricCatalogue();
+  console.log(
+    previous?.metrics?.length
+      ? `  keeping ${metrics.length} existing function metrics untouched`
+      : `  seeding ${metrics.length} function metrics from the catalogue`,
+  );
+
   const dataset: Dataset = {
     version: DATASET_VERSION,
     generatedAt: new Date().toISOString(),
     source: path.basename(inputPath),
     taxonomy: buildTaxonomy(companies),
     companies,
+    metrics,
   };
 
   const validated = datasetSchema.safeParse(dataset);
@@ -306,14 +333,6 @@ async function main(): Promise<void> {
     console.error("\nSchema validation failed:");
     console.error(formatIssues(validated.error));
     fail("import aborted; nothing written");
-  }
-
-  const store = createFsDataStore();
-  let previous: Dataset | null = null;
-  try {
-    previous = await store.read();
-  } catch {
-    previous = null;
   }
 
   console.log(

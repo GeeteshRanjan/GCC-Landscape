@@ -74,6 +74,9 @@ function summarize(diff: DatasetDiff): string {
   if (diff.counts.taxonomy) {
     parts.push(`${diff.counts.taxonomy} taxonomy list${diff.counts.taxonomy === 1 ? "" : "s"} updated`);
   }
+  if (diff.counts.metrics) {
+    parts.push(`${diff.counts.metrics} metric${diff.counts.metrics === 1 ? "" : "s"} updated`);
+  }
   return parts.length > 0 ? parts.join(", ") : "no changes";
 }
 

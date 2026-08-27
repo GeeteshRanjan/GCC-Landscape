@@ -69,8 +69,17 @@ describe("verifySessionToken", () => {
     const forged = forgeToken(validPayload({ exp: 9_999_999_999 }), SECRET).split(".")[0];
     expect(verifySessionToken(`${forged}.${signature as string}`)).toBeNull();
 
-    // Flip a character in the signature.
-    const flipped = `${signature?.slice(0, -1)}${signature?.endsWith("A") ? "B" : "A"}`;
+    /**
+     * Flip a character in the signature — the FIRST one, not the last.
+     *
+     * The last character of a base64url-encoded 32-byte HMAC carries two padding
+     * bits, so "A", "B", "C" and "D" in that position all decode to the same 32
+     * bytes. Flipping it swapped a character and produced a byte-identical
+     * signature, and the test then passed or failed depending on what the final
+     * character of that run's signature happened to be.
+     */
+    const first = signature?.startsWith("A") ? "B" : "A";
+    const flipped = `${first}${signature?.slice(1)}`;
     expect(verifySessionToken(`${encoded as string}.${flipped}`)).toBeNull();
   });
 

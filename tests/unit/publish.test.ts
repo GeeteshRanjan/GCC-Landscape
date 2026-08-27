@@ -3,7 +3,7 @@ import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 
-import { DATASET_VERSION, type Dataset } from "@/data/schema";
+import { DATASET_VERSION, type Dataset, type Metric } from "@/data/schema";
 import { serializeDataset } from "@/data/store";
 
 /**
@@ -44,6 +44,7 @@ function dataset(overrides: Partial<Dataset> = {}): Dataset {
         forbesGlobal2000: false,
       },
     ],
+    metrics: [],
     ...overrides,
   };
 }
@@ -326,5 +327,116 @@ describe("publish target selection", () => {
     for (const word of ["commit", "git", "repository", "branch", "sha"]) {
       expect(target.description.toLowerCase()).not.toContain(word);
     }
+  });
+});
+
+describe("publishing function metrics", () => {
+  const metric: Metric = {
+    id: "tech-bench-strength",
+    functionArea: "tech",
+    lens: "supply",
+    title: "Technology bench strength",
+    question: "How many people with the skills we need are available today?",
+    unit: "FTEs",
+    format: "number",
+    structure: { kind: "scalar" },
+    value: null,
+    gated: false,
+  };
+
+  it("treats entering a figure as something to publish, and writes it", async () => {
+    writeFileSync(datasetPath, serializeDataset(dataset({ metrics: [metric] })), "utf8");
+    const { publishDataset } = await loadPublish();
+
+    const result = await publishDataset({
+      dataset: dataset({
+        metrics: [{ ...metric, value: { kind: "scalar", value: 900_000 } }],
+      }),
+    });
+
+    expect(result.ok).toBe(true);
+    if (result.ok) expect(result.diff.counts.metrics).toBe(1);
+    expect(onDisk().metrics[0]?.value).toEqual({ kind: "scalar", value: 900_000 });
+  });
+
+  it("names the metric in the commit message", async () => {
+    writeFileSync(datasetPath, serializeDataset(dataset({ metrics: [metric] })), "utf8");
+    const { publishDataset } = await loadPublish();
+
+    const result = await publishDataset({
+      dataset: dataset({
+        metrics: [{ ...metric, value: { kind: "scalar", value: 1 } }],
+      }),
+    });
+
+    expect(result.ok).toBe(true);
+    if (result.ok) expect(result.message).toContain("1 metric updated");
+  });
+
+  it("refuses a metric edit that does not validate, and writes nothing", async () => {
+    const before = serializeDataset(dataset({ metrics: [metric] }));
+    writeFileSync(datasetPath, before, "utf8");
+    const { publishDataset } = await loadPublish();
+
+    const result = await publishDataset({
+      dataset: dataset({
+        metrics: [
+          // A breakdown shape with a scalar value: the exact mismatch the
+          // structure-and-value split exists to catch.
+          {
+            ...metric,
+            structure: { kind: "breakdown", entries: ["A", "B"] },
+            value: { kind: "scalar", value: 5 },
+          },
+        ],
+      }),
+    });
+
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.status).toBe(422);
+      expect(result.issues?.join(" ")).toContain("metrics.0");
+    }
+    expect(readFileSync(datasetPath, "utf8")).toBe(before);
+  });
+
+  it("refuses a currency unit, so no absolute money figure can be published", async () => {
+    writeFileSync(datasetPath, serializeDataset(dataset({ metrics: [metric] })), "utf8");
+    const { publishDataset } = await loadPublish();
+
+    const result = await publishDataset({
+      dataset: dataset({ metrics: [{ ...metric, unit: "USD per head" }] }),
+    });
+
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.status).toBe(422);
+  });
+
+  it("reads a dataset written before the catalogue existed, and defaults it empty", async () => {
+    // The key is defaulted rather than required precisely so this works — the fs
+    // store refuses an unrecognised version, so bumping DATASET_VERSION would
+    // have turned a backwards-compatible addition into a broken read.
+    const legacy = JSON.parse(serializeDataset(dataset())) as Record<string, unknown>;
+    delete legacy.metrics;
+    writeFileSync(datasetPath, `${JSON.stringify(legacy, null, 2)}\n`, "utf8");
+
+    const { buildPreview } = await loadPublish();
+    const preview = await buildPreview({ dataset: dataset({ metrics: [metric] }) });
+
+    expect(preview.ok).toBe(true);
+    if (preview.ok) {
+      expect(preview.diff.counts.metrics).toBe(1);
+      expect(preview.diff.metrics.added.map((m) => m.id)).toEqual([metric.id]);
+    }
+  });
+
+  it("still refuses a publish that only moves the timestamp", async () => {
+    writeFileSync(datasetPath, serializeDataset(dataset({ metrics: [metric] })), "utf8");
+    const { publishDataset } = await loadPublish();
+
+    const result = await publishDataset({ dataset: dataset({ metrics: [metric] }) });
+
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.status).toBe(409);
   });
 });

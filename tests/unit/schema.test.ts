@@ -45,6 +45,7 @@ function dataset(overrides: Partial<Dataset> = {}): Dataset {
       hqCountries: ["USA"],
     },
     companies: [company()],
+    metrics: [],
     ...overrides,
   };
 }
