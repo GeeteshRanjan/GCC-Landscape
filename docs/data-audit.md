@@ -168,7 +168,8 @@ Every one of these is a real defect in the current file, not a hypothetical.
   headcount claim can be made from this file.
 - **Global headcount / global tech workforce.** Needed as the denominator for "India GCC as a share
   of global tech workforce". Not present, and not derivable.
-- **Function-view metrics.** Every Screen 2 number. Separate dataset, not yet supplied.
+- **Function-view metrics.** Every Screen 2 number. Separate dataset, not yet supplied. The
+  catalogue that will hold them now exists — see below.
 ## What the import found that this profile did not
 
 Added 2026-08-27, after the seed import ran. Everything above profiles the file **as supplied**;
@@ -206,6 +207,58 @@ all. Derived tier-2 presence is therefore 176 companies, not 166.
 
 ### Size on disk, as published
 
-`data/dataset.json` is 700 KB, 53 KB gzipped. The 326 KB / 33 KB figures above are minified; the
+`data/dataset.json` is 720 KB, 56 KB gzipped. The 326 KB / 33 KB figures above are minified; the
 published file is pretty-printed so that a publish produces a reviewable line-per-field diff, which
-is the reason git can stand in for a database at all.
+is the reason git can stand in for a database at all. The Screen 2 catalogue added roughly 20 KB of
+that.
+
+## The Screen 2 function metric catalogue
+
+Added 2026-08-27. Nothing in this section comes from the spreadsheet — this is the second dataset,
+and it has no spreadsheet behind it at all. It lives under `metrics` in the same `dataset.json`, and
+the figures are typed into admin.
+
+**35 metric definitions**, transcribed from `docs/brief.md` and seeded from
+`src/data/metric-catalogue.ts`:
+
+| Function area | Metrics |
+| --- | --- |
+| Technology | 8 |
+| Operations | 9 |
+| HR | 12 |
+| Finance | 6 |
+
+Filed against four internal lenses — supply, speed, place, cost. The brief's author used six, adding
+Fit and Optional; both collapse into supply, because both were supply questions (Fit is comparative
+capability supply across delivery locations, and the Optional diversity block is the composition of
+the workforce on offer). Nothing from the brief lost a home. **The lens is never a public label** —
+`publicMetric` strips the field, and the admin surface labels the groupings as internal.
+
+**Values entered: 1 of 35, and that is deliberate.** None of the Screen 2 figures have been supplied.
+Seeding plausible-looking numbers would put fabricated data in front of a CIO evaluating a
+several-hundred-person commitment, so every metric ships with `value: null` and is left off the
+public screen until it is filled. The single exception is `tech-capability-comparison`, whose India /
+Poland / Philippines cells are the worked example in the brief itself, carried over as supplied;
+Vietnam is a comparator the brief names but does not rate, so that column is empty and the metric
+therefore still counts as incomplete.
+
+**Four gated metrics**, matching the invariant list in `project.md`:
+`hr-cost-per-employee-served`, `hr-fully-loaded-cost`, `fin-cost-vs-ecosystem-depth`,
+`fin-workplace-cost-gradient`.
+
+**What a visitor would receive today**, measured through `publicMetricsFor` — the same function the
+public screens will call: `tech 0, operations 0, hr 2, finance 2`. The four are the gated ones, which
+always ship as a placeholder of the right shape; every open metric is still incomplete.
+
+`npm run data:verify` records all of the above as **profile figures, not invariants**. Entering a
+month of values is supposed to move them, so `-- --accept` is the correct response to a legitimate
+edit. The gated set is recorded by id rather than counted, so a metric quietly losing its gate shows
+up as a named change in the baseline diff rather than as a number going down by one.
+
+Two figures the schema makes structurally impossible rather than merely discouraged:
+
+- **No absolute per-head money figure.** There is no currency format in the schema, and a unit that
+  looks like currency is rejected. Cost is indices, spreads and growth rates.
+- **No figure inside a gated metric's public text.** A gated metric's title and question do cross to
+  the browser, so digits in either are refused — the value being omitted server-side is no help if
+  the sentence beside it gives the answer away.

@@ -47,7 +47,20 @@ Never ask for a revenue figure. The data holds bands, so the input is a band.
 
 *Screen 2 — Function View.* Tech, Operations, HR, Finance. Internally the metrics are organised by
 four lenses — supply, speed, place, cost — but **the lens names are an internal filing system, not
-UI labels**. The rendered grouping and copy are a design decision, made per screen.
+public UI labels**. The rendered grouping and copy on the public screen are a design decision, made
+per screen. Admin does show them, labelled as internal, because that is what a filing system is for.
+
+The brief's author used six lenses, adding Fit and Optional. Both collapse into supply: Fit is
+comparative capability supply across delivery locations, and the Optional diversity block is the
+composition of the workforce on offer. Nothing from the brief lost a home, and the four are the
+contract — see `METRIC_LENSES` in `src/data/schema.ts`.
+
+**A metric is a shape plus, separately, its numbers.** Structure (`scalar`, `range`, `breakdown`,
+`matrix`) is authored once; `value` is nullable and arrives later. That split is what makes two
+things work at once: the catalogue can ship as definitions with no invented figures, and a gated
+metric has a shape to render a placeholder from without a value existing anywhere near the browser.
+`alignValue` re-fits the numbers when the shape changes, in one tested place, so the form cannot
+build something the publish gate then rejects for a length mismatch.
 
 **India heatmap.** Built from the city lists in the company data — density of GCCs per city, filtered
 to the visitor's industry. Not a separate dataset.
@@ -55,14 +68,34 @@ to the visitor's industry. Not a separate dataset.
 **Cut from the brief, deliberately:** the editable peer set, and "India GCC as a % of global tech
 workforce". Do not reintroduce either.
 
+**Lead capture is out of scope.** The tool informs and earns a conversation; the CTA links out to a
+separate landing page. No form, no email field, no stored visitor input anywhere in this codebase.
+
 ## Invariants
 
 Violating any of these breaks the product, not just the build.
 
-1. **Gated values never reach the browser.** Fully loaded cost per FTE by role and level, HR cost
-   per employee served, the cost-vs-ecosystem-depth trade-off, and the workplace-cost gradient are
-   server-side omissions rendered as shape-only placeholders. A CSS blur over real text is a leak.
-   Absolute per-head salary figures are never shown, gated or not.
+1. **Gated values never reach the visitor's browser.** Fully loaded cost per FTE by role and level,
+   HR cost per employee served, the cost-vs-ecosystem-depth trade-off, and the workplace-cost
+   gradient are server-side omissions rendered as shape-only placeholders. A CSS blur over real text
+   is a leak. Absolute per-head salary figures are never shown, gated or not.
+
+   **`publicMetric` in `src/data/metrics.ts` is the single enforcement point, and the only way a
+   metric may cross.** Its gated branch has no `value` or `structure` field for a number to travel
+   in, so the compiler carries the invariant rather than whoever writes the component. It also drops
+   the row and column names, the unit, the index base and the as-of date: a row label beside a
+   visible axis can imply the answer, and a placeholder needs only cardinality to be the right size.
+   Both branches drop `lens` and `note`.
+
+   Gated metrics *are* edited normally in admin, and that is not a contradiction — admin is
+   authenticated and already holds the whole dataset, exactly as it does for companies. The gate is
+   on the way out.
+
+   Two ways the schema makes a leak impossible rather than merely discouraged: there is **no
+   currency format**, and a currency-looking `unit` is refused, so no absolute money figure can be
+   expressed at all; and a **gated metric's title and question may not contain digits**, because
+   both do cross to the browser and omitting the value is no help if the sentence beside it gives
+   the answer away. `gated` is not an admin control — the provider re-pins it on save.
 2. **The free layer must stand alone as credible.** Peer proof carries it. If a screen only makes
    sense once the gate is paid, the free layer has failed.
 3. **Peers must be defensibly comparable.** Never pad a thin set with a company the visitor can see
@@ -182,9 +215,28 @@ written to a live store one field at a time.
 The dataset is read server-side and held in memory. It is never shipped whole to the browser —
 Screen 1 sends five peers and a few counts, nothing more.
 
-**Two datasets, one admin.** The company table seeds from a spreadsheet upload. The Screen 2 function
-metrics are hundreds of individual values with no spreadsheet behind them, so admin edits those as
-forms, through the same draft-then-publish flow.
+**Two datasets, one admin, one file.** The company table seeds from a spreadsheet upload. The Screen 2
+function metrics are hundreds of individual values with no spreadsheet behind them, so admin edits
+those as forms, through the same draft-then-publish flow.
+
+They live under `metrics` in the **same `dataset.json`**, not a second file, and that is what makes
+"one pipeline" true rather than aspirational: the schema is already the publish gate, the diff, the
+browser draft, the two stores and the mtime-and-size read cache all carry the new key with no changes.
+A second file would mean a second write target, a second diff, a second cache and a publish that could
+half-succeed. The key is **defaulted to `[]` rather than required**, so a dataset written before it
+existed still reads — the fs store refuses a version it does not recognise, so bumping
+`DATASET_VERSION` would have turned a backwards-compatible addition into a broken read.
+
+**The importer preserves the catalogue; the seed is only used when there is none.** A re-import
+rebuilds companies and taxonomy from the spreadsheet, and would otherwise erase months of typed-in
+metric values in a way that looks exactly like a normal import. `scripts/import-seed.ts` carries the
+existing `metrics` across untouched.
+
+**No invented metric values.** Every seeded metric ships with `value: null`. The audience is a CIO
+sizing a several-hundred-person commitment, so a plausible-looking placeholder figure is worse than an
+empty screen. An incomplete open metric is left off the public screen rather than rendered half-filled;
+a gated one is always included, because it has nothing to be missing. The one seeded value is the
+capability grid's worked example, which is in the brief itself.
 
 **Columns kept.** Company name, HQ country, revenue band, industry, establishment year, city list,
 FTE range, Fortune Global 500 flag, Forbes Global 2000 flag.
@@ -221,6 +273,12 @@ developer involved. Renaming a value **cascades into every company that referenc
 cascade the publish fails referential integrity, which is correct but useless. Deleting a value still
 in use is refused in the editor, where the reason can be explained, rather than at the schema gate.
 
+**The four function areas and four lenses are enums, not taxonomy.** They come from the brief and
+Screen 2's tab structure, so there is nothing for an admin to add. The metric editor can rename a
+metric, rewrite its question, and add, rename or remove the parts and axes of its shape — but not add
+or delete a whole metric, and not change its format, its function area, its lens or its gating. If a
+genuinely new metric is ever needed, that is a code change to the catalogue, deliberately.
+
 **`data:verify` checks two different things and the distinction is load-bearing.**
 
 *Invariants* are properties of the code that must hold for any dataset, seed or heavily edited: the
@@ -230,8 +288,10 @@ never empty, known revenue bands stay in ascending order. A failure here is a bu
 deliberately cannot silence it.
 
 *Profile figures* are the measurements in `docs/data-audit.md` — counts, index membership, aggregate
-professionals, city density, coverage. They pin a snapshot, and a legitimate admin edit is supposed to
-move them. They live in `data/verify-baseline.json`, not hardcoded in the script, so accepting a real
+professionals, city density, coverage, and the metric catalogue's completeness. They pin a snapshot,
+and a legitimate admin edit is supposed to move them; entering a batch of metric values is exactly
+that. The gated set is recorded **by id rather than counted**, so a metric quietly losing its gate
+reads as a named change in the baseline diff instead of a number going down by one. They live in `data/verify-baseline.json`, not hardcoded in the script, so accepting a real
 change is `npm run data:verify -- --accept`, which rewrites the baseline and prints the delta. Commit
 that file alongside the data change and bring the audit document into line.
 
@@ -242,7 +302,8 @@ stopped being a check.
 **Known gaps** — tracked in `handoff.md`:
 - No per-company function list → the common-functions block has no source. The brief permits a
   hardcoded common function set.
-- All Screen 2 metrics. Admin gets the editing views first; the values are entered there.
+- Screen 2 metric **values**: 34 of 35 empty. The catalogue and the editing forms exist; the figures
+  are entered there. Every gated metric is empty too.
 
 ## Architecture map
 
@@ -252,16 +313,16 @@ session, so this records **what lives where and why**, never a file listing.
 | Path | Responsibility |
 | --- | --- |
 | `src/app/` | Next.js App Router. `globals.css` is the Tailwind theme, aliased onto the brand tokens — it restates no values and clears Tailwind's default palette so off-brand colour is unreachable through a utility class. |
-| `src/data/` | The whole data layer, and the only place that knows the dataset shape. `schema.ts` is the zod contract; `normalize.ts` holds the cleaning primitives, shared by the seed importer and the future admin upload so one file format never gets two parsers; `derive.ts` computes everything not stored; `peers.ts` is the matching ladder and the Screen 1 counts, pure functions over a loaded dataset; `diff.ts` is the dataset diff — one computation with two renderers, a console one for the importer and structured output for the admin preview, so the two can never disagree; `store.ts` + `store/{fs,github}-store.ts` are the `DataStore` implementations; `publish-store.ts` selects the write target and refuses to guess; `dataset.ts` is the cached server-side read, invalidated by an mtime-and-size check rather than by anyone remembering to clear it, and is `server-only`, which is what makes "never ship the dataset to the browser" a build error rather than a habit. |
-| `src/app/admin/` | The admin surface. `login/` sits outside the `(authed)` route group and is the one path without a session; the group's layout is the guard for everything else and hosts the draft provider, so a draft survives moving between tabs. A route group rather than middleware: middleware would be a second runtime to keep Node-only for no gain. |
+| `src/data/` | The whole data layer, and the only place that knows the dataset shape. `schema.ts` is the zod contract; `normalize.ts` holds the cleaning primitives, shared by the seed importer and the future admin upload so one file format never gets two parsers; `derive.ts` computes everything not stored; `peers.ts` is the matching ladder and the Screen 1 counts, pure functions over a loaded dataset; `diff.ts` is the dataset diff — one computation with two renderers, a console one for the importer and structured output for the admin preview, so the two can never disagree; `metrics.ts` holds the Screen 2 catalogue's behaviour, and `publicMetric` there is the single place a gated value is omitted; `metric-catalogue.ts` is the seed transcribed from the brief, definitions only; `store.ts` + `store/{fs,github}-store.ts` are the `DataStore` implementations; `publish-store.ts` selects the write target and refuses to guess; `dataset.ts` is the cached server-side read, invalidated by an mtime-and-size check rather than by anyone remembering to clear it, and is `server-only`, which is what makes "never ship the dataset to the browser" a build error rather than a habit. |
+| `src/app/admin/` | The admin surface. Four tabs: Companies, Taxonomy, Metrics, Publish. `login/` sits outside the `(authed)` route group and is the one path without a session; the group's layout is the guard for everything else and hosts the draft provider, so a draft survives moving between tabs. A route group rather than middleware: middleware would be a second runtime to keep Node-only for no gain. |
 | `src/app/api/admin/` | Login, logout, diff preview, publish. Each **re-checks the session itself** — deliberate duplication, because a layout cannot guard a route handler and a route that forgot would be silently public. |
 | `src/lib/admin/` | Auth and the publish pipeline. `password.ts` is scrypt hashing; `session.ts` is the signed cookie and is `server-only`; `rate-limit.ts` is the two-budget login limiter; `totp.ts` is the optional second factor, RFC 6238 on `node:crypto` with no dependency; `guard.ts` holds the two refusal shapes (redirect for pages, bare 401 for APIs); `publish.ts` is the validate → read → diff pipeline shared by preview and commit; `constants.ts` exists solely because `server-only` throws under `tsx`, so anything a script imports cannot carry the marker. |
-| `src/components/admin/` | Client-side admin UI. `draft-provider.tsx` is the browser draft, autosaved locally and pinned to the baseline it started from. The rest is the app-shell chrome, the company table and editor, the taxonomy editor and the publish view. |
+| `src/components/admin/` | Client-side admin UI. `draft-provider.tsx` is the browser draft, autosaved locally and pinned to the baseline it started from; its `STORAGE_KEY` is versioned and **is bumped whenever the editable shape changes**, because restoring a draft missing a key produces a schema error the admin cannot fix from the UI. The rest is the app-shell chrome, the company table and editor, the taxonomy editor, the metric catalogue and editor, and the publish view. |
 | `src/components/ui/` | shadcn/ui components, unmodified from the registry. On-brand because `globals.css` maps the registry's contract variables onto brand tokens. |
 | `data/` | `dataset.json` — the published dataset, tracked in git. Pretty-printed on purpose: a reviewable diff is the reason there is no database. `verify-baseline.json` holds the profile figures `data:verify` compares against; also tracked, and updated only by `data:verify -- --accept`. |
 | `assets/brand/` | Brand source of truth. `tokens.css` is authoritative. Motifs adapted, never pasted. |
-| `tests/unit/` | Vitest, node environment, no jsdom. Pure and server-side logic: hashing, session signing, TOTP, the rate limiter, the diff, the schema, the cleaning primitives, the GitHub store against a stubbed `fetch`, and the publish pipeline against a temp file. `vitest.config.ts` resolves the `react-server` condition, which is how these import a `server-only` module at all. |
-| `tests/browser/` | Playwright against a real `next build && next start`, on its own copy of the dataset. Covers what a unit test structurally cannot: the draft lifecycle, autosave, restore after reload, the stale-baseline conflict, and focus behaviour. Serial, one worker — the server holds the rate limiter and the dataset cache in memory, so parallelism would make test order part of the result. Numbered specs run in reading order; `5-lockout.spec.ts` exhausts the limiter and must stay last. |
+| `tests/unit/` | Vitest, node environment, no jsdom. Pure and server-side logic: hashing, session signing, TOTP, the rate limiter, the diff, the schema, the cleaning primitives, the metric catalogue and its gate, the GitHub store against a stubbed `fetch`, and the publish pipeline against a temp file. `vitest.config.ts` resolves the `react-server` condition, which is how these import a `server-only` module at all. |
+| `tests/browser/` | Playwright against a real `next build && next start`, on its own copy of the dataset. Covers what a unit test structurally cannot: the draft lifecycle, autosave, restore after reload, the stale-baseline conflict, and focus behaviour. Serial, one worker — the server holds the rate limiter and the dataset cache in memory, so parallelism would make test order part of the result. Numbered specs run in reading order; `6-lockout.spec.ts` exhausts the limiter and must stay last. The `admin` project's `testMatch` is a character class, so a spec numbered outside it lands in no project and silently never runs — `helpers.ts` also owns `DRAFT_STORAGE_KEY`, so a provider bump is one edit rather than eight. |
 | `scripts/` | Maintenance tools, run by hand, never at request time. Python: `brand_lint.py` enforces tokens, `brand_asset.py` adapts SVGs, `inspect_xlsx.py` profiles data drops. TypeScript via `tsx`: `import-seed.ts` is the xlsx → JSON pipeline, `verify-data.ts` reproduces every figure in `docs/data-audit.md` from the published dataset and exits non-zero if one moves, `admin-hash.ts` mints the two admin env values from a TTY prompt so the password never lands in shell history. |
 | `docs/` | Deep reference, read on demand. Not steering. `brief.md` is the transcription of the source mind map — read it, not the image. `data-audit.md` is the profile of the source database. |
 | `.kiro/steering/` | Always-in-context rules. Four files, kept small on purpose. Tracked, along with `hooks/`, `settings/` and `skill-sources.json`. **`.kiro/skills/` is deliberately untracked** — 300 files of vendored third-party packs with one LICENSE between them, and git history is forever. `skill-sources.json` pins each pack's repo and commit, so re-cloning restores them. |
