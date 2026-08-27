@@ -30,22 +30,28 @@ pushes need no setup, and commit identity is set repo-locally. Locally admin wor
 production build — the passphrase in `.env.local` was generated during setup and shared in a transcript,
 so rotate it with `npm run admin:hash` before it guards anything real.
 
-**Live at `gcc-landscape.vercel.app`**, running the current `main`, with the public page rendering and
-`data/dataset.json` confirmed traced into all three bundle types. All ten environment variables are set
-in Vercel, **but the running build predates them, so admin still refuses every password.** A redeploy is
-the fix and it has not happened yet.
+**Live and working at `gcc-landscape.vercel.app`**, running the current `main`. Verified against the
+deployment, not assumed: the public page renders, login succeeds, and the companies table serves all
+1,834 rows. `ADMIN_PASSWORD_HASH` and `ADMIN_SESSION_SECRET` are correct there; `ADMIN_TOTP_SECRET` has
+been removed, so the second factor is off.
 
-**Two paths remain unexercised:** a publish through the GitHub store, and TOTP in a live deployment.
-Everything else is covered by one of the two suites.
+**Publishing is not configured yet, and fails closed.** `GCC_DATA_STORE` is empty, so the Publish tab
+shows the "refusing to guess" banner instead of writing anywhere — the intended behaviour, confirmed by
+reading the live banner text. Admin edits therefore cannot go live until the GitHub token is in place.
+
+**One path remains unexercised:** a publish through the GitHub store. Everything else is covered by one
+of the two suites or verified against the deployment.
 
 ## Next action
 
-**Screen 2 metric catalogue, then the screens.**
+**Finish publishing, then the Screen 2 metric catalogue.**
 
-1. Metric catalogue. Needs a pass over `docs/brief.md` to turn the four internal lenses (supply, speed,
+1. Publishing: see the blockers. It is two variables and a redeploy away, and nothing else in admin is
+   worth trusting until an edit can actually reach the live site.
+2. Metric catalogue. Needs a pass over `docs/brief.md` to turn the four internal lenses (supply, speed,
    place, cost) into a schema before any form exists. The lens names are a filing system, not UI
    labels. Then the admin forms, reusing the draft-then-publish flow.
-2. Screen 1, then Screen 2. Design skills run before markup on each, per `skill-router.md`.
+3. Screen 1, then Screen 2. Design skills run before markup on each, per `skill-router.md`.
    `src/app/page.tsx` is a scaffold placeholder that Screen 1 replaces wholesale.
 
 Screen 1's data is in place: `matchPeers`, `largestInIndustry`, `nationalScale` and `cityDensity` in
@@ -53,23 +59,17 @@ Screen 1's data is in place: `matchPeers`, `largestInIndustry`, `nationalScale` 
 
 ## Blocked / needs the user
 
-1. **Delete `ADMIN_TOTP_SECRET`, then redeploy Vercel.** In that order. Confirmed: no authenticator app
-   was ever set up, so if that variable carries a real secret the redeploy locks everyone out of admin
-   with no recovery but editing the variable again. The redeploy itself is the fix for login — the
-   variables exist but the running build predates them, and nothing else explains the failure, since the
-   deployed commit is current and the public page works.
-2. **Treat all ten Vercel variables as unconfirmed.** They were pasted from the documented key list
-   rather than configured, so values may be empty or placeholders. Only `ADMIN_PASSWORD_HASH` and
-   `ADMIN_SESSION_SECRET` need to be right for admin to work; the rest can stay empty, because an
-   incomplete publish target fails closed and shows a banner.
-3. **Publishing, when it is wanted.** Needs a fine-grained `GCC_GITHUB_TOKEN` with
-   `contents: read and write` plus `GCC_DATA_STORE=github`. Never `fs` on a serverless host. The GitHub
-   write path has never run against a real repository, so expect token scope or branch protection to
-   surface on the first attempt.
-4. **Screen 2 metric values** — hundreds, no spreadsheet behind them. Forms first, then the values.
-5. **Function-per-company data** — for the common-functions block. A hardcoded common function set is
+1. **Turn on publishing.** A fine-grained GitHub token with `contents: read and write` on this repo, set
+   as `GCC_GITHUB_TOKEN`, plus `GCC_DATA_STORE=github` and `GCC_GITHUB_REPO=GeeteshRanjan/GCC-Landscape`,
+   then a redeploy. Never `fs` on a serverless host. The other `GCC_GITHUB_*` variables can stay empty;
+   the code defaults the branch and path. Walked through with the user; waiting on the token.
+2. **Then one real publish, watched.** The GitHub write path has never run against a real repository.
+   Change one field, check the diff, publish, confirm the commit appears, change it back. Token scope and
+   branch protection both fail in ways that only surface on a real attempt.
+3. **Screen 2 metric values** — hundreds, no spreadsheet behind them. Forms first, then the values.
+4. **Function-per-company data** — for the common-functions block. A hardcoded common function set is
    permitted by the brief and is the likely answer.
-6. **Hosting details** — which ansr.com page hosts the iframe, and who adds the embed snippet. Allowed
+5. **Hosting details** — which ansr.com page hosts the iframe, and who adds the embed snippet. Allowed
    origins are `ansr.com` and `*.ansr.com` in `next.config.ts`; correct them when known.
 
 ## Open decisions, not yet made

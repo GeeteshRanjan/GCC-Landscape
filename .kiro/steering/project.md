@@ -112,6 +112,11 @@ used. Concretely:
   — blob, tree, commit, non-forced ref update. Both choices are about limits the simple path silently
   hits: the Contents API's JSON form returns *empty content* above 1 MB, and its single-call update
   cannot express a real fast-forward check. Do not "simplify" either back.
+
+  **`GCC_GITHUB_TOKEN` is a scheduled failure.** A fine-grained token expires, and when it does
+  publishing starts returning "GitHub refused the request (401)" with a valid password and a valid
+  draft — a failure that looks like a bug months after anyone last touched this. Record the expiry
+  date with the deployment, and read that 401 as an expired token before debugging anything else.
   **Reads and writes select different stores, deliberately.** Reads always come from the local JSON,
   because a GitHub round trip per cold start would add a network dependency and a rate limit to the
   public screens for nothing. Writes go wherever the deployment's source of truth is, and the diff is
