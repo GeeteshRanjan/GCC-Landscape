@@ -83,8 +83,7 @@ no source.
   `--accept`. Revisit when Screen 1 exists.
 - `data/dataset.json` is pretty-printed: 700 KB in the repo, 53 KB gzipped. Kept because a reviewable
   line-per-field diff is the whole reason there is no database.
-- `exceljs` carries a moderate `uuid` advisory reachable only when *writing*. devDependency, offline
-  read-only script. Left pinned.
+- `exceljs` has a moderate `uuid` advisory, reachable only when *writing*. Offline read-only script; pinned.
 - No ESLint. `tsc --noEmit`, `brand_lint.py` and the two suites are the checks.
 - No web font is loaded. Inter comes through the token's fallback stack; self-host it for visual work.
 - Lead capture stays out of scope; the CTA links out to a separate landing page.
