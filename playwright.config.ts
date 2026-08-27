@@ -38,7 +38,10 @@ const PORT = 3210;
 export default defineConfig({
   testDir: "./tests/browser",
   // Numbered so the reading order is the running order: sign in, then edit a
-  // draft, then taxonomy, then publish — which mutates the fixture dataset.
+  // draft, then taxonomy, then the function metrics, then publish — which
+  // mutates the fixture dataset. The numbers are load-bearing twice over: the
+  // `admin` project's pattern is a character class, so a spec numbered outside
+  // it lands in no project at all and silently never runs.
   testMatch: /\d+-.*\.spec\.ts/,
   fullyParallel: false,
   workers: 1,
@@ -70,13 +73,13 @@ export default defineConfig({
     { name: "signin", testMatch: /signin\.setup\.ts/, dependencies: ["unauthenticated"] },
     {
       name: "admin",
-      testMatch: /[234]-.*\.spec\.ts/,
+      testMatch: /[2345]-.*\.spec\.ts/,
       use: { ...devices["Desktop Chrome"], storageState: "tests/browser/.tmp/session.json" },
       dependencies: ["signin"],
     },
     {
       name: "lockout",
-      testMatch: /5-lockout\.spec\.ts/,
+      testMatch: /6-lockout\.spec\.ts/,
       use: { ...devices["Desktop Chrome"] },
       dependencies: ["admin"],
     },

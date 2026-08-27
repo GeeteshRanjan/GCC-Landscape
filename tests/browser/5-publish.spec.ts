@@ -3,7 +3,7 @@ import { readFileSync } from "node:fs";
 import path from "node:path";
 
 import type { Dataset } from "../../src/data/schema";
-import { waitForDraftSaved } from "./helpers";
+import { DRAFT_STORAGE_KEY, waitForDraftSaved } from "./helpers";
 
 /**
  * Publishing, for real, against the fixture copy of the dataset.
@@ -113,15 +113,14 @@ test("blocks a publish that would break referential integrity", async ({ page })
   // That is the point — the server gate has to hold even when the client is
   // bypassed entirely.
   await editEstablishedYear(page, "2014");
-  await page.evaluate(() => {
-    const key = "gcc-admin-draft-v1";
+  await page.evaluate((key) => {
     const draft = JSON.parse(window.localStorage.getItem(key) as string) as {
       editable: { taxonomy: Record<string, string[]>; companies: Array<Record<string, unknown>> };
     };
     // Point a company at an industry the taxonomy does not offer.
     draft.editable.companies[0]!.industry = "Nonexistent Industry";
     window.localStorage.setItem(key, JSON.stringify(draft));
-  });
+  }, DRAFT_STORAGE_KEY);
   await page.goto("/admin/publish");
 
   await expect(page.getByText("Not published")).toBeVisible();
@@ -132,7 +131,10 @@ test("blocks a publish that would break referential integrity", async ({ page })
 
   // Clear the tampered draft and reload, so the in-memory copy goes with it and
   // nothing leaks into the tests that follow.
-  await page.evaluate(() => window.localStorage.removeItem("gcc-admin-draft-v1"));
+  await page.evaluate(
+    (key) => window.localStorage.removeItem(key),
+    DRAFT_STORAGE_KEY,
+  );
   await page.goto("/admin/publish");
   await expect(page.getByText("Nothing to publish")).toBeVisible();
 });
@@ -165,7 +167,10 @@ test("publishes a company edit and a taxonomy addition together", async ({ page 
 
   // The banner clears, because the draft is now the baseline.
   await expect(page.getByText("You have unpublished changes.")).toHaveCount(0);
-  const stored = await page.evaluate(() => window.localStorage.getItem("gcc-admin-draft-v1"));
+  const stored = await page.evaluate(
+    (key) => window.localStorage.getItem(key),
+    DRAFT_STORAGE_KEY,
+  );
   expect(stored).toBeNull();
 });
 

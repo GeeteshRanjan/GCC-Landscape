@@ -44,3 +44,17 @@ export async function discardEverything(page: Page): Promise<void> {
     await expect(empty).toBeVisible();
   }
 }
+
+/**
+ * The draft's localStorage key, in one place.
+ *
+ * Two specs reach into storage directly, to forge a stale baseline and to forge a
+ * dataset the UI will not build. The key was written out as a literal in eight
+ * places, so bumping it — which the provider does deliberately whenever the
+ * editable shape changes — broke both specs in a way that looked like a
+ * regression in the draft rather than a stale test constant.
+ *
+ * `page.evaluate` callbacks cannot close over Node values, so this is passed in as
+ * an argument rather than read from the enclosing scope.
+ */
+export const DRAFT_STORAGE_KEY = "gcc-admin-draft-v2";

@@ -330,3 +330,47 @@ export function CheckboxGroupField({
     </fieldset>
   );
 }
+
+/**
+ * A multi-line field, for the one kind of content the metric editor collects that
+ * a single-line input would truncate out of sight: the internal working note.
+ * Resizable vertically only — horizontal resize breaks out of the dialog.
+ */
+export function TextAreaField({
+  label,
+  hint,
+  error,
+  optional,
+  value,
+  onChange,
+  rows = 3,
+}: {
+  label: string;
+  hint?: string;
+  error?: string;
+  optional?: boolean;
+  value: string;
+  onChange: (value: string) => void;
+  rows?: number;
+}) {
+  return (
+    <FieldShell label={label} hint={hint} error={error} optional={optional}>
+      {({ controlId, describedBy }) => (
+        <textarea
+          id={controlId}
+          rows={rows}
+          value={value}
+          onChange={(event) => onChange(event.target.value)}
+          aria-invalid={error ? true : undefined}
+          aria-describedby={describedBy}
+          className={cn(
+            "w-full min-w-0 resize-y rounded-md border border-input bg-transparent px-3 py-2 text-base text-text shadow-xs",
+            "outline-none transition-[color,box-shadow] duration-fast",
+            "focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50",
+            "aria-invalid:border-feedback-attention md:text-sm",
+          )}
+        />
+      )}
+    </FieldShell>
+  );
+}

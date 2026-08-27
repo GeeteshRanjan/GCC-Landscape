@@ -5,8 +5,10 @@ import { useCallback, useEffect, useState } from "react";
 import { useDraft } from "@/components/admin/draft-provider";
 import { Button } from "@/components/ui/button";
 import {
+  METRIC_FIELD_LABELS,
   TAXONOMY_LABELS,
   formatFieldValue,
+  formatMetricFieldValue,
   type DatasetDiff,
 } from "@/data/diff";
 
@@ -197,8 +199,8 @@ function EmptyState() {
     <div className="border border-border-subtle bg-surface px-6 py-12 text-center">
       <p className="text-sm text-text">Nothing to publish.</p>
       <p className="mt-1 text-sm text-text-muted">
-        The draft matches what is already live. Edit a company or a taxonomy
-        value and the changes will show up here.
+        The draft matches what is already live. Edit a company, a taxonomy value
+        or a function metric and the changes will show up here.
       </p>
     </div>
   );
@@ -284,6 +286,11 @@ function summarise(diff: DatasetDiff): string {
       `${diff.counts.taxonomy} taxonomy list${diff.counts.taxonomy === 1 ? "" : "s"} updated`,
     );
   }
+  if (diff.counts.metrics) {
+    parts.push(
+      `${diff.counts.metrics} metric${diff.counts.metrics === 1 ? "" : "s"} updated`,
+    );
+  }
   return parts.length > 0 ? parts.join(", ") : "No changes";
 }
 
@@ -303,11 +310,12 @@ function DiffView({ diff }: { diff: DatasetDiff }) {
 
   return (
     <div className="flex flex-col gap-5">
-      <dl className="grid grid-cols-2 gap-px border border-border-subtle bg-border-subtle sm:grid-cols-4">
+      <dl className="grid grid-cols-2 gap-px border border-border-subtle bg-border-subtle sm:grid-cols-3 lg:grid-cols-5">
         <Count label="Added" value={diff.counts.added} />
         <Count label="Removed" value={diff.counts.removed} />
         <Count label="Edited" value={diff.counts.changed} />
         <Count label="Taxonomy lists" value={diff.counts.taxonomy} />
+        <Count label="Metrics" value={diff.counts.metrics} />
       </dl>
 
       {diff.taxonomy.length > 0 ? (
@@ -345,6 +353,60 @@ function DiffView({ diff }: { diff: DatasetDiff }) {
             ))}
           </ul>
         </section>
+      ) : null}
+
+      {diff.counts.metrics > 0 ? (
+        <DiffSection title={`Function metrics (${diff.counts.metrics})`}>
+          <ul className="divide-y divide-border-subtle">
+            {diff.metrics.changed.slice(0, 100).map((metric) => (
+              <li key={metric.id} className="px-5 py-3 text-sm">
+                <p className="font-medium text-text">{metric.title}</p>
+                <ul className="mt-1.5 flex flex-col gap-1">
+                  {metric.changes.map((change) => (
+                    <li key={change.field} className="flex flex-col gap-0.5">
+                      <span className="text-xs uppercase tracking-caps text-text-muted">
+                        {METRIC_FIELD_LABELS[change.field]}
+                      </span>
+                      <span className="flex flex-wrap gap-x-2">
+                        <span className="text-text-muted line-through">
+                          {formatMetricFieldValue(change.field, change.before)}
+                        </span>
+                        <span aria-hidden="true" className="text-text-muted">
+                          →
+                        </span>
+                        <span className="text-text">
+                          {formatMetricFieldValue(change.field, change.after)}
+                        </span>
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              </li>
+            ))}
+            {diff.metrics.added.map((metric) => (
+              <li key={metric.id} className="px-5 py-2.5 text-sm text-text">
+                Added: {metric.title}
+                <span className="ms-2 font-mono text-xs text-text-muted">
+                  {metric.id}
+                </span>
+              </li>
+            ))}
+            {diff.metrics.removed.map((metric) => (
+              <li key={metric.id} className="px-5 py-2.5 text-sm text-text">
+                Removed: {metric.title}
+                <span className="ms-2 font-mono text-xs text-text-muted">
+                  {metric.id}
+                </span>
+              </li>
+            ))}
+          </ul>
+          {diff.metrics.changed.length > 100 ? (
+            <p className="border-t border-border-subtle px-5 py-3 text-sm text-text-muted">
+              …and {diff.metrics.changed.length - 100} more. All of them will be
+              published.
+            </p>
+          ) : null}
+        </DiffSection>
       ) : null}
 
       {diff.changed.length > 0 ? (

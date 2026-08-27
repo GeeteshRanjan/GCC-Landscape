@@ -11,7 +11,7 @@ import { discardEverything, waitForDraftSaved } from "./helpers";
  *   - Renaming a value has to cascade into every company that referenced it, or
  *     the publish fails referential integrity and the rename looked successful.
  *
- * Everything is discarded afterwards; 4-publish.spec.ts owns the writing.
+ * Everything is discarded afterwards; 5-publish.spec.ts owns the writing.
  */
 
 function section(page: import("@playwright/test").Page, heading: string) {

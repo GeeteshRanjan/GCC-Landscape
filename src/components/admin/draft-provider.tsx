@@ -10,7 +10,8 @@ import {
   useState,
 } from "react";
 
-import type { Company, Dataset, Taxonomy } from "@/data/schema";
+import { alignValue } from "@/data/metrics";
+import type { Company, Dataset, Metric, Taxonomy } from "@/data/schema";
 import { slugify, uniqueSlug } from "@/data/normalize";
 
 /**
@@ -33,11 +34,20 @@ import { slugify, uniqueSlug } from "@/data/normalize";
  *     rather than silently replayed over data it never saw.
  */
 
-const STORAGE_KEY = "gcc-admin-draft-v1";
+/**
+ * Bumped to v2 when the function metrics joined the editable slice.
+ *
+ * Not cosmetic. A draft stored under v1 has no `metrics` key, and restoring it
+ * would produce a draft whose catalogue is missing — which the publish gate
+ * rejects with a schema error the admin has no way to fix from the UI. A new key
+ * means those drafts are simply not found, which is the honest outcome: the key
+ * was versioned for exactly this.
+ */
+const STORAGE_KEY = "gcc-admin-draft-v2";
 const AUTOSAVE_DEBOUNCE_MS = 800;
 
 /** Everything the admin can edit. Metadata is server-owned. */
-type EditableDataset = Pick<Dataset, "taxonomy" | "companies">;
+type EditableDataset = Pick<Dataset, "taxonomy" | "companies" | "metrics">;
 
 export type TaxonomyKey = keyof Taxonomy;
 
@@ -70,6 +80,17 @@ interface DraftContextValue {
   updateCompany: (id: string, patch: Partial<Omit<Company, "id">>) => void;
   deleteCompany: (id: string) => void;
 
+  metricById: (id: string) => Metric | undefined;
+  /**
+   * Saves a whole edited metric. One call rather than a patch per field, so a
+   * shape change and the numbers re-fitted to it land in a single edit — the
+   * admin's "Save" is one undoable step, and no render sees a metric whose value
+   * length disagrees with its shape.
+   */
+  replaceMetric: (id: string, next: Metric) => void;
+  /** Back to no numbers at all, leaving the definition alone. */
+  clearMetricValue: (id: string) => void;
+
   setTaxonomyValues: (key: TaxonomyKey, values: string[]) => void;
   addTaxonomyValue: (key: TaxonomyKey, value: string) => void;
   renameTaxonomyValue: (key: TaxonomyKey, from: string, to: string) => void;
@@ -87,8 +108,14 @@ interface DraftContextValue {
 const DraftContext = createContext<DraftContextValue | null>(null);
 
 function editableOf(dataset: Dataset): EditableDataset {
-  return { taxonomy: dataset.taxonomy, companies: dataset.companies };
+  return {
+    taxonomy: dataset.taxonomy,
+    companies: dataset.companies,
+    metrics: dataset.metrics,
+  };
 }
+
+
 
 /** Which taxonomy list a company field draws from. */
 const COMPANY_FIELD_FOR: Record<TaxonomyKey, keyof Company | "cities"> = {
@@ -171,7 +198,11 @@ export function DraftProvider({
       window.localStorage.removeItem(STORAGE_KEY);
       return;
     }
-    if (!stored.editable?.companies || !stored.editable?.taxonomy) {
+    if (
+      !stored.editable?.companies ||
+      !stored.editable?.taxonomy ||
+      !stored.editable?.metrics
+    ) {
       window.localStorage.removeItem(STORAGE_KEY);
       return;
     }
@@ -281,8 +312,14 @@ export function DraftProvider({
       source: currentBaseline.source,
       taxonomy: editable.taxonomy,
       companies: editable.companies,
+      metrics: editable.metrics,
     }),
     [currentBaseline, editable],
+  );
+
+  const metricIndex = useMemo(
+    () => new Map(editable.metrics.map((m) => [m.id, m])),
+    [editable.metrics],
   );
 
   const companyIndex = useMemo(
@@ -319,6 +356,51 @@ export function DraftProvider({
     applyEdit((current) => ({
       ...current,
       companies: current.companies.filter((company) => company.id !== id),
+    }));
+  }, [applyEdit]);
+
+  /**
+   * Metric mutators. Both read the metric out of `current` inside the updater
+   * rather than from a closure over `editable.metrics`, so neither takes it as a
+   * dependency. That is not tidiness: a dependency on the slice they also write
+   * is how the autosave loop documented above gets recreated one callback at a
+   * time.
+   */
+  const replaceMetric = useCallback((id: string, next: Metric) => {
+    applyEdit((current) => ({
+      ...current,
+      metrics: current.metrics.map((metric) =>
+        metric.id === id
+          ? {
+              ...next,
+              /**
+               * Identity and classification are re-pinned from the metric being
+               * replaced, not taken from the form.
+               *
+               * `gated` especially: which metrics sit behind the gate is a
+               * product decision recorded in project.md, not an admin setting,
+               * and a form field that could flip it would make a documented
+               * invariant one stray click from being wrong. Same for `format`,
+               * which decides whether a cell may hold text.
+               */
+              id: metric.id,
+              functionArea: metric.functionArea,
+              lens: metric.lens,
+              format: metric.format,
+              gated: metric.gated,
+              value: alignValue(next.structure, next.value),
+            }
+          : metric,
+      ),
+    }));
+  }, [applyEdit]);
+
+  const clearMetricValue = useCallback((id: string) => {
+    applyEdit((current) => ({
+      ...current,
+      metrics: current.metrics.map((metric) =>
+        metric.id === id ? { ...metric, value: null } : metric,
+      ),
     }));
   }, [applyEdit]);
 
@@ -376,7 +458,11 @@ export function DraftProvider({
           return company[field] === from ? { ...company, [field]: next } : company;
         });
 
-        return { taxonomy: { ...current.taxonomy, [key]: deduped }, companies };
+        return {
+          ...current,
+          taxonomy: { ...current.taxonomy, [key]: deduped },
+          companies,
+        };
       });
     },
     [applyEdit],
@@ -432,6 +518,7 @@ export function DraftProvider({
         ...metadata,
         taxonomy: editable.taxonomy,
         companies: editable.companies,
+        metrics: editable.metrics,
       }));
       pinnedBaseline.current = metadata.generatedAt;
       setConflict(null);
@@ -456,6 +543,9 @@ export function DraftProvider({
       addCompany,
       updateCompany,
       deleteCompany,
+      metricById: (id) => metricIndex.get(id),
+      replaceMetric,
+      clearMetricValue,
       setTaxonomyValues,
       addTaxonomyValue,
       renameTaxonomyValue,
@@ -475,6 +565,9 @@ export function DraftProvider({
       addCompany,
       updateCompany,
       deleteCompany,
+      metricIndex,
+      replaceMetric,
+      clearMetricValue,
       setTaxonomyValues,
       addTaxonomyValue,
       renameTaxonomyValue,

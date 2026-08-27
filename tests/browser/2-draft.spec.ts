@@ -1,6 +1,11 @@
 import { expect, test } from "@playwright/test";
 
-import { discardEverything, openEditor, waitForDraftSaved } from "./helpers";
+import {
+  DRAFT_STORAGE_KEY,
+  discardEverything,
+  openEditor,
+  waitForDraftSaved,
+} from "./helpers";
 
 /**
  * The draft lifecycle. This is the reason a browser is in the loop at all.
@@ -12,7 +17,7 @@ import { discardEverything, openEditor, waitForDraftSaved } from "./helpers";
  * observable without real storage and real navigation.
  *
  * Every test edits and then discards, so the fixture dataset is left as found —
- * publishing is 4-publish.spec.ts's job.
+ * publishing is 5-publish.spec.ts's job.
  */
 
 
@@ -100,7 +105,10 @@ test("discarding restores the published values and clears local storage", async 
   await page.getByRole("button", { name: "Discard all changes" }).click();
 
   await expect(page.getByText("Nothing to publish")).toBeVisible();
-  const stored = await page.evaluate(() => window.localStorage.getItem("gcc-admin-draft-v1"));
+  const stored = await page.evaluate(
+    (key) => window.localStorage.getItem(key),
+    DRAFT_STORAGE_KEY,
+  );
   expect(stored).toBeNull();
 
   await page.goto("/admin");
@@ -113,13 +121,13 @@ test("a stale draft is surfaced as a conflict rather than replayed silently", as
 
   // A draft saved against a baseline that no longer exists — what an admin has
   // in the tab after someone else publishes, or after a re-import.
-  await page.evaluate(() => {
-    const raw = window.localStorage.getItem("gcc-admin-draft-v1");
+  await page.evaluate((key) => {
+    const raw = window.localStorage.getItem(key);
     const draft = raw
       ? (JSON.parse(raw) as Record<string, unknown>)
       : { editable: null, savedAt: new Date().toISOString() };
     window.localStorage.setItem(
-      "gcc-admin-draft-v1",
+      key,
       JSON.stringify({
         ...draft,
         baselineGeneratedAt: "2020-01-01T00:00:00.000Z",
@@ -127,7 +135,7 @@ test("a stale draft is surfaced as a conflict rather than replayed silently", as
         editable: draft.editable ?? null,
       }),
     );
-  });
+  }, DRAFT_STORAGE_KEY);
 
   // Seed a real draft first so there is something to conflict over.
   await page.reload();
@@ -136,13 +144,13 @@ test("a stale draft is surfaced as a conflict rather than replayed silently", as
   await page.getByRole("button", { name: "Save to draft" }).click();
   await waitForDraftSaved(page);
 
-  await page.evaluate(() => {
+  await page.evaluate((key) => {
     const draft = JSON.parse(
-      window.localStorage.getItem("gcc-admin-draft-v1") as string,
+      window.localStorage.getItem(key) as string,
     ) as Record<string, unknown>;
     draft.baselineGeneratedAt = "2020-01-01T00:00:00.000Z";
-    window.localStorage.setItem("gcc-admin-draft-v1", JSON.stringify(draft));
-  });
+    window.localStorage.setItem(key, JSON.stringify(draft));
+  }, DRAFT_STORAGE_KEY);
   await page.reload();
 
   const conflict = page.getByRole("alert").filter({ hasText: "The live data changed" });
