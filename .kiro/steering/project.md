@@ -111,7 +111,9 @@ used. Concretely:
   The GitHub store reads with the Contents API's `raw` media type and writes through the Git Data API
   — blob, tree, commit, non-forced ref update. Both choices are about limits the simple path silently
   hits: the Contents API's JSON form returns *empty content* above 1 MB, and its single-call update
-  cannot express a real fast-forward check. Do not "simplify" either back.
+  cannot express a real fast-forward check. Do not "simplify" either back. Verified against the real
+  repository: a publish produces one commit touching only the dataset path, so basing the new tree on the
+  parent's does keep every other file — the failure mode a hand-built tree would have introduced.
 
   **`GCC_GITHUB_TOKEN` is a scheduled failure.** A fine-grained token expires, and when it does
   publishing starts returning "GitHub refused the request (401)" with a valid password and a valid

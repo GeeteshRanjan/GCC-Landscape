@@ -25,27 +25,16 @@ code, rate limited per IP and per process. Edits are a browser draft autosaved t
 banner on every tab. Publish validates the whole dataset, diffs it against what the write will land on,
 then commits.
 
-**Environment.** `main` is pushed and tracking a private repo; the keychain holds a usable credential so
-pushes need no setup, and commit identity is set repo-locally. Locally admin works, verified against a
-production build — the passphrase in `.env.local` was generated during setup and shared in a transcript,
-so rotate it with `npm run admin:hash` before it guards anything real.
+**Live and fully working at `gcc-landscape.vercel.app`**, running the current `main`. Verified against the
+deployment rather than assumed: the public page renders, login succeeds, the table serves all 1,834 rows,
+and **publishing round-trips to the real repository** — diff, commit on `main`, Vercel rebuild, live. The
+second factor is off (`ADMIN_TOTP_SECRET` removed). Nothing is left unexercised: every path is covered by
+one of the two suites or by that check.
 
-**Live and working at `gcc-landscape.vercel.app`**, running the current `main`. Verified against the
-deployment, not assumed: the public page renders, login succeeds, and the companies table serves all
-1,834 rows. `ADMIN_PASSWORD_HASH` and `ADMIN_SESSION_SECRET` are correct there; `ADMIN_TOTP_SECRET` has
-been removed, so the second factor is off.
+The two `data: publish from admin` commits in history are that test, reverted — not real data changes.
 
-**Publishing works, proven against the real repository.** A round trip was run through the deployed
-admin: edit one field, diff against the branch, publish, and the commit appears on `main` authored by
-the token's identity, touching only `data/dataset.json` and only the two lines expected — the edited
-field plus the server-stamped `generatedAt`. Nothing else in the tree moved, so the base-tree logic does
-not drop files. Republishing the same state is refused with a 409 against the live store, and the Vercel
-rebuild picked the change up, so the whole chain — publish, commit, rebuild, serve — is verified. The
-edit was reverted, so the data is where it started; the two `data: publish from admin` commits in history
-are that test.
-
-**Nothing is left unexercised.** Every path is covered by one of the two suites or verified against the
-live deployment.
+**Local.** `main` tracks a private repo, the keychain holds a usable credential so pushes need no setup,
+and commit identity is set repo-locally.
 
 ## Next action
 
@@ -62,10 +51,14 @@ Screen 1's data is in place: `matchPeers`, `largestInIndustry`, `nationalScale` 
 
 ## Blocked / needs the user
 
-1. **Screen 2 metric values** — hundreds, no spreadsheet behind them. Forms first, then the values.
-2. **Function-per-company data** — for the common-functions block. A hardcoded common function set is
+1. **Rotate the admin password.** The current one was generated during setup and shared in a chat
+   transcript. `npm run admin:hash`, then update `ADMIN_PASSWORD_HASH` in Vercel and redeploy.
+2. **Record the `GCC_GITHUB_TOKEN` expiry in a calendar.** When it lapses, publishing starts failing with
+   a GitHub 401 that reads like a bug rather than an expiry.
+3. **Screen 2 metric values** — hundreds, no spreadsheet behind them. Forms first, then the values.
+4. **Function-per-company data** — for the common-functions block. A hardcoded common function set is
    permitted by the brief and is the likely answer.
-3. **Hosting details** — which ansr.com page hosts the iframe, and who adds the embed snippet. Allowed
+5. **Hosting details** — which ansr.com page hosts the iframe, and who adds the embed snippet. Allowed
    origins are `ansr.com` and `*.ansr.com` in `next.config.ts`; correct them when known.
 
 ## Open decisions, not yet made
@@ -73,8 +66,6 @@ Screen 1's data is in place: `matchPeers`, `largestInIndustry`, `nationalScale` 
 - **Whether to switch on `ADMIN_TOTP_SECRET`.** Built, RFC 6238 verified, currently removed. Both
   rate-limit budgets are per-process, so on Vercel's instances it is the only real bound on distributed
   guessing. Only enable it while able to test a code immediately — see the Auth row in `project.md`.
-- **The `GCC_GITHUB_TOKEN` expiry date is not recorded anywhere.** When it lapses, publishing returns a
-  401 that looks like a bug. Worth putting in a calendar.
 - **Whether the browser suite runs in CI.** Needs a Chromium download and about a minute.
 - **Thin peer sets stay as they are.** Electrical & Electronics returns two peers, shortfall three.
   Never padding is the invariant; the count is a baseline figure. Revisit when Screen 1 exists.
