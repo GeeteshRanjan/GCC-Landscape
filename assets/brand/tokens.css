@@ -1,0 +1,387 @@
+/* ==========================================================================
+   ANSR design tokens — single source of truth.
+
+   Colour and gradients derive from Branding_Palette.docx (preserved as
+   assets/brand/reference/*.png; written up in assets/brand/BRAND.md).
+   Ramps regenerate with: python3 scripts/brand_asset.py ramp
+
+   Nothing in this project may contain a raw hex value, a magic pixel size,
+   or an ad-hoc duration. Use these. `scripts/brand_lint.py` enforces it.
+   ========================================================================== */
+
+:root {
+
+  /* ======================================================================
+     1. COLOUR
+     ====================================================================== */
+
+  /* ---- Core palette. Verbatim from the brand doc. Do not edit. ---------
+     Sampled from the source board to confirm; all within PNG compression
+     error of these stated values, which govern.                          */
+  --ansr-black:      #000000; /* Rich Black       CMYK 0 0 0 100          */
+  --ansr-white:      #FFFFFF; /* White            CMYK 0 0 0 0            */
+  --ansr-grey:       #E6E6E6; /* Light Grey       CMYK 0 0 0 10           */
+  --ansr-teal:       #005465; /* Light Teal       CMYK 100 60 50 20  PMS 7714 */
+  --ansr-teal-deep:  #00242E; /* Deep Teal        CMYK 90 68 57 65   PMS 548  */
+  --ansr-orange:     #FF5400; /* Orange Highlight CMYK 0 80 100 0    PMS Orange 021 */
+
+  /* ---- Teal ramp -------------------------------------------------------
+     Motifs need up to 9 depth steps; the brand gives 2 teals. Steps 900-500
+     are Oklab interpolations between the two brand anchors, 400-100 are tints
+     toward white. No new hues.                                           */
+  --ansr-teal-900: #00242E; /* = teal-deep */
+  --ansr-teal-800: #002F3B;
+  --ansr-teal-700: #003B49;
+  --ansr-teal-600: #004757;
+  --ansr-teal-500: #005465; /* = teal */
+  --ansr-teal-400: #54818E;
+  --ansr-teal-300: #87A6AF;
+  --ansr-teal-200: #BBCDD2;
+  --ansr-teal-100: #E1E9EB;
+
+  /* ---- Orange ramp -----------------------------------------------------
+     Tints only. The brand doc restricts orange to CTAs and hover states, so
+     these exist for motif falloff — not for surfaces, and not for text.   */
+  --ansr-orange-500: #FF5400; /* = orange */
+  --ansr-orange-400: #FF865D;
+  --ansr-orange-300: #FFAE91;
+  --ansr-orange-200: #FFD1C0;
+  --ansr-orange-100: #FFEBE3;
+
+  /* ---- Grey ramp ------------------------------------------------------- */
+  --ansr-grey-900: #000000; /* = black */
+  --ansr-grey-700: #4C4C4C;
+  --ansr-grey-500: #8E8E8E;
+  --ansr-grey-300: #C2C2C2;
+  --ansr-grey-100: #E6E6E6; /* = grey */
+  --ansr-grey-50:  #F4F4F4;
+
+  /* ---- Semantic aliases ------------------------------------------------
+     Components reference these. Never the ramp directly, never a raw hex.
+     Contrast on white: text 21:1, text-muted 9.0:1, accent 8.9:1.        */
+  --ansr-surface:            var(--ansr-white);
+  --ansr-surface-subtle:     var(--ansr-grey-50);
+  --ansr-surface-sunken:     var(--ansr-grey-100);
+  --ansr-surface-inverse:    var(--ansr-teal-deep);
+  --ansr-surface-accent:     var(--ansr-teal);
+
+  --ansr-text:               var(--ansr-black);
+  --ansr-text-muted:         var(--ansr-grey-700);
+  --ansr-text-inverse:       var(--ansr-white);
+  --ansr-text-on-accent:     var(--ansr-white);
+
+  --ansr-border:             var(--ansr-grey-100);
+  --ansr-border-strong:      var(--ansr-grey-300);
+  --ansr-border-inverse:     color-mix(in oklab, var(--ansr-white) 20%, transparent);
+
+  --ansr-action:             var(--ansr-orange);
+  --ansr-action-hover:       var(--ansr-orange-400);
+  --ansr-action-text:        var(--ansr-white);
+  --ansr-accent:             var(--ansr-teal);
+  --ansr-focus:              var(--ansr-orange);
+
+  /* ---- Feedback / status -----------------------------------------------
+     A measured constraint, not a stylistic preference. Two findings from
+     `python3 scripts/brand_status_analysis.py`:
+
+       - Teal steps sit within dE 0.044-0.087 of one another. The threshold
+         for "clearly different" is 0.15. So success and info CANNOT be
+         separated by colour inside this palette.
+       - The brand doc commits orange to CTAs and hover states. Reusing it for
+         danger makes a Delete button identical to Save. (The earlier
+         --ansr-status-danger did exactly that, and at 3.22:1 on white it also
+         failed text contrast. Both bugs are removed.)
+
+     So colour carries only two signals here; icon, label, weight and form
+     carry the rest. WCAG 1.4.1 requires that anyway.
+
+     There is deliberately NO danger colour. Destructive controls use the
+     .ansr-destructive pattern below. See the open brand ask in BRAND.md.  */
+  --ansr-feedback-neutral:   var(--ansr-teal-500);   /* info, success, pending  */
+  --ansr-feedback-attention: var(--ansr-orange-500); /* caution — in banners and
+                                                        badges, never a button  */
+  --ansr-feedback-critical:  var(--ansr-black);      /* errors: 21:1, always
+                                                        paired with icon + text */
+
+  /* ---- Motif ink -------------------------------------------------------
+     What a brand motif may be tinted to, and how far back it sits.        */
+  --ansr-motif-ink:          var(--ansr-teal-500);
+  --ansr-motif-ink-deep:     var(--ansr-teal-900);
+  --ansr-motif-ink-light:    var(--ansr-teal-200);
+  --ansr-motif-ink-accent:   var(--ansr-orange);
+  --ansr-motif-opacity:      0.18;
+
+  /* ======================================================================
+     2. GRADIENTS
+     Exactly two exist. Each is a light gradient layer with a transparent
+     background composited over a solid ground.
+
+     Geometry is measured, not eyeballed. A 5x5 grid was sampled from each
+     board swatch, then origin / radius / inner plateau / falloff exponent were
+     least-squares fitted. Both land under 0.04 rms on normalised strength
+     (see BRAND.md). Stop tables below are that fitted curve.
+
+     Peak COLOUR is deliberately not taken from the board: its colour
+     management is unreliable (the Orange Highlight swatch reads #EF5921
+     against a stated #FF5400, and the error is not uniform across swatches),
+     so the doc's stated hexes govern. What is taken from the board is the
+     shape.
+     ====================================================================== */
+
+  /* Fitted: origin 95% 85%, radius 100%, opaque to 30%, then quadratic. */
+  --ansr-gradient-teal:
+    radial-gradient(100% 100% at 95% 85%,
+      var(--ansr-teal)                                          0%,
+      var(--ansr-teal)                                         30%,
+      color-mix(in oklab, var(--ansr-teal) 73%, transparent)    40%,
+      color-mix(in oklab, var(--ansr-teal) 51%, transparent)    50%,
+      color-mix(in oklab, var(--ansr-teal) 33%, transparent)    60%,
+      color-mix(in oklab, var(--ansr-teal) 18%, transparent)    70%,
+      color-mix(in oklab, var(--ansr-teal)  8%, transparent)    80%,
+      color-mix(in oklab, var(--ansr-teal)  2%, transparent)    90%,
+      transparent                                             100%),
+    var(--ansr-teal-deep);
+
+  /* Fitted: origin 85% 105%, radius 110%, plateau 10%, exponent 2.5.
+     Peak is 50% orange, not full — least-squares fit of the board's peak
+     swatch against Orange Highlight over Light Grey gives alpha 0.49. */
+  --ansr-gradient-orange:
+    radial-gradient(110% 110% at 85% 105%,
+      color-mix(in oklab, var(--ansr-orange) 50%, transparent)   0%,
+      color-mix(in oklab, var(--ansr-orange) 50%, transparent)  10%,
+      color-mix(in oklab, var(--ansr-orange) 37%, transparent)  20%,
+      color-mix(in oklab, var(--ansr-orange) 27%, transparent)  30%,
+      color-mix(in oklab, var(--ansr-orange) 18%, transparent)  40%,
+      color-mix(in oklab, var(--ansr-orange) 12%, transparent)  50%,
+      color-mix(in oklab, var(--ansr-orange)  7%, transparent)  60%,
+      color-mix(in oklab, var(--ansr-orange)  3%, transparent)  70%,
+      transparent                                              85%),
+    var(--ansr-grey);
+
+  /* Reconstruction of the deleted Wireframe-55 export, whose conic fill lived
+     inside a <foreignObject> XHTML div that no standalone SVG renderer
+     honours. Angles preserved from that export; hues pulled onto the ramps. */
+  --ansr-gradient-conic:
+    conic-gradient(from 90deg,
+      var(--ansr-teal-900)  0deg,
+      var(--ansr-teal-800)  36deg,
+      var(--ansr-orange)    95deg,
+      var(--ansr-teal-600) 206deg,
+      var(--ansr-teal-400) 253deg,
+      var(--ansr-teal-900) 360deg);
+
+  /* Replaces the deleted 40MB Rectangle-1 blur raster. */
+  --ansr-blur-wash: blur(96px);
+
+  /* ======================================================================
+     3. TYPOGRAPHY
+     The brand doc specifies no typeface, so this is a project decision:
+     Inter, for its tabular numerals and small-size legibility — both of
+     which a benchmarking product leans on hard. Swap the family tokens if
+     brand supplies a licensed face; nothing else needs to change.
+     ====================================================================== */
+  --ansr-font-sans: Inter, ui-sans-serif, system-ui, -apple-system,
+                    "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  --ansr-font-mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo,
+                    Consolas, monospace;
+
+  /* Scale. Tight at the bottom for dense UI, ~1.25 at the display end. */
+  --ansr-text-xs:   0.75rem;  /* 12px  captions, table meta       */
+  --ansr-text-sm:   0.875rem; /* 14px  UI default, dense tables   */
+  --ansr-text-base: 1rem;     /* 16px  body                       */
+  --ansr-text-lg:   1.125rem; /* 18px  lead paragraph             */
+  --ansr-text-xl:   1.25rem;  /* 20px  card title                 */
+  --ansr-text-2xl:  1.5rem;   /* 24px  section heading            */
+  --ansr-text-3xl:  1.875rem; /* 30px                             */
+  --ansr-text-4xl:  2.375rem; /* 38px  page title                 */
+  --ansr-text-5xl:  3rem;     /* 48px  hero                       */
+  --ansr-text-6xl:  3.75rem;  /* 60px  hero, desktop only         */
+
+  --ansr-leading-tight:   1.15; /* display only */
+  --ansr-leading-snug:    1.3;  /* headings     */
+  --ansr-leading-normal:  1.5;  /* body         */
+  --ansr-leading-relaxed: 1.65; /* long form    */
+
+  --ansr-weight-regular:  400;
+  --ansr-weight-medium:   500;
+  --ansr-weight-semibold: 600;
+  --ansr-weight-bold:     700;
+
+  /* Optical tracking: large type needs negative, small caps need positive. */
+  --ansr-tracking-display: -0.02em;
+  --ansr-tracking-heading: -0.01em;
+  --ansr-tracking-body:    0;
+  --ansr-tracking-caps:    0.06em;
+
+  --ansr-measure: 68ch; /* max line length for body copy */
+
+  /* ======================================================================
+     4. SPACING — 4px base unit
+     ====================================================================== */
+  --ansr-space-0:  0;
+  --ansr-space-1:  0.25rem; /*  4px */
+  --ansr-space-2:  0.5rem;  /*  8px */
+  --ansr-space-3:  0.75rem; /* 12px */
+  --ansr-space-4:  1rem;    /* 16px */
+  --ansr-space-5:  1.25rem; /* 20px */
+  --ansr-space-6:  1.5rem;  /* 24px */
+  --ansr-space-8:  2rem;    /* 32px */
+  --ansr-space-10: 2.5rem;  /* 40px */
+  --ansr-space-12: 3rem;    /* 48px */
+  --ansr-space-16: 4rem;    /* 64px */
+  --ansr-space-20: 5rem;    /* 80px */
+  --ansr-space-24: 6rem;    /* 96px */
+  --ansr-space-32: 8rem;    /* 128px — section rhythm */
+
+  /* ======================================================================
+     5. RADIUS
+     The brand's geometry is hard-edged: every motif is a square-cut pin, and
+     the logo is sharp rays. Rounding stays minimal so UI does not drift soft
+     against the graphic language. Default is `md`; `none` for anything
+     sitting directly against a motif.
+     ====================================================================== */
+  --ansr-radius-none: 0;
+  --ansr-radius-sm:   2px;
+  --ansr-radius-md:   4px;
+  --ansr-radius-lg:   8px;
+  --ansr-radius-xl:   12px;
+  --ansr-radius-pill: 9999px; /* tags and counters only */
+
+  /* ======================================================================
+     6. ELEVATION
+     Shadows are teal-tinted rather than neutral black, so depth reads as
+     part of the palette. Kept shallow — the brand is graphic, not glossy.
+     ====================================================================== */
+  --ansr-shadow-xs: 0 1px 2px color-mix(in oklab, var(--ansr-teal-deep) 8%, transparent);
+  --ansr-shadow-sm: 0 1px 3px color-mix(in oklab, var(--ansr-teal-deep) 10%, transparent),
+                    0 1px 2px color-mix(in oklab, var(--ansr-teal-deep) 6%, transparent);
+  --ansr-shadow-md: 0 4px 12px color-mix(in oklab, var(--ansr-teal-deep) 10%, transparent),
+                    0 1px 3px color-mix(in oklab, var(--ansr-teal-deep) 6%, transparent);
+  --ansr-shadow-lg: 0 12px 32px color-mix(in oklab, var(--ansr-teal-deep) 14%, transparent),
+                    0 2px 6px color-mix(in oklab, var(--ansr-teal-deep) 8%, transparent);
+
+  --ansr-z-base:    0;
+  --ansr-z-raised:  10;
+  --ansr-z-sticky:  100;
+  --ansr-z-overlay: 200;
+  --ansr-z-modal:   300;
+  --ansr-z-toast:   400;
+
+  /* ======================================================================
+     7. MOTION
+     Everything lands under the 400ms flow threshold. `base` is the default
+     for state changes; reserve `slow`/`slower` for entering elements that
+     travel distance.
+     ====================================================================== */
+  --ansr-duration-instant: 0ms;
+  --ansr-duration-fast:    120ms; /* hover, focus, colour swaps       */
+  --ansr-duration-base:    180ms; /* default state change             */
+  --ansr-duration-slow:    240ms; /* panels, disclosure               */
+  --ansr-duration-slower:  320ms; /* full-surface or modal transition */
+
+  --ansr-ease-standard: cubic-bezier(0.2, 0, 0, 1);    /* default          */
+  --ansr-ease-entrance: cubic-bezier(0, 0, 0.2, 1);    /* decelerate in    */
+  --ansr-ease-exit:     cubic-bezier(0.4, 0, 1, 1);    /* accelerate out   */
+  --ansr-ease-spring:   cubic-bezier(0.34, 1.4, 0.64, 1); /* one accent max */
+
+  /* ======================================================================
+     8. LAYOUT
+     ====================================================================== */
+  --ansr-container:      80rem;  /* 1280px content max        */
+  --ansr-container-wide: 90rem;  /* 1440px full-bleed sections */
+  --ansr-gutter:         var(--ansr-space-6);
+  --ansr-gutter-lg:      var(--ansr-space-12);
+}
+
+/* ==========================================================================
+   Stripe field
+   Replaces the six deleted flat-stripe SVGs (Group 2/3/4, Layer_1 5/9), which
+   were eight evenly spaced rectangles each. Same output, zero bytes, any
+   density.
+   ========================================================================== */
+.ansr-stripes {
+  --stripe-w: 16px;
+  --stripe-gap: 11px;
+  --stripe-color: var(--ansr-motif-ink);
+  background-image: repeating-linear-gradient(
+    to right,
+    var(--stripe-color) 0 var(--stripe-w),
+    transparent var(--stripe-w) calc(var(--stripe-w) + var(--stripe-gap))
+  );
+}
+.ansr-stripes--fade-right { mask-image: linear-gradient(to right,  #000, transparent); }
+.ansr-stripes--fade-left  { mask-image: linear-gradient(to left,   #000, transparent); }
+.ansr-stripes--fade-down  { mask-image: linear-gradient(to bottom, #000, transparent); }
+
+/* ==========================================================================
+   Motif placement
+   Default posture for decorative brand art: behind content, held back,
+   non-interactive, and gone when the user has asked for more contrast.
+   ========================================================================== */
+.ansr-motif {
+  position: absolute;
+  z-index: var(--ansr-z-base);
+  pointer-events: none;
+  opacity: var(--ansr-motif-opacity);
+}
+.ansr-motif > svg { display: block; width: 100%; height: 100%; }
+.ansr-motif + *   { position: relative; z-index: var(--ansr-z-raised); }
+
+@media (prefers-contrast: more) {
+  /* Motifs sit under text and cut effective contrast. */
+  .ansr-motif { display: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 1ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 1ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* Focus is always the brand orange, always visible, never removed. */
+:where(a, button, input, select, textarea, summary, [tabindex]):focus-visible {
+  outline: 2px solid var(--ansr-focus);
+  outline-offset: 2px;
+}
+
+/* ==========================================================================
+   Destructive actions
+
+   The palette cannot signal "destructive" with colour: orange belongs to the
+   primary CTA, and nothing else in a six-colour set reads as danger. So the
+   distinction is carried by FORM instead — an outlined control against a
+   filled primary. Measured separation from a filled orange CTA is total:
+   different fill, different border, different text colour.
+
+   Three things are mandatory alongside this class, because form alone is not
+   enough either:
+     1. An explicit verb naming the consequence — "Delete 3 regions", not "OK".
+     2. A warning icon, so the signal survives greyscale and colour blindness.
+     3. A confirmation step for anything irreversible.
+   ========================================================================== */
+.ansr-destructive {
+  background: transparent;
+  color: var(--ansr-feedback-critical);
+  border: 1px solid var(--ansr-feedback-critical);
+  border-radius: var(--ansr-radius-md);
+  font-weight: var(--ansr-weight-semibold);
+  transition: background var(--ansr-duration-fast) var(--ansr-ease-standard),
+              color var(--ansr-duration-fast) var(--ansr-ease-standard);
+}
+.ansr-destructive:hover,
+.ansr-destructive:focus-visible {
+  background: var(--ansr-feedback-critical);
+  color: var(--ansr-white);
+}
+
+/* Inline field errors. Black text carries the message at 21:1; the orange rule
+   draws the eye without pretending to be a danger hue. */
+.ansr-field-error {
+  color: var(--ansr-feedback-critical);
+  font-weight: var(--ansr-weight-medium);
+  border-inline-start: 2px solid var(--ansr-feedback-attention);
+  padding-inline-start: var(--ansr-space-2);
+}

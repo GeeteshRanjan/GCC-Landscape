@@ -1,0 +1,47 @@
+{
+  "describedAs": "1834 companies, from Consolidated_GCC_India_Database_2026_New.xlsx",
+  "recordedAt": "2026-08-27T04:38:09.900Z",
+  "figures": {
+    "companies": 1834,
+    "industries": 24,
+    "revenue bands": 7,
+    "cities": 31,
+    "HQ countries": 47,
+    "revenue band order": [
+      "< $100 Mn",
+      "$100 Mn – $500 Mn",
+      "$500 Mn – $1 Bn",
+      "$1 Bn – $5 Bn",
+      "$5 Bn – $10 Bn",
+      "$10 Bn – $20 Bn",
+      "Above $20 Bn"
+    ],
+    "largest FTE upper bound": 60000,
+    "distinct FTE ranges after normalising both dash variants": 128,
+    "Fortune Global 500": 181,
+    "Forbes Global 2000": 483,
+    "professionals, all companies": 2610500,
+    "professionals, Fortune 500 subset": 1059175,
+    "tier-2 presence, derived": 176,
+    "top six cities": [
+      "Bengaluru 1004",
+      "Hyderabad 434",
+      "Pune 372",
+      "NCR 332",
+      "Chennai 282",
+      "Mumbai 224"
+    ],
+    "multi-city companies": 626,
+    "industry + revenue band": 1683,
+    "industry + revenue band +/- 1 step": 1795,
+    "industry x band combinations": 136,
+    "combinations short of five peers": 6,
+    "industries with nobody in the top band": [
+      "Education",
+      "Electrical & Electronics",
+      "Professional Services"
+    ],
+    "Education: in industry / peers / shortfall": "6 / 5 / 0",
+    "Electrical & Electronics: in industry / peers / shortfall": "2 / 2 / 3"
+  }
+}

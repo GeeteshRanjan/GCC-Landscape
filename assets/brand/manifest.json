@@ -1,0 +1,322 @@
+{
+  "palette_source": "Branding_Palette.docx",
+  "tokens": "assets/brand/tokens.css",
+  "rule": "Never place an asset from this library unmodified. See .kiro/skills/ansr-brand-assets/SKILL.md",
+  "assets": [
+    {
+      "id": "ansr-mark",
+      "path": "assets/brand/logo/ansr-mark.svg",
+      "role": "logo",
+      "viewBox": "0 0 88 91",
+      "aspect": 0.967,
+      "origin": "ANSR_Logo.svg",
+      "note": "Sunburst mark, no wordmark. The radial pin burst every other motif derives from. Use where the wordmark is already present or space is square.",
+      "literal_use": true
+    },
+    {
+      "id": "ansr-logo",
+      "path": "assets/brand/logo/ansr-logo.svg",
+      "role": "logo",
+      "viewBox": "0 0 253 91",
+      "aspect": 2.78,
+      "origin": "ANSR_NAMED_Logo.svg",
+      "note": "Mark plus wordmark. Default lockup. Wordmark inherits currentColor, so it is black on light grounds and follows text colour when inlined.",
+      "literal_use": true
+    },
+    {
+      "id": "ansr-logo-on-dark",
+      "path": "assets/brand/logo/ansr-logo-on-dark.svg",
+      "role": "logo",
+      "viewBox": "0 0 253 91",
+      "aspect": 2.78,
+      "origin": "ANSR_NAMED_Logo.svg",
+      "note": "Same lockup with an explicitly white wordmark. Use on deep teal or black grounds, and anywhere the logo is loaded via <img> where currentColor cannot inherit.",
+      "literal_use": true
+    },
+    {
+      "id": "pin-arc-teal",
+      "path": "assets/brand/motif/pin-arc-teal.svg",
+      "role": "motif",
+      "viewBox": "0 0 378 752",
+      "aspect": 0.503,
+      "origin": "Group (3).svg",
+      "note": "Pins arranged in a bell curve, teal gradient. Reads as growth/distribution. Section header or card corner."
+    },
+    {
+      "id": "pin-arc-orange",
+      "path": "assets/brand/motif/pin-arc-orange.svg",
+      "role": "motif",
+      "viewBox": "0 0 482 960",
+      "aspect": 0.502,
+      "origin": "Group (2).svg",
+      "note": "Same bell curve in orange. Orange is a highlight colour - one per view at most."
+    },
+    {
+      "id": "pin-field-teal",
+      "path": "assets/brand/motif/pin-field-teal.svg",
+      "role": "motif",
+      "viewBox": "0 0 556 1350",
+      "aspect": 0.412,
+      "origin": "Group (1).svg",
+      "note": "Dense pin column field fading to nothing. Best as a full-bleed edge wash behind content."
+    },
+    {
+      "id": "pin-field-orange",
+      "path": "assets/brand/motif/pin-field-orange.svg",
+      "role": "motif",
+      "viewBox": "0 0 1328 1258",
+      "aspect": 1.056,
+      "origin": "Group 37.svg",
+      "note": "Orange counterpart. Very loud at full opacity - fade to 0.15-0.3 before use."
+    },
+    {
+      "id": "pin-circle",
+      "path": "assets/brand/motif/pin-circle.svg",
+      "role": "motif",
+      "viewBox": "0 0 689 688",
+      "aspect": 1.001,
+      "origin": "Clip path group.svg",
+      "note": "Pin field clipped to a circle. Works as an avatar backdrop or a stat medallion."
+    },
+    {
+      "id": "pin-cascade",
+      "path": "assets/brand/motif/pin-cascade.svg",
+      "role": "motif",
+      "viewBox": "0 0 1075 901",
+      "aspect": 1.193,
+      "origin": "Group 38.svg",
+      "note": "Staggered horizontal bars ascending left to right. Progress, ranking, or timeline."
+    },
+    {
+      "id": "pin-rows-accent",
+      "path": "assets/brand/motif/pin-rows-accent.svg",
+      "role": "motif",
+      "viewBox": "0 0 622 816",
+      "aspect": 0.762,
+      "origin": "Layer_1.svg",
+      "note": "Horizontal pin rows with a few highlighted. Good for 'N of M' emphasis."
+    },
+    {
+      "id": "pin-rows-interlock",
+      "path": "assets/brand/motif/pin-rows-interlock.svg",
+      "role": "motif",
+      "viewBox": "0 0 1080 540",
+      "aspect": 2.0,
+      "origin": "Layer_1 (3).svg",
+      "note": "Interlocking horizontal bars, tight and graphic. Wide banner or divider."
+    },
+    {
+      "id": "pin-staircase",
+      "path": "assets/brand/motif/pin-staircase.svg",
+      "role": "motif",
+      "viewBox": "0 0 539 951",
+      "aspect": 0.567,
+      "origin": "Layer_1 (4).svg",
+      "note": "Blocky ascending staircase. The most chart-like motif - avoid next to a real chart."
+    },
+    {
+      "id": "pin-diagonal",
+      "path": "assets/brand/motif/pin-diagonal.svg",
+      "role": "motif",
+      "viewBox": "0 0 1080 708",
+      "aspect": 1.525,
+      "origin": "Layer_1 (1).svg",
+      "note": "Diagonal pin streaks. Motion and direction. Fade it for a background texture."
+    },
+    {
+      "id": "pin-fan-wide",
+      "path": "assets/brand/motif/pin-fan-wide.svg",
+      "role": "motif",
+      "viewBox": "0 0 1260 859",
+      "aspect": 1.467,
+      "origin": "Layer_1 (8).svg",
+      "note": "Wide fan sweeping from a left origin. Fills an awkward horizontal gap."
+    },
+    {
+      "id": "pin-fan-corner-teal",
+      "path": "assets/brand/motif/pin-fan-corner-teal.svg",
+      "role": "motif",
+      "viewBox": "0 0 638 662",
+      "aspect": 0.964,
+      "origin": "Vector (2).svg",
+      "note": "Tight triangular corner fan. Anchors a layout corner without competing for attention."
+    },
+    {
+      "id": "pin-fan-corner-orange",
+      "path": "assets/brand/motif/pin-fan-corner-orange.svg",
+      "role": "motif",
+      "viewBox": "0 0 638 662",
+      "aspect": 0.964,
+      "origin": "Vector (1).svg",
+      "note": "Orange corner fan. Reserve for the one moment a view needs heat."
+    },
+    {
+      "id": "pin-burst",
+      "path": "assets/brand/motif/pin-burst.svg",
+      "role": "motif",
+      "viewBox": "0 0 1062 1062",
+      "aspect": 1.0,
+      "origin": "Vector 2.svg",
+      "note": "Full radial burst - the logo mark blown up to graphic scale. Strong hero centrepiece; never place near the actual logo, it competes."
+    },
+    {
+      "id": "arc-dome",
+      "path": "assets/brand/motif/arc-dome.svg",
+      "role": "motif",
+      "viewBox": "0 0 784 378",
+      "aspect": 2.074,
+      "origin": "Layer_1 (6).svg",
+      "note": "Concentric half-dome of thin arcs. Sits under a headline as a horizon."
+    },
+    {
+      "id": "arc-quarter",
+      "path": "assets/brand/motif/arc-quarter.svg",
+      "role": "motif",
+      "viewBox": "0 0 848 643",
+      "aspect": 1.319,
+      "origin": "Layer_1 (7).svg",
+      "note": "Concentric quarter-circle. Corner radial rhythm; near-invisible by design."
+    },
+    {
+      "id": "pin-scatter",
+      "path": "assets/brand/motif/pin-scatter.svg",
+      "role": "motif",
+      "viewBox": "0 0 752 1268",
+      "aspect": 0.593,
+      "origin": "Group 40.svg",
+      "note": "Loose scattered pin clusters across two hues. Busy - crop a region out of it rather than using whole."
+    },
+    {
+      "id": "deep-teal-diagonal-portrait",
+      "path": "assets/brand/texture/deep-teal-diagonal-portrait.svg",
+      "role": "texture",
+      "viewBox": "0 0 1080 1440",
+      "aspect": 0.75,
+      "origin": "Wireframe - 45.svg",
+      "note": "Deep teal ground with low-contrast diagonal streaks. Portrait/mobile hero."
+    },
+    {
+      "id": "deep-teal-diagonal-wide",
+      "path": "assets/brand/texture/deep-teal-diagonal-wide.svg",
+      "role": "texture",
+      "viewBox": "0 0 2560 1600",
+      "aspect": 1.6,
+      "origin": "Wireframe - 63.svg",
+      "note": "Same texture, 16:10. Desktop hero or full-viewport section."
+    }
+  ],
+  "dropped": [
+    {
+      "file": "Rectangle 1.svg",
+      "reason": "40MB embedded raster behind a Gaussian blur. Ships a 40MB payload to draw a blurred rectangle. Replaced by the gradient recipe in tokens.css."
+    },
+    {
+      "file": "Wireframe - 55.svg",
+      "reason": "Figma angular-gradient export - the fill lives in a <foreignObject> XHTML div using CSS conic-gradient, which no standalone SVG renderer honours. Replaced by --ansr-gradient-conic in tokens.css."
+    },
+    {
+      "file": "Group 36.svg",
+      "reason": "Percentage labels baked into paths. Text as vector is untranslatable, unselectable and invisible to screen readers. Build stat callouts as HTML over a motif instead."
+    },
+    {
+      "file": "Group.svg",
+      "reason": "Palette swatch board, not an asset. Its colours are reconciled into tokens.css."
+    },
+    {
+      "file": "Group 2 2.svg",
+      "reason": "Byte-identical duplicate of Group 2.svg."
+    },
+    {
+      "file": "Group 4 2.svg",
+      "reason": "Byte-identical duplicate of Group 4.svg."
+    },
+    {
+      "file": "Group 2.svg",
+      "reason": "Eight evenly spaced flat rects. One CSS repeating-linear-gradient. See tokens.css."
+    },
+    {
+      "file": "Group 3.svg",
+      "reason": "Same stripe field, different height. viewBox already scales."
+    },
+    {
+      "file": "Group 4.svg",
+      "reason": "Same stripe field, different height."
+    },
+    {
+      "file": "Layer_1 (5).svg",
+      "reason": "Flat mint stripe columns - stripe recipe plus a token."
+    },
+    {
+      "file": "Layer_1 (9).svg",
+      "reason": "Flat mint stripe columns, shorter."
+    },
+    {
+      "file": "Group (4).svg",
+      "reason": "Scale variant of pin-arc-orange. SVG is resolution independent."
+    },
+    {
+      "file": "Group (5).svg",
+      "reason": "Scale variant of pin-arc-teal."
+    },
+    {
+      "file": "Group (6).svg",
+      "reason": "Scale variant of pin-arc-teal."
+    },
+    {
+      "file": "Layer_1 (2).svg",
+      "reason": "Lighter, wider pin-diagonal. Reproduce with `fade`, not a second file."
+    },
+    {
+      "file": "Vector.svg",
+      "reason": "Single solid rect #FFEDDF - a colour, not a shape."
+    },
+    {
+      "file": "Vector-1.svg",
+      "reason": "Single solid rect - a colour, not a shape."
+    },
+    {
+      "file": "Vector-2.svg",
+      "reason": "Single solid rect - a colour, not a shape."
+    },
+    {
+      "file": "Vector-3.svg",
+      "reason": "Single solid rect - a colour, not a shape."
+    },
+    {
+      "file": "Vector-4.svg",
+      "reason": "Single solid rect - a colour, not a shape."
+    },
+    {
+      "file": "Vector-5.svg",
+      "reason": "Single solid rect - a colour, not a shape."
+    },
+    {
+      "file": "Vector-6.svg",
+      "reason": "Single solid rect - a colour, not a shape."
+    },
+    {
+      "file": "Vector-7.svg",
+      "reason": "Single solid rect - a colour, not a shape."
+    },
+    {
+      "file": "Vector-8.svg",
+      "reason": "Single solid rect - a colour, not a shape."
+    },
+    {
+      "file": "Vector-9.svg",
+      "reason": "Single solid rect - a colour, not a shape."
+    },
+    {
+      "file": "Vector-10.svg",
+      "reason": "Single solid rect - a colour, not a shape."
+    },
+    {
+      "file": "Vector-11.svg",
+      "reason": "Single solid rect - a colour, not a shape."
+    },
+    {
+      "file": "Vector-12.svg",
+      "reason": "Single solid rect - a colour, not a shape."
+    }
+  ]
+}

@@ -1,0 +1,456 @@
+"use client";
+
+import { useCallback, useEffect, useState } from "react";
+
+import { useDraft } from "@/components/admin/draft-provider";
+import { Button } from "@/components/ui/button";
+import {
+  TAXONOMY_LABELS,
+  formatFieldValue,
+  type DatasetDiff,
+} from "@/data/diff";
+
+/**
+ * Validate, show the diff, then commit. In that order, always.
+ *
+ * The preview is not decoration and it is not computed here — it comes back from
+ * the server, which validates the submitted dataset against the schema and
+ * diffs it against what the write will actually land on. That matters: diffing
+ * in the browser against the copy the page loaded with would miss anything
+ * published from another session in between.
+ *
+ * No git vocabulary reaches this screen. There is one button, and what it says
+ * is what happens.
+ */
+
+interface PreviewState {
+  diff: DatasetDiff;
+  targetDescription: string;
+}
+
+type Phase =
+  | { kind: "idle" }
+  | { kind: "checking" }
+  | { kind: "ready"; preview: PreviewState }
+  | { kind: "publishing"; preview: PreviewState }
+  | { kind: "published"; diff: DatasetDiff }
+  | { kind: "blocked"; error: string; issues?: string[] };
+
+export function PublishPanel() {
+  const { draft, dirty, conflict, markPublished, discardDraft } = useDraft();
+  const [phase, setPhase] = useState<Phase>({ kind: "idle" });
+
+  const check = useCallback(async () => {
+    setPhase({ kind: "checking" });
+    try {
+      const response = await fetch("/api/admin/diff", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ dataset: draft }),
+      });
+      const body = (await response.json().catch(() => ({}))) as {
+        diff?: DatasetDiff;
+        targetDescription?: string;
+        error?: string;
+        issues?: string[];
+      };
+      if (!response.ok || !body.diff) {
+        setPhase({
+          kind: "blocked",
+          error: body.error ?? "Could not check these changes.",
+          issues: body.issues,
+        });
+        return;
+      }
+      setPhase({
+        kind: "ready",
+        preview: {
+          diff: body.diff,
+          targetDescription: body.targetDescription ?? "",
+        },
+      });
+    } catch {
+      setPhase({
+        kind: "blocked",
+        error: "Could not reach the server. Nothing was published.",
+      });
+    }
+  }, [draft]);
+
+  /**
+   * Check on arrival when there is something to check, so the admin lands on the
+   * diff rather than on a button that hides it.
+   *
+   * The `published` phase is held rather than replaced. A successful publish
+   * clears the draft, which makes this fire with `dirty` false — and replacing the
+   * confirmation with "Nothing to publish" means the one moment the admin needs
+   * acknowledgement is the moment they get none. It reads as though the publish
+   * did nothing.
+   */
+  useEffect(() => {
+    if (dirty) {
+      void check();
+      return;
+    }
+    setPhase((current) => (current.kind === "published" ? current : { kind: "idle" }));
+    // `check` closes over the draft; re-running on every keystroke elsewhere in
+    // the app is not wanted, so this intentionally keys on dirty alone.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [dirty]);
+
+  async function publish(preview: PreviewState) {
+    setPhase({ kind: "publishing", preview });
+    try {
+      const response = await fetch("/api/admin/publish", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ dataset: draft }),
+      });
+      const body = (await response.json().catch(() => ({}))) as {
+        ok?: boolean;
+        diff?: DatasetDiff;
+        published?: { version: number; generatedAt: string; source: string };
+        error?: string;
+        issues?: string[];
+      };
+      if (!response.ok || !body.ok || !body.published || !body.diff) {
+        setPhase({
+          kind: "blocked",
+          error: body.error ?? "The changes were not published.",
+          issues: body.issues,
+        });
+        return;
+      }
+      markPublished(body.published);
+      setPhase({ kind: "published", diff: body.diff });
+    } catch {
+      setPhase({
+        kind: "blocked",
+        error:
+          "Lost the connection before the changes were confirmed. Reload this page to see whether they went through.",
+      });
+    }
+  }
+
+  return (
+    <div className="flex flex-col gap-6">
+      <div>
+        <h1 className="text-xl font-semibold tracking-heading text-text">
+          Publish
+        </h1>
+        <p className="mt-1 max-w-measure text-sm text-text-muted">
+          Everything you have edited is checked before anything goes live. If a
+          check fails, nothing is published.
+        </p>
+      </div>
+
+      {conflict ? (
+        <p role="alert" className="ansr-field-error text-sm">
+          The live data changed since these edits were started. Resolve that at
+          the top of the page before publishing.
+        </p>
+      ) : null}
+
+      {phase.kind === "idle" ? (
+        <EmptyState />
+      ) : phase.kind === "checking" ? (
+        <SkeletonState />
+      ) : phase.kind === "blocked" ? (
+        <BlockedState
+          error={phase.error}
+          issues={phase.issues}
+          onRetry={dirty ? check : undefined}
+        />
+      ) : phase.kind === "published" ? (
+        <PublishedState diff={phase.diff} />
+      ) : (
+        <>
+          <DiffView diff={phase.preview.diff} />
+          <div className="flex flex-wrap items-center gap-4 border-t border-border-subtle pt-5">
+            <Button
+              onClick={() => void publish(phase.preview)}
+              disabled={phase.kind === "publishing" || phase.preview.diff.isEmpty}
+            >
+              {phase.kind === "publishing" ? "Publishing…" : "Publish changes"}
+            </Button>
+            <Button
+              variant="ghost"
+              onClick={discardDraft}
+              disabled={phase.kind === "publishing"}
+            >
+              Discard all changes
+            </Button>
+            {phase.preview.targetDescription ? (
+              <p className="text-sm text-text-muted">
+                {phase.preview.targetDescription}
+              </p>
+            ) : null}
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
+function EmptyState() {
+  return (
+    <div className="border border-border-subtle bg-surface px-6 py-12 text-center">
+      <p className="text-sm text-text">Nothing to publish.</p>
+      <p className="mt-1 text-sm text-text-muted">
+        The draft matches what is already live. Edit a company or a taxonomy
+        value and the changes will show up here.
+      </p>
+    </div>
+  );
+}
+
+function SkeletonState() {
+  return (
+    <div
+      role="status"
+      className="border border-border-subtle bg-surface p-6"
+      aria-label="Checking the changes"
+    >
+      <div className="flex flex-col gap-3">
+        {[0, 1, 2].map((row) => (
+          <div
+            key={row}
+            aria-hidden="true"
+            className="h-4 animate-pulse bg-surface-sunken"
+            style={{ width: `${70 - row * 15}%` }}
+          />
+        ))}
+      </div>
+      <p className="mt-4 text-sm text-text-muted">Checking the changes…</p>
+    </div>
+  );
+}
+
+function BlockedState({
+  error,
+  issues,
+  onRetry,
+}: {
+  error: string;
+  issues?: string[];
+  onRetry?: () => void;
+}) {
+  return (
+    <div role="alert" className="border border-border-strong bg-surface p-6">
+      <h2 className="text-base font-semibold text-text">Not published</h2>
+      <p className="ansr-field-error mt-2 text-sm">{error}</p>
+      {issues && issues.length > 0 ? (
+        <ul className="mt-4 flex flex-col gap-1 border-t border-border-subtle pt-4">
+          {issues.map((issue, index) => (
+            <li key={`${issue}-${index}`} className="font-mono text-xs text-text">
+              {issue}
+            </li>
+          ))}
+        </ul>
+      ) : null}
+      {onRetry ? (
+        <Button variant="outline" className="mt-5" onClick={onRetry}>
+          Check again
+        </Button>
+      ) : null}
+    </div>
+  );
+}
+
+function PublishedState({ diff }: { diff: DatasetDiff }) {
+  return (
+    <div className="border border-border-subtle bg-surface p-6">
+      {/* Success carried by form and words, not a colour: this palette has no
+          success hue, by measurement. See tokens.css. */}
+      <h2 className="flex items-center gap-2 text-base font-semibold text-text">
+        <span aria-hidden="true">✓</span>
+        Published
+      </h2>
+      <p className="mt-2 max-w-measure text-sm text-text-muted">
+        {summarise(diff)}. Changes go live shortly — give it a minute, then
+        reload the public page to see them.
+      </p>
+    </div>
+  );
+}
+
+function summarise(diff: DatasetDiff): string {
+  const parts: string[] = [];
+  if (diff.counts.added) parts.push(`${diff.counts.added} added`);
+  if (diff.counts.removed) parts.push(`${diff.counts.removed} removed`);
+  if (diff.counts.changed) parts.push(`${diff.counts.changed} edited`);
+  if (diff.counts.taxonomy) {
+    parts.push(
+      `${diff.counts.taxonomy} taxonomy list${diff.counts.taxonomy === 1 ? "" : "s"} updated`,
+    );
+  }
+  return parts.length > 0 ? parts.join(", ") : "No changes";
+}
+
+function DiffView({ diff }: { diff: DatasetDiff }) {
+  if (diff.isEmpty) {
+    return (
+      <div className="border border-border-subtle bg-surface px-6 py-12 text-center">
+        <p className="text-sm text-text">
+          These changes match what is already live.
+        </p>
+        <p className="mt-1 text-sm text-text-muted">
+          There is nothing to publish.
+        </p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex flex-col gap-5">
+      <dl className="grid grid-cols-2 gap-px border border-border-subtle bg-border-subtle sm:grid-cols-4">
+        <Count label="Added" value={diff.counts.added} />
+        <Count label="Removed" value={diff.counts.removed} />
+        <Count label="Edited" value={diff.counts.changed} />
+        <Count label="Taxonomy lists" value={diff.counts.taxonomy} />
+      </dl>
+
+      {diff.taxonomy.length > 0 ? (
+        <section
+          aria-labelledby="diff-taxonomy"
+          className="border border-border-subtle bg-surface"
+        >
+          <h2
+            id="diff-taxonomy"
+            className="border-b border-border-subtle px-5 py-3 text-sm font-semibold text-text"
+          >
+            Taxonomy
+          </h2>
+          <ul className="divide-y divide-border-subtle">
+            {diff.taxonomy.map((entry) => (
+              <li key={entry.key} className="px-5 py-3 text-sm">
+                <p className="font-medium text-text">
+                  {TAXONOMY_LABELS[entry.key]}
+                </p>
+                <ul className="mt-1 flex flex-col gap-0.5 text-text-muted">
+                  {entry.added.length > 0 ? (
+                    <li>Added: {entry.added.join(", ")}</li>
+                  ) : null}
+                  {entry.removed.length > 0 ? (
+                    <li>Removed: {entry.removed.join(", ")}</li>
+                  ) : null}
+                  {entry.reordered ? (
+                    <li className="text-text">
+                      Reordered. For revenue bands this changes which band counts
+                      as adjacent, so it changes who matches as a peer.
+                    </li>
+                  ) : null}
+                </ul>
+              </li>
+            ))}
+          </ul>
+        </section>
+      ) : null}
+
+      {diff.changed.length > 0 ? (
+        <DiffSection title={`Edited (${diff.changed.length})`}>
+          <ul className="divide-y divide-border-subtle">
+            {diff.changed.slice(0, 100).map((company) => (
+              <li key={company.id} className="px-5 py-3 text-sm">
+                <p className="font-medium text-text">{company.name}</p>
+                <ul className="mt-1.5 flex flex-col gap-1">
+                  {company.changes.map((change) => (
+                    <li key={change.field} className="flex flex-wrap gap-x-2">
+                      <span className="text-xs uppercase tracking-caps text-text-muted">
+                        {change.field}
+                      </span>
+                      <span className="text-text-muted line-through">
+                        {formatFieldValue(change.before)}
+                      </span>
+                      <span aria-hidden="true" className="text-text-muted">
+                        →
+                      </span>
+                      <span className="text-text">
+                        {formatFieldValue(change.after)}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              </li>
+            ))}
+          </ul>
+          {diff.changed.length > 100 ? (
+            <p className="border-t border-border-subtle px-5 py-3 text-sm text-text-muted">
+              …and {diff.changed.length - 100} more. All of them will be
+              published.
+            </p>
+          ) : null}
+        </DiffSection>
+      ) : null}
+
+      {diff.added.length > 0 ? (
+        <DiffSection title={`Added (${diff.added.length})`}>
+          <NameList items={diff.added} />
+        </DiffSection>
+      ) : null}
+
+      {diff.removed.length > 0 ? (
+        <DiffSection title={`Removed (${diff.removed.length})`}>
+          <NameList items={diff.removed} />
+        </DiffSection>
+      ) : null}
+    </div>
+  );
+}
+
+/**
+ * `aria-labelledby` is what makes each block a named landmark rather than an
+ * anonymous <section>. The diff is the densest thing on this screen and the one
+ * an admin is being asked to approve, so being able to jump between Added,
+ * Removed and Edited by region is the difference between reviewing it and
+ * scrolling past it.
+ */
+function DiffSection({
+  title,
+  children,
+}: {
+  title: string;
+  children: React.ReactNode;
+}) {
+  const headingId = `diff-${title.replace(/[^a-z]+/gi, "-").toLowerCase()}`;
+  return (
+    <section aria-labelledby={headingId} className="border border-border-subtle bg-surface">
+      <h2
+        id={headingId}
+        className="border-b border-border-subtle px-5 py-3 text-sm font-semibold text-text"
+      >
+        {title}
+      </h2>
+      {children}
+    </section>
+  );
+}
+
+function NameList({ items }: { items: Array<{ id: string; name: string }> }) {
+  return (
+    <ul className="divide-y divide-border-subtle">
+      {items.slice(0, 100).map((item) => (
+        <li key={item.id} className="px-5 py-2.5 text-sm text-text">
+          {item.name}
+          <span className="ms-2 font-mono text-xs text-text-muted">{item.id}</span>
+        </li>
+      ))}
+      {items.length > 100 ? (
+        <li className="px-5 py-2.5 text-sm text-text-muted">
+          …and {items.length - 100} more.
+        </li>
+      ) : null}
+    </ul>
+  );
+}
+
+function Count({ label, value }: { label: string; value: number }) {
+  return (
+    <div className="bg-surface px-5 py-4">
+      <dt className="text-xs uppercase tracking-caps text-text-muted">{label}</dt>
+      <dd className="mt-1 text-2xl font-semibold tabular-nums text-text">
+        {value.toLocaleString()}
+      </dd>
+    </div>
+  );
+}

@@ -1,0 +1,37 @@
+node_modules/
+.next/
+out/
+build/
+dist/
+
+# env
+.env
+.env.*
+!.env.example
+
+# os / editor
+.DS_Store
+*.pem
+
+# typescript
+*.tsbuildinfo
+next-env.d.ts
+
+# import scratch output — the published dataset lives in data/, tracked
+data/*.report.json
+
+# test fixtures and reports
+tests/browser/.tmp/
+playwright-report/
+test-results/
+
+# Vendored third-party agent skills: 300 files, 2.1 MB, three upstream packs, one
+# LICENSE between them. Not committed, because git history is forever and this is
+# a client repo — redistributing other people's work into it is the hard decision
+# to reverse, whereas re-adding these is a one-line change.
+#
+# Nothing is lost: .kiro/skill-sources.json records each pack's repo and pinned
+# commit, and the documented update path is re-cloning rather than editing in
+# place. Steering, hooks and settings ARE tracked — they are ours and they are
+# what makes a session reproducible.
+.kiro/skills/

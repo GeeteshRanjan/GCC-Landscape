@@ -1,0 +1,260 @@
+{
+  "generated": "2026-08-26",
+  "note": "Provenance for skills installed under .kiro/skills. Flat layout: SKILL.md frontmatter `name` == folder name.",
+  "packs": [
+    {
+      "repo": "emilkowalski/skills",
+      "url": "https://github.com/emilkowalski/skills",
+      "source_path": "emilkowalski/skills",
+      "commit": "d23d7f88a2e21c9e4b1418c7abe420f5c1052ba7",
+      "skills": [
+        "animate",
+        "animate-expo",
+        "animation-vocabulary",
+        "apple-design",
+        "ask-sonner",
+        "emil-design-eng",
+        "find-animation-opportunities",
+        "improve-animations",
+        "pick-ui-library",
+        "prototype",
+        "review-animations",
+        "write-swift"
+      ]
+    },
+    {
+      "repo": "jakubkrehel/skills",
+      "url": "https://github.com/jakubkrehel/skills",
+      "source_path": "jakubkrehel/skills",
+      "commit": "ca483852de23d48ab4f4ea71da37dad12bd70a95",
+      "skills": [
+        "better-accessibility",
+        "better-colors",
+        "better-interface",
+        "better-layout",
+        "better-typography",
+        "better-ui",
+        "better-writing",
+        "break",
+        "explain-interface",
+        "interface-review",
+        "variant"
+      ]
+    },
+    {
+      "repo": "elayadesign/ai-design-skills",
+      "url": "https://github.com/elayadesign/ai-design-skills",
+      "source_path": "elaya/skills",
+      "commit": "1c1e97cb9878e236552c772092dda7adcdddbcb2",
+      "skills": [
+        "landing-page-design"
+      ]
+    },
+    {
+      "repo": "codeswithroh/tastemaker",
+      "url": "https://github.com/codeswithroh/tastemaker",
+      "source_path": "tastemaker/skills",
+      "commit": "45313ce9f60971134704a17f7b1a64c30909c240",
+      "skills": [
+        "tastemaker"
+      ]
+    },
+    {
+      "repo": "ConardLi/garden-skills",
+      "url": "https://github.com/ConardLi/garden-skills",
+      "source_path": "garden/skills/web-design-engineer",
+      "commit": "aaf9a82f5efd73e87cc0998edc398e75bfc35901",
+      "skills": [
+        "web-design-engineer"
+      ]
+    },
+    {
+      "repo": "bklit/bklit-ui",
+      "url": "https://github.com/bklit/bklit-ui",
+      "source_path": "bklit/skills/bklit-ui",
+      "commit": "c57f66bfa7c3198edb677b567ce08cbf364ae159",
+      "skills": [
+        "bklit-ui"
+      ]
+    },
+    {
+      "repo": "Owl-Listener/designer-skills",
+      "url": "https://github.com/Owl-Listener/designer-skills",
+      "source_path": "owl/design-ops/skills",
+      "commit": "20e34c4a587e5eb09fcdf8351fa97b3ad761b31e",
+      "skills": [
+        "design-critique",
+        "design-debt-audit",
+        "design-impact-reporting",
+        "design-qa-checklist",
+        "design-review-process",
+        "design-sprint-plan",
+        "handoff-spec",
+        "team-workflow",
+        "version-control-strategy"
+      ]
+    },
+    {
+      "repo": "Owl-Listener/designer-skills",
+      "url": "https://github.com/Owl-Listener/designer-skills",
+      "source_path": "owl/design-research/skills",
+      "commit": "20e34c4a587e5eb09fcdf8351fa97b3ad761b31e",
+      "skills": [
+        "affinity-diagram",
+        "card-sort-analysis",
+        "diary-study-plan",
+        "empathy-map",
+        "interview-script",
+        "jobs-to-be-done",
+        "journey-map",
+        "research-repository",
+        "summarize-interview",
+        "survey-design",
+        "usability-test-plan",
+        "user-persona"
+      ]
+    },
+    {
+      "repo": "Owl-Listener/designer-skills",
+      "url": "https://github.com/Owl-Listener/designer-skills",
+      "source_path": "owl/design-systems/skills",
+      "commit": "20e34c4a587e5eb09fcdf8351fa97b3ad761b31e",
+      "skills": [
+        "accessibility-audit",
+        "component-spec",
+        "design-system-governance",
+        "design-token",
+        "documentation-template",
+        "icon-system",
+        "localization-design",
+        "motion-system",
+        "naming-convention",
+        "pattern-library",
+        "theming-system"
+      ]
+    },
+    {
+      "repo": "Owl-Listener/designer-skills",
+      "url": "https://github.com/Owl-Listener/designer-skills",
+      "source_path": "owl/designer-toolkit/skills",
+      "commit": "20e34c4a587e5eb09fcdf8351fa97b3ad761b31e",
+      "skills": [
+        "case-study",
+        "design-negotiation",
+        "design-rationale",
+        "design-system-adoption",
+        "design-token-audit",
+        "presentation-deck",
+        "ux-writing"
+      ]
+    },
+    {
+      "repo": "Owl-Listener/designer-skills",
+      "url": "https://github.com/Owl-Listener/designer-skills",
+      "source_path": "owl/interaction-design/skills",
+      "commit": "20e34c4a587e5eb09fcdf8351fa97b3ad761b31e",
+      "skills": [
+        "animation-principles",
+        "conversational-ux",
+        "doherty-threshold",
+        "error-handling-ux",
+        "feedback-patterns",
+        "fitts-law",
+        "form-design",
+        "gesture-patterns",
+        "hicks-law",
+        "interfaces-that-feel",
+        "jakobs-law",
+        "loading-states",
+        "micro-interaction-spec",
+        "millers-law",
+        "navigation-patterns",
+        "onboarding-design",
+        "peak-end-rule",
+        "search-ux",
+        "serial-position-effect",
+        "state-machine",
+        "teslers-law",
+        "zeigarnik-effect"
+      ]
+    },
+    {
+      "repo": "Owl-Listener/designer-skills",
+      "url": "https://github.com/Owl-Listener/designer-skills",
+      "source_path": "owl/prototyping-testing/skills",
+      "commit": "20e34c4a587e5eb09fcdf8351fa97b3ad761b31e",
+      "skills": [
+        "a-b-test-design",
+        "accessibility-test-plan",
+        "click-test-plan",
+        "heuristic-evaluation",
+        "prototype-strategy",
+        "test-scenario",
+        "user-flow-diagram",
+        "wireframe-spec"
+      ]
+    },
+    {
+      "repo": "Owl-Listener/designer-skills",
+      "url": "https://github.com/Owl-Listener/designer-skills",
+      "source_path": "owl/ui-design/skills",
+      "commit": "20e34c4a587e5eb09fcdf8351fa97b3ad761b31e",
+      "skills": [
+        "aesthetic-usability",
+        "color-system",
+        "dark-mode-design",
+        "data-visualization",
+        "illustration-style",
+        "law-of-closure",
+        "law-of-common-region",
+        "law-of-continuity",
+        "law-of-figure-ground",
+        "law-of-proximity",
+        "law-of-similarity",
+        "layout-grid",
+        "platform-conventions",
+        "readable-measure",
+        "responsive-design",
+        "spacing-system",
+        "typography-scale",
+        "visual-hierarchy",
+        "von-restorff-effect"
+      ]
+    },
+    {
+      "repo": "Owl-Listener/designer-skills",
+      "url": "https://github.com/Owl-Listener/designer-skills",
+      "source_path": "owl/ux-strategy/skills",
+      "commit": "20e34c4a587e5eb09fcdf8351fa97b3ad761b31e",
+      "skills": [
+        "business-design",
+        "competitive-analysis",
+        "content-strategy",
+        "design-brief",
+        "design-principles",
+        "experience-map",
+        "information-architecture",
+        "metrics-definition",
+        "north-star-vision",
+        "opportunity-framework",
+        "service-blueprint",
+        "stakeholder-alignment"
+      ]
+    },
+    {
+      "repo": "Owl-Listener/designer-skills",
+      "url": "https://github.com/Owl-Listener/designer-skills",
+      "source_path": "owl/visual-critique/skills",
+      "commit": "20e34c4a587e5eb09fcdf8351fa97b3ad761b31e",
+      "skills": [
+        "critique-affordance",
+        "critique-brand-consistency",
+        "critique-color",
+        "critique-composition",
+        "critique-information-density",
+        "critique-typography",
+        "critique-visual-hierarchy"
+      ]
+    }
+  ]
+}

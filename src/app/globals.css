@@ -1,0 +1,238 @@
+/* ==========================================================================
+   Tailwind theme, generated from the brand tokens.
+
+   assets/brand/tokens.css is the single source of truth and is imported
+   verbatim — the values are NOT restated here. Every entry below is an alias
+   from a Tailwind theme key to an --ansr-* token, so a token change lands in
+   the utilities with no second edit.
+
+   Two deliberate constraints:
+     - Tailwind's default colour palette is cleared (`--color-*: initial`).
+       Off-brand colour is then unreachable through a utility class, which is
+       what makes scripts/brand_lint.py sufficient rather than optimistic.
+     - The shadcn/ui contract variables (--background, --primary, --ring, ...)
+       are defined here as mappings onto the brand aliases, so a component
+       pulled from a registry is on-brand with no edits.
+   ========================================================================== */
+
+@import "../../assets/brand/tokens.css";
+@import "tailwindcss" source(none);
+@import "tw-animate-css";
+
+@source "../../src";
+
+@custom-variant dark (&:is(.dark *));
+
+/* --------------------------------------------------------------------------
+   shadcn/ui contract. Names fixed by the registry; values are ours.
+   -------------------------------------------------------------------------- */
+:root {
+  --radius: var(--ansr-radius-md);
+
+  --background: var(--ansr-surface);
+  --foreground: var(--ansr-text);
+
+  --card: var(--ansr-surface);
+  --card-foreground: var(--ansr-text);
+  --popover: var(--ansr-surface);
+  --popover-foreground: var(--ansr-text);
+
+  /* Primary is the brand teal, not the orange: orange is restricted to CTAs
+     and hover states, and shadcn maps `primary` onto every default button. */
+  --primary: var(--ansr-accent);
+  --primary-foreground: var(--ansr-text-on-accent);
+
+  --secondary: var(--ansr-surface-subtle);
+  --secondary-foreground: var(--ansr-text);
+  --muted: var(--ansr-surface-sunken);
+  --muted-foreground: var(--ansr-text-muted);
+
+  --accent: var(--ansr-action);
+  --accent-foreground: var(--ansr-action-text);
+
+  /* No danger hue exists in this palette; destructive is carried by form.
+     See .ansr-destructive in tokens.css and the open brand ask in BRAND.md. */
+  --destructive: var(--ansr-feedback-critical);
+  --destructive-foreground: var(--ansr-text-inverse);
+
+  --border: var(--ansr-border);
+  --input: var(--ansr-border-strong);
+  --ring: var(--ansr-focus);
+}
+
+@theme inline {
+  /* ---- Colour ---------------------------------------------------------- */
+  --color-*: initial;
+
+  --color-transparent: transparent;
+  --color-current: currentColor;
+  --color-inherit: inherit;
+
+  --color-black: var(--ansr-black);
+  --color-white: var(--ansr-white);
+
+  --color-teal-900: var(--ansr-teal-900);
+  --color-teal-800: var(--ansr-teal-800);
+  --color-teal-700: var(--ansr-teal-700);
+  --color-teal-600: var(--ansr-teal-600);
+  --color-teal-500: var(--ansr-teal-500);
+  --color-teal-400: var(--ansr-teal-400);
+  --color-teal-300: var(--ansr-teal-300);
+  --color-teal-200: var(--ansr-teal-200);
+  --color-teal-100: var(--ansr-teal-100);
+
+  --color-orange-500: var(--ansr-orange-500);
+  --color-orange-400: var(--ansr-orange-400);
+  --color-orange-300: var(--ansr-orange-300);
+  --color-orange-200: var(--ansr-orange-200);
+  --color-orange-100: var(--ansr-orange-100);
+
+  --color-grey-900: var(--ansr-grey-900);
+  --color-grey-700: var(--ansr-grey-700);
+  --color-grey-500: var(--ansr-grey-500);
+  --color-grey-300: var(--ansr-grey-300);
+  --color-grey-100: var(--ansr-grey-100);
+  --color-grey-50: var(--ansr-grey-50);
+
+  /* Semantic aliases — prefer these in components. */
+  --color-surface: var(--ansr-surface);
+  --color-surface-subtle: var(--ansr-surface-subtle);
+  --color-surface-sunken: var(--ansr-surface-sunken);
+  --color-surface-inverse: var(--ansr-surface-inverse);
+  --color-surface-accent: var(--ansr-surface-accent);
+
+  --color-text: var(--ansr-text);
+  --color-text-muted: var(--ansr-text-muted);
+  --color-text-inverse: var(--ansr-text-inverse);
+  --color-text-on-accent: var(--ansr-text-on-accent);
+
+  --color-border-subtle: var(--ansr-border);
+  --color-border-strong: var(--ansr-border-strong);
+  --color-border-inverse: var(--ansr-border-inverse);
+
+  --color-action: var(--ansr-action);
+  --color-action-hover: var(--ansr-action-hover);
+  --color-action-text: var(--ansr-action-text);
+  --color-accent-teal: var(--ansr-accent);
+  --color-focus: var(--ansr-focus);
+
+  --color-feedback-neutral: var(--ansr-feedback-neutral);
+  --color-feedback-attention: var(--ansr-feedback-attention);
+  --color-feedback-critical: var(--ansr-feedback-critical);
+
+  /* shadcn/ui names, resolved through the block above. */
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+
+  /* ---- Gradients ------------------------------------------------------- */
+  --background-image-gradient-teal: var(--ansr-gradient-teal);
+  --background-image-gradient-orange: var(--ansr-gradient-orange);
+  --background-image-gradient-conic: var(--ansr-gradient-conic);
+
+  /* ---- Type ------------------------------------------------------------ */
+  --font-sans: var(--ansr-font-sans);
+  --font-mono: var(--ansr-font-mono);
+
+  --text-xs: var(--ansr-text-xs);
+  --text-sm: var(--ansr-text-sm);
+  --text-base: var(--ansr-text-base);
+  --text-lg: var(--ansr-text-lg);
+  --text-xl: var(--ansr-text-xl);
+  --text-2xl: var(--ansr-text-2xl);
+  --text-3xl: var(--ansr-text-3xl);
+  --text-4xl: var(--ansr-text-4xl);
+  --text-5xl: var(--ansr-text-5xl);
+  --text-6xl: var(--ansr-text-6xl);
+
+  --leading-tight: var(--ansr-leading-tight);
+  --leading-snug: var(--ansr-leading-snug);
+  --leading-normal: var(--ansr-leading-normal);
+  --leading-relaxed: var(--ansr-leading-relaxed);
+
+  --font-weight-regular: var(--ansr-weight-regular);
+  --font-weight-medium: var(--ansr-weight-medium);
+  --font-weight-semibold: var(--ansr-weight-semibold);
+  --font-weight-bold: var(--ansr-weight-bold);
+
+  --tracking-display: var(--ansr-tracking-display);
+  --tracking-heading: var(--ansr-tracking-heading);
+  --tracking-body: var(--ansr-tracking-body);
+  --tracking-caps: var(--ansr-tracking-caps);
+
+  /* ---- Spacing — 4px base, same unit as --ansr-space-1 ----------------- */
+  --spacing: var(--ansr-space-1);
+
+  /* ---- Radius ---------------------------------------------------------- */
+  --radius-none: var(--ansr-radius-none);
+  --radius-sm: var(--ansr-radius-sm);
+  --radius-md: var(--ansr-radius-md);
+  --radius-lg: var(--ansr-radius-lg);
+  --radius-xl: var(--ansr-radius-xl);
+  --radius-full: var(--ansr-radius-pill);
+
+  /* ---- Elevation ------------------------------------------------------- */
+  --shadow-xs: var(--ansr-shadow-xs);
+  --shadow-sm: var(--ansr-shadow-sm);
+  --shadow-md: var(--ansr-shadow-md);
+  --shadow-lg: var(--ansr-shadow-lg);
+
+  /* ---- Motion ---------------------------------------------------------- */
+  --default-transition-duration: var(--ansr-duration-base);
+  --default-transition-timing-function: var(--ansr-ease-standard);
+
+  --transition-duration-instant: var(--ansr-duration-instant);
+  --transition-duration-fast: var(--ansr-duration-fast);
+  --transition-duration-base: var(--ansr-duration-base);
+  --transition-duration-slow: var(--ansr-duration-slow);
+  --transition-duration-slower: var(--ansr-duration-slower);
+
+  --ease-standard: var(--ansr-ease-standard);
+  --ease-entrance: var(--ansr-ease-entrance);
+  --ease-exit: var(--ansr-ease-exit);
+  --ease-spring: var(--ansr-ease-spring);
+
+  /* ---- Layout ---------------------------------------------------------- */
+  --container-content: var(--ansr-container);
+  --container-wide: var(--ansr-container-wide);
+  /* Reading measure, so `max-w-measure` caps body copy at the token's own
+     line length instead of an improvised ch value. */
+  --container-measure: var(--ansr-measure);
+}
+
+@layer base {
+  * {
+    border-color: var(--border);
+  }
+
+  html {
+    /* The tool is iframed and does not own the scroll container, so height is
+       never assumed. See the iframe constraints in project.md. */
+    -webkit-text-size-adjust: 100%;
+  }
+
+  body {
+    background: var(--ansr-surface);
+    color: var(--ansr-text);
+    font-family: var(--ansr-font-sans);
+    font-size: var(--ansr-text-base);
+    line-height: var(--ansr-leading-normal);
+    letter-spacing: var(--ansr-tracking-body);
+  }
+}

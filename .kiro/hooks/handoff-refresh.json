@@ -1,0 +1,14 @@
+{
+  "version": "v1",
+  "hooks": [
+    {
+      "name": "Refresh handoff",
+      "trigger": "Stop",
+      "description": "At the end of a session, rewrite .kiro/steering/handoff.md so the next session starts with accurate state.",
+      "action": {
+        "type": "agent",
+        "prompt": "If this session changed any file, rewrite `.kiro/steering/handoff.md` to describe the CURRENT state only. Rewrite it, do not append. Delete anything that now describes the past, is resolved, or is no longer true. Keep it under 120 lines and keep the existing section structure (Where we are / Next action / Blocked / Open decisions / Traps). Update the Last updated date. If a decision made this session belongs in the durable set, move it into `.kiro/steering/project.md` instead and leave it out of the handoff. If nothing material changed, leave both files alone."
+      }
+    }
+  ]
+}

@@ -1,0 +1,16 @@
+{
+  "version": "v1",
+  "hooks": [
+    {
+      "name": "Brand Guard",
+      "trigger": "PostFileSave",
+      "description": "Runs brand-lint after a source file is saved, flagging raw hex colors, off-brand hues, and brand motifs placed without adaptation.",
+      "matcher": "\\.(css|scss|ts|tsx|js|jsx|vue|svelte|html|astro|mdx)$",
+      "action": {
+        "type": "command",
+        "command": "python3 scripts/brand_lint.py 2>&1",
+        "timeout": 30
+      }
+    }
+  ]
+}
