@@ -17,7 +17,7 @@ Six commands, all green, plus `tsc --noEmit` and `brand_lint.py`:
 - `npm run test:browser` — 54 Playwright tests against a real production build, about a minute.
 - `npm run data:import` — xlsx → JSON. `-- --dry-run` stops before the write.
 - `npm run data:verify` — invariants, then the profile figures in `data/verify-baseline.json`.
-- `npm run admin:hash` — mints the admin env values. TTY only.
+- `npm run admin:hash` — mints the admin env values. TTY only; `-- --secret` / `-- --totp` for one.
 - `npm run build` — the portability test. Plain Node, no host-specific anything.
 
 **Admin is at `/admin`**, three tabs: Companies, Taxonomy, Publish. Single password plus an optional
@@ -25,18 +25,13 @@ TOTP code, rate limited on two budgets — five per IP and twenty per process. E
 draft, autosaved to localStorage, with a banner on every tab. Publish validates the whole dataset,
 diffs it against what the write will land on, then commits.
 
-**Git works end to end.** `main` is pushed and tracking, the repo is private, and the macOS keychain
-holds a usable credential so pushes need no setup. Commit identity is set **repo-locally** to the
-GitHub noreply address; the global config is deliberately still unset.
-
-**Local admin works**, verified against a production build — login, the 1,834-row table, and a publish
-target of the local file. The passphrase in `.env.local` was generated during setup and shared in a
-chat transcript, so rotate it with `npm run admin:hash` before it guards anything real.
-
-**Deployed on Vercel from `main`.** The build traces `data/dataset.json` into all three bundle types —
-public page, admin pages, publish route — checked in the `.nft.json` manifests rather than inferred
-from the config. **No environment variables are set yet**, so admin refuses every password there until
-they are; see the blockers.
+**Environment.** `main` is pushed and tracking a private repo; the macOS keychain holds a usable
+credential, so pushes need no setup, and commit identity is set repo-locally to the GitHub noreply
+address with the global config deliberately unset. Locally admin works, verified against a production
+build — the passphrase in `.env.local` was generated during setup and shared in a transcript, so rotate
+it with `npm run admin:hash` before it guards anything real. Deployed on Vercel from `main`, with
+`data/dataset.json` confirmed traced into all three bundle types via the `.nft.json` manifests —
+but **no environment variables are set there**, so admin refuses every password until they are.
 
 **Two paths remain unexercised:** a publish through the GitHub store, and TOTP in a live deployment.
 Everything else is covered by one of the two suites.
