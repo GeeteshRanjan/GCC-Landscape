@@ -15,21 +15,20 @@ Six commands, all green, plus `tsc --noEmit` and `brand_lint.py`:
 
 - `npm test` — 165 Vitest unit tests, under a second.
 - `npm run test:browser` — 54 Playwright tests against a real production build, about a minute.
-- `npm run data:import` — xlsx → JSON. `-- --dry-run` stops before the write.
+- `npm run data:import` — xlsx → JSON; `-- --dry-run` stops before the write.
 - `npm run data:verify` — invariants, then the profile figures in `data/verify-baseline.json`.
-- `npm run admin:hash` — mints the admin env values. TTY only; `-- --secret` / `-- --totp` for one.
+- `npm run admin:hash` — mints the admin env values. TTY only.
 - `npm run build` — the portability test. Plain Node, no host-specific anything.
 
-**Admin is at `/admin`**, three tabs: Companies, Taxonomy, Publish. Single password plus an optional
-TOTP code, rate limited on two budgets — five per IP and twenty per process. Edits are a browser
-draft, autosaved to localStorage, with a banner on every tab. Publish validates the whole dataset,
-diffs it against what the write will land on, then commits.
+**Admin is at `/admin`**, three tabs: Companies, Taxonomy, Publish. Single password plus an optional TOTP
+code, rate limited per IP and per process. Edits are a browser draft autosaved to localStorage, with a
+banner on every tab. Publish validates the whole dataset, diffs it against what the write will land on,
+then commits.
 
-**Environment.** `main` is pushed and tracking a private repo; the macOS keychain holds a usable
-credential, so pushes need no setup, and commit identity is set repo-locally to the GitHub noreply
-address with the global config deliberately unset. Locally admin works, verified against a production
-build — the passphrase in `.env.local` was generated during setup and shared in a transcript, so rotate
-it with `npm run admin:hash` before it guards anything real.
+**Environment.** `main` is pushed and tracking a private repo; the keychain holds a usable credential so
+pushes need no setup, and commit identity is set repo-locally. Locally admin works, verified against a
+production build — the passphrase in `.env.local` was generated during setup and shared in a transcript,
+so rotate it with `npm run admin:hash` before it guards anything real.
 
 **Live at `gcc-landscape.vercel.app`**, running the current `main`, with the public page rendering and
 `data/dataset.json` confirmed traced into all three bundle types. All ten environment variables are set
@@ -49,33 +48,34 @@ Everything else is covered by one of the two suites.
 2. Screen 1, then Screen 2. Design skills run before markup on each, per `skill-router.md`.
    `src/app/page.tsx` is a scaffold placeholder that Screen 1 replaces wholesale.
 
-Screen 1's data is entirely in place: `matchPeers`, `largestInIndustry`, `nationalScale` and
-`cityDensity` in `src/data/peers.ts` cover all four blocks plus the heatmap. Only common functions has
-no source.
+Screen 1's data is in place: `matchPeers`, `largestInIndustry`, `nationalScale` and `cityDensity` in
+`src/data/peers.ts` cover all four blocks plus the heatmap. Only common functions has no source.
 
 ## Blocked / needs the user
 
-1. **Redeploy Vercel.** The variables exist but the running build predates them. Nothing else explains
-   the current failure: the deployed commit is current and the public page works.
-2. **Remove `ADMIN_TOTP_SECRET` until it can be tested interactively.** It is set, which will require a
-   6-digit code after the redeploy. If that secret is not in an authenticator app, everyone is locked
-   out of admin with no way back except editing the variable. The live site reports the factor as off,
-   so the value is probably empty — unverified either way.
-3. **Confirm `GCC_DATA_STORE` is `github`, not `fs`.** Unverified. On a serverless host `fs` makes every
-   publish report success and vanish on the next deploy.
-4. **One real publish through admin, once the above is done.** The GitHub write path has never run
-   against a real repository; expect token scope or branch protection to surface then.
-5. **Screen 2 metric values** — hundreds, no spreadsheet behind them. Forms first, then the values.
-6. **Function-per-company data** — for the common-functions block. A hardcoded common function set is
+1. **Delete `ADMIN_TOTP_SECRET`, then redeploy Vercel.** In that order. Confirmed: no authenticator app
+   was ever set up, so if that variable carries a real secret the redeploy locks everyone out of admin
+   with no recovery but editing the variable again. The redeploy itself is the fix for login — the
+   variables exist but the running build predates them, and nothing else explains the failure, since the
+   deployed commit is current and the public page works.
+2. **Treat all ten Vercel variables as unconfirmed.** They were pasted from the documented key list
+   rather than configured, so values may be empty or placeholders. Only `ADMIN_PASSWORD_HASH` and
+   `ADMIN_SESSION_SECRET` need to be right for admin to work; the rest can stay empty, because an
+   incomplete publish target fails closed and shows a banner.
+3. **Publishing, when it is wanted.** Needs a fine-grained `GCC_GITHUB_TOKEN` with
+   `contents: read and write` plus `GCC_DATA_STORE=github`. Never `fs` on a serverless host. The GitHub
+   write path has never run against a real repository, so expect token scope or branch protection to
+   surface on the first attempt.
+4. **Screen 2 metric values** — hundreds, no spreadsheet behind them. Forms first, then the values.
+5. **Function-per-company data** — for the common-functions block. A hardcoded common function set is
    permitted by the brief and is the likely answer.
-7. **Hosting details** — which ansr.com page hosts the iframe, and who adds the embed snippet. Allowed
+6. **Hosting details** — which ansr.com page hosts the iframe, and who adds the embed snippet. Allowed
    origins are `ansr.com` and `*.ansr.com` in `next.config.ts`; correct them when known.
 
 ## Open decisions, not yet made
 
-- **Whether to switch on `ADMIN_TOTP_SECRET`.** Built and verified against the RFC 6238 vectors. Both
-  rate-limit budgets are per-process, so on a multi-instance host a second factor is the only thing that
-  bounds a distributed guessing attempt. Recommended, but only with a code tested before committing.
+- **Whether to switch on `ADMIN_TOTP_SECRET`.** Built, RFC 6238 verified. Both rate-limit budgets are
+  per-process, so on a multi-instance host it is the only real bound on distributed guessing.
 - **Whether the browser suite runs in CI.** Needs a Chromium download and about a minute.
 - **Thin peer sets stay as they are.** Electrical & Electronics returns two peers, shortfall three.
   Never padding is the invariant; the count is a baseline figure. Revisit when Screen 1 exists.
@@ -97,8 +97,7 @@ the ones that only bite while working on the code.
   imports cannot carry the marker: that is why `src/lib/admin/constants.ts` exists and why
   `password.ts` and `totp.ts` have none. Vitest gets past it by resolving the `react-server` condition.
 - **A 401 from `/api/admin/login` with no `remainingAttempts` is a config error, not a wrong password.**
-  The server never reached the password check; the real reason is in the server log. Usually environment
-  variables that were added but never deployed.
+  The server never reached the password check; the reason is in the server log, never the response.
 - **`git ls-remote` on an empty repo prints nothing and exits 2.** That is success with no refs, not a
   missing repo. A private repo also 404s to an unauthenticated browser. Check the exit code and stderr
   before concluding a remote does not exist.
