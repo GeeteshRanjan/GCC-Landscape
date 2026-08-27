@@ -17,7 +17,6 @@ Six commands, all green, plus `tsc --noEmit` and `brand_lint.py`:
 - `npm run test:browser` — 54 Playwright tests against a real production build, about a minute.
 - `npm run data:import` — xlsx → JSON. `-- --dry-run` stops before the write.
 - `npm run data:verify` — invariants, then the profile figures in `data/verify-baseline.json`.
-  `-- --accept` re-baselines after a deliberate edit; it cannot silence an invariant failure.
 - `npm run admin:hash` — mints the admin env values. TTY only; `-- --secret` / `-- --totp` for one.
 - `npm run build` — the portability test. Plain Node, no host-specific anything.
 
@@ -29,6 +28,10 @@ diffs it against what the write will land on, then commits.
 **Git works end to end.** `main` is pushed and tracking, the repo is private, and the macOS keychain
 holds a usable credential so pushes need no setup. Commit identity is set **repo-locally** to the
 GitHub noreply address; the global config is deliberately still unset.
+
+**Local admin works**, verified against a production build — login, the 1,834-row table, and a publish
+target of the local file. The passphrase in `.env.local` was generated during setup and shared in a
+chat transcript, so rotate it with `npm run admin:hash` before it guards anything real.
 
 **Deployed on Vercel from `main`.** The build traces `data/dataset.json` into all three bundle types —
 public page, admin pages, publish route — checked in the `.nft.json` manifests rather than inferred
@@ -61,12 +64,10 @@ no source.
    `GCC_GITHUB_REPO`, `GCC_GITHUB_BRANCH` and a fine-grained `GCC_GITHUB_TOKEN` carrying
    `contents: read and write`. The keychain credential covers `git push` but the app cannot read it.
    Worth one real publish once it is set, to shake out token scope and branch protection.
-2. **`.env.local` holds a throwaway password** set during verification, not one you chose. Replace it:
-   `npm run admin:hash`, then paste both lines over the existing ones.
-3. **Screen 2 metric values** — hundreds, no spreadsheet behind them. Forms first, then the values.
-4. **Function-per-company data** — for the common-functions block. A hardcoded common function set is
+2. **Screen 2 metric values** — hundreds, no spreadsheet behind them. Forms first, then the values.
+3. **Function-per-company data** — for the common-functions block. A hardcoded common function set is
    permitted by the brief and is the likely answer.
-5. **Hosting details** — which ansr.com page hosts the iframe, and who adds the embed snippet. Allowed
+4. **Hosting details** — which ansr.com page hosts the iframe, and who adds the embed snippet. Allowed
    origins are `ansr.com` and `*.ansr.com` in `next.config.ts`; correct them when known.
 
 ## Open decisions, not yet made
