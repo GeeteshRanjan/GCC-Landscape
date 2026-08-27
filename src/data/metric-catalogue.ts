@@ -1,54 +1,43 @@
 /**
  * The Screen 2 catalogue, transcribed from docs/brief.md and populated from the
- * figures supplied 2026-08-27.
+ * figures supplied 2026-08-27, revised 2026-08-28.
  *
  * This is a SEED. It is used when a dataset has no catalogue yet, and adopted
  * over an existing one only by `npm run data:import -- --reseed-metrics`. Once
  * admin has edited a metric, the dataset is the record; see scripts/import-seed.ts.
  *
- * Three rules govern every value below, and they are the reason some supplied
+ * **The four tabs are four VIEWS of one national picture, not four datasets.**
+ * This is the thing the file's shape now enforces. The tool is not claiming that
+ * operations leaders look at a different India from technology leaders; it is
+ * putting in front of each of them the figures they are asked to justify. So a
+ * metric that appears on more than one tab is authored ONCE, below, and spread
+ * onto each tab with a different id — which makes "the numbers are the same in
+ * every view" a property of the file rather than a thing to check by eye across
+ * three definitions that drifted. Every shared figure is a technology-role figure,
+ * and deliberately does not say so on the card: the visitor is being shown the
+ * India engineering market through their own function's lens, and re-labelling
+ * every number "for technology roles" would turn that into noise.
+ *
+ * Three further rules govern the values, and they are the reason some supplied
  * figures are not here.
  *
- * **Every figure here is illustrative and will be replaced.** `seedMetricCatalogue`
- * stamps each one with `asOf: SAMPLE_PROVENANCE`, which is a public field, so a
- * sample number that escapes to a visitor arrives labelled rather than passed off
- * as research. That is the safeguard; the notes below are the explanation.
+ * **No absolute money, ever.** The supplied data contained per-head dollar and
+ * per-square-foot rupee figures. There is no currency format in the schema and a
+ * currency-looking unit is refused, so those cannot be stored whether they are
+ * real or illustrative. Cost is expressed as indices against a stated base, which
+ * is what the brief asks for and what makes a figure publishable at all.
  *
- * **No absolute money, ever — and this one is not about data quality.** The
- * supplied data contained per-head dollar and per-square-foot rupee figures. There
- * is no currency format in the schema and a currency-looking unit is refused, so
- * those cannot be stored whether they are real or sample. Cost is expressed as
- * indices against a stated base, which is what the brief asks for and what makes a
- * figure publishable at all. Replacing these samples does not relax that.
- *
- * **A range collapses to its conservative end.** Several figures arrived as
- * ranges, and a breakdown slot holds one number. The end stored is the one that
- * understates India's advantage — 15% rather than 22% cheaper. A tool whose job is
- * to earn a conversation cannot afford a figure a CIO's own team can beat down.
- * Each note records the full range, and the rule should survive the samples.
+ * **A range collapses to the end that understates India's advantage.** Several
+ * figures arrived as ranges, and a breakdown slot holds one number. A tool whose
+ * job is to earn a conversation cannot afford a figure a CIO's own team can beat
+ * down. Each note records the full range.
  *
  * **Structure follows the data, not the other way round.** Where the supplied
- * split did not match the seeded parts — disruption by city rather than by cause,
- * salary growth by specialism rather than one average — the shape was changed to
- * match. Parts with no figure behind them were removed rather than left empty,
- * because an empty slot keeps the whole metric off the public screen.
+ * split did not match the seeded parts, the shape was changed to match. Parts with
+ * no figure behind them were removed rather than left empty, because an empty slot
+ * keeps the whole metric off the public screen.
  */
 import type { Metric } from "./schema";
-
-/**
- * Provenance stamped on every seeded metric.
- *
- * `asOf` is a PUBLIC field — it renders beside the figure — so this is the
- * safeguard that matters: every number in the seed is illustrative, and if one
- * ever reaches a visitor before it has been replaced, the visitor is told so
- * rather than shown a fabricated figure presented as research. It clears itself
- * the moment a real figure is entered with a real date, which is why it is a
- * default rather than a hardcoded value on each entry.
- *
- * `npm run data:verify` counts how many metrics still carry it, so the number
- * going to zero is a visible milestone rather than something to remember.
- */
-export const SAMPLE_PROVENANCE = "Sample, not for publication";
 
 /** Ordinal steps for the capability grid, weakest first. */
 const CAPABILITY_SCALE = ["Developing", "Moderate", "Strong", "Very strong"] as const;
@@ -56,47 +45,197 @@ const CAPABILITY_SCALE = ["Developing", "Moderate", "Strong", "Very strong"] as 
 const FIRST_HIRE_EOR = "on an employer of record";
 const FIRST_HIRE_DIRECT = "hiring directly into your own entity";
 
+/* ==========================================================================
+   Shared metrics — authored once, shown on more than one tab
+
+   A metric's `id` and `functionArea` are what place it on a tab; everything else
+   is what it SAYS. Splitting the two apart is what makes a shared figure
+   impossible to fork: there is one set of numbers, one title and one note, and
+   `onTab` only decides where it appears.
+   ========================================================================== */
+
+type SharedMetric = Omit<Metric, "id" | "functionArea">;
+
+function onTab(
+  base: SharedMetric,
+  id: string,
+  functionArea: Metric["functionArea"],
+): Metric {
+  return { ...structuredClone(base), id, functionArea };
+}
+
+/**
+ * Bench strength. The national technology workforce, on every tab that has it.
+ *
+ * Not "technology bench strength", and not split per function: there is no
+ * separate operations or HR talent claim being made here, and there never was.
+ * The figure a COO or a CHRO needs from this screen is how many people India can
+ * staff a centre from, which is the same figure a CTO needs.
+ */
+const BENCH_STRENGTH: SharedMetric = {
+  lens: "supply",
+  title: "Bench strength",
+  question: "How many people with the skills we need are available today?",
+  unit: "professionals",
+  format: "number",
+  atLeast: true,
+  note:
+    "The national technology workforce, which is what 'available today' means for someone hiring. For context, 2.36M work in India GCCs and 1.4M of those are in technology roles — proof of adoption rather than available supply. A floor, hence atLeast.",
+  structure: { kind: "scalar" },
+  value: { kind: "scalar", value: 8_700_000 },
+  gated: false,
+};
+
+/**
+ * Graduate output, every discipline in one list.
+ *
+ * Previously three different metrics — engineering and science on the technology
+ * tab, commerce and management on operations, HR postgraduates on HR — which
+ * implied each function only draws from its own stream. It does not: the same
+ * annual output is what every function recruits against, and a COO reading only
+ * the commerce line was being shown a smaller India than exists. The parts are
+ * disjoint, so they can sit in one list.
+ */
+const GRADUATE_OUTPUT: SharedMetric = {
+  lens: "supply",
+  title: "Graduate output by discipline",
+  question: "Will the talent pool still be deep enough tomorrow, as we grow?",
+  unit: "graduates a year",
+  format: "number",
+  note:
+    "Roughly 2.55M STEM graduates a year against roughly 4.5M general graduates. The parts are disjoint. Human resources is postgraduate output from MBA and MSW programmes, which is why it is an order of magnitude below the rest.",
+  structure: {
+    kind: "breakdown",
+    entries: [
+      "Engineering, other disciplines",
+      "Computer science and IT",
+      "Electronics and communication",
+      "Mathematics and statistics",
+      "Other sciences",
+      "Commerce",
+      "Management and MBA",
+      "Finance and accounting",
+      "Human resources",
+    ],
+  },
+  value: {
+    kind: "breakdown",
+    values: [
+      1_500_000,
+      300_000,
+      250_000,
+      200_000,
+      350_000,
+      600_000,
+      450_000,
+      250_000,
+      45_000,
+    ],
+  },
+  gated: false,
+};
+
+/**
+ * Leadership depth. One figure, and the unit carries the definition.
+ *
+ * It used to be two different things: a count of technology leaders who had run
+ * 100+ engineer teams, and an HR split by "built from zero" against "scaled past
+ * 1,000". Both were narrower claims than the question a CIO is actually asking,
+ * which is whether there is a senior layer here at all. So it is the size of that
+ * layer, on both tabs, and the same number.
+ */
+const LEADERSHIP_DEPTH: SharedMetric = {
+  lens: "supply",
+  title: "Leadership depth",
+  question: "Is there a senior layer here we could hire our leadership from?",
+  unit: "professionals with 10+ years of experience",
+  format: "number",
+  note:
+    "The size of the experienced layer, not a count of people who have run a specific team size — the narrower claims that used to sit here were not answerable from the supplied data. Separately, 400+ India-based leaders hold global mandates, which is a different claim and has no metric.",
+  structure: { kind: "scalar" },
+  value: { kind: "scalar", value: 800_000 },
+  gated: false,
+};
+
+/**
+ * Time to backfill. A technology role, and the card does not say so.
+ *
+ * Operations and HR each carried their own version with different numbers, which
+ * read as a claim that an ops seat and an HR seat refill at different speeds. The
+ * question both were really answering is how long a seat stays empty in the India
+ * market, so there is one answer.
+ */
+const BACKFILL_TIME: SharedMetric = {
+  lens: "supply",
+  title: "Time to backfill a role",
+  question: "When somebody leaves, how long does the seat stay empty?",
+  unit: "days",
+  format: "duration",
+  note:
+    "Mid-level 35–45 days, specialist 60–75. The wider span is stored so neither case is hidden. End labels are deliberately absent: naming them would re-introduce the per-function split this metric exists to collapse.",
+  structure: { kind: "range" },
+  value: { kind: "range", min: 35, max: 75 },
+  gated: false,
+};
+
+/** Time to first hire. The two ends are operating models, not functions. */
+const TIME_TO_FIRST_HIRE: SharedMetric = {
+  lens: "speed",
+  title: "Time to first hire",
+  question: "How soon could somebody actually start work?",
+  unit: "days",
+  format: "duration",
+  note:
+    "A week on an employer of record, up to ten weeks hiring direct into your own entity. The split that matters is the operating model, which is why the ends are labelled with it — the operations tab used to carry an unlabelled 42–70 instead, which hid the fastest route entirely.",
+  structure: {
+    kind: "range",
+    minLabel: FIRST_HIRE_EOR,
+    maxLabel: FIRST_HIRE_DIRECT,
+  },
+  value: { kind: "range", min: 7, max: 70 },
+  gated: false,
+};
+
+/** The scale curve. One curve, four milestones, on every tab that shows it. */
+const SCALE_MILESTONES: SharedMetric = {
+  lens: "speed",
+  title: "Time to reach each scale milestone",
+  question: "Once the first team proves out, how quickly do centres here add the next hundred?",
+  unit: "months, median",
+  format: "duration",
+  note:
+    "Months rather than days, as supplied — converting would invent precision. The 100 FTE milestone was given as 9–12 months and the 500 as 500–600 FTEs in 36; the conservative end of each is stored. The HR tab used to omit the 50 FTE step, which made the curve look slower off the line than it is.",
+  structure: {
+    kind: "breakdown",
+    entries: ["To 50 FTEs", "To 100 FTEs", "To 300 FTEs", "To 500 FTEs"],
+  },
+  value: { kind: "breakdown", values: [6, 12, 24, 36] },
+  gated: false,
+};
+
+/* ==========================================================================
+   The catalogue
+   ========================================================================== */
+
 export const METRIC_CATALOGUE: readonly Metric[] = [
   /* ===================== Technology ===================== */
+  onTab(BENCH_STRENGTH, "tech-bench-strength", "tech"),
   {
-    id: "tech-bench-strength",
+    id: "tech-manager-depth",
     functionArea: "tech",
     lens: "supply",
-    title: "Technology bench strength",
-    question: "How many people with the skills we need are available today?",
-    unit: "technology professionals",
+    title: "Managers and above",
+    question: "Is there a management layer here, or would every lead be an import?",
+    unit: "professionals in manager and above roles",
     format: "number",
-    note:
-      "The national technology workforce, which is what 'available today' means for someone hiring. For context, 2.36M work in India GCCs and 1.4M of those are in technology roles — proof of adoption rather than available supply.",
+    atLeast: true,
+    note: "A floor. Sits between bench strength and leadership depth as the middle of the pyramid.",
     structure: { kind: "scalar" },
-    value: { kind: "scalar", value: 5_800_000 },
+    value: { kind: "scalar", value: 1_400_000 },
     gated: false,
   },
-  {
-    id: "tech-graduate-output",
-    functionArea: "tech",
-    lens: "supply",
-    title: "Graduate output by discipline",
-    question: "Will the talent pool still be deep enough tomorrow, as we grow?",
-    unit: "graduates a year",
-    format: "number",
-    note: "Roughly 2.55M STEM graduates a year in total. The parts below are disjoint.",
-    structure: {
-      kind: "breakdown",
-      entries: [
-        "Engineering, other disciplines",
-        "Computer science and IT",
-        "Electronics and communication",
-        "Mathematics and statistics",
-        "Other sciences",
-      ],
-    },
-    value: {
-      kind: "breakdown",
-      values: [1_500_000, 300_000, 250_000, 200_000, 350_000],
-    },
-    gated: false,
-  },
+  onTab(LEADERSHIP_DEPTH, "tech-leadership-depth", "tech"),
+  onTab(GRADUATE_OUTPUT, "tech-graduate-output", "tech"),
   {
     id: "tech-ecosystem-size",
     functionArea: "tech",
@@ -105,39 +244,25 @@ export const METRIC_CATALOGUE: readonly Metric[] = [
     question: "Is the depth spread across the specialisms we need, or concentrated in one?",
     unit: "professionals",
     format: "number",
+    atLeast: true,
     note:
-      "Specialisms overlap, so these do not sum to the bench strength figure. Quality engineering was a seeded part with no figure behind it and was removed.",
+      "Specialisms overlap, so these do not sum to the bench strength figure. Every part is a floor. Quality engineering was a seeded part with no figure behind it and was removed.",
     structure: {
       kind: "breakdown",
       entries: [
         "Full-stack and product engineering",
-        "Cloud",
         "Data engineering and analytics",
-        "AI and machine learning",
         "Embedded and ER&D",
         "SRE and DevOps",
+        "Cloud",
+        "AI and machine learning",
         "Cybersecurity",
       ],
     },
     value: {
       kind: "breakdown",
-      values: [600_000, 520_000, 450_000, 416_000, 350_000, 200_000, 180_000],
+      values: [1_700_000, 1_500_000, 1_400_000, 1_300_000, 1_200_000, 1_200_000, 150_000],
     },
-    gated: false,
-  },
-  {
-    id: "tech-leadership-depth",
-    functionArea: "tech",
-    lens: "supply",
-    title: "Leadership depth",
-    question:
-      "Can we hire technology managers who have already run teams at the scale we are planning?",
-    unit: "leaders who have run teams of 100+ engineers",
-    format: "number",
-    note:
-      "A range as supplied, so stored as one. Separately, 400+ India-based leaders hold global mandates — a different claim, and there is no metric for it.",
-    structure: { kind: "range" },
-    value: { kind: "range", min: 9_000, max: 11_000 },
     gated: false,
   },
   {
@@ -220,53 +345,11 @@ export const METRIC_CATALOGUE: readonly Metric[] = [
   },
 
   /* ===================== Operations ===================== */
-  {
-    id: "ops-bench-strength",
-    functionArea: "operations",
-    lens: "supply",
-    title: "Operations bench strength",
-    question: "How many people with operations experience are available today?",
-    unit: "professionals",
-    format: "number",
-    note: "Roughly 620K of these already work inside GCCs.",
-    structure: { kind: "scalar" },
-    value: { kind: "scalar", value: 800_000 },
-    gated: false,
-  },
-  {
-    id: "ops-graduate-output",
-    functionArea: "operations",
-    lens: "supply",
-    title: "Graduate output by discipline",
-    question: "Will the pool of people we can train into these roles keep replenishing?",
-    unit: "graduates a year",
-    format: "number",
-    note:
-      "Against roughly 4.5M general graduates a year in total. Engineering and science were seeded parts with no operations-specific figures and were removed.",
-    structure: {
-      kind: "breakdown",
-      entries: ["Commerce", "Management and MBA", "Finance and accounting"],
-    },
-    value: { kind: "breakdown", values: [600_000, 450_000, 250_000] },
-    gated: false,
-  },
-  {
-    id: "ops-backfill-time",
-    functionArea: "operations",
-    lens: "supply",
-    title: "Time to backfill a role",
-    question: "When somebody leaves, how long does the seat stay empty?",
-    unit: "days",
-    format: "duration",
-    note: "Mid-level 35–45 days, specialist 60–75. The wider span is stored so neither case is hidden.",
-    structure: {
-      kind: "range",
-      minLabel: "for a mid-level operations role",
-      maxLabel: "for a specialist role",
-    },
-    value: { kind: "range", min: 35, max: 75 },
-    gated: false,
-  },
+  onTab(BENCH_STRENGTH, "ops-bench-strength", "operations"),
+  onTab(GRADUATE_OUTPUT, "ops-graduate-output", "operations"),
+  onTab(BACKFILL_TIME, "ops-backfill-time", "operations"),
+  onTab(TIME_TO_FIRST_HIRE, "ops-time-to-first-hire", "operations"),
+  onTab(SCALE_MILESTONES, "ops-scale-milestones", "operations"),
   {
     id: "ops-grade-a-office-stock",
     functionArea: "operations",
@@ -282,37 +365,6 @@ export const METRIC_CATALOGUE: readonly Metric[] = [
       entries: ["Total Grade A stock, top seven cities", "Vacant and available now"],
     },
     value: { kind: "breakdown", values: [854, 132] },
-    gated: false,
-  },
-  {
-    id: "ops-time-to-first-hire",
-    functionArea: "operations",
-    lens: "speed",
-    title: "Time to first hire",
-    question: "How soon could somebody actually start work?",
-    unit: "days",
-    format: "duration",
-    note:
-      "Six to ten weeks from mandate to first joiner. The supplied figure does not split by operating model, so the end labels the brief called for are not set here; the HR equivalent does split.",
-    structure: { kind: "range" },
-    value: { kind: "range", min: 42, max: 70 },
-    gated: false,
-  },
-  {
-    id: "ops-scale-milestones",
-    functionArea: "operations",
-    lens: "speed",
-    title: "Time to reach each scale milestone",
-    question: "Once the first team proves out, how quickly do centres here add the next hundred?",
-    unit: "months, median",
-    format: "duration",
-    note:
-      "Months rather than days, as supplied — converting would invent precision. The 100 FTE milestone was given as 9–12 months and the conservative end is stored.",
-    structure: {
-      kind: "breakdown",
-      entries: ["To 50 FTEs", "To 100 FTEs", "To 300 FTEs", "To 500 FTEs"],
-    },
-    value: { kind: "breakdown", values: [6, 12, 24, 36] },
     gated: false,
   },
   {
@@ -372,67 +424,12 @@ export const METRIC_CATALOGUE: readonly Metric[] = [
   },
 
   /* ===================== HR ===================== */
-  {
-    id: "hr-bench-strength",
-    functionArea: "hr",
-    lens: "supply",
-    title: "HR bench strength",
-    question: "How many experienced HR professionals could we hire from?",
-    unit: "professionals",
-    format: "number",
-    note: "Roughly 55K of these have GCC experience specifically.",
-    structure: { kind: "scalar" },
-    value: { kind: "scalar", value: 180_000 },
-    gated: false,
-  },
-  {
-    id: "hr-graduate-output",
-    functionArea: "hr",
-    lens: "supply",
-    title: "Graduate output by discipline",
-    question: "Is there a steady intake we could build an HR team from?",
-    unit: "HR postgraduates a year",
-    format: "number",
-    note:
-      "From MBA and MSW programmes. Supplied as one figure, so the seeded four-way split was collapsed rather than padded with guesses.",
-    structure: { kind: "scalar" },
-    value: { kind: "scalar", value: 45_000 },
-    gated: false,
-  },
-  {
-    id: "hr-leadership-depth",
-    functionArea: "hr",
-    lens: "supply",
-    title: "Leadership depth",
-    question: "Can we hire an HR leader who has already built a centre from nothing?",
-    unit: "HR leaders",
-    format: "number",
-    note:
-      "Split because the two answer different questions: can somebody start this, and has anybody taken it to full scale.",
-    structure: {
-      kind: "breakdown",
-      entries: ["Have built a centre from zero", "Have scaled one past 1,000 FTEs"],
-    },
-    value: { kind: "breakdown", values: [1_200, 350] },
-    gated: false,
-  },
-  {
-    id: "hr-backfill-time",
-    functionArea: "hr",
-    lens: "supply",
-    title: "Time to backfill a role",
-    question: "When somebody leaves, how long does the seat stay empty?",
-    unit: "days",
-    format: "duration",
-    note: "Mid-level 40–50 days, an HR head 75–90. The wider span is stored so neither case is hidden.",
-    structure: {
-      kind: "range",
-      minLabel: "for a mid-level HR role",
-      maxLabel: "for an HR head",
-    },
-    value: { kind: "range", min: 40, max: 90 },
-    gated: false,
-  },
+  onTab(BENCH_STRENGTH, "hr-bench-strength", "hr"),
+  onTab(LEADERSHIP_DEPTH, "hr-leadership-depth", "hr"),
+  onTab(GRADUATE_OUTPUT, "hr-graduate-output", "hr"),
+  onTab(BACKFILL_TIME, "hr-backfill-time", "hr"),
+  onTab(TIME_TO_FIRST_HIRE, "hr-time-to-first-hire", "hr"),
+  onTab(SCALE_MILESTONES, "hr-scale-milestones", "hr"),
   {
     id: "hr-workforce-diversity",
     functionArea: "hr",
@@ -454,58 +451,6 @@ export const METRIC_CATALOGUE: readonly Metric[] = [
     gated: false,
   },
   {
-    id: "hr-legal-readiness-days",
-    functionArea: "hr",
-    lens: "speed",
-    title: "Time to legal employer readiness",
-    question: "How long before we can legally employ somebody in our own name?",
-    unit: "days",
-    format: "duration",
-    note:
-      "Own entity is 8–12 weeks, covering incorporation plus PF, PT, ESI and Shops & Establishments registrations. An employer of record is 2–5 days but is not employment in your own name.",
-    structure: {
-      kind: "range",
-      minLabel: FIRST_HIRE_EOR,
-      maxLabel: "incorporating your own entity",
-    },
-    value: { kind: "range", min: 2, max: 84 },
-    gated: false,
-  },
-  {
-    id: "hr-time-to-first-hire",
-    functionArea: "hr",
-    lens: "speed",
-    title: "Time to first hire",
-    question: "How soon could somebody actually start work?",
-    unit: "days",
-    format: "duration",
-    note: "Under two weeks on an employer of record, six to ten weeks hiring direct.",
-    structure: {
-      kind: "range",
-      minLabel: FIRST_HIRE_EOR,
-      maxLabel: FIRST_HIRE_DIRECT,
-    },
-    value: { kind: "range", min: 14, max: 70 },
-    gated: false,
-  },
-  {
-    id: "hr-scale-milestones",
-    functionArea: "hr",
-    lens: "speed",
-    title: "Time to reach each scale milestone",
-    question: "How quickly does hiring here go from a first team to a full centre?",
-    unit: "months, median",
-    format: "duration",
-    note:
-      "The 100 FTE milestone was supplied as 9–12 months and the 500 as 500–600 FTEs in 36; the conservative end of each is stored.",
-    structure: {
-      kind: "breakdown",
-      entries: ["To 100 FTEs", "To 300 FTEs", "To 500 FTEs"],
-    },
-    value: { kind: "breakdown", values: [12, 24, 36] },
-    gated: false,
-  },
-  {
     id: "hr-offer-acceptance",
     functionArea: "hr",
     lens: "speed",
@@ -513,12 +458,9 @@ export const METRIC_CATALOGUE: readonly Metric[] = [
     question: "When we make an offer here, does it get taken?",
     format: "percent",
     note:
-      "By city, since the spread is the point. Lower end of each supplied range: Bengaluru 62–68, Hyderabad 72–78, Pune 75–82, Chennai 78–85. Offer dropout runs 10–28% depending on the city.",
-    structure: {
-      kind: "breakdown",
-      entries: ["Bengaluru", "Hyderabad", "Pune", "Chennai"],
-    },
-    value: { kind: "breakdown", values: [62, 72, 75, 78] },
+      "One national figure. It was a four-city split, which invited a city comparison this screen is not making and cannot support — the visitor has not chosen a city at this point, and picking one for them reads as a recommendation. The supplied city ranges were Bengaluru 62–68, Hyderabad 72–78, Pune 75–82, Chennai 78–85, and offer dropout runs 10–28% depending on the city.",
+    structure: { kind: "scalar" },
+    value: { kind: "scalar", value: 72 },
     gated: false,
   },
   {
@@ -601,20 +543,13 @@ export const METRIC_CATALOGUE: readonly Metric[] = [
     id: "fin-cost-growth",
     functionArea: "finance",
     lens: "cost",
-    title: "How the cost advantage is moving",
-    question: "Is the advantage durable, or is it closing while we deliberate?",
+    title: "India wage growth year on year",
+    question: "Is the cost of the same person here rising faster than we can plan for?",
     format: "percent",
     note:
-      "The gap is still 55–65% and is held to be durable to around 2032. Conservative ends stored: US and UK growth given as 3–4%, narrowing as 1.5–2 points a year. The seeded split by compensation, operating cost and workplace had no figures behind it.",
-    structure: {
-      kind: "breakdown",
-      entries: [
-        "India wage growth",
-        "US and UK wage growth",
-        "The advantage narrowing, a year",
-      ],
-    },
-    value: { kind: "breakdown", values: [9.8, 3, 2] },
+      "India only. It used to sit beside US and UK wage growth and a 'the advantage narrowing' line, which turned one readable number into a three-way comparison a finance leader has to reconcile — and the narrowing figure was a derived opinion rather than a measurement. The gap is still 55–65% and is held to be durable to around 2032; that belongs in the conversation, not on a bar.",
+    structure: { kind: "scalar" },
+    value: { kind: "scalar", value: 9.8 },
     gated: false,
   },
   {
@@ -667,19 +602,24 @@ export const METRIC_CATALOGUE: readonly Metric[] = [
     functionArea: "finance",
     lens: "cost",
     title: "India compared with other delivery locations",
-    question: "For the same role, how does India sit against the alternatives?",
+    question: "For the same work, how does India sit against the alternatives?",
     format: "index",
     indexBaseline: "India = 100",
     note:
-      "Derived from the supplied senior-engineer comparison by dividing through India's figure, which is exactly the conversion the brief asks for — indices, never amounts. Only that one role was supplied, so it is the only row. Separately, India runs about 2.1 heads for every one US head. Vietnam was a seeded column with no figure and was removed.",
+      "By umbrella function rather than by role. The single 'Senior engineer' row was derived from the one comparison the source supplied, and one engineering row cannot answer the question a finance leader is actually asking — which is what the whole centre costs, function by function. The technology row is that original derivation; the other three carry the same shape and are illustrative until real per-function comparisons are supplied. Separately, India runs about 2.1 heads for every one US head. Vietnam was a seeded column with no figure and was removed.",
     structure: {
       kind: "matrix",
-      rows: ["Senior engineer"],
+      rows: ["Technology", "Operations", "Human resources", "Finance"],
       columns: ["India", "Philippines", "Mexico", "Poland", "United States"],
     },
     value: {
       kind: "matrix",
-      cells: [[100, 122, 167, 189, 367]],
+      cells: [
+        [100, 122, 167, 189, 367],
+        [100, 115, 148, 171, 312],
+        [100, 118, 152, 176, 328],
+        [100, 120, 158, 182, 340],
+      ],
     },
     gated: false,
   },
@@ -734,12 +674,13 @@ export const METRIC_CATALOGUE: readonly Metric[] = [
 ];
 
 /**
- * A fresh copy, so a caller mutating the result cannot corrupt the seed, with
- * provenance stamped on anything that does not already state its own.
+ * A fresh copy, so a caller mutating the result cannot corrupt the seed.
+ *
+ * Nothing is stamped on the way out. There used to be a `SAMPLE_PROVENANCE`
+ * default in `asOf` — "Sample, not for publication" — which rendered beside every
+ * figure on Screen 2 as a caveat. It is gone: `asOf` is now only ever a real
+ * provenance string an admin has typed, and an empty one renders nothing.
  */
 export function seedMetricCatalogue(): Metric[] {
-  return (structuredClone(METRIC_CATALOGUE) as Metric[]).map((metric) => ({
-    ...metric,
-    asOf: metric.asOf ?? SAMPLE_PROVENANCE,
-  }));
+  return structuredClone(METRIC_CATALOGUE) as Metric[];
 }

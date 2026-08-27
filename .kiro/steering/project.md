@@ -50,6 +50,17 @@ four lenses — supply, speed, place, cost — but **the lens names are an inter
 public UI labels**. The rendered grouping and copy on the public screen are a design decision, made
 per screen. Admin does show them, labelled as internal, because that is what a filing system is for.
 
+**The four tabs are four VIEWS of one national picture, not four datasets.** The tool is not claiming
+that a COO looks at a different India from a CTO; it is putting in front of each of them the figures
+they are asked to justify. So a metric that appears on more than one tab carries **the same figure on
+every one of them** — bench strength, graduate output, leadership depth, time to backfill, time to
+first hire and the scale curve are all shared. They are authored **once** in
+`src/data/metric-catalogue.ts` and spread onto each tab with a different id, and `data:verify` carries
+the property as an **invariant**: metrics sharing a title must be identical apart from `id` and
+`functionArea`. There is no legitimate edit that makes two views of one number disagree. Every shared
+figure is a technology-role figure and the cards deliberately do not say so — re-labelling each one
+"for technology roles" would be noise over the point.
+
 The brief's author used six lenses, adding Fit and Optional. Both collapse into supply: Fit is
 comparative capability supply across delivery locations, and the Optional diversity block is the
 composition of the workforce on offer. Nothing from the brief lost a home, and the four are the
@@ -61,6 +72,13 @@ things work at once: the catalogue can ship as definitions with no invented figu
 metric has a shape to render a placeholder from without a value existing anywhere near the browser.
 `alignValue` re-fits the numbers when the shape changes, in one tested place, so the form cannot
 build something the publish gate then rejects for a length mismatch.
+
+**`atLeast` marks a metric whose figures are a floor**, and it is part of the definition rather than
+the value — "8.7 million or more" is a claim about how the figure was arrived at, and it holds whatever
+number is entered next month. Every figure the metric produces renders with a trailing `+`, applied in
+one place in `src/data/screen2.ts` so a parts list cannot silently drop it and make a stronger claim
+than the data does. Refused on a rating, since an ordinal has no "or more", and dropped by the gate,
+where it would qualify a figure that is not there.
 
 **India heatmap.** Built from the city lists in the company data — density of GCCs per city, filtered
 to the visitor's industry. Not a separate dataset.
@@ -305,16 +323,19 @@ in use is refused in the editor, where the reason can be explained, rather than 
 **The four function areas and four lenses are enums, not taxonomy.** They come from the brief and
 Screen 2's tab structure, so there is nothing for an admin to add. The metric editor can rename a
 metric, rewrite its question, and add, rename or remove the parts and axes of its shape — but not add
-or delete a whole metric, and not change its format, its function area, its lens or its gating. If a
-genuinely new metric is ever needed, that is a code change to the catalogue, deliberately.
+or delete a whole metric, and not change its format, its function area, its lens, its gating or its
+`atLeast` floor marker. If a genuinely new metric is ever needed, that is a code change to the
+catalogue, deliberately. Because six titles now appear on more than one tab, admin's Edit button names
+the function area alongside the title — three buttons all called "Edit Bench strength" would leave an
+admin unable to tell which copy they had opened, or that there were three.
 
 **`data:verify` checks two different things and the distinction is load-bearing.**
 
 *Invariants* are properties of the code that must hold for any dataset, seed or heavily edited: the
 peer ladder never leaves the industry, a thin industry degrades rather than pads, peers are ordered by
 size within a rung, HQ country never changes how many peers come back, the largest-in-industry panel is
-never empty, known revenue bands stay in ascending order. A failure here is a bug, and `--accept`
-deliberately cannot silence it.
+never empty, known revenue bands stay in ascending order, and a metric shown on several tabs carries one
+set of figures. A failure here is a bug, and `--accept` deliberately cannot silence it.
 
 *Profile figures* are the measurements in `docs/data-audit.md` — counts, index membership, aggregate
 professionals, city density, coverage, and the metric catalogue's completeness. They pin a snapshot,
@@ -333,9 +354,11 @@ stopped being a check.
   `src/data/screen1.ts` is the hardcoded set the brief permits, rendered with a visible line saying
   it is the general India GCC pattern rather than a breakdown of the companies shown. ANSR has still
   to sign off the wording and the order.
-- Screen 2 metric values: all 35 populated, all **illustrative**. Every one is stamped
-  `asOf: SAMPLE_PROVENANCE`, which is public and renders beside the figure, so a sample cannot
-  quietly become production. See `docs/data-audit.md`.
+- Screen 2 metric values: all 35 populated, from figures ANSR supplied and revised rather than from a
+  citable source, and three filled from judgement. **The "Sample, not for publication" stamp has been
+  removed at ANSR's request**, so nothing on the page now flags a figure as not-yet-final; `asOf` is
+  only ever provenance an admin typed. `data:verify` counts how many state none. See
+  `docs/data-audit.md`.
 
 ## Architecture map
 
@@ -345,7 +368,7 @@ session, so this records **what lives where and why**, never a file listing.
 | Path | Responsibility |
 | --- | --- |
 | `src/app/` | Next.js App Router. `page.tsx` is the tool's only public route and serves BOTH screens; it is `force-dynamic`, because a prerender would bake the taxonomy into the build and defeat the read cache the data layer was designed around. `actions.ts` is the public surface's single server action — deliberately one seam, so there is one place to check that the dataset does not cross. Screen 2 needs no action: its payload does not depend on the visitor, so `page.tsx` builds it per request and passes it down. `globals.css` is the Tailwind theme, aliased onto the brand tokens — it restates no values and clears Tailwind's default palette so off-brand colour is unreachable through a utility class, and it carries the public screens' one motion sequence. |
-| `src/data/` | The whole data layer, and the only place that knows the dataset shape. `schema.ts` is the zod contract; `normalize.ts` holds the cleaning primitives, shared by the seed importer and the future admin upload so one file format never gets two parsers; `derive.ts` computes everything not stored; `peers.ts` is the matching ladder and the Screen 1 counts, pure functions over a loaded dataset; `diff.ts` is the dataset diff — one computation with two renderers, a console one for the importer and structured output for the admin preview, so the two can never disagree; `metrics.ts` holds the Screen 2 catalogue's behaviour, and `publicMetric` there is the single place a gated value is omitted; `metric-catalogue.ts` is the seed transcribed from the brief, definitions only; `store.ts` + `store/{fs,github}-store.ts` are the `DataStore` implementations; `publish-store.ts` selects the write target and refuses to guess; `dataset.ts` is the cached server-side read, invalidated by an mtime-and-size check rather than by anyone remembering to clear it, and is `server-only`, which is what makes "never ship the dataset to the browser" a build error rather than a habit. `screen1.ts` is Screen 1's view model — the pure function that turns a dataset plus five inputs into the couple of kilobytes the Peer View renders, and the place that decides whether a result is degenerate so the copy can say something true about it; `geo.ts` holds the city coordinates the density map plots, hardcoded here because they are geographic fact rather than admin-editable data. `screen2.ts` is Screen 2's view model: it imports the gate rather than `dataset.metrics`, so there is no path around it, and it resolves every metric to pre-formatted figures and bar fractions with no nullable value left in the type — which is where the "an incomplete open metric is dropped, never half-filled" rule becomes something the compiler carries. |
+| `src/data/` | The whole data layer, and the only place that knows the dataset shape. `schema.ts` is the zod contract; `normalize.ts` holds the cleaning primitives, shared by the seed importer and the future admin upload so one file format never gets two parsers; `derive.ts` computes everything not stored; `peers.ts` is the matching ladder and the Screen 1 counts, pure functions over a loaded dataset; `diff.ts` is the dataset diff — one computation with two renderers, a console one for the importer and structured output for the admin preview, so the two can never disagree; `metrics.ts` holds the Screen 2 catalogue's behaviour, and `publicMetric` there is the single place a gated value is omitted; `metric-catalogue.ts` is the seed transcribed from the brief and populated, and the place a metric shown on several tabs is authored once and spread onto each with a different id; `store.ts` + `store/{fs,github}-store.ts` are the `DataStore` implementations; `publish-store.ts` selects the write target and refuses to guess; `dataset.ts` is the cached server-side read, invalidated by an mtime-and-size check rather than by anyone remembering to clear it, and is `server-only`, which is what makes "never ship the dataset to the browser" a build error rather than a habit. `screen1.ts` is Screen 1's view model — the pure function that turns a dataset plus five inputs into the couple of kilobytes the Peer View renders, and the place that decides whether a result is degenerate so the copy can say something true about it; `geo.ts` holds the city coordinates the density map plots, hardcoded here because they are geographic fact rather than admin-editable data. `screen2.ts` is Screen 2's view model: it imports the gate rather than `dataset.metrics`, so there is no path around it, and it resolves every metric to pre-formatted figures and bar fractions with no nullable value left in the type — which is where the "an incomplete open metric is dropped, never half-filled" rule becomes something the compiler carries. |
 | `src/app/admin/` | The admin surface. Four tabs: Companies, Taxonomy, Metrics, Publish. `login/` sits outside the `(authed)` route group and is the one path without a session; the group's layout is the guard for everything else and hosts the draft provider, so a draft survives moving between tabs. A route group rather than middleware: middleware would be a second runtime to keep Node-only for no gain. |
 | `src/app/api/admin/` | Login, logout, diff preview, publish. Each **re-checks the session itself** — deliberate duplication, because a layout cannot guard a route handler and a route that forgot would be silently public. |
 | `src/lib/admin/` | Auth and the publish pipeline. `password.ts` is scrypt hashing; `session.ts` is the signed cookie and is `server-only`; `rate-limit.ts` is the two-budget login limiter; `totp.ts` is the optional second factor, RFC 6238 on `node:crypto` with no dependency; `guard.ts` holds the two refusal shapes (redirect for pages, bare 401 for APIs); `publish.ts` is the validate → read → diff pipeline shared by preview and commit; `constants.ts` exists solely because `server-only` throws under `tsx`, so anything a script imports cannot carry the marker. |

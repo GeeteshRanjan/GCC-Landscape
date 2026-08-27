@@ -63,6 +63,17 @@ export default defineConfig({
      * limiter is in-process, so the spec that deliberately exhausts it locks out
      * everything that runs afterwards — it has to go last, behind a dependency.
      */
+    /**
+     * The public screens. No session, no dependencies, and first: the specs here
+     * read the fixture dataset, and `5-publish` rewrites it. Its own `testMatch`
+     * exists because `admin`'s is a character class — a spec numbered outside
+     * every project's pattern lands in no project and silently never runs.
+     */
+    {
+      name: "public",
+      testMatch: /0-.*\.spec\.ts/,
+      use: { ...devices["Desktop Chrome"] },
+    },
     {
       name: "unauthenticated",
       testMatch: /1-auth\.spec\.ts/,

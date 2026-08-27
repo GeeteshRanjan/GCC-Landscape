@@ -236,3 +236,142 @@
     letter-spacing: var(--ansr-tracking-body);
   }
 }
+
+/* ==========================================================================
+   Public screens — the one motion moment
+
+   Screen 1 has a single state change worth animating: the swap from the input
+   panel to the answer. The evidence bands stagger in behind it, which reads as
+   the answer assembling rather than as decoration.
+
+   Three constraints shaped this into CSS rather than a motion library:
+
+     - The tool is iframed and does not own the scroll container, so
+       scroll-driven motion has nothing reliable to attach to. An
+       IntersectionObserver against our own viewport fires for content the
+       visitor cannot see, because the parent decides what is on screen. So no
+       scroll reveals — motion is tied to the state change instead.
+     - Everything comes from the motion tokens. No ad-hoc duration, and the
+       whole sequence lands under the 400ms flow threshold per band.
+     - Opt-in, not opt-out: the animation only exists inside
+       `prefers-reduced-motion: no-preference`. tokens.css also collapses
+       durations globally under `reduce`, so this is belt and braces on the one
+       place motion is actually load-bearing.
+   ========================================================================== */
+
+.gcc-enter {
+  /* Set per band by the component, so the stagger is data rather than a
+     hand-written delay per section. */
+  --gcc-enter-index: 0;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .gcc-enter {
+    animation: gcc-enter var(--ansr-duration-slow) var(--ansr-ease-entrance) both;
+    animation-delay: calc(var(--gcc-enter-index) * var(--ansr-duration-fast));
+  }
+}
+
+@keyframes gcc-enter {
+  from {
+    opacity: 0;
+    /* Small and vertical: the band is arriving into place, not flying in. Kept
+       to a transform so no layout is animated. */
+    transform: translateY(var(--ansr-space-3));
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* --------------------------------------------------------------------------
+   Header horizon wash
+
+   `assets/brand/motif/arc-dome.svg` recoloured to --ansr-teal-600 and trimmed
+   via scripts/brand_asset.py, then held back with the .ansr-motif posture and
+   faded toward the top so it reads as a horizon under the headline rather than
+   a graphic competing with it. Never placed unmodified — see
+   .kiro/skills/ansr-brand-assets/SKILL.md.
+   -------------------------------------------------------------------------- */
+.gcc-horizon {
+  /* Anchored to the trailing bottom corner rather than stretched across the
+     header. Two reasons, both learned by looking at it: stretched wide enough to
+     bleed, the only part of the dome inside a header's height is its flattest
+     slice, which reads as diagonal wallpaper rather than as arcs; and the
+     headline is leading-aligned and capped at the reading measure, so the
+     trailing side is the empty ground the ornament should occupy. */
+  inset-block-end: 0;
+  inset-inline-end: 0;
+  inline-size: 62%;
+  /* Fades away from its anchor, so density sits where there is no text and the
+     motif has visibly stopped before the headline begins.
+
+     A mask only reads the alpha channel, so the colour here is machinery rather
+     than a design choice — but it still comes from a token, because
+     brand_lint.py correctly refuses to distinguish a mask's hex from a real one. */
+  mask-image: linear-gradient(
+    to top left,
+    var(--ansr-black),
+    transparent 72%
+  );
+}
+
+/* --------------------------------------------------------------------------
+   Screen 2 — ring quarter
+
+   `assets/brand/motif/arc-quarter.svg` recoloured to the brand teal and trimmed
+   via scripts/brand_asset.py, then held back with the .ansr-motif posture. Same
+   arc family as Screen 1's horizon, so the two screens read as one system, but a
+   quarter rather than a dome — a measured segment rather than an open horizon.
+   Never placed unmodified — see .kiro/skills/ansr-brand-assets/SKILL.md.
+   -------------------------------------------------------------------------- */
+.gcc-rings {
+  /* The asset's concentric origin sits at its own leading top and the rings sweep
+     down and across, so anchoring the box to the trailing edge puts the empty
+     centre where the leading-aligned headline is and the ring density in the
+     ground beside it. Taller than the header on purpose: the rings then read as a
+     slice of something larger rather than as a complete graphic parked in a
+     corner. */
+  inset-block-start: 0;
+  inset-inline-end: 0;
+  inline-size: 48%;
+
+  /* Fades away from the trailing edge, so the motif has visibly stopped before
+     the headline begins.
+
+     A mask only reads the alpha channel, so the colour here is machinery rather
+     than a design choice — but it still comes from a token, because
+     brand_lint.py correctly refuses to distinguish a mask's hex from a real one. */
+  mask-image: linear-gradient(
+    to bottom left,
+    var(--ansr-black),
+    transparent 68%
+  );
+}
+
+/* --------------------------------------------------------------------------
+   Screen 2 — a withheld slot
+
+   The shape of a gated metric, with nothing in it. There is no value to blur:
+   `publicMetric` omits it on the server, and `GatedMetric` has no field it could
+   have travelled in.
+
+   The treatment's whole job is to read as SEALED rather than as loading or as
+   broken, and it does that by being everything a skeleton is not: static, so
+   there is nothing to wait for; hatched, so it is visibly a surface rather than
+   an unstyled box; and uniform wherever it repeats, because a varying width is
+   how a skeleton imitates text and would imply a value here.
+   -------------------------------------------------------------------------- */
+.gcc-held {
+  background-color: var(--ansr-surface-subtle);
+  /* Geometry, not colour: a fine diagonal rule at the border weight. Fixed rather
+     than scaled to the block, so every withheld slot on the screen shares one
+     texture regardless of its size. */
+  background-image: repeating-linear-gradient(
+    135deg,
+    var(--ansr-border-strong) 0 1px,
+    transparent 1px 6px
+  );
+  border: 1px solid var(--ansr-border);
+}

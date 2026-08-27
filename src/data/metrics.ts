@@ -101,6 +101,8 @@ export interface OpenMetric {
   ratingScale?: string[];
   indexBaseline?: string;
   asOf?: string;
+  /** The figures are a floor. Rendered as a trailing "+" on every one of them. */
+  atLeast?: boolean;
   structure: MetricStructure;
   value: MetricValue | null;
 }
@@ -132,8 +134,9 @@ export type PublicMetric = OpenMetric | GatedMetric;
  *
  * Both branches drop `lens` (internal filing) and `note` (the admin's working
  * notes). The gated branch additionally drops the structure's labels, the unit,
- * the index base and the as-of date: a row label plus a visible axis can imply
- * the answer, and the placeholder does not need them to be the right size.
+ * the index base, the as-of date and `atLeast`: a row label plus a visible axis
+ * can imply the answer, and the placeholder does not need any of them to be the
+ * right size. `atLeast` in particular qualifies a figure that is not there.
  */
 export function publicMetric(metric: Metric): PublicMetric {
   if (metric.gated) {
@@ -160,6 +163,7 @@ export function publicMetric(metric: Metric): PublicMetric {
       ? {}
       : { indexBaseline: metric.indexBaseline }),
     ...(metric.asOf === undefined ? {} : { asOf: metric.asOf }),
+    ...(metric.atLeast === undefined ? {} : { atLeast: metric.atLeast }),
     structure: metric.structure,
     value: metric.value,
   };

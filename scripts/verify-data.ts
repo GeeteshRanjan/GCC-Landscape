@@ -31,7 +31,6 @@ import path from "node:path";
 import process from "node:process";
 
 import { fteMidpoint, hasTier2Presence } from "../src/data/derive";
-import { SAMPLE_PROVENANCE } from "../src/data/metric-catalogue";
 import { metricProgress, publicMetricsFor } from "../src/data/metrics";
 import { SEED_REVENUE_BAND_ORDER } from "../src/data/normalize";
 import {
@@ -275,6 +274,41 @@ async function main(): Promise<void> {
   invariant("every industry produces a largest-in-industry panel", emptyPanels, []);
   invariant("that panel never leaves the industry", panelOutsideIndustry, []);
 
+  /**
+   * A metric shown on more than one tab says the same thing on each.
+   *
+   * The four function tabs are four VIEWS of one national picture, not four
+   * datasets — bench strength, graduate output, leadership depth, time to backfill,
+   * time to first hire and the scale curve each appear on two or three tabs and
+   * must carry an identical figure, question and shape. The seed guarantees it by
+   * authoring each one once, but a dataset that has been through admin has no such
+   * guarantee: the metrics are separate rows with separate ids, so an admin editing
+   * "Bench strength" on the HR tab and not on the technology tab is exactly the
+   * drift this catches. An invariant rather than a profile figure, because there is
+   * no legitimate edit that makes two views of one number disagree.
+   */
+  const forked: string[] = [];
+  const byTitle = new Map<string, (typeof dataset.metrics)[number][]>();
+  for (const metric of dataset.metrics) {
+    const group = byTitle.get(metric.title) ?? [];
+    group.push(metric);
+    byTitle.set(metric.title, group);
+  }
+  for (const [title, group] of byTitle) {
+    if (group.length < 2) continue;
+    const shape = (metric: (typeof dataset.metrics)[number]) => {
+      // Everything except where it appears. `note` is included on purpose: a note
+      // that has diverged means somebody edited one copy of a shared metric.
+      const { id: _id, functionArea: _functionArea, ...content } = metric;
+      return JSON.stringify(content);
+    };
+    const first = shape(group[0]!);
+    if (group.some((metric) => shape(metric) !== first)) {
+      forked.push(`${title} (${group.map((m) => m.id).join(", ")})`);
+    }
+  }
+  invariant("a metric on several tabs carries one set of figures", forked.sort(), []);
+
   /* ======================================================================
      PROFILE FIGURES — pinned to a baseline, moved deliberately
      ====================================================================== */
@@ -364,19 +398,21 @@ async function main(): Promise<void> {
    * ships as a placeholder; an open one only counts once every slot is filled.
    */
   /**
-   * How many figures are still illustrative. A profile figure rather than an
-   * invariant, because the number going down is the point — when it reaches zero
-   * the catalogue is real, and that shows up here as drift to accept rather than
-   * as something anyone has to remember to check.
+   * How many metrics carry a provenance string.
+   *
+   * There used to be a companion figure counting how many still said "Sample, not
+   * for publication", because `asOf` defaulted to that. The default is gone, so
+   * every seeded metric now has no provenance at all and this one number says the
+   * same thing: it going down is the catalogue becoming real.
    */
-  profile(
-    "metrics still marked as sample data",
-    dataset.metrics.filter((m) => m.asOf === SAMPLE_PROVENANCE).length,
-    baseline,
-  );
   profile(
     "metrics with no provenance stated",
     dataset.metrics.filter((m) => !m.asOf).length,
+    baseline,
+  );
+  profile(
+    "metrics whose figures are a floor",
+    dataset.metrics.filter((m) => m.atLeast).map((m) => m.id).sort(),
     baseline,
   );
 

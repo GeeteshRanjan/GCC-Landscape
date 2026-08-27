@@ -204,6 +204,21 @@ const metricObjectSchema = z.object({
   ratingScale: z.array(nonEmpty).min(2).max(8).optional(),
   /** Required when `format` is "index": an index with no stated base is unreadable. */
   indexBaseline: z.string().trim().min(1).max(80).optional(),
+  /**
+   * The figures are a floor, not a point measurement, and render with a trailing
+   * "+".
+   *
+   * Part of the DEFINITION rather than of the value, which is why it lives beside
+   * `format` and not inside `metricValueSchema`: "8.7 million or more technology
+   * professionals" is a claim about how the figure was arrived at, and it holds
+   * whatever number is entered next month. Keeping it here also means the admin
+   * editor cannot flip it while typing a value — the same reason `format` and
+   * `gated` are not editable either.
+   *
+   * Only meaningful where a figure is a count, so it is refused on a rating; an
+   * ordinal has no "or more".
+   */
+  atLeast: z.boolean().optional(),
   /** Free-text provenance shown to the visitor, e.g. "2026 Q1". */
   asOf: z.string().trim().min(1).max(40).optional(),
   /** Internal working note. Never served — see `publicMetric`. */
@@ -248,6 +263,11 @@ export const metricSchema = metricObjectSchema.superRefine((metric, ctx) => {
   }
   if (metric.ratingScale && new Set(metric.ratingScale).size !== metric.ratingScale.length) {
     issue("ratingScale repeats a step", ["ratingScale"]);
+  }
+  if (metric.atLeast && metric.format === "rating") {
+    issue("an ordinal step has no \"or more\" — atLeast only applies to a figure", [
+      "atLeast",
+    ]);
   }
 
   // A rating is an ordinal label, so it can only live in cells. Nothing in the

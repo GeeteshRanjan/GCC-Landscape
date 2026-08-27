@@ -27,9 +27,19 @@ function metricSection(page: Page, heading: string) {
     .filter({ has: page.getByRole("heading", { name: heading, exact: true }) });
 }
 
-/** Opens a metric's editor by its public title. */
-async function openMetric(page: Page, title: string): Promise<void> {
-  await page.getByRole("button", { name: `Edit ${title}` }).first().click();
+/**
+ * Opens a metric's editor by its public title, and by function area where the
+ * title is not unique.
+ *
+ * Six titles now appear on more than one tab — bench strength, graduate output,
+ * leadership depth, backfill, first hire, the scale curve — because they are one
+ * figure shown in several views. The Edit button's accessible name carries the
+ * function area for exactly that reason, and a bare title here would silently open
+ * whichever copy happened to come first.
+ */
+async function openMetric(page: Page, title: string, area?: string): Promise<void> {
+  const name = area ? `Edit ${title}, ${area}` : `Edit ${title}`;
+  await page.getByRole("button", { name }).first().click();
   await expect(page.getByRole("dialog")).toBeVisible();
 }
 
@@ -64,7 +74,7 @@ test("the internal lens groupings are labelled as internal", async ({ page }) =>
 
 test("entering a figure marks the draft dirty and survives a reload", async ({ page }) => {
   await page.goto("/admin/metrics");
-  await openMetric(page, "Technology bench strength");
+  await openMetric(page, "Bench strength", "Technology");
 
   await page.getByLabel("Figure").fill("912000");
   await page.getByRole("button", { name: "Save to draft" }).click();
@@ -77,13 +87,13 @@ test("entering a figure marks the draft dirty and survives a reload", async ({ p
   await page.reload();
 
   await expect(page.getByText("You have unpublished changes.")).toBeVisible();
-  await openMetric(page, "Technology bench strength");
+  await openMetric(page, "Bench strength", "Technology");
   await expect(page.getByLabel("Figure")).toHaveValue("912000");
 });
 
 test("a metric edit survives moving between tabs", async ({ page }) => {
   await page.goto("/admin/metrics");
-  await openMetric(page, "Operations bench strength");
+  await openMetric(page, "Bench strength", "Operations");
   await page.getByLabel("Figure").fill("84");
   await page.getByRole("button", { name: "Save to draft" }).click();
   await waitForDraftSaved(page);
@@ -92,13 +102,13 @@ test("a metric edit survives moving between tabs", async ({ page }) => {
   await expect(page.getByRole("heading", { name: "Companies", level: 1 })).toBeVisible();
   await page.getByRole("link", { name: "Metrics" }).click();
 
-  await openMetric(page, "Operations bench strength");
+  await openMetric(page, "Bench strength", "Operations");
   await expect(page.getByLabel("Figure")).toHaveValue("84");
 });
 
 test("editing a figure back to its original clears the unpublished warning", async ({ page }) => {
   await page.goto("/admin/metrics");
-  await openMetric(page, "Technology bench strength");
+  await openMetric(page, "Bench strength", "Technology");
   const original = await page.getByLabel("Figure").inputValue();
   expect(original).not.toBe("");
 
@@ -106,7 +116,7 @@ test("editing a figure back to its original clears the unpublished warning", asy
   await page.getByRole("button", { name: "Save to draft" }).click();
   await expect(page.getByText("You have unpublished changes.")).toBeVisible();
 
-  await openMetric(page, "Technology bench strength");
+  await openMetric(page, "Bench strength", "Technology");
   await page.getByLabel("Figure").fill(original);
   await page.getByRole("button", { name: "Save to draft" }).click();
 
@@ -201,10 +211,13 @@ test.describe("a comparison grid", () => {
     ).toBeAttached();
   });
 
-  test("says the figures are samples, on a field the visitor would also see", async ({ page }) => {
+  test("states no provenance until somebody types one", async ({ page }) => {
     await page.goto("/admin/metrics");
     await openMetric(page, title);
-    await expect(page.getByLabel("As of")).toHaveValue(/Sample/);
+    // `asOf` is public and renders verbatim beside the figure. It used to default
+    // to "Sample, not for publication", which put that caveat on every card; the
+    // default is gone, so the field is empty until an admin fills it.
+    await expect(page.getByLabel("As of")).toHaveValue("");
   });
 
   test("rates cells from the metric's own scale, not free text", async ({ page }) => {
@@ -295,6 +308,23 @@ test.describe("gated metrics", () => {
   });
 });
 
+test("names each copy of a shared metric by its function area", async ({ page }) => {
+  await page.goto("/admin/metrics");
+
+  /**
+   * The public screen shows one figure on three tabs; admin shows three editable
+   * rows. Without the function area in the button's accessible name they would all
+   * be called "Edit Bench strength", and an admin correcting the figure would have
+   * no way to tell which one they had opened — or that there were three.
+   */
+  await expect(page.getByRole("button", { name: /^Edit Bench strength/ })).toHaveCount(3);
+  for (const area of ["Technology", "Operations", "HR"]) {
+    await expect(
+      page.getByRole("button", { name: `Edit Bench strength, ${area}` }),
+    ).toHaveCount(1);
+  }
+});
+
 test("an index metric will not save without a stated base", async ({ page }) => {
   await page.goto("/admin/metrics");
   await openMetric(page, "India compared with other delivery locations");
@@ -310,7 +340,7 @@ test("an index metric will not save without a stated base", async ({ page }) => 
 
 test("a figure that is not a number is reported rather than silently dropped", async ({ page }) => {
   await page.goto("/admin/metrics");
-  await openMetric(page, "Technology bench strength");
+  await openMetric(page, "Bench strength", "Technology");
 
   await page.getByLabel("Figure").fill("about a million");
   await page.getByRole("button", { name: "Save to draft" }).click();
@@ -321,7 +351,7 @@ test("a figure that is not a number is reported rather than silently dropped", a
 
 test("a title is required, because it is the public heading", async ({ page }) => {
   await page.goto("/admin/metrics");
-  await openMetric(page, "Technology bench strength");
+  await openMetric(page, "Bench strength", "Technology");
 
   await page.getByLabel("Title").fill("   ");
   await page.getByRole("button", { name: "Save to draft" }).click();
@@ -344,7 +374,7 @@ test("clearing all figures leaves the definition intact", async ({ page }) => {
 
 test("the dialog traps focus and closes on Escape", async ({ page }) => {
   await page.goto("/admin/metrics");
-  await openMetric(page, "Technology bench strength");
+  await openMetric(page, "Bench strength", "Technology");
 
   const dialog = page.getByRole("dialog");
   await expect(dialog).toBeVisible();

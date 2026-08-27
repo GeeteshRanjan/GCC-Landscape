@@ -1,10 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import {
-  METRIC_CATALOGUE,
-  SAMPLE_PROVENANCE,
-  seedMetricCatalogue,
-} from "@/data/metric-catalogue";
+import { METRIC_CATALOGUE, seedMetricCatalogue } from "@/data/metric-catalogue";
 import {
   alignValue,
   emptyValueFor,
@@ -578,32 +574,111 @@ describe("the seeded catalogue", () => {
     expect(seeded.filter((m) => !isMetricComplete(m))).toEqual([]);
   });
 
-  it("stamps every seeded metric with provenance, and defaults it to sample", () => {
+  it("stamps nothing on the way out, so no caveat renders beside a figure", () => {
     /**
-     * The safeguard that matters while the figures are illustrative. `asOf` is a
-     * public field, so a sample number that escapes to a visitor arrives labelled
-     * rather than passed off as research.
+     * `asOf` used to default to "Sample, not for publication", which is a PUBLIC
+     * field and rendered on every card. That default is gone: provenance is now
+     * only ever something an admin typed, and the seed states none.
      */
     const seeded = seedMetricCatalogue();
-    expect(seeded.filter((m) => !m.asOf)).toEqual([]);
-    expect(seeded.every((m) => m.asOf === SAMPLE_PROVENANCE)).toBe(true);
-    expect(SAMPLE_PROVENANCE).toMatch(/sample/i);
+    expect(seeded.filter((m) => m.asOf !== undefined)).toEqual([]);
+    expect(JSON.stringify(seeded)).not.toMatch(/sample/i);
   });
 
-  it("lets a real date survive the stamp, so replacing a figure clears the caveat", () => {
-    // The default must not overwrite provenance a metric already states, or the
-    // caveat could never be retired one metric at a time.
+  it("lets provenance an admin typed cross the gate untouched", () => {
     const dated: Metric = { ...(METRIC_CATALOGUE[0] as Metric), asOf: "2026 Q1" };
-    const stamped = { ...dated, asOf: dated.asOf ?? SAMPLE_PROVENANCE };
-    expect(stamped.asOf).toBe("2026 Q1");
+    const published = publicMetric(dated);
+    expect(published.gated).toBe(false);
+    if (!published.gated) expect(published.asOf).toBe("2026 Q1");
   });
 
-  it("carries the provenance through the gate for an open metric", () => {
-    const seeded = seedMetricCatalogue();
-    const open = seeded.find((m) => !m.gated) as Metric;
-    const published = publicMetric(open);
-    expect(published.gated).toBe(false);
-    if (!published.gated) expect(published.asOf).toBe(SAMPLE_PROVENANCE);
+  /**
+   * The four tabs are four views of one national picture, not four datasets. Six
+   * titles appear on more than one tab, and each must carry an identical figure,
+   * question and shape — which the seed guarantees by authoring each one once.
+   */
+  it("gives a metric shown on several tabs one set of figures", () => {
+    const byTitle = new Map<string, Metric[]>();
+    for (const metric of METRIC_CATALOGUE) {
+      byTitle.set(metric.title, [...(byTitle.get(metric.title) ?? []), metric]);
+    }
+
+    const shared = [...byTitle.entries()].filter(([, group]) => group.length > 1);
+    expect(shared.map(([title]) => title).sort()).toEqual([
+      "Bench strength",
+      "Graduate output by discipline",
+      "Leadership depth",
+      "Time to backfill a role",
+      "Time to first hire",
+      "Time to reach each scale milestone",
+    ]);
+
+    for (const [title, group] of shared) {
+      const content = group.map((metric) => {
+        const { id: _id, functionArea: _functionArea, ...rest } = metric;
+        return JSON.stringify(rest);
+      });
+      expect(new Set(content).size, title).toBe(1);
+      // And they really are on different tabs, or the check above proves nothing.
+      expect(new Set(group.map((m) => m.functionArea)).size, title).toBe(group.length);
+    }
+  });
+
+  it("holds the figures the brief was revised to, as floors where they are floors", () => {
+    const value = (id: string) => METRIC_CATALOGUE.find((m) => m.id === id);
+
+    for (const id of ["tech-bench-strength", "ops-bench-strength", "hr-bench-strength"]) {
+      const metric = value(id);
+      expect(metric?.value, id).toEqual({ kind: "scalar", value: 8_700_000 });
+      expect(metric?.atLeast, id).toBe(true);
+    }
+    expect(value("tech-manager-depth")?.value).toEqual({
+      kind: "scalar",
+      value: 1_400_000,
+    });
+    expect(value("tech-leadership-depth")?.value).toEqual({
+      kind: "scalar",
+      value: 800_000,
+    });
+    expect(value("tech-ecosystem-size")?.value).toEqual({
+      kind: "breakdown",
+      values: [1_700_000, 1_500_000, 1_400_000, 1_300_000, 1_200_000, 1_200_000, 150_000],
+    });
+    for (const id of ["ops-time-to-first-hire", "hr-time-to-first-hire"]) {
+      expect(value(id)?.value, id).toEqual({ kind: "range", min: 7, max: 70 });
+    }
+    // One national figure, not a four-city split the visitor cannot act on.
+    expect(value("hr-offer-acceptance")?.structure.kind).toBe("scalar");
+    // India's own wage growth, without the US and UK comparison beside it.
+    expect(value("fin-cost-growth")?.value).toEqual({ kind: "scalar", value: 9.8 });
+    expect(value("fin-cost-growth")?.structure.kind).toBe("scalar");
+  });
+
+  it("has dropped the metrics the brief cut", () => {
+    const ids = METRIC_CATALOGUE.map((m) => m.id);
+    // Legal employer readiness: removed outright.
+    expect(ids).not.toContain("hr-legal-readiness-days");
+    // And nothing has quietly re-created it under a different id.
+    expect(JSON.stringify(METRIC_CATALOGUE)).not.toMatch(/legal employer/i);
+  });
+
+  it("compares delivery locations by umbrella function, not by one role", () => {
+    const metric = METRIC_CATALOGUE.find((m) => m.id === "fin-india-vs-hubs");
+    expect(metric?.structure.kind).toBe("matrix");
+    if (metric?.structure.kind !== "matrix") return;
+    expect(metric.structure.rows).toEqual([
+      "Technology",
+      "Operations",
+      "Human resources",
+      "Finance",
+    ]);
+    expect(metric.structure.rows).not.toContain("Senior engineer");
+  });
+
+  it("refuses a floor marker on an ordinal, which has no \"or more\"", () => {
+    const grid = METRIC_CATALOGUE.find((m) => m.id === "tech-capability-comparison");
+    const parsed = metricSchema.safeParse({ ...grid, atLeast: true });
+    expect(parsed.success).toBe(false);
   });
 
   it("keeps every index readable by stating its base", () => {

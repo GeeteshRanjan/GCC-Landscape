@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generatedAt": "2026-08-27T17:59:36.229Z",
+  "generatedAt": "2026-08-27T19:05:20.112Z",
   "source": "Consolidated_GCC_India_Database_2026_New.xlsx",
   "taxonomy": {
     "industries": [
@@ -32328,18 +32328,55 @@
       "id": "tech-bench-strength",
       "functionArea": "tech",
       "lens": "supply",
-      "title": "Technology bench strength",
+      "title": "Bench strength",
       "question": "How many people with the skills we need are available today?",
-      "unit": "technology professionals",
+      "unit": "professionals",
       "format": "number",
-      "asOf": "Sample, not for publication",
-      "note": "The national technology workforce, which is what 'available today' means for someone hiring. For context, 2.36M work in India GCCs and 1.4M of those are in technology roles — proof of adoption rather than available supply.",
+      "atLeast": true,
+      "note": "The national technology workforce, which is what 'available today' means for someone hiring. For context, 2.36M work in India GCCs and 1.4M of those are in technology roles — proof of adoption rather than available supply. A floor, hence atLeast.",
       "structure": {
         "kind": "scalar"
       },
       "value": {
         "kind": "scalar",
-        "value": 5800000
+        "value": 8700000
+      },
+      "gated": false
+    },
+    {
+      "id": "tech-manager-depth",
+      "functionArea": "tech",
+      "lens": "supply",
+      "title": "Managers and above",
+      "question": "Is there a management layer here, or would every lead be an import?",
+      "unit": "professionals in manager and above roles",
+      "format": "number",
+      "atLeast": true,
+      "note": "A floor. Sits between bench strength and leadership depth as the middle of the pyramid.",
+      "structure": {
+        "kind": "scalar"
+      },
+      "value": {
+        "kind": "scalar",
+        "value": 1400000
+      },
+      "gated": false
+    },
+    {
+      "id": "tech-leadership-depth",
+      "functionArea": "tech",
+      "lens": "supply",
+      "title": "Leadership depth",
+      "question": "Is there a senior layer here we could hire our leadership from?",
+      "unit": "professionals with 10+ years of experience",
+      "format": "number",
+      "note": "The size of the experienced layer, not a count of people who have run a specific team size — the narrower claims that used to sit here were not answerable from the supplied data. Separately, 400+ India-based leaders hold global mandates, which is a different claim and has no metric.",
+      "structure": {
+        "kind": "scalar"
+      },
+      "value": {
+        "kind": "scalar",
+        "value": 800000
       },
       "gated": false
     },
@@ -32351,8 +32388,7 @@
       "question": "Will the talent pool still be deep enough tomorrow, as we grow?",
       "unit": "graduates a year",
       "format": "number",
-      "asOf": "Sample, not for publication",
-      "note": "Roughly 2.55M STEM graduates a year in total. The parts below are disjoint.",
+      "note": "Roughly 2.55M STEM graduates a year against roughly 4.5M general graduates. The parts are disjoint. Human resources is postgraduate output from MBA and MSW programmes, which is why it is an order of magnitude below the rest.",
       "structure": {
         "kind": "breakdown",
         "entries": [
@@ -32360,7 +32396,11 @@
           "Computer science and IT",
           "Electronics and communication",
           "Mathematics and statistics",
-          "Other sciences"
+          "Other sciences",
+          "Commerce",
+          "Management and MBA",
+          "Finance and accounting",
+          "Human resources"
         ]
       },
       "value": {
@@ -32370,7 +32410,11 @@
           300000,
           250000,
           200000,
-          350000
+          350000,
+          600000,
+          450000,
+          250000,
+          45000
         ]
       },
       "gated": false
@@ -32383,51 +32427,31 @@
       "question": "Is the depth spread across the specialisms we need, or concentrated in one?",
       "unit": "professionals",
       "format": "number",
-      "asOf": "Sample, not for publication",
-      "note": "Specialisms overlap, so these do not sum to the bench strength figure. Quality engineering was a seeded part with no figure behind it and was removed.",
+      "atLeast": true,
+      "note": "Specialisms overlap, so these do not sum to the bench strength figure. Every part is a floor. Quality engineering was a seeded part with no figure behind it and was removed.",
       "structure": {
         "kind": "breakdown",
         "entries": [
           "Full-stack and product engineering",
-          "Cloud",
           "Data engineering and analytics",
-          "AI and machine learning",
           "Embedded and ER&D",
           "SRE and DevOps",
+          "Cloud",
+          "AI and machine learning",
           "Cybersecurity"
         ]
       },
       "value": {
         "kind": "breakdown",
         "values": [
-          600000,
-          520000,
-          450000,
-          416000,
-          350000,
-          200000,
-          180000
+          1700000,
+          1500000,
+          1400000,
+          1300000,
+          1200000,
+          1200000,
+          150000
         ]
-      },
-      "gated": false
-    },
-    {
-      "id": "tech-leadership-depth",
-      "functionArea": "tech",
-      "lens": "supply",
-      "title": "Leadership depth",
-      "question": "Can we hire technology managers who have already run teams at the scale we are planning?",
-      "unit": "leaders who have run teams of 100+ engineers",
-      "format": "number",
-      "asOf": "Sample, not for publication",
-      "note": "A range as supplied, so stored as one. Separately, 400+ India-based leaders hold global mandates — a different claim, and there is no metric for it.",
-      "structure": {
-        "kind": "range"
-      },
-      "value": {
-        "kind": "range",
-        "min": 9000,
-        "max": 11000
       },
       "gated": false
     },
@@ -32439,7 +32463,6 @@
       "question": "How many centres have already grown past the size we are aiming for?",
       "unit": "GCCs",
       "format": "number",
-      "asOf": "Sample, not for publication",
       "note": "Roughly 60% of 2,117 centres. About 450 are above 1,000 FTEs, which the metric definition does not cover.",
       "structure": {
         "kind": "scalar"
@@ -32458,7 +32481,6 @@
       "question": "Are engineers here building in the open, or only inside their employers?",
       "unit": "developers on GitHub",
       "format": "number",
-      "asOf": "Sample, not for publication",
       "note": "Second largest developer population globally, around 13% of global public contributions, with roughly 2.9M new accounts a year. GitLab and Kaggle were seeded parts with no figures and were removed, which makes this a single figure rather than a split.",
       "structure": {
         "kind": "scalar"
@@ -32476,7 +32498,6 @@
       "title": "Technical community activity",
       "question": "Is there a working community around our stack, or would we be starting one?",
       "format": "number",
-      "asOf": "Sample, not for publication",
       "note": "Groups counted across the top eight cities; Bengaluru alone has about 450. Largest chapters are Python, Kubernetes, AWS and PyTorch. No unit is set because the two parts count different things.",
       "structure": {
         "kind": "breakdown",
@@ -32507,7 +32528,6 @@
         "Strong",
         "Very strong"
       ],
-      "asOf": "Sample, not for publication",
       "note": "India, Poland and the Philippines are the worked example in docs/brief.md. Vietnam is rated illustratively — the brief names it as a comparator but never rates it, and the supplied comparison was prose about headcount scale rather than capability. Vietnam reads as emerging: competitive on product engineering, thinner on AI and security. Replace with a real assessment before this ships.",
       "structure": {
         "kind": "matrix",
@@ -32566,18 +32586,18 @@
       "id": "ops-bench-strength",
       "functionArea": "operations",
       "lens": "supply",
-      "title": "Operations bench strength",
-      "question": "How many people with operations experience are available today?",
+      "title": "Bench strength",
+      "question": "How many people with the skills we need are available today?",
       "unit": "professionals",
       "format": "number",
-      "asOf": "Sample, not for publication",
-      "note": "Roughly 620K of these already work inside GCCs.",
+      "atLeast": true,
+      "note": "The national technology workforce, which is what 'available today' means for someone hiring. For context, 2.36M work in India GCCs and 1.4M of those are in technology roles — proof of adoption rather than available supply. A floor, hence atLeast.",
       "structure": {
         "kind": "scalar"
       },
       "value": {
         "kind": "scalar",
-        "value": 800000
+        "value": 8700000
       },
       "gated": false
     },
@@ -32586,25 +32606,36 @@
       "functionArea": "operations",
       "lens": "supply",
       "title": "Graduate output by discipline",
-      "question": "Will the pool of people we can train into these roles keep replenishing?",
+      "question": "Will the talent pool still be deep enough tomorrow, as we grow?",
       "unit": "graduates a year",
       "format": "number",
-      "asOf": "Sample, not for publication",
-      "note": "Against roughly 4.5M general graduates a year in total. Engineering and science were seeded parts with no operations-specific figures and were removed.",
+      "note": "Roughly 2.55M STEM graduates a year against roughly 4.5M general graduates. The parts are disjoint. Human resources is postgraduate output from MBA and MSW programmes, which is why it is an order of magnitude below the rest.",
       "structure": {
         "kind": "breakdown",
         "entries": [
+          "Engineering, other disciplines",
+          "Computer science and IT",
+          "Electronics and communication",
+          "Mathematics and statistics",
+          "Other sciences",
           "Commerce",
           "Management and MBA",
-          "Finance and accounting"
+          "Finance and accounting",
+          "Human resources"
         ]
       },
       "value": {
         "kind": "breakdown",
         "values": [
+          1500000,
+          300000,
+          250000,
+          200000,
+          350000,
           600000,
           450000,
-          250000
+          250000,
+          45000
         ]
       },
       "gated": false
@@ -32617,43 +32648,14 @@
       "question": "When somebody leaves, how long does the seat stay empty?",
       "unit": "days",
       "format": "duration",
-      "asOf": "Sample, not for publication",
-      "note": "Mid-level 35–45 days, specialist 60–75. The wider span is stored so neither case is hidden.",
+      "note": "Mid-level 35–45 days, specialist 60–75. The wider span is stored so neither case is hidden. End labels are deliberately absent: naming them would re-introduce the per-function split this metric exists to collapse.",
       "structure": {
-        "kind": "range",
-        "minLabel": "for a mid-level operations role",
-        "maxLabel": "for a specialist role"
+        "kind": "range"
       },
       "value": {
         "kind": "range",
         "min": 35,
         "max": 75
-      },
-      "gated": false
-    },
-    {
-      "id": "ops-grade-a-office-stock",
-      "functionArea": "operations",
-      "lens": "supply",
-      "title": "Grade A office stock",
-      "question": "Is there space we could move into at the quality our people expect?",
-      "unit": "million sq ft",
-      "format": "number",
-      "asOf": "Sample, not for publication",
-      "note": "Both figures rather than a choice between them: total stock answers whether the market is deep, and vacant answers whether we could move in now. Across the top seven cities at 15.5% vacancy; Bengaluru alone holds 241 msf of the total.",
-      "structure": {
-        "kind": "breakdown",
-        "entries": [
-          "Total Grade A stock, top seven cities",
-          "Vacant and available now"
-        ]
-      },
-      "value": {
-        "kind": "breakdown",
-        "values": [
-          854,
-          132
-        ]
       },
       "gated": false
     },
@@ -32665,14 +32667,15 @@
       "question": "How soon could somebody actually start work?",
       "unit": "days",
       "format": "duration",
-      "asOf": "Sample, not for publication",
-      "note": "Six to ten weeks from mandate to first joiner. The supplied figure does not split by operating model, so the end labels the brief called for are not set here; the HR equivalent does split.",
+      "note": "A week on an employer of record, up to ten weeks hiring direct into your own entity. The split that matters is the operating model, which is why the ends are labelled with it — the operations tab used to carry an unlabelled 42–70 instead, which hid the fastest route entirely.",
       "structure": {
-        "kind": "range"
+        "kind": "range",
+        "minLabel": "on an employer of record",
+        "maxLabel": "hiring directly into your own entity"
       },
       "value": {
         "kind": "range",
-        "min": 42,
+        "min": 7,
         "max": 70
       },
       "gated": false
@@ -32685,8 +32688,7 @@
       "question": "Once the first team proves out, how quickly do centres here add the next hundred?",
       "unit": "months, median",
       "format": "duration",
-      "asOf": "Sample, not for publication",
-      "note": "Months rather than days, as supplied — converting would invent precision. The 100 FTE milestone was given as 9–12 months and the conservative end is stored.",
+      "note": "Months rather than days, as supplied — converting would invent precision. The 100 FTE milestone was given as 9–12 months and the 500 as 500–600 FTEs in 36; the conservative end of each is stored. The HR tab used to omit the 50 FTE step, which made the curve look slower off the line than it is.",
       "structure": {
         "kind": "breakdown",
         "entries": [
@@ -32708,13 +32710,37 @@
       "gated": false
     },
     {
+      "id": "ops-grade-a-office-stock",
+      "functionArea": "operations",
+      "lens": "supply",
+      "title": "Grade A office stock",
+      "question": "Is there space we could move into at the quality our people expect?",
+      "unit": "million sq ft",
+      "format": "number",
+      "note": "Both figures rather than a choice between them: total stock answers whether the market is deep, and vacant answers whether we could move in now. Across the top seven cities at 15.5% vacancy; Bengaluru alone holds 241 msf of the total.",
+      "structure": {
+        "kind": "breakdown",
+        "entries": [
+          "Total Grade A stock, top seven cities",
+          "Vacant and available now"
+        ]
+      },
+      "value": {
+        "kind": "breakdown",
+        "values": [
+          854,
+          132
+        ]
+      },
+      "gated": false
+    },
+    {
       "id": "ops-power-uptime",
       "functionArea": "operations",
       "lens": "place",
       "title": "Power and connectivity uptime",
       "question": "Can we run a shift here without planning around outages?",
       "format": "percent",
-      "asOf": "Sample, not for publication",
       "note": "Split because the campus figure and the grid figure answer different worries, and a single number would hide the weaker one.",
       "structure": {
         "kind": "breakdown",
@@ -32740,7 +32766,6 @@
       "question": "Will our teams be working at the same responsiveness as the rest of the business?",
       "unit": "milliseconds",
       "format": "duration",
-      "asOf": "Sample, not for publication",
       "note": "Upper end of each supplied range, so nothing reads better than it is: 2–8 ms intra-city to the Mumbai, Hyderabad and Chennai regions, 25–40 ms inter-city. Singapore was a seeded part with no figure and was removed.",
       "structure": {
         "kind": "breakdown",
@@ -32770,7 +32795,6 @@
       "question": "How many working days a year does the city actually lose?",
       "unit": "days a year",
       "format": "duration",
-      "asOf": "Sample, not for publication",
       "note": "By city, as supplied, rather than by cause — the seeded split of power, flooding and transit had no figures behind it. Monsoon, civic strikes and extreme weather together account for 3–6 days nationally.",
       "structure": {
         "kind": "breakdown",
@@ -32796,37 +32820,18 @@
       "id": "hr-bench-strength",
       "functionArea": "hr",
       "lens": "supply",
-      "title": "HR bench strength",
-      "question": "How many experienced HR professionals could we hire from?",
+      "title": "Bench strength",
+      "question": "How many people with the skills we need are available today?",
       "unit": "professionals",
       "format": "number",
-      "asOf": "Sample, not for publication",
-      "note": "Roughly 55K of these have GCC experience specifically.",
+      "atLeast": true,
+      "note": "The national technology workforce, which is what 'available today' means for someone hiring. For context, 2.36M work in India GCCs and 1.4M of those are in technology roles — proof of adoption rather than available supply. A floor, hence atLeast.",
       "structure": {
         "kind": "scalar"
       },
       "value": {
         "kind": "scalar",
-        "value": 180000
-      },
-      "gated": false
-    },
-    {
-      "id": "hr-graduate-output",
-      "functionArea": "hr",
-      "lens": "supply",
-      "title": "Graduate output by discipline",
-      "question": "Is there a steady intake we could build an HR team from?",
-      "unit": "HR postgraduates a year",
-      "format": "number",
-      "asOf": "Sample, not for publication",
-      "note": "From MBA and MSW programmes. Supplied as one figure, so the seeded four-way split was collapsed rather than padded with guesses.",
-      "structure": {
-        "kind": "scalar"
-      },
-      "value": {
-        "kind": "scalar",
-        "value": 45000
+        "value": 8700000
       },
       "gated": false
     },
@@ -32835,23 +32840,54 @@
       "functionArea": "hr",
       "lens": "supply",
       "title": "Leadership depth",
-      "question": "Can we hire an HR leader who has already built a centre from nothing?",
-      "unit": "HR leaders",
+      "question": "Is there a senior layer here we could hire our leadership from?",
+      "unit": "professionals with 10+ years of experience",
       "format": "number",
-      "asOf": "Sample, not for publication",
-      "note": "Split because the two answer different questions: can somebody start this, and has anybody taken it to full scale.",
+      "note": "The size of the experienced layer, not a count of people who have run a specific team size — the narrower claims that used to sit here were not answerable from the supplied data. Separately, 400+ India-based leaders hold global mandates, which is a different claim and has no metric.",
+      "structure": {
+        "kind": "scalar"
+      },
+      "value": {
+        "kind": "scalar",
+        "value": 800000
+      },
+      "gated": false
+    },
+    {
+      "id": "hr-graduate-output",
+      "functionArea": "hr",
+      "lens": "supply",
+      "title": "Graduate output by discipline",
+      "question": "Will the talent pool still be deep enough tomorrow, as we grow?",
+      "unit": "graduates a year",
+      "format": "number",
+      "note": "Roughly 2.55M STEM graduates a year against roughly 4.5M general graduates. The parts are disjoint. Human resources is postgraduate output from MBA and MSW programmes, which is why it is an order of magnitude below the rest.",
       "structure": {
         "kind": "breakdown",
         "entries": [
-          "Have built a centre from zero",
-          "Have scaled one past 1,000 FTEs"
+          "Engineering, other disciplines",
+          "Computer science and IT",
+          "Electronics and communication",
+          "Mathematics and statistics",
+          "Other sciences",
+          "Commerce",
+          "Management and MBA",
+          "Finance and accounting",
+          "Human resources"
         ]
       },
       "value": {
         "kind": "breakdown",
         "values": [
-          1200,
-          350
+          1500000,
+          300000,
+          250000,
+          200000,
+          350000,
+          600000,
+          450000,
+          250000,
+          45000
         ]
       },
       "gated": false
@@ -32864,17 +32900,64 @@
       "question": "When somebody leaves, how long does the seat stay empty?",
       "unit": "days",
       "format": "duration",
-      "asOf": "Sample, not for publication",
-      "note": "Mid-level 40–50 days, an HR head 75–90. The wider span is stored so neither case is hidden.",
+      "note": "Mid-level 35–45 days, specialist 60–75. The wider span is stored so neither case is hidden. End labels are deliberately absent: naming them would re-introduce the per-function split this metric exists to collapse.",
       "structure": {
-        "kind": "range",
-        "minLabel": "for a mid-level HR role",
-        "maxLabel": "for an HR head"
+        "kind": "range"
       },
       "value": {
         "kind": "range",
-        "min": 40,
-        "max": 90
+        "min": 35,
+        "max": 75
+      },
+      "gated": false
+    },
+    {
+      "id": "hr-time-to-first-hire",
+      "functionArea": "hr",
+      "lens": "speed",
+      "title": "Time to first hire",
+      "question": "How soon could somebody actually start work?",
+      "unit": "days",
+      "format": "duration",
+      "note": "A week on an employer of record, up to ten weeks hiring direct into your own entity. The split that matters is the operating model, which is why the ends are labelled with it — the operations tab used to carry an unlabelled 42–70 instead, which hid the fastest route entirely.",
+      "structure": {
+        "kind": "range",
+        "minLabel": "on an employer of record",
+        "maxLabel": "hiring directly into your own entity"
+      },
+      "value": {
+        "kind": "range",
+        "min": 7,
+        "max": 70
+      },
+      "gated": false
+    },
+    {
+      "id": "hr-scale-milestones",
+      "functionArea": "hr",
+      "lens": "speed",
+      "title": "Time to reach each scale milestone",
+      "question": "Once the first team proves out, how quickly do centres here add the next hundred?",
+      "unit": "months, median",
+      "format": "duration",
+      "note": "Months rather than days, as supplied — converting would invent precision. The 100 FTE milestone was given as 9–12 months and the 500 as 500–600 FTEs in 36; the conservative end of each is stored. The HR tab used to omit the 50 FTE step, which made the curve look slower off the line than it is.",
+      "structure": {
+        "kind": "breakdown",
+        "entries": [
+          "To 50 FTEs",
+          "To 100 FTEs",
+          "To 300 FTEs",
+          "To 500 FTEs"
+        ]
+      },
+      "value": {
+        "kind": "breakdown",
+        "values": [
+          6,
+          12,
+          24,
+          36
+        ]
       },
       "gated": false
     },
@@ -32885,7 +32968,6 @@
       "title": "Workforce diversity",
       "question": "Would a centre here look like the workforce we are trying to build?",
       "format": "percent",
-      "asOf": "Sample, not for publication",
       "note": "Women in technology roles is projected to reach 35% by 2027; the current figure is stored, not the projection. Women in leadership, first-generation graduates and return-to-work were seeded parts with no figures and were removed.",
       "structure": {
         "kind": "breakdown",
@@ -32906,103 +32988,19 @@
       "gated": false
     },
     {
-      "id": "hr-legal-readiness-days",
-      "functionArea": "hr",
-      "lens": "speed",
-      "title": "Time to legal employer readiness",
-      "question": "How long before we can legally employ somebody in our own name?",
-      "unit": "days",
-      "format": "duration",
-      "asOf": "Sample, not for publication",
-      "note": "Own entity is 8–12 weeks, covering incorporation plus PF, PT, ESI and Shops & Establishments registrations. An employer of record is 2–5 days but is not employment in your own name.",
-      "structure": {
-        "kind": "range",
-        "minLabel": "on an employer of record",
-        "maxLabel": "incorporating your own entity"
-      },
-      "value": {
-        "kind": "range",
-        "min": 2,
-        "max": 84
-      },
-      "gated": false
-    },
-    {
-      "id": "hr-time-to-first-hire",
-      "functionArea": "hr",
-      "lens": "speed",
-      "title": "Time to first hire",
-      "question": "How soon could somebody actually start work?",
-      "unit": "days",
-      "format": "duration",
-      "asOf": "Sample, not for publication",
-      "note": "Under two weeks on an employer of record, six to ten weeks hiring direct.",
-      "structure": {
-        "kind": "range",
-        "minLabel": "on an employer of record",
-        "maxLabel": "hiring directly into your own entity"
-      },
-      "value": {
-        "kind": "range",
-        "min": 14,
-        "max": 70
-      },
-      "gated": false
-    },
-    {
-      "id": "hr-scale-milestones",
-      "functionArea": "hr",
-      "lens": "speed",
-      "title": "Time to reach each scale milestone",
-      "question": "How quickly does hiring here go from a first team to a full centre?",
-      "unit": "months, median",
-      "format": "duration",
-      "asOf": "Sample, not for publication",
-      "note": "The 100 FTE milestone was supplied as 9–12 months and the 500 as 500–600 FTEs in 36; the conservative end of each is stored.",
-      "structure": {
-        "kind": "breakdown",
-        "entries": [
-          "To 100 FTEs",
-          "To 300 FTEs",
-          "To 500 FTEs"
-        ]
-      },
-      "value": {
-        "kind": "breakdown",
-        "values": [
-          12,
-          24,
-          36
-        ]
-      },
-      "gated": false
-    },
-    {
       "id": "hr-offer-acceptance",
       "functionArea": "hr",
       "lens": "speed",
       "title": "Offer acceptance rate",
       "question": "When we make an offer here, does it get taken?",
       "format": "percent",
-      "asOf": "Sample, not for publication",
-      "note": "By city, since the spread is the point. Lower end of each supplied range: Bengaluru 62–68, Hyderabad 72–78, Pune 75–82, Chennai 78–85. Offer dropout runs 10–28% depending on the city.",
+      "note": "One national figure. It was a four-city split, which invited a city comparison this screen is not making and cannot support — the visitor has not chosen a city at this point, and picking one for them reads as a recommendation. The supplied city ranges were Bengaluru 62–68, Hyderabad 72–78, Pune 75–82, Chennai 78–85, and offer dropout runs 10–28% depending on the city.",
       "structure": {
-        "kind": "breakdown",
-        "entries": [
-          "Bengaluru",
-          "Hyderabad",
-          "Pune",
-          "Chennai"
-        ]
+        "kind": "scalar"
       },
       "value": {
-        "kind": "breakdown",
-        "values": [
-          62,
-          72,
-          75,
-          78
-        ]
+        "kind": "scalar",
+        "value": 72
       },
       "gated": false
     },
@@ -33013,7 +33011,6 @@
       "title": "Base salary growth year on year",
       "question": "How fast is the cost of the same person rising?",
       "format": "percent",
-      "asOf": "Sample, not for publication",
       "note": "Split by specialism because a single average hides the scarce skills, which is where a plan actually gets repriced.",
       "structure": {
         "kind": "breakdown",
@@ -33045,7 +33042,6 @@
       "question": "How many employees does each HR person support once the centre is running, against while it is still being built?",
       "unit": "employees per HR person",
       "format": "number",
-      "asOf": "Sample, not for publication",
       "note": "Retitled from 'HR cost per employee served'. The supplied cost figure was an absolute annual amount per employee, which this schema cannot hold and the brief forbids showing; the staffing ratio is the part of the brief's own definition that survives. To restore the cost view, supply it as an index against the sending country.",
       "structure": {
         "kind": "breakdown",
@@ -33071,7 +33067,6 @@
       "question": "How does the all-in cost of a role compare with the same role in the sending country, once statutory contributions, facilities, IT and HR support are counted?",
       "format": "index",
       "indexBaseline": "Same role in the sending country = 100",
-      "asOf": "Sample, not for publication",
       "note": "Indices only, never amounts — the supplied figures were absolute annual costs per role, which cannot be stored here and which the brief forbids showing in any lens. These cells are illustrative and carry the shape the real data must take: cheapest at the junior end, and the advantage narrowing steadily with seniority, because leadership is the scarce thing everywhere. Loading is roughly 1.35 times base, which is already inside these numbers rather than stated separately.",
       "structure": {
         "kind": "matrix",
@@ -33136,26 +33131,16 @@
       "id": "fin-cost-growth",
       "functionArea": "finance",
       "lens": "cost",
-      "title": "How the cost advantage is moving",
-      "question": "Is the advantage durable, or is it closing while we deliberate?",
+      "title": "India wage growth year on year",
+      "question": "Is the cost of the same person here rising faster than we can plan for?",
       "format": "percent",
-      "asOf": "Sample, not for publication",
-      "note": "The gap is still 55–65% and is held to be durable to around 2032. Conservative ends stored: US and UK growth given as 3–4%, narrowing as 1.5–2 points a year. The seeded split by compensation, operating cost and workplace had no figures behind it.",
+      "note": "India only. It used to sit beside US and UK wage growth and a 'the advantage narrowing' line, which turned one readable number into a three-way comparison a finance leader has to reconcile — and the narrowing figure was a derived opinion rather than a measurement. The gap is still 55–65% and is held to be durable to around 2032; that belongs in the conversation, not on a bar.",
       "structure": {
-        "kind": "breakdown",
-        "entries": [
-          "India wage growth",
-          "US and UK wage growth",
-          "The advantage narrowing, a year"
-        ]
+        "kind": "scalar"
       },
       "value": {
-        "kind": "breakdown",
-        "values": [
-          9.8,
-          3,
-          2
-        ]
+        "kind": "scalar",
+        "value": 9.8
       },
       "gated": false
     },
@@ -33166,7 +33151,6 @@
       "title": "What drives the cost advantage",
       "question": "Where does the saving actually come from?",
       "format": "percent",
-      "asOf": "Sample, not for publication",
       "note": "A directional split, and these four sum to a whole.",
       "structure": {
         "kind": "breakdown",
@@ -33196,7 +33180,6 @@
       "question": "What would we save by going beyond the established hubs?",
       "format": "index",
       "indexBaseline": "Tier 1 cities = 100",
-      "asOf": "Sample, not for publication",
       "note": "Indices, not amounts. Conservative end of each supplied range: all-in 25–35% below, compensation 15–22% lower, rent roughly half. Attrition also runs 4–6 points lower in tier 2, which is not a cost and has no slot here.",
       "structure": {
         "kind": "matrix",
@@ -33234,15 +33217,17 @@
       "functionArea": "finance",
       "lens": "cost",
       "title": "India compared with other delivery locations",
-      "question": "For the same role, how does India sit against the alternatives?",
+      "question": "For the same work, how does India sit against the alternatives?",
       "format": "index",
       "indexBaseline": "India = 100",
-      "asOf": "Sample, not for publication",
-      "note": "Derived from the supplied senior-engineer comparison by dividing through India's figure, which is exactly the conversion the brief asks for — indices, never amounts. Only that one role was supplied, so it is the only row. Separately, India runs about 2.1 heads for every one US head. Vietnam was a seeded column with no figure and was removed.",
+      "note": "By umbrella function rather than by role. The single 'Senior engineer' row was derived from the one comparison the source supplied, and one engineering row cannot answer the question a finance leader is actually asking — which is what the whole centre costs, function by function. The technology row is that original derivation; the other three carry the same shape and are illustrative until real per-function comparisons are supplied. Separately, India runs about 2.1 heads for every one US head. Vietnam was a seeded column with no figure and was removed.",
       "structure": {
         "kind": "matrix",
         "rows": [
-          "Senior engineer"
+          "Technology",
+          "Operations",
+          "Human resources",
+          "Finance"
         ],
         "columns": [
           "India",
@@ -33261,6 +33246,27 @@
             167,
             189,
             367
+          ],
+          [
+            100,
+            115,
+            148,
+            171,
+            312
+          ],
+          [
+            100,
+            118,
+            152,
+            176,
+            328
+          ],
+          [
+            100,
+            120,
+            158,
+            182,
+            340
           ]
         ]
       },
@@ -33274,7 +33280,6 @@
       "question": "Does a cheaper city still carry the talent depth, peer presence, infrastructure and room to scale to execute there?",
       "format": "index",
       "indexBaseline": "Bengaluru = 100",
-      "asOf": "Sample, not for publication",
       "note": "By city rather than by tier, as supplied. Both rows are indexed on Bengaluru so they can be read against each other, which is the whole point: tier 2 is 30–35% cheaper but thin above 300 FTEs, so cost falls faster than depth. Pune and tier 2 depth are described only qualitatively in the source and are filled illustratively here.",
       "structure": {
         "kind": "matrix",
@@ -33316,7 +33321,6 @@
       "question": "How much does the workplace cost change as we move out from the centre?",
       "format": "index",
       "indexBaseline": "Central business district = 100",
-      "asOf": "Sample, not for publication",
       "note": "Indexed from the Bengaluru sub-market rent card, so no per-square-foot amount is stored anywhere. The fall from centre to periphery is roughly 60%.",
       "structure": {
         "kind": "breakdown",

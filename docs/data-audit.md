@@ -168,8 +168,8 @@ Every one of these is a real defect in the current file, not a hypothetical.
   headcount claim can be made from this file.
 - **Global headcount / global tech workforce.** Needed as the denominator for "India GCC as a share
   of global tech workforce". Not present, and not derivable.
-- **Function-view metrics.** Every Screen 2 number. Separate dataset, not yet supplied. The
-  catalogue that will hold them now exists — see below.
+- **Function-view metrics.** Every Screen 2 number. A separate dataset with no spreadsheet behind it;
+  supplied directly by ANSR and now populated in full — see below.
 ## What the import found that this profile did not
 
 Added 2026-08-27, after the seed import ran. Everything above profiles the file **as supplied**;
@@ -219,14 +219,84 @@ and it has no spreadsheet behind it at all. It lives under `metrics` in the same
 the figures are typed into admin.
 
 **35 metric definitions**, transcribed from `docs/brief.md` and seeded from
-`src/data/metric-catalogue.ts`:
+`src/data/metric-catalogue.ts`. Revised 2026-08-28 against ANSR's review; the counts below are
+post-revision:
 
 | Function area | Metrics |
 | --- | --- |
-| Technology | 8 |
+| Technology | 9 |
 | Operations | 9 |
-| HR | 12 |
+| HR | 11 |
 | Finance | 6 |
+
+### The tabs are four views of one national picture
+
+The single largest correction from the review, and it changes how the catalogue is authored rather
+than just what is in it. The four function tabs were carrying different figures for the same thing —
+a technology bench strength and an operations bench strength, three separate graduate-output
+splits, two different backfill times, two different scale curves. That implied the tool was
+measuring four separate Indias. It is not: it is showing each function's leaders the figures they
+are asked to justify, over one national picture.
+
+So a metric that appears on more than one tab is now **authored once** in
+`src/data/metric-catalogue.ts` and spread onto each tab with a different id. Six titles are shared:
+
+| Metric | Tabs | Figure |
+| --- | --- | --- |
+| Bench strength | Technology, Operations, HR | 8.7M+ professionals |
+| Graduate output by discipline | Technology, Operations, HR | 9 disciplines, 3.9M a year |
+| Leadership depth | Technology, HR | 800,000 with 10+ years |
+| Time to backfill a role | Operations, HR | 35–75 days |
+| Time to first hire | Operations, HR | 7–70 days |
+| Time to reach each scale milestone | Operations, HR | 6 / 12 / 24 / 36 months |
+
+Every shared figure is a technology-role figure, and the cards deliberately do not say so — the
+point is to let each leader read the India engineering market in the terms they answer for, not to
+label every number "for technology roles".
+
+`data:verify` carries this as an **invariant**, not a profile figure: metrics sharing a title must be
+byte-identical apart from `id` and `functionArea`. The seed guarantees it by construction, but a
+dataset that has been through admin does not — three separate rows are three separate things to edit,
+and an admin correcting bench strength on one tab and not the others is exactly the drift the check
+catches. There is no legitimate edit that makes two views of one number disagree, which is why
+`--accept` cannot silence it.
+
+### What else the review changed
+
+- **Bench strength is 8.7M+**, replacing 5.8M, and is one figure rather than three.
+- **Graduate output is one nine-discipline list** — engineering, CS and IT, electronics,
+  mathematics, other sciences, commerce, management, finance and accounting, human resources —
+  rather than a per-function slice of it.
+- **Specialism figures raised and reordered**: full-stack 1.7M+, data 1.5M+, embedded and ER&D
+  1.4M+, SRE and DevOps 1.3M+, cloud 1.2M+, AI and ML 1.2M+, cybersecurity 150,000+.
+- **`tech-manager-depth` added**: 1.4M+ in manager and above roles, the middle of the pyramid
+  between bench strength and leadership depth.
+- **Leadership depth is one number**, 800,000 professionals with 10+ years. The two narrower claims
+  it used to carry — technology leaders who had run 100+ engineer teams, and HR leaders who had
+  built a centre from zero — were not answerable from the supplied data.
+- **Time to first hire starts at 7 days**, on an employer of record, on both tabs. The operations
+  copy previously started at 42 and hid the fastest route entirely.
+- **`hr-legal-readiness-days` removed** outright.
+- **Offer acceptance is one national figure**, 72%, not a four-city split: the visitor has not chosen
+  a city at that point, and picking one for them reads as a recommendation.
+- **`fin-cost-growth` is India's own wage growth alone**, 9.8%. The US and UK comparison and the
+  derived "advantage narrowing" line are gone — one readable number rather than a three-way
+  reconciliation, and the narrowing figure was an opinion rather than a measurement.
+- **`fin-india-vs-hubs` compares umbrella functions**, not one role. Technology, Operations, Human
+  resources, Finance. The technology row is the original derivation from the supplied senior-engineer
+  comparison; the other three carry the same shape and are illustrative until real per-function
+  figures arrive.
+
+### Floors, marked as floors
+
+`atLeast` is new on the metric schema: a boolean on the DEFINITION, beside `format`, saying that this
+metric's figures are a floor rather than a point measurement. Every figure it produces renders with a
+trailing `+` — the headline and every part of a breakdown, applied in one place in
+`src/data/screen2.ts` so a parts list cannot silently drop it and make a stronger claim than the data
+does. It is refused on a rating, since an ordinal step has no "or more", and the gate drops it for a
+gated metric, where it would qualify a figure that is not there. Five metrics carry it:
+`tech-bench-strength`, `ops-bench-strength`, `hr-bench-strength`, `tech-manager-depth`,
+`tech-ecosystem-size`.
 
 Filed against four internal lenses — supply, speed, place, cost. The brief's author used six, adding
 Fit and Optional; both collapse into supply, because both were supply questions (Fit is comparative
@@ -234,16 +304,18 @@ capability supply across delivery locations, and the Optional diversity block is
 the workforce on offer). Nothing from the brief lost a home. **The lens is never a public label** —
 `publicMetric` strips the field, and the admin surface labels the groupings as internal.
 
-**Values entered: all 35, and every one is illustrative.** The figures supplied 2026-08-27 were
-sample data, confirmed as such, to be replaced before launch. Rather than leave gaps that would read
-as bugs while the screens were built, every metric was populated — and every one is stamped
-`asOf: "Sample, not for publication"`.
+**Values entered: all 35.** The figures supplied 2026-08-27 and revised 2026-08-28 came from ANSR
+rather than from a source this repository can cite, and three of them were filled from judgement
+(below). Rather than leave gaps that would read as bugs, every metric is populated.
 
-That stamp is the safeguard, not a comment. `asOf` is a **public** field: it renders beside the figure
-on Screen 2, so a sample number that escapes to a visitor arrives labelled rather than passed off as
-research. It is applied as a default in `seedMetricCatalogue`, so entering a real date on one metric
-clears it for that metric alone, and `data:verify` reports how many still carry it — the count reaching
-zero is the visible milestone.
+**The sample stamp is gone.** Every seeded metric used to carry `asOf: "Sample, not for publication"`,
+which is a **public** field and rendered beside every figure on Screen 2. ANSR asked for it removed, so
+the default in `seedMetricCatalogue` is deleted and `asOf` is now only ever a provenance string an
+admin has typed; an absent one renders nothing. The trade is explicit and worth recording: the caveat
+was the mechanism that made a not-yet-final figure arrive labelled rather than passed off as research,
+and nothing replaces it. `data:verify` still reports how many metrics state no provenance — currently
+35 — so the number going down remains the visible milestone, but it is now a count in a script rather
+than a warning on the page.
 
 Three metrics were filled from judgement rather than from the supplied data, each recorded in its own
 note: Vietnam's column in the capability grid, the role-by-level grid in `hr-fully-loaded-cost`, and
@@ -252,7 +324,8 @@ the depth row for Pune and tier 2 in `fin-cost-vs-ecosystem-depth`.
 **No absolute money survived the import, and that is enforced rather than trusted.** The supplied
 data contained per-head dollar amounts and per-square-foot rupee rents. Where the source also gave a
 comparison base they were converted to an index — `fin-india-vs-hubs` divides the senior-engineer
-figures through India's to give `India 100, Philippines 122, Mexico 167, Poland 189, US 367`, and
+figures through India's to give `India 100, Philippines 122, Mexico 167, Poland 189, US 367`, now the
+technology row of a four-function grid, and
 `fin-workplace-cost-gradient` indexes the Bengaluru rent card to `100 / 93 / 70 / 45 / 37`. Where it
 gave no base, the grid was filled with illustrative indices carrying the shape the real data must
 take. A unit test asserts the serialized catalogue contains no currency token in any field, `note`
@@ -261,25 +334,26 @@ the schema has no currency format, so an absolute per-head amount cannot be stor
 
 **Ranges collapse to their conservative end.** Several figures arrived as ranges and a breakdown slot
 holds one number, so the end stored is the one that understates India's advantage: compensation 15%
-rather than 22% below tier 1, offer acceptance at the bottom of each city's band, latency at the top
-of each. Every affected metric records the full range in its note.
+rather than 22% below tier 1, latency at the top of each supplied span, the conservative end of each
+scale milestone. Every affected metric records the full range in its note.
 
 **Structure followed the data where the two disagreed.** Disruption days are split by city rather
 than by cause, salary growth by specialism rather than one average, and uptime into campus versus
 grid — because that is how the figures arrived. Seeded parts with no figure behind them were removed
-rather than left empty, since an empty slot keeps the whole metric off the public screen. Two metrics
-collapsed from a breakdown to a single figure for the same reason (`tech-open-source-signal`,
-`hr-graduate-output`), and `hr-cost-per-employee-served` was retitled to the staffing ratio it can
-actually hold.
+rather than left empty, since an empty slot keeps the whole metric off the public screen.
+`tech-open-source-signal` collapsed from a breakdown to a single figure for the same reason, and
+`hr-cost-per-employee-served` was retitled to the staffing ratio it can actually hold. The 2026-08-28
+review collapsed three more the other way — leadership depth, offer acceptance and `fin-cost-growth`
+each became a single figure because the split they carried was narrower or noisier than the question.
 
 **Four gated metrics**, matching the invariant list in `project.md`:
 `hr-cost-per-employee-served`, `hr-fully-loaded-cost`, `fin-cost-vs-ecosystem-depth`,
 `fin-workplace-cost-gradient`.
 
 **What a visitor would receive today**, measured through `publicMetricsFor` — the same function the
-public screens will call: `tech 8, operations 9, hr 12, finance 6` — the whole catalogue, since
-nothing is incomplete. Gated metrics count too, because they ship as a placeholder of the right
-shape rather than not at all.
+public screens call: `tech 9, operations 9, hr 11, finance 6` — the whole catalogue, since nothing is
+incomplete. Gated metrics count too, because they ship as a placeholder of the right shape rather
+than not at all.
 
 `npm run data:verify` records all of the above as **profile figures, not invariants**. Entering a
 month of values is supposed to move them, so `-- --accept` is the correct response to a legitimate

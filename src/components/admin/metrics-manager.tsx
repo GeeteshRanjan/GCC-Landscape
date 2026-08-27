@@ -159,7 +159,15 @@ function MetricRow({
 
       <Button variant="outline" size="sm" onClick={onEdit} className="shrink-0">
         Edit
-        <span className="sr-only"> {metric.title}</span>
+        {/* The function area is part of the name, not decoration. Six titles now
+            appear on more than one tab — bench strength, graduate output,
+            leadership depth, backfill, first hire, the scale curve — because they
+            are one figure shown in several views. "Edit Bench strength" alone would
+            name three different buttons on this page. */}
+        <span className="sr-only">
+          {" "}
+          {metric.title}, {METRIC_FUNCTION_LABELS[metric.functionArea]}
+        </span>
       </Button>
     </li>
   );

@@ -1,6 +1,6 @@
 {
   "describedAs": "1834 companies, from Consolidated_GCC_India_Database_2026_New.xlsx",
-  "recordedAt": "2026-08-27T18:01:07.773Z",
+  "recordedAt": "2026-08-27T19:05:33.322Z",
   "figures": {
     "companies": 1834,
     "industries": 24,
@@ -43,17 +43,23 @@
       "hr-fully-loaded-cost"
     ],
     "metrics per function area": [
-      "tech 8",
+      "tech 9",
       "operations 9",
-      "hr 12",
+      "hr 11",
       "finance 6"
     ],
-    "metrics still marked as sample data": 35,
-    "metrics with no provenance stated": 0,
+    "metrics with no provenance stated": 35,
+    "metrics whose figures are a floor": [
+      "hr-bench-strength",
+      "ops-bench-strength",
+      "tech-bench-strength",
+      "tech-ecosystem-size",
+      "tech-manager-depth"
+    ],
     "metrics a visitor would receive, per function area": [
-      "tech 8",
+      "tech 9",
       "operations 9",
-      "hr 12",
+      "hr 11",
       "finance 6"
     ],
     "industry + revenue band": 1683,
