@@ -163,6 +163,13 @@ commits the JSON and triggers a rebuild. Live in about a minute; that latency wa
 instant-publish alternatives and accepted, so do not reopen it. Validation failure blocks the
 publish. Rollback is a git revert.
 
+**Development never publishes to the configured production store.** Once `GCC_DATA_STORE=github` is set
+somewhere, a publish is a real commit to the real branch that rebuilds the live site — so "just testing
+the pipeline" mutates the client's data and shows up in history. Locally the store is `fs` and writes to
+`data/dataset.json`, which is fine and revertible. To exercise the publish path deliberately, use the
+browser suite: it runs against its own copy of the dataset in `tests/browser/.tmp`, which is exactly why
+that fixture exists.
+
 **The admin never touches git.** The app makes the commit server-side with a token from the
 environment. Admin sees one Publish button and no mention of a repository.
 
