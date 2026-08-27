@@ -27,10 +27,13 @@ optional TOTP code, rate limited per IP and per process. Edits are a browser dra
 localStorage, with a banner on every tab. Publish validates the whole dataset, diffs it against what
 the write will land on, then commits.
 
-**Live at `gcc-landscape.vercel.app`**, deployed from `a3dbdf6`, which is both `HEAD` and
-`origin/main` with a clean tree. Verified after deploy: public page 200, admin login 200,
-`/admin/metrics` 307 to login when unauthenticated. No publish has been made from admin — the local
-store is `fs`, and the browser suite publishes against its own fixture in `tests/browser/.tmp`.
+**Live at `gcc-landscape.vercel.app`**, deployed from `main`. `HEAD` and `origin/main` were in sync
+with a clean tree at the end of the last session — `git status --short` and `git log --oneline -1`
+against `origin/main` is the check, and a SHA is deliberately not pinned here because this file is
+itself committed and the number would always be one behind. Verified after the last deploy: public page
+200, admin login 200, `/admin/metrics` 307 to login when unauthenticated. No publish has been made from
+admin — the local store is `fs`, and the browser suite publishes against its own fixture in
+`tests/browser/.tmp`.
 
 `main` tracks a private repo; the keychain holds a usable credential and commit identity is repo-local.
 
