@@ -14,7 +14,7 @@ public screen exists yet.
 
 Six commands, all green, plus `tsc --noEmit` and `brand_lint.py`:
 
-- `npm test` — 237 Vitest unit tests, under a second.
+- `npm test` — 240 Vitest unit tests, under a second.
 - `npm run test:browser` — 75 Playwright tests against a real production build, about a minute.
 - `npm run data:import` — xlsx → JSON; `-- --dry-run` stops before the write. Preserves the stored
   catalogue unless `-- --reseed-metrics` is passed.
@@ -27,9 +27,10 @@ optional TOTP code, rate limited per IP and per process. Edits are a browser dra
 localStorage, with a banner on every tab. Publish validates the whole dataset, diffs it against what
 the write will land on, then commits.
 
-**Live at `gcc-landscape.vercel.app`**, deployed from `main`. No publish has been made from admin: the
-local store is `fs`, and the browser suite exercises publishing against its own fixture in
-`tests/browser/.tmp`.
+**Live at `gcc-landscape.vercel.app`**, deployed from `a3dbdf6`, which is both `HEAD` and
+`origin/main` with a clean tree. Verified after deploy: public page 200, admin login 200,
+`/admin/metrics` 307 to login when unauthenticated. No publish has been made from admin — the local
+store is `fs`, and the browser suite publishes against its own fixture in `tests/browser/.tmp`.
 
 `main` tracks a private repo; the keychain holds a usable credential and commit identity is repo-local.
 
@@ -53,8 +54,9 @@ Consume it through `publicMetricsFor` only; reading `dataset.metrics` bypasses t
    with a GitHub 401 that reads like a bug rather than an expiry.
 3. **Two metrics still need figures.** `hr-fully-loaded-cost` was supplied as absolute amounts per
    role, which cannot be stored — it needs each cell as an index against the same role in the sending
-   country. `tech-capability-comparison` needs Vietnam rated on the five capability rows.
-   `docs/data-audit.md` has the detail.
+   country. `tech-capability-comparison` needs Vietnam rated on the five capability rows, or the
+   column dropped — the brief names Vietnam as a comparator but never rates it. Either is fine; a
+   guess is not. `docs/data-audit.md` has the detail on both.
 4. **Confirm two judgement calls in the figures.** Technology bench strength is stored as the national
    technology workforce rather than the GCC subset, and Grade A office stock as vacant rather than
    total, because each matches its question — both are arguable. And no metric has an `asOf` date, so
@@ -69,9 +71,6 @@ Consume it through `publicMetricsFor` only; reading `dataset.metrics` bypasses t
 - **Whether to switch on `ADMIN_TOTP_SECRET`.** Built, RFC 6238 verified, currently removed. Both
   rate-limit budgets are per-process, so on Vercel's instances it is the only real bound on distributed
   guessing. Only enable it while able to test a code immediately — see `project.md`.
-- **Whether the capability grid keeps Vietnam.** The brief names it as a comparator but rates only
-  India, Poland and the Philippines, so that column is empty and the metric reads as incomplete. Rate
-  it or drop the column; do not guess it.
 - **Whether `fin-tier-cost-spread` gets per-city columns.** The brief wants a scatterplot across city
   names; the seed holds the tier-1/tier-2 headline, which is the part that carries the point.
 - **Whether the browser suite runs in CI.** Needs a Chromium download and about a minute.
