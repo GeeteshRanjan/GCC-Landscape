@@ -75,9 +75,9 @@ no source.
 - **Whether to switch on `ADMIN_TOTP_SECRET`.** Built, verified against the published RFC 6238 test
   vectors, opt-in, currently unset. Both rate-limit budgets are per-process, so a second factor is the
   only thing that bounds a distributed guessing attempt. Recommended before this is reachable publicly.
+- **Whether a push actually triggers a Vercel rebuild.** The publish design depends on it and nobody
+  has watched it happen end to end.
 - **Whether the browser suite runs in CI.** Needs a Chromium download and about a minute.
-- **Whether a push actually triggers a Vercel rebuild.** The deployment exists, but the publish design
-  depends on a commit rebuilding the app, and nobody has watched that happen end to end.
 - **Thin peer sets stay as they are for now.** Electrical & Electronics returns two peers, shortfall
   three. Never padding is the invariant; the count is a baseline figure, so revising it is one
   `--accept`. Revisit when Screen 1 exists.
