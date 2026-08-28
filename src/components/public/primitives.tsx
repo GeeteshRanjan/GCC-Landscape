@@ -63,10 +63,60 @@ export function formatProfessionals(value: number): string {
 
 type SectionWeight = "connective" | "standard" | "pivotal";
 
+/**
+ * How much air a band gets, by what it is doing.
+ *
+ * Still tighter than a standalone landing page, and still for the iframe reason —
+ * but the first pass read that constraint as "uniformly tight" and capped
+ * everything at 48–80px, which is why no band on either screen had a moment of
+ * its own. A pivotal band now genuinely outweighs a connective one.
+ */
 const SECTION_PADDING: Record<SectionWeight, string> = {
-  connective: "py-12",
-  standard: "py-16",
-  pivotal: "py-20",
+  connective: "py-14 md:py-16",
+  standard: "py-16 md:py-24",
+  pivotal: "py-20 md:py-28",
+};
+
+/**
+ * The ground a band sits on. Three, not two.
+ *
+ * The first pass alternated `surface` and `surface-subtle` — white against a grey
+ * two steps off it — which meant 95% of both screens rendered as one value and no
+ * section announced itself. ansr.com's own pages alternate three saturated
+ * grounds, and that is what carries its sectioning; the type and the ornament sit
+ * on top of it.
+ *
+ * `inverse` is no longer reserved for the close. It is what a FIGURE band gets:
+ * the two moments on Screen 1 that are a single large number (the industry count,
+ * the national base) earn a ground of their own, because a number reversed out of
+ * deep teal is the most emphatic thing this palette can do without touching
+ * orange — which is committed to the CTA.
+ */
+export type Ground = "surface" | "tint" | "inverse";
+
+const GROUND: Record<Ground, string> = {
+  surface: "bg-surface",
+  tint: "bg-surface-tint",
+  inverse: "bg-surface-inverse",
+};
+
+/** Ground-dependent text colours, resolved once here rather than per band. */
+const ON_GROUND: Record<Ground, { kicker: string; title: string; lead: string }> = {
+  surface: {
+    kicker: "text-accent-teal",
+    title: "text-text",
+    lead: "text-text-muted",
+  },
+  tint: {
+    kicker: "text-accent-teal",
+    title: "text-text",
+    lead: "text-text-muted",
+  },
+  inverse: {
+    kicker: "text-text-inverse-muted",
+    title: "text-text-inverse",
+    lead: "text-text-inverse-muted",
+  },
 };
 
 export function Section({
@@ -74,8 +124,9 @@ export function Section({
   title,
   kicker,
   lead,
-  tint = false,
+  ground = "surface",
   weight = "standard",
+  layout = "stack",
   headingLevel = 2,
   children,
 }: {
@@ -84,14 +135,55 @@ export function Section({
   title: string;
   kicker?: string;
   lead?: string;
-  /** Alternating tint is the separation mechanism. Alternate it, do not mix. */
-  tint?: boolean;
+  /** Which of the three grounds. Chosen per band by role, not alternated blindly. */
+  ground?: Ground;
   weight?: SectionWeight;
+  /**
+   * `split` puts the heading in a leading column beside the content instead of
+   * above it — ansr.com's own dominant section shape, and the one that lets a
+   * heading be genuinely large without pushing the evidence off the fold. Used
+   * where the content is a grid or a list; `stack` stays for full-width charts,
+   * which need the whole measure.
+   */
+  layout?: "stack" | "split";
   headingLevel?: 2 | 3;
   children: React.ReactNode;
 }) {
   const Heading = headingLevel === 2 ? "h2" : "h3";
   const headingId = `${id}-heading`;
+  const on = ON_GROUND[ground];
+
+  const header = (
+    <header className="flex flex-col gap-4">
+      {kicker ? (
+        <p
+          className={cn(
+            "text-xs font-semibold tracking-caps uppercase",
+            on.kicker,
+          )}
+        >
+          {kicker}
+        </p>
+      ) : null}
+      <Heading
+        id={headingId}
+        className={cn(
+          // Up from 24/30px. The tokens carried a 48px step that neither public
+          // screen used, so every heading came out mid-scale against a 1280px
+          // canvas. `text-balance` keeps a three-word third line from happening
+          // now that the type is large enough for it to show.
+          "text-3xl leading-tight font-bold tracking-display text-balance",
+          "md:text-4xl lg:text-5xl",
+          on.title,
+        )}
+      >
+        {title}
+      </Heading>
+      {lead ? (
+        <p className={cn("max-w-measure text-lg", on.lead)}>{lead}</p>
+      ) : null}
+    </header>
+  );
 
   return (
     // A <section> with no accessible name is not a `region` landmark, so it is
@@ -99,29 +191,28 @@ export function Section({
     <section
       id={id}
       aria-labelledby={headingId}
-      className={cn(
-        SECTION_PADDING[weight],
-        tint ? "bg-surface-subtle" : "bg-surface",
-      )}
+      className={cn(SECTION_PADDING[weight], GROUND[ground])}
     >
       <div className="mx-auto max-w-content px-6 md:px-12">
-        <header className="flex flex-col gap-3">
-          {kicker ? (
-            <p className="text-xs font-semibold tracking-caps text-accent-teal uppercase">
-              {kicker}
-            </p>
-          ) : null}
-          <Heading
-            id={headingId}
-            className="text-2xl font-semibold tracking-heading text-text md:text-3xl"
-          >
-            {title}
-          </Heading>
-          {lead ? (
-            <p className="max-w-measure text-base text-text-muted">{lead}</p>
-          ) : null}
-        </header>
-        <div className="mt-8">{children}</div>
+        {layout === "split" ? (
+          // Twelve columns, 5/7. The heading column is capped at the reading
+          // measure by its own width rather than by max-w-measure, so a long
+          // industry name wraps inside the column instead of escaping it.
+          //
+          // `items-start` for the same reason the metric grid needs it: a grid
+          // child stretches to its row by default, so a card in the content column
+          // was padded out to the height of the heading beside it and rendered with
+          // a band of empty white under its own content.
+          <div className="grid items-start gap-10 lg:grid-cols-12 lg:gap-16">
+            <div className="lg:col-span-5">{header}</div>
+            <div className="lg:col-span-7">{children}</div>
+          </div>
+        ) : (
+          <>
+            {header}
+            <div className="mt-10 md:mt-12">{children}</div>
+          </>
+        )}
       </div>
     </section>
   );
@@ -141,24 +232,68 @@ export function Stat({
   label,
   footnote,
   emphasis = false,
+  size = "md",
+  ground = "surface",
 }: {
   value: string;
   label: string;
   footnote?: string;
   emphasis?: boolean;
+  /**
+   * `display` is for a figure that IS the band — the industry count, the national
+   * base. The first pass set every figure at one size, so the most persuasive
+   * numbers on the screen were the same weight as a caption beside a chart.
+   */
+  size?: "md" | "display";
+  ground?: Ground;
 }) {
+  const inverse = ground === "inverse";
   return (
-    <div className="flex flex-col gap-1">
+    // A rule under the figure, ansr.com's own stat shape: it separates the number
+    // from its label without a box, and it gives a lone figure an edge to sit on.
+    <div className="flex flex-col gap-3">
       <p
         className={cn(
-          "text-4xl leading-tight font-bold tracking-display tabular-nums md:text-5xl",
-          emphasis ? "text-accent-teal" : "text-text",
+          "leading-tight font-bold tracking-display tabular-nums",
+          // Capped at 60px, matching `FractionBar`. It is not the hero: 72px is
+          // reserved for the h1, and at 72px in a one-third column "1.06 million"
+          // broke across two lines mid-figure, which reads as two numbers.
+          size === "display" ? "text-5xl md:text-6xl" : "text-4xl md:text-5xl",
+          inverse
+            ? "text-text-inverse"
+            : emphasis
+              ? "text-accent-teal"
+              : "text-text",
         )}
       >
         {value}
       </p>
-      <p className="text-sm font-medium text-text">{label}</p>
-      {footnote ? <p className="text-xs text-text-muted">{footnote}</p> : null}
+      <div
+        className={cn(
+          "border-t pt-3",
+          inverse ? "border-border-inverse" : "border-border-strong",
+        )}
+      >
+        <p
+          className={cn(
+            "font-medium",
+            size === "display" ? "text-lg" : "text-base",
+            inverse ? "text-text-inverse" : "text-text",
+          )}
+        >
+          {label}
+        </p>
+        {footnote ? (
+          <p
+            className={cn(
+              "mt-1 text-xs",
+              inverse ? "text-text-inverse-muted" : "text-text-muted",
+            )}
+          >
+            {footnote}
+          </p>
+        ) : null}
+      </div>
     </div>
   );
 }
@@ -171,6 +306,7 @@ export function Stat({
 export function Chip({
   children,
   tone = "neutral",
+  ground = "surface",
 }: {
   children: React.ReactNode;
   /**
@@ -179,14 +315,25 @@ export function Chip({
    * hue, and a chip has no form to vary.
    */
   tone?: "neutral" | "accent";
-  }) {
+  /**
+   * A neutral chip is a filled grey pill, which disappears on the tint ground and
+   * inverts wrongly on the inverse one. Passing the ground is what keeps one chip
+   * component legible on all three rather than spawning a second.
+   */
+  ground?: Ground;
+}) {
+  const neutral: Record<Ground, string> = {
+    surface: "bg-surface-sunken text-text",
+    tint: "bg-surface text-text",
+    inverse: "border border-border-inverse text-text-inverse",
+  };
   return (
     <span
       className={cn(
         "inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium",
         tone === "accent"
           ? "bg-surface-accent text-text-on-accent"
-          : "bg-surface-sunken text-text",
+          : neutral[ground],
       )}
     >
       {children}
@@ -222,9 +369,22 @@ export function FactList({
  * not cover. Kept visually quiet but never hidden behind a disclosure — a caveat
  * the visitor has to open is a caveat the screen is hiding.
  */
-export function Provenance({ children }: { children: React.ReactNode }) {
+export function Provenance({
+  children,
+  ground = "surface",
+}: {
+  children: React.ReactNode;
+  ground?: Ground;
+}) {
   return (
-    <p className="max-w-measure border-s-2 border-border-strong ps-3 text-xs text-text-muted">
+    <p
+      className={cn(
+        "max-w-measure border-s-2 ps-3 text-xs",
+        ground === "inverse"
+          ? "border-border-inverse text-text-inverse-muted"
+          : "border-border-strong text-text-muted",
+      )}
+    >
       {children}
     </p>
   );

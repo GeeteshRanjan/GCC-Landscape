@@ -102,7 +102,9 @@ describe("buildPeerView", () => {
     const [peer] = view.peers.peers;
     expect(peer).toBeDefined();
     // Narrower than `Company` on purpose: revenue band is a matching input, not a
-    // fact worth publishing beside a peer's name.
+    // fact worth publishing beside a peer's name. The exhaustive key list is the
+    // point — it is what makes adding a field to this card a deliberate act rather
+    // than something that happens on the way to fixing a layout.
     expect(Object.keys(peer!).sort()).toEqual([
       "cities",
       "establishedYear",
@@ -110,7 +112,30 @@ describe("buildPeerView", () => {
       "headcount",
       "id",
       "name",
+      // A ratio, never a published figure: the visible headcount stays the band,
+      // because a share derived from band midpoints is honest as a bar's length
+      // and would not be honest as a statistic.
+      "sizeShare",
     ]);
+  });
+
+  it("scales each set of cards against its own largest member", () => {
+    // Sharing one peak across both blocks would flatten every peer bar to a sliver
+    // whenever the industry contained an Amazon — which is most industries — and
+    // the peer block's comparison would be lost to a company it does not show.
+    const view = buildPeerView(dataset, input({ industry: "Retail" }));
+
+    const peerShares = view.peers.peers.map((peer) => peer.sizeShare);
+    expect(Math.max(...peerShares)).toBe(1);
+
+    const largestShares = view.largest.entries.map(
+      (entry) => entry.company.sizeShare,
+    );
+    expect(Math.max(...largestShares)).toBe(1);
+
+    // And the two really are different scales here, so the peer bars are not just
+    // the largest panel's bars under another heading.
+    expect(peerShares).not.toEqual(largestShares);
   });
 
   it("never includes the visitor's own company in its own peer set", () => {
@@ -251,7 +276,7 @@ describe("degenerate industries", () => {
 
   it("ranks the largest panel by GCC size, with shares that describe a magnitude", () => {
     const view = buildPeerView(dataset, input({ industry: "BFSI" }));
-    const shares = view.largest.entries.map((entry) => entry.sizeShare);
+    const shares = view.largest.entries.map((entry) => entry.company.sizeShare);
     // Already ordered largest-first by `largestInIndustry`, so the shares must be
     // non-increasing and the leader must be exactly 1. A bar drawn from these is
     // what makes "largest" a magnitude rather than a claim.
@@ -286,7 +311,14 @@ describe("copy", () => {
     expect(line).not.toBeNull();
     // One sentence's worth of statement, reframed rather than apologised for.
     expect(line).toMatch(/thin/i);
-    expect(line).toMatch(/pad/i);
+    expect(line).toMatch(/early ground/i);
+    // And it does not narrate our own restraint. The line used to close on "we
+    // would rather show you two defensible comparisons than pad the list", which
+    // answers a question the reader had not asked and plants it by answering.
+    // Not padding the set is an invariant, checked in `matchPeers`, not a promise
+    // made on the page.
+    expect(line).not.toMatch(/\bpad\b/i);
+    expect(line).not.toMatch(/\bwe would rather\b/i);
   });
 
   it("personalises on the company name and degrades without it", () => {
@@ -448,9 +480,13 @@ describe("the peer lead and the match basis agree", () => {
     expect(lead).not.toMatch(/closest revenue band/);
     expect(lead).not.toMatch(/your own market first/);
 
-    // The lead must lead on the same thing the basis does.
-    expect(lead).toMatch(/line of business/i);
-    expect(basis).toMatch(/preference, not a filter/);
+    // The lead must lead on the same thing the basis does, and the assertion is on
+    // the ORDER rather than on a phrase — the wording is a copywriter's to change,
+    // but "business before size" is the ranking and has to stay true of the
+    // sentence describing it.
+    expect(lead).toMatch(/business/i);
+    expect(lead.search(/business/i)).toBeLessThan(lead.search(/size/i));
+    expect(basis).toMatch(/preference rather than a filter/);
   });
 
   it("still says band-led when no line of business was given, because then it is", () => {

@@ -98,16 +98,20 @@
   --color-surface: var(--ansr-surface);
   --color-surface-subtle: var(--ansr-surface-subtle);
   --color-surface-sunken: var(--ansr-surface-sunken);
+  --color-surface-tint: var(--ansr-surface-tint);
   --color-surface-inverse: var(--ansr-surface-inverse);
+  --color-surface-inverse-soft: var(--ansr-surface-inverse-soft);
   --color-surface-accent: var(--ansr-surface-accent);
 
   --color-text: var(--ansr-text);
   --color-text-muted: var(--ansr-text-muted);
   --color-text-inverse: var(--ansr-text-inverse);
+  --color-text-inverse-muted: var(--ansr-text-inverse-muted);
   --color-text-on-accent: var(--ansr-text-on-accent);
 
   --color-border-subtle: var(--ansr-border);
   --color-border-strong: var(--ansr-border-strong);
+  --color-border-tint: var(--ansr-border-tint);
   --color-border-inverse: var(--ansr-border-inverse);
 
   --color-action: var(--ansr-action);
@@ -141,14 +145,24 @@
   --color-input: var(--input);
   --color-ring: var(--ring);
 
-  /* ---- Gradients ------------------------------------------------------- */
-  --background-image-gradient-teal: var(--ansr-gradient-teal);
-  --background-image-gradient-orange: var(--ansr-gradient-orange);
+  /* ---- Gradients -------------------------------------------------------
+     Only the conic one is aliased into `background-image`, and that is not an
+     oversight. `--ansr-gradient-teal` and `--ansr-gradient-orange` are
+     `background` SHORTHAND values — a gradient layer composited over a solid
+     ground colour — because that is how the brand board builds them. A colour is
+     not a valid `<image>`, so `bg-gradient-teal` emitted a `background-image` whose
+     last layer was the deep-teal ground colour, which is invalid, and painted
+     nothing at all. It generated a utility class and failed silently, which is why
+     it survived until something actually tried to use it.
+
+     Those two are consumed through `.gcc-ground-gradient` below, which uses the
+     `background` shorthand the tokens are written for. */
   --background-image-gradient-conic: var(--ansr-gradient-conic);
 
   /* ---- Type ------------------------------------------------------------ */
   --font-sans: var(--ansr-font-sans);
   --font-mono: var(--ansr-font-mono);
+  --font-display: var(--ansr-font-display);
 
   --text-xs: var(--ansr-text-xs);
   --text-sm: var(--ansr-text-sm);
@@ -160,7 +174,10 @@
   --text-4xl: var(--ansr-text-4xl);
   --text-5xl: var(--ansr-text-5xl);
   --text-6xl: var(--ansr-text-6xl);
+  --text-7xl: var(--ansr-text-7xl);
+  --text-8xl: var(--ansr-text-8xl);
 
+  --leading-display: var(--ansr-leading-display);
   --leading-tight: var(--ansr-leading-tight);
   --leading-snug: var(--ansr-leading-snug);
   --leading-normal: var(--ansr-leading-normal);
@@ -286,6 +303,70 @@
 }
 
 /* --------------------------------------------------------------------------
+   The hero ground
+
+   `--ansr-gradient-teal` through the `background` shorthand it is written for —
+   see the note in the theme block above for why this is not a `bg-*` utility.
+
+   This is the brand's own fitted gradient (radial light teal over deep teal),
+   not a colour chosen to look richer than white. Contrast holds across the whole
+   band without a per-placement measurement: the brightest point is
+   `--ansr-teal`, where white is 8.55:1, darkening to teal-deep at 16.26:1.
+   -------------------------------------------------------------------------- */
+.gcc-ground-gradient {
+  background: var(--ansr-gradient-teal);
+}
+
+/* --------------------------------------------------------------------------
+   Ornament on an inverse ground
+
+   The `.ansr-motif` posture is calibrated for dark ink over a light ground, where
+   its job is to stop a graphic competing with black text. Over deep teal the same
+   0.18 of a LIGHT ink composites to within a couple of RGB values of the ground —
+   which is exactly the bug the closing band already had to fix by hand with a
+   local override. This makes that a named posture instead of a one-off.
+
+   Raising it costs no contrast: the copy on an inverse band is white, and a light
+   motif raises the floor beneath it rather than lowering the ceiling above it.
+   -------------------------------------------------------------------------- */
+.gcc-motif-inverse {
+  --ansr-motif-opacity: var(--ansr-motif-opacity-inverse);
+}
+
+/* --------------------------------------------------------------------------
+   Hero diagonal
+
+   `assets/brand/motif/pin-diagonal.svg` recoloured onto three light ramp steps and
+   trimmed. Reproduce with `brand_asset.py recolor ... --map "<a>=<b>,..."` followed
+   by `trim`, mapping the asset's three source darks onto teal-200, teal-300 and
+   teal-100 respectively; run `brand_asset.py stat` on the source for the three
+   values, and read the targets out of tokens.css. They are deliberately not
+   repeated here — brand_lint.py is right to refuse a literal hex in source even
+   inside a comment.
+
+   Three steps rather than one flat tint so the streaks keep their internal depth
+   instead of flattening into a single silhouette. `pin-diagonal` reads as motion
+   and direction, which is what a hero wants; the arc family it replaces here reads
+   as horizon, which is quieter than an entry point needs. The manifest's warning
+   about chart-like motifs does not apply on a header — there are no bars on it.
+   -------------------------------------------------------------------------- */
+.gcc-hero-diagonal {
+  /* Oversized and anchored past the trailing edge, so the streaks read as a slice
+     of something larger crossing the band rather than a graphic parked in it.
+     `overflow-hidden` on the header does the cropping — better than a crop file,
+     per the brand skill's own table. */
+  inset-block-start: -12%;
+  inset-inline-end: -8%;
+  inline-size: 66%;
+
+  /* Fades away from its anchor so it has visibly stopped before the headline
+     begins. A mask reads only the alpha channel, so the colour is machinery — but
+     it still comes from a token, because brand_lint.py is right to refuse a
+     literal hex even inside a mask. */
+  mask-image: linear-gradient(to left, var(--ansr-black), transparent 78%);
+}
+
+/* --------------------------------------------------------------------------
    Header horizon wash
 
    `assets/brand/motif/arc-dome.svg` recoloured to --ansr-teal-600 and trimmed
@@ -347,6 +428,53 @@
     to bottom left,
     var(--ansr-black),
     transparent 68%
+  );
+}
+
+/* --------------------------------------------------------------------------
+   The closing band's texture
+
+   `assets/brand/texture/deep-teal-diagonal-wide.svg` is 2560x1600 full-viewport
+   deck art. A 480-unit horizontal band was cropped out of it via
+   scripts/brand_asset.py and written to public/brand/close-streaks.svg — the
+   whole texture behind a py-20 band would have been scaled to a slice of its
+   own top edge. Never placed unmodified; see
+   .kiro/skills/ansr-brand-assets/SKILL.md.
+
+   Shared by both screens' closes, because it is one shared component.
+   -------------------------------------------------------------------------- */
+.gcc-close-streaks {
+  /* Covers the band and bleeds off the trailing edge, so the diagonals read as a
+     slice of something larger rather than as a rectangle parked inside the
+     section. */
+  inset-block: 0;
+  inset-inline-end: 0;
+  inline-size: 72%;
+
+  /* The motif token's 0.18 is the posture for ink over a LIGHT ground, where the
+     job is to stop a graphic competing with black text. This texture sits on the
+     inverse band and its own streaks are already only a step or two off the ground
+     they are drawn on, so 0.18 composited to within a couple of RGB values of the
+     band — it was measurably present and visibly absent.
+
+     0.7 is where it reads. Measured rather than chosen: the lightest streak at
+     this strength leaves white at 10.48:1 and the 80% body copy at 7.31:1, both
+     clear of AA with room, and the mask below drops it further still under the
+     copy itself. */
+  --ansr-motif-opacity: 0.7;
+
+  /* Fades away from the trailing edge. The heading and body copy are
+     leading-aligned and capped at the reading measure, so the trailing side is
+     the ground the texture can have — and by the time the copy starts, the
+     texture has visibly stopped.
+
+     A mask only reads the alpha channel, so the colour here is machinery rather
+     than a design choice — but it still comes from a token, because
+     brand_lint.py is right to refuse a literal hex even inside a mask. */
+  mask-image: linear-gradient(
+    to left,
+    var(--ansr-black),
+    transparent 88%
   );
 }
 

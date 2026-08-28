@@ -4,13 +4,17 @@ import { seedMetricCatalogue } from "@/data/metric-catalogue";
 import { publicMetricsFor } from "@/data/metrics";
 import type { Dataset, Metric } from "@/data/schema";
 import {
+  anchorColumnFor,
+  breakdownDisplay,
   breakdownScale,
   buildFunctionAreaView,
   buildFunctionView,
   formatCompact,
   formatFigure,
-  metricSpan,
+  gridDisplay,
+  metricWidth,
   rowScale,
+  SUBJECT_COLUMN,
   type ShownMetric,
 } from "@/data/screen2";
 
@@ -198,11 +202,10 @@ describe("area assembly", () => {
     ]);
   });
 
-  it("orders a tab from single figures to grids", () => {
+  it("orders a tab from the narrowest card to the widest", () => {
+    const rank = { third: 0, half: 1, full: 2 } as const;
     for (const area of view.areas) {
-      const order = area.shown.map((shown) => shown.shape);
-      const rank = { scalar: 0, range: 1, breakdown: 2, grid: 3 } as const;
-      const ranks = order.map((shape) => rank[shape]);
+      const ranks = area.shown.map((shown) => rank[metricWidth(shown)]);
       expect(ranks).toEqual([...ranks].sort((a, b) => a - b));
     }
   });
@@ -225,11 +228,165 @@ describe("area assembly", () => {
     expect(view.areas.map((area) => area.functionArea)).toEqual(["finance"]);
   });
 
-  it("gives a grid the full measure and everything else half", () => {
-    expect(metricSpan("grid")).toBe("full");
-    expect(metricSpan("scalar")).toBe("half");
-    expect(metricSpan("range")).toBe("half");
-    expect(metricSpan("breakdown")).toBe("half");
+  it("weights a card's width by what it has to draw", () => {
+    // The point of the change: a single figure no longer takes the same width as a
+    // nine-part breakdown, which is what made a scalar card stretch to a tall
+    // neighbour's height and render four fifths empty.
+    expect(metricWidth(find(view, "tech-bench-strength"))).toBe("third");
+    expect(metricWidth(find(view, "hr-time-to-first-hire"))).toBe("half");
+    expect(metricWidth(find(view, "tech-graduate-output"))).toBe("full");
+    expect(metricWidth(find(view, "fin-cost-composition"))).toBe("full");
+    expect(metricWidth(find(view, "fin-tier-cost-spread"))).toBe("full");
+    expect(metricWidth(find(view, "ops-power-uptime"))).toBe("half");
+  });
+});
+
+/* ==========================================================================
+   Which chart draws a metric
+
+   The decisions that moved out of the component and into the view model, so a
+   test can pin them. Each rule exists because the obvious single rule produced a
+   chart that misled.
+   ========================================================================== */
+
+describe("choosing a chart", () => {
+  const view = buildFunctionView(datasetWith(CATALOGUE));
+
+  it("draws a percentage split that sums to a whole as one stacked bar", () => {
+    // Four bars against a 100% axis say "each of these is some of it". One divided
+    // bar says "these four are all of it", which is the claim being made.
+    expect(breakdownDisplay("percent", [72, 12, 8, 8])).toBe("stack");
+    const shown = find(view, "fin-cost-composition");
+    if (shown.shape !== "breakdown") throw new Error("expected a breakdown");
+    expect(shown.display).toBe("stack");
+  });
+
+  it("stops drawing bars for percentages clustered at the top of their domain", () => {
+    // 99.95 against 99.5 draws as two identical bars on an honest 0-to-100 axis,
+    // and as a difference that is not there on a truncated one. Neither is worth
+    // having, so the figures carry it alone.
+    expect(breakdownDisplay("percent", [99.95, 99.5])).toBe("figures");
+    const shown = find(view, "ops-power-uptime");
+    if (shown.shape !== "breakdown") throw new Error("expected a breakdown");
+    expect(shown.display).toBe("figures");
+  });
+
+  it("nests a part inside its total, but only when it really is one", () => {
+    // 132 vacant of 854 total is a containment: both are million sq ft, and the
+    // second is some of the first.
+    expect(breakdownDisplay("number", [854, 132], "million sq ft")).toBe("nested");
+    // Two counts that happen to be close are a comparison, not a containment.
+    expect(breakdownDisplay("number", [854, 700], "million sq ft")).toBe("bars");
+
+    const stock = find(view, "ops-grade-a-office-stock");
+    if (stock.shape !== "breakdown") throw new Error("expected a breakdown");
+    expect(stock.display).toBe("nested");
+  });
+
+  it("refuses to nest two parts that do not share a unit", () => {
+    // The bug this rule exists for, and it shipped as a drawn falsehood. Technical
+    // community activity holds 1,400 meetup groups and 120 conferences a year: two
+    // parts, and 120 is well under half of 1,400, so a size-only rule nested them
+    // and asserted that a conference is a kind of meetup group. The metric declares
+    // no unit precisely BECAUSE its two parts count different things.
+    expect(breakdownDisplay("number", [1_400, 120], undefined)).toBe("bars");
+
+    const community = find(view, "tech-community-events");
+    if (community.shape !== "breakdown") throw new Error("expected a breakdown");
+    expect(community.metric.unit).toBeUndefined();
+    expect(community.display).toBe("bars");
+  });
+
+  it("leaves a percentage split that does not sum to a whole as bars", () => {
+    expect(breakdownDisplay("percent", [35, 25, 28.8])).toBe("bars");
+    expect(breakdownDisplay("percent", [9.8, 21.1, 20, 16.1, 7.5])).toBe("bars");
+  });
+
+  it("routes a matrix by whether it has a scale, a base, and how wide it is", () => {
+    expect(gridDisplay(true, false, 4)).toBe("ratings");
+    expect(gridDisplay(false, false, 4)).toBe("numbers");
+    expect(gridDisplay(false, true, 2)).toBe("dumbbell");
+    expect(gridDisplay(false, true, 5)).toBe("lollipop");
+    // A rating scale wins over everything: an ordinal has no distance, so it gets
+    // no axis whatever else the definition carries.
+    expect(gridDisplay(true, true, 2)).toBe("ratings");
+  });
+
+  it("finds the index base as the column identical in every row", () => {
+    // Derived from the cells, never parsed out of `indexBaseline` — that field is
+    // free text an admin types, so a rule that read it would break on a typo and
+    // break silently.
+    expect(
+      anchorColumnFor(
+        ["Tier 1 cities", "Tier 2 cities"],
+        [
+          [100, 75],
+          [100, 85],
+          [100, 81],
+        ],
+      ),
+    ).toBe("Tier 1 cities");
+    expect(anchorColumnFor(["Alpha", "Beta"], [[1, 2], [3, 4]])).toBeUndefined();
+  });
+
+  it("prefers the subject column wherever the grid carries one", () => {
+    // Poland is "Strong" in all five rows of the capability grid, so the
+    // identical-column rule alone would anchor the reader's eye to Poland on a
+    // screen about India.
+    expect(
+      anchorColumnFor(
+        ["India", "Poland"],
+        [
+          ["Very strong", "Strong"],
+          ["Strong", "Strong"],
+        ],
+      ),
+    ).toBe(SUBJECT_COLUMN);
+  });
+
+  it("scales a lollipop across the whole grid, not row by row", () => {
+    // The bug this chart replaced: each row was scaled to its own maximum, so
+    // "India = 100" drew the SHORTEST mark in a row where the United States drew a
+    // full one — and a reader scanning a cost table reads the long bar as the
+    // winner. The number was right and the picture said the opposite.
+    const shown = find(view, "fin-india-vs-hubs");
+    if (shown.shape !== "grid") throw new Error("expected a grid");
+    expect(shown.grid.kind).toBe("lollipop");
+    if (shown.grid.kind !== "lollipop") return;
+
+    expect(shown.grid.baselineColumn).toBe("India");
+    // 367 is the largest cell anywhere in the grid, so it is the axis for all of
+    // them and India sits at the same place on every row.
+    expect(shown.grid.baselineShare).toBeCloseTo(100 / 367);
+    const shares = shown.grid.rows.map(
+      (row) => row.cells.find((cell) => cell.anchor)?.share,
+    );
+    expect(new Set(shares).size).toBe(1);
+
+    const operations = shown.grid.rows.find((row) => row.label === "Operations");
+    expect(operations?.cells.map((cell) => cell.figure)).toEqual([
+      "100",
+      "115",
+      "148",
+      "171",
+      "312",
+    ]);
+    expect(operations?.cells[4]?.share).toBeCloseTo(312 / 367);
+  });
+
+  it("draws a two-column index as a gap, with the difference already formatted", () => {
+    const shown = find(view, "fin-tier-cost-spread");
+    if (shown.shape !== "grid") throw new Error("expected a grid");
+    expect(shown.grid.kind).toBe("dumbbell");
+    if (shown.grid.kind !== "dumbbell") return;
+
+    const compensation = shown.grid.rows.find((row) => row.label === "Compensation");
+    expect(compensation?.from.column).toBe("Tier 1 cities");
+    expect(compensation?.to.column).toBe("Tier 2 cities");
+    expect(compensation?.from.figure).toBe("100");
+    expect(compensation?.to.figure).toBe("85");
+    // A real minus sign, and no arithmetic left for the component.
+    expect(compensation?.delta).toBe("\u221215");
   });
 });
 
@@ -332,8 +489,17 @@ describe("resolving a value", () => {
     ]);
   });
 
-  it("resolves a number grid and scales each cell against its own row", () => {
-    const shown = find(view, "fin-tier-cost-spread");
+  it("scales a bare numeric grid against its own row", () => {
+    // The fallback reading, for a matrix that is neither an index nor a rating.
+    // Its rows measure different things, so a shared axis across them would
+    // compare a latency with a headcount. No seeded metric takes this path — every
+    // matrix in the catalogue declares a base or a scale — so it is built here.
+    const metrics = structuredClone(CATALOGUE) as Metric[];
+    const target = metrics.find((metric) => metric.id === "fin-tier-cost-spread");
+    if (!target) throw new Error("expected the tier spread");
+    delete target.indexBaseline;
+
+    const shown = find(buildFunctionView(datasetWith(metrics)), "fin-tier-cost-spread");
     if (shown.shape !== "grid") throw new Error("expected a grid");
     expect(shown.grid.kind).toBe("numbers");
     if (shown.grid.kind !== "numbers") return;
@@ -472,6 +638,25 @@ describe("figures", () => {
    Cost, in every lens
    ========================================================================== */
 
+/**
+ * Every string a grid puts on the screen, whichever of the four readings it is.
+ *
+ * Exhaustive over `MetricGrid` by construction: a fifth reading added without a
+ * branch here is a compile error rather than a currency check that silently stops
+ * covering one of them.
+ */
+function gridFigures(grid: Extract<ShownMetric, { shape: "grid" }>["grid"]): string[] {
+  switch (grid.kind) {
+    case "numbers":
+    case "lollipop":
+      return grid.rows.flatMap((row) => row.cells.map((cell) => cell.figure));
+    case "dumbbell":
+      return grid.rows.flatMap((row) => [row.from.figure, row.to.figure, row.delta]);
+    case "ratings":
+      return grid.rows.flatMap((row) => row.cells.map((cell) => cell.rating));
+  }
+}
+
 describe("no absolute money anywhere", () => {
   it("shows no currency symbol or code in any figure or unit", () => {
     const view = buildFunctionView(datasetWith(CATALOGUE));
@@ -488,9 +673,7 @@ describe("no absolute money anywhere", () => {
               ? [shown.low, shown.high]
               : shown.shape === "breakdown"
                 ? shown.parts.map((part) => part.figure)
-                : shown.grid.kind === "numbers"
-                  ? shown.grid.rows.flatMap((row) => row.cells.map((cell) => cell.figure))
-                  : shown.grid.rows.flatMap((row) => row.cells.map((cell) => cell.rating));
+                : gridFigures(shown.grid);
         for (const figure of figures) expect(figure).not.toMatch(currency);
       }
     }

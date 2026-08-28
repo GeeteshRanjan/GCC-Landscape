@@ -579,7 +579,11 @@ export const METRIC_CATALOGUE: readonly Metric[] = [
     title: "Tier 1 and tier 2 operating cost spread",
     question: "What would we save by going beyond the established hubs?",
     format: "index",
-    indexBaseline: "Tier 1 cities = 100",
+    // The DIRECTION belongs here rather than in the component, because the author
+    // of a metric is the only one who knows it. `format: "index"` says nothing
+    // about whether up is good, and a chart that guessed would eventually put an
+    // arrow on the wrong end of a real number.
+    indexBaseline: "Tier 1 cities = 100. Lower is cheaper.",
     note:
       "Indices, not amounts. Conservative end of each supplied range: all-in 25–35% below, compensation 15–22% lower, rent roughly half. Attrition also runs 4–6 points lower in tier 2, which is not a cost and has no slot here.",
     structure: {
@@ -604,7 +608,7 @@ export const METRIC_CATALOGUE: readonly Metric[] = [
     title: "India compared with other delivery locations",
     question: "For the same work, how does India sit against the alternatives?",
     format: "index",
-    indexBaseline: "India = 100",
+    indexBaseline: "India = 100. Higher is more expensive.",
     note:
       "By umbrella function rather than by role. The single 'Senior engineer' row was derived from the one comparison the source supplied, and one engineering row cannot answer the question a finance leader is actually asking — which is what the whole centre costs, function by function. The technology row is that original derivation; the other three carry the same shape and are illustrative until real per-function comparisons are supplied. Separately, India runs about 2.1 heads for every one US head. Vietnam was a seeded column with no figure and was removed.",
     structure: {

@@ -1,5 +1,7 @@
 import { expect, test } from "@playwright/test";
 
+import { band, expectBand } from "./helpers";
+
 /**
  * Screen 1, the public Peer View, against a real production build.
  *
@@ -131,49 +133,43 @@ test.describe("the answer", () => {
     await expect(heading).toBeVisible();
     await expect(heading).toBeFocused();
 
-    // Every block is a named region, so it is reachable by role.
-    for (const name of [
-      /companies match you closely/,
-      /Your industry in India is bigger/,  // BFSI is not exhaustive
-      /The largest companies in your industry here/,
-      /The functions India GCCs carry/,
-      /BFSI GCCs across India/,
-      /The scale you would be joining/,
-    ]) {
-      await expect(page.getByRole("region", { name })).toBeVisible();
+    // Every block is a named region, so it is reachable by role. Located by id and
+    // checked for a name, rather than located BY its name — the ids are the
+    // structural contract and the headings are a copywriter's to change.
+    for (const id of ["peers", "industry", "largest", "functions", "map", "scale"]) {
+      await expectBand(page, id);
     }
 
     // Five peer cards, each with a headcount band rather than a point figure.
-    const peers = page.getByRole("region", { name: /companies match you closely/ });
+    const peers = band(page, "peers");
     await expect(peers.getByRole("heading", { level: 4 })).toHaveCount(5);
     await expect(peers.getByText("India headcount").first()).toBeVisible();
 
-    // The industry count, and the "and N others" clause beside it.
-    const industry = page.getByRole("region", {
-      name: /Your industry in India is bigger/,
-    });
-    await expect(industry.getByText(/BFSI companies running a GCC in India/)).toBeVisible();
-    await expect(industry.getByText(/more beyond the companies above/)).toBeVisible();
+    // The industry count, drawn as the peer set's share of the whole industry —
+    // which is what makes five named companies read as a selection rather than as
+    // the supply.
+    const industry = band(page, "industry");
+    await expect(industry.getByText(/BFSI companies already run a centre/)).toBeVisible();
+    await expect(industry.getByText("Named above")).toBeVisible();
+    await expect(industry.getByText("Elsewhere in your industry")).toBeVisible();
 
     // The largest block is a ranking, and an overlap with the peer set is marked
     // rather than restated as a second identical card.
-    const largest = page.getByRole("region", {
-      name: /The largest companies in your industry here/,
-    });
+    const largest = band(page, "largest");
     await expect(largest.getByRole("listitem")).toHaveCount(5);
     await expect(largest.getByText("Also in your peer set").first()).toBeVisible();
-    await expect(largest.getByText(/Ranked by the size of the India GCC/)).toBeVisible();
+    await expect(largest.getByText(/Bars compare the size of the India centre/)).toBeVisible();
 
     // Scale proof is national, and says it is approximate rather than implying
     // band midpoints are a measurement.
-    const scale = page.getByRole("region", { name: /The scale you would be joining/ });
+    const scale = band(page, "scale");
     await expect(scale.getByText("181")).toBeVisible();
-    await expect(scale.getByText("1,834")).toBeVisible();
-    await expect(scale.getByText(/summed from headcount bands/)).toBeVisible();
+    await expect(scale.getByText(/1,834 India GCCs/)).toBeVisible();
+    await expect(scale.getByText(/sum of band midpoints/)).toBeVisible();
 
     // The map is a real graphic with an accessible summary, paired with the
     // ranked list that carries the figures.
-    const map = page.getByRole("region", { name: /BFSI GCCs across India/ });
+    const map = band(page, "map");
     await expect(map.getByRole("img", { name: /GCC locations across India/ })).toBeVisible();
     // Scoped to the ranked list: the dot's own <title> matches the city name too,
     // which is the point — the graphic and the list say the same thing.
@@ -191,9 +187,7 @@ test.describe("the answer", () => {
   test("keeps the dataset on the server", async ({ page }) => {
     await page.goto("/");
     await ask(page, { industry: "BFSI", revenueBand: "Above $20 Bn" });
-    await expect(
-      page.getByRole("region", { name: /companies match you closely/ }),
-    ).toBeVisible();
+    await expect(band(page, "peers")).toBeVisible();
 
     const html = await page.content();
 
@@ -259,7 +253,7 @@ test.describe("a thin industry", () => {
       revenueBand: "Above $20 Bn",
     });
 
-    const peers = page.getByRole("region", { name: /companies match you closely/ });
+    const peers = band(page, "peers");
     await expect(peers).toBeVisible();
 
     // Exactly two. Never five, never a filler card.
@@ -269,38 +263,39 @@ test.describe("a thin industry", () => {
       peers.getByRole("heading", { level: 4, name: "Iskraemeco" }),
     ).toBeVisible();
 
-    // One line, said plainly, reframed rather than apologised for.
+    // One line, said plainly, reframed rather than apologised for. It states the
+    // shortfall and does NOT narrate our own restraint — "we would rather show you
+    // two defensible comparisons than pad the list" answered a question the reader
+    // had not asked, and planted it by answering.
     await expect(peers.getByText(/Electrical & Electronics is thin in India/)).toBeVisible();
-    await expect(peers.getByText(/than pad the list/)).toBeVisible();
+    await expect(peers.getByText(/Early ground, not absent ground/)).toBeVisible();
+    await expect(peers.getByText(/pad/i)).toHaveCount(0);
 
     // The industry count degrades instead of reading "and 0 others" — and so does
-    // its heading, which would otherwise claim the industry is bigger than the two
-    // companies printed underneath it.
-    const industry = page.getByRole("region", {
-      name: /All of Electrical & Electronics in India/,
-    });
+    // its heading, which would otherwise claim the peers were a selection out of
+    // something larger than the two companies printed above it.
+    const industry = band(page, "industry");
     await expect(industry).toBeVisible();
     await expect(
-      page.getByRole("region", { name: /bigger than five names/ }),
+      industry.getByRole("heading", { name: /All of Electrical & Electronics in India/ }),
+    ).toBeVisible();
+    await expect(
+      industry.getByRole("heading", { name: /a selection, not the supply/ }),
     ).toHaveCount(0);
     await expect(
-      industry.getByText(/every Electrical & Electronics company in our India GCC data/),
+      industry.getByText(/that is all of them in our data/),
     ).toBeVisible();
-    await expect(industry.getByText(/0 others/)).toHaveCount(0);
-    await expect(industry.getByText(/0 more/)).toHaveCount(0);
+    // The split collapses to the named peers alone rather than drawing an empty
+    // remainder segment beside them.
+    await expect(industry.getByText("Elsewhere in your industry")).toHaveCount(0);
 
     // The largest panel would be the same two companies, so it becomes a line.
-    const largest = page.getByRole("region", {
-      name: /The largest companies in your industry here/,
-    });
+    const largest = band(page, "largest");
     await expect(largest.getByText(/the same ones shown above/)).toBeVisible();
     await expect(largest.getByRole("heading", { level: 4 })).toHaveCount(0);
 
-
     // The national scale block is unchanged — that is what it is for.
-    await expect(
-      page.getByRole("region", { name: /The scale you would be joining/ }).getByText("181"),
-    ).toBeVisible();
+    await expect(band(page, "scale").getByText("181")).toBeVisible();
   });
 });
 
@@ -310,9 +305,7 @@ test.describe("iframe constraints", () => {
   }) => {
     await page.goto("/");
     await ask(page, { industry: "BFSI", revenueBand: "Above $20 Bn" });
-    await expect(
-      page.getByRole("region", { name: /companies match you closely/ }),
-    ).toBeVisible();
+    await expect(band(page, "peers")).toBeVisible();
 
     // The tool does not own the scroll container, so any of these would break the
     // moment it is embedded. Checked on the rendered result, not the source, so a

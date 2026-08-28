@@ -75,8 +75,17 @@ test("skipping it returns the same peers as before the field existed", async ({
   await submit(page);
 
   await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
-  // The industry-level line, not the business-type one.
-  await expect(page.getByText(/Retail companies running a GCC in India/)).toBeVisible();
+  // The industry-level split, not the business-type one: two segments rather than
+  // three, because there is no line of business to draw a middle band from.
+  const industry = page.locator("#industry");
+  await expect(
+    industry.getByText(/Retail companies already run a centre in India/),
+  ).toBeVisible();
+  await expect(industry.getByText("Named above")).toBeVisible();
+  await expect(industry.getByText("Elsewhere in your industry")).toBeVisible();
+  await expect(
+    industry.getByText("More in a comparable line of business"),
+  ).toHaveCount(0);
 });
 
 test("choosing it narrows the peer set to the same line of business", async ({
@@ -88,13 +97,16 @@ test("choosing it narrows the peer set to the same line of business", async ({
 
   await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
 
-  // The two-level count replaces the plain industry line.
+  // The three-level split replaces the two-level one: the named peers, the rest of
+  // the population they were drawn from, then the rest of the industry. That middle
+  // segment is what turns a thin peer set into evidence.
+  const industry = page.locator("#industry");
   await expect(
-    page.getByText(/comparable line of business run a GCC in India/),
+    industry.getByText("More in a comparable line of business"),
   ).toBeVisible();
   // And the method line names what the peers share rather than a revenue band the
   // peer cards do not even display.
-  await expect(page.getByText(/Matched on your line of business/)).toBeVisible();
+  await expect(page.getByText(/Matched on line of business/)).toBeVisible();
 
   /*
     The original complaint, asserted directly: a home-improvement chain is not a
@@ -137,14 +149,17 @@ test("the peer block's lead agrees with its method line", async ({ page }) => {
   const block = (await peers.innerText()).replace(/\s+/g, " ");
 
   // The method line's claim.
-  expect(block).toMatch(/Revenue band is a preference, not a filter/);
+  expect(block).toMatch(/Revenue band is a preference rather than a filter/);
 
   // The two claims the old lead made, which contradict it.
   expect(block).not.toMatch(/closest revenue band/i);
   expect(block).not.toMatch(/own market first/i);
 
-  // And the lead leads on what actually decided the set.
-  expect(block).toMatch(/same line of business/i);
+  // And the lead leads on what actually decided the set. Asserted as an ORDER
+  // rather than a phrase: the wording is a copywriter's to change, but "business
+  // before size" is the ranking and has to stay true of the sentence describing it.
+  expect(block).toMatch(/business/i);
+  expect(block.search(/business/i)).toBeLessThan(block.search(/then by size/i));
 });
 
 test("the tag vocabulary never reaches the browser", async ({ page }) => {

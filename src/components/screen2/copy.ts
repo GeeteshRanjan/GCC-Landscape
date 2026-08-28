@@ -7,27 +7,31 @@ import type { GccStatus, PeerViewInput } from "@/data/screen1";
  * `copy.ts`. The components own layout; this owns language, so the wording a
  * client reviews is one file rather than five JSX trees.
  *
- * Three things the copy on this screen has to carry, all of them product
- * constraints rather than tone:
+ * **Who this is written for, and what that costs.** Not ANSR. A CIO, COO, CHRO or
+ * CFO at a large global company who is deciding whether India is worth a
+ * several-hundred-person commitment, reading on a phone, between two other
+ * meetings. Three consequences the wording has to carry:
+ *
+ *   - **The answer leads.** Every heading and lead states what the reader is
+ *     looking at, not what we did to produce it.
+ *   - **No sentence about our own rigour.** The screen used to explain that it
+ *     shows figures exactly as entered and drops incomplete ones — true, and worth
+ *     doing, and worth nothing to the reader. Method belongs in the provenance
+ *     line, once, at the foot. Everywhere else it reads as protesting.
+ *   - **Nothing sells.** The evidence is the argument. A sentence that praises
+ *     India rather than measuring it is the one thing this audience discounts the
+ *     whole page for.
+ *
+ * Three product constraints on top of that, unchanged:
  *
  *   - **No lens names.** Supply, speed, place and cost are an internal filing
- *     system. Nothing below is a re-lettering of them: the per-tab lines describe
- *     what the tab answers in the visitor's own terms, and there are no group
- *     headings inside a tab at all.
- *   - **The tabs are four views, not four datasets.** A metric that appears on
- *     more than one tab carries the same figure on each — that is enforced in
- *     `src/data/metric-catalogue.ts` — so the copy must never imply that operations
- *     or HR is being measured separately. The shared figures are technology-role
- *     figures, and the cards deliberately do not say so: the point is to let each
- *     leader read the India engineering market in the terms they answer for.
+ *     system. Nothing below is a re-lettering of them.
+ *   - **The tabs are four views, not four datasets.** A metric on more than one
+ *     tab carries the same figure on each, so the copy must never imply that
+ *     operations or HR is measured separately.
  *   - **The scope change is said out loud.** Screen 1 was filtered to the
- *     visitor's industry and revenue band. Screen 2 is national. A visitor who
- *     carried the peer framing across would read every figure as a statement
- *     about their peers, which none of it is.
- *   - **A withheld figure is described as withheld, never as missing.** The
- *     wording says the value is left out on the server, because it is — and
- *     "there is nothing here to uncover" is a claim this codebase can actually
- *     stand behind.
+ *     visitor's industry. Screen 2 is national. A visitor who carried the peer
+ *     framing across would read every figure as a statement about their peers.
  */
 
 /** The way back to Screen 1. A real control in the flow, not a pinned edge. */
@@ -48,8 +52,8 @@ export interface FunctionFraming {
 const TITLES: Record<GccStatus, (name: string | null) => string> = {
   evaluating: (name) =>
     name
-      ? `What it would take for ${name} to run these functions in India`
-      : "What it would take to run these functions in India",
+      ? `What an India GCC would give ${name}`
+      : "What an India GCC would give you",
   operating: () => "The benchmarks your India functions sit against",
   expanding: () => "The benchmarks for the functions you are adding",
 };
@@ -62,10 +66,18 @@ const TITLES: Record<GccStatus, (name: string | null) => string> = {
 export function functionFraming(input: PeerViewInput): FunctionFraming {
   const name = input.companyName?.trim() || null;
 
+  /**
+   * Two sentences, and the second one is the important one.
+   *
+   * The previous version ran to three sentences and forty-seven words, the last
+   * of which explained the tab structure — "each tab is the same national picture,
+   * showing the figures that function's leaders are asked to justify". True, and
+   * a description of our own information architecture. The reader needs the scope
+   * change and nothing else, because the tab labels already say what the tabs are.
+   */
   const lead =
     "Talent depth, time to stand up, what the location gives you, and how the cost moves. " +
-    "These are figures for India as a whole — not for the companies in your peer set. " +
-    "Each tab is the same national picture, showing the figures that function's leaders are asked to justify.";
+    "These are figures for India as a whole — the market your peers hire in, not a measure of the peers themselves.";
 
   switch (input.gccStatus) {
     case "operating":
@@ -74,7 +86,7 @@ export function functionFraming(input: PeerViewInput): FunctionFraming {
         lead,
         ctaHeading: "Where you sit against these",
         ctaBody:
-          "ANSR runs the functions on this page for global companies, at every scale on it. A conversation is the fastest way to find out which of these numbers your own operation is already beating, and which it is not.",
+          "ANSR runs these functions for global companies at every scale on this page. A conversation is the quickest way to see which of these numbers you are already beating.",
         ctaLabel: "Talk to ANSR about your India GCC",
       };
     case "expanding":
@@ -83,16 +95,16 @@ export function functionFraming(input: PeerViewInput): FunctionFraming {
         lead,
         ctaHeading: "Costing the next function",
         ctaBody:
-          "ANSR has stood up each of these functions from a first hire. A conversation is the fastest way to turn these benchmarks into a plan for the one you are adding — including the parts held back above.",
+          "ANSR has stood up each of these functions from a first hire. A conversation turns these benchmarks into a plan for the one you are adding — including the figures held back above.",
         ctaLabel: "Talk to ANSR about scaling your India GCC",
       };
     case "evaluating":
       return {
         title: TITLES.evaluating(name),
         lead,
-        ctaHeading: "Turning this into a plan",
+        ctaHeading: "What this looks like for your roles",
         ctaBody:
-          "ANSR has built and run every function on this page inside India GCCs for global companies. A conversation is the fastest way to see what these numbers look like for your own roles, your own cities and your own sending country.",
+          "These are national figures. Yours depend on the roles you would move, the cities you would pick and the country you are hiring from — which is a conversation, not a page.",
         ctaLabel: "Talk to ANSR about building your India GCC",
       };
   }
@@ -102,14 +114,16 @@ export function functionFraming(input: PeerViewInput): FunctionFraming {
    The tabs
 
    One line per function area, saying what the tab answers. Written as the
-   visitor's question, not as the four lenses relabelled.
+   visitor's question, not as the four lenses relabelled — and cut to one clause,
+   because a lead paragraph above a grid of cards that each carry their own
+   question is the third time the reader has been told what they are looking at.
    ========================================================================== */
 
 export const AREA_LEAD: Record<MetricFunction, string> = {
-  tech: "How deep the engineering pool is, which specialisms it actually covers, and how India sits against the other locations on your list.",
+  tech: "How deep the engineering pool is, which specialisms it covers, and how India sits against the other locations on your list.",
   operations:
-    "The same talent picture, alongside how long a function takes to stand up and whether the city stays up while it runs.",
-  hr: "The same talent picture, alongside how quickly you can hire, how long a seat stays empty, and what the same person costs a year from now.",
+    "The same talent picture, plus how long a function takes to stand up and whether the city stays up while it runs.",
+  hr: "The same talent picture, plus how fast you can hire, how long a seat stays empty, and what the same person costs a year from now.",
   finance:
     "Where the cost advantage comes from, whether it lasts, and what going beyond the established hubs is worth.",
 };
@@ -121,11 +135,11 @@ export const AREA_LEAD: Record<MetricFunction, string> = {
  * absolute per-head figure cannot be stored in this dataset at all.
  */
 const BENCH_PROVENANCE =
-  "Bench strength, graduate output and the hiring timings are the national workforce, not the share of it already inside GCCs, because that is what “available to hire” means. They are the same figures on every tab that shows them.";
+  "Bench strength, graduate output and the hiring timings are the national workforce rather than the share already inside GCCs — that is what “available to hire” means. Same figures on every tab that shows them.";
 
 export const AREA_PROVENANCE: Partial<Record<MetricFunction, string>> = {
   finance:
-    "Cost is shown as indices, spreads and growth rates. We do not publish a per-head salary figure — not here, and not behind the gate.",
+    "Cost is shown as indices, spreads and growth rates. We publish no per-head salary figure — not here, and not behind the gate.",
   // The three tabs that carry the shared supply figures each state where they
   // come from, rather than one tab stating it for the others.
   tech: BENCH_PROVENANCE,
@@ -134,20 +148,18 @@ export const AREA_PROVENANCE: Partial<Record<MetricFunction, string>> = {
 };
 
 /**
- * The screen-level caveat.
+ * The screen-level caveat. One sentence now.
  *
- * Two claims, both true by construction rather than by promise: a figure is shown
- * exactly as entered, and a metric with a gap in it is dropped rather than
- * part-filled — which `publicMetricsFor` enforces and `ShownMetric` types.
- *
- * It says nothing about provenance dates. `asOf` used to default to "Sample, not
- * for publication" and rendered beside every figure, so this line had to
- * acknowledge it; the default is gone, `asOf` is now only ever a real provenance
- * string an admin has typed, and a line promising a caveat that is no longer there
- * would be worse than no line.
+ * It used to be two, the first of which promised that figures are shown exactly
+ * as entered and that a metric with a gap is left off rather than part-filled.
+ * Both are true, both are enforced in `publicMetricsFor`, and neither is
+ * information to a reader — an absent metric is absent, and a sentence explaining
+ * that we would never part-fill one draws attention to a failure mode nobody
+ * suspected. What survives is the part that changes how a figure is READ: the
+ * plus marker.
  */
 export const SCREEN_PROVENANCE =
-  "Figures are national aggregates maintained by ANSR and shown exactly as entered — a metric with a gap in it is left off this screen rather than part-filled. A figure marked with a plus is a floor rather than a point measurement.";
+  "National aggregates maintained by ANSR. A figure marked with a plus is a floor rather than a point measurement.";
 
 /* ==========================================================================
    The held group
@@ -155,12 +167,22 @@ export const SCREEN_PROVENANCE =
 
 export function heldHeading(count: number): string {
   return count === 1
-    ? "One of these we work through with you"
-    : "These we work through with you";
+    ? "One figure we work through with you"
+    : "Figures we work through with you";
 }
 
+/**
+ * Why a shape is on the screen with nothing in it.
+ *
+ * Cut from four sentences to two. The removed pair explained that the shapes are
+ * real and that the values are omitted server-side so there is nothing to
+ * uncover — which is a promise made to a reader who had not accused us of
+ * anything, and which reads as defensive precisely because it is so specific. The
+ * reason these are held is the reason worth keeping, and it is a real one: a
+ * single number without the reader's own roles and cities behind it would mislead.
+ */
 export const HELD_BODY =
-  "The shapes below are real: the rows, columns and parts are exactly what these metrics hold. The figures are not on this page in any form — they are left out on the server, so there is nothing here to uncover. They also depend on your own roles, your own cities and the country you are hiring from, and a single number without that context would mislead more than it would inform.";
+  "These depend on the roles you would move, the cities you would pick and the country you are hiring from. A single national number would mislead more than it would inform, so the shape is here and the figures are not.";
 
 export const HELD_CHIP = "Held back";
 
@@ -188,7 +210,5 @@ export function heldShapeNote(shape: MetricShape): string {
    Small labels
    ========================================================================== */
 
-export const RANGE_LOW_FALLBACK = "at the low end";
-export const RANGE_HIGH_FALLBACK = "at the high end";
 export const RATING_KEY_LABEL = "Scale, weakest first";
 export const TABS_LABEL = "Function";

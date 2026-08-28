@@ -51,6 +51,114 @@ export interface GridNumberCell {
   share: number;
 }
 
+/* ==========================================================================
+   Which chart draws a metric
+
+   The decision lives here rather than in the component, for the same reason the
+   scales do: it is a property of the DATA, and a property of the data is
+   something a test can pin. `metric-card.tsx` then has no chart selection in it
+   at all — it draws what it is handed.
+
+   Every rule below is derived from values and structure only. Nothing parses a
+   label, deliberately: entry and axis names are admin-editable, so a rule that
+   read "To 500 FTEs" to find the number 500 would silently change which chart a
+   metric gets the first time somebody renamed a part.
+   ========================================================================== */
+
+/**
+ * How a breakdown is drawn.
+ *
+ *   - `stack` — the parts are the whole. A percentage split that sums to 100 is
+ *     making a part-to-whole claim, and a row of separate bars is the one thing
+ *     that cannot show it.
+ *   - `figures` — a bar would mislead. Percentages clustered at the top of their
+ *     domain (99.95 against 99.5) draw as identical bars on an honest axis, and
+ *     as a fabricated difference on a truncated one. Neither is worth having.
+ *   - `nested` — two parts where the smaller is a subset of the larger. Drawn
+ *     inside it, because "132 of the 854" is the actual relationship.
+ *   - `bars` — everything else.
+ */
+export type BreakdownDisplay = "bars" | "stack" | "figures" | "nested";
+
+/** Sums to a whole, within the rounding the source figures carry. */
+function sumsToWhole(values: readonly number[]): boolean {
+  const total = values.reduce((sum, value) => sum + value, 0);
+  return Math.abs(total - 100) <= 0.5;
+}
+
+/**
+ * Every value is high in its own domain and they sit close together, so the
+ * difference between them is smaller than the width of the axis can show.
+ */
+function clusteredHigh(values: readonly number[]): boolean {
+  const min = Math.min(...values);
+  const max = Math.max(...values);
+  return min >= 90 && max <= 100 && max - min <= 10;
+}
+
+export function breakdownDisplay(
+  format: MetricFormat,
+  values: readonly number[],
+  /**
+   * The metric's unit, and it is load-bearing rather than decorative here — see
+   * the containment test below.
+   */
+  unit?: string,
+): BreakdownDisplay {
+  if (format === "percent") {
+    if (values.length >= 2 && values.length <= 6 && sumsToWhole(values)) {
+      return "stack";
+    }
+    if (clusteredHigh(values)) return "figures";
+    return "bars";
+  }
+  /**
+   * Two parts, measured in the SAME unit, one of which fits inside the other with
+   * room to spare.
+   *
+   * The unit requirement is the whole rule, and it is there because the version
+   * without it drew a false claim. "Technical community activity" holds 1,400
+   * meetup groups and 120 conferences a year: two parts, and 120 is comfortably
+   * under half of 1,400, so a size-only rule nested the conferences inside the
+   * meetup groups and asserted that a conference is a kind of meetup group. It is
+   * not — the catalogue's own note says the two parts count different things,
+   * which is exactly why that metric declares no unit.
+   *
+   * A shared unit is not proof of containment, and nothing available here is. What
+   * it is, is the definition's own statement that the two parts measure the same
+   * kind of thing, which is a precondition — and it is authored rather than
+   * inferred. "Total Grade A stock" and "vacant and available now" are both
+   * million sq ft; the nesting is real.
+   */
+  if (values.length === 2 && unit !== undefined) {
+    const [first, second] = values;
+    if (
+      typeof first === "number" &&
+      typeof second === "number" &&
+      first > 0 &&
+      second > 0 &&
+      second / first <= 0.5
+    ) {
+      return "nested";
+    }
+  }
+  return "bars";
+}
+
+/**
+ * How a matrix is drawn.
+ *
+ *   - `ratings` — an ordinal. No axis, because an ordinal has no distance.
+ *   - `dumbbell` — a two-column index, where the answer is the gap rather than
+ *     either figure.
+ *   - `lollipop` — an index across three or more columns, on ONE axis shared by
+ *     every row, with the base drawn as a rule. Scaling each row to its own
+ *     maximum is what made "India = 100" the shortest mark in its row.
+ *   - `numbers` — a matrix with no index base. Rows measure different things, so
+ *     each cell is read against its own row.
+ */
+export type GridDisplay = "ratings" | "dumbbell" | "lollipop" | "numbers";
+
 export interface GridRatingCell {
   /** The ordinal label, shown as text. Colour is never the only encoding. */
   rating: string;
@@ -58,10 +166,32 @@ export interface GridRatingCell {
   step: number;
 }
 
+/** One dot on a shared index axis. */
+export interface GridIndexCell {
+  column: string;
+  figure: string;
+  /** 0 to 1 against the axis shared by the WHOLE grid, not by the row. */
+  share: number;
+  /** The index base column. */
+  anchor: boolean;
+}
+
+/** A two-column index row, where the gap is the answer. */
+export interface GridDeltaRow {
+  label: string;
+  from: { column: string; figure: string; share: number };
+  to: { column: string; figure: string; share: number };
+  /** Already formatted and signed. No arithmetic in the component. */
+  delta: string;
+}
+
 /**
- * A comparison grid. Two variants rather than one nullable shape, because a
- * rating cell and a number cell are read differently: a number is measured
- * against its row, an ordinal against the scale the metric declares.
+ * A comparison grid, in one of four readings.
+ *
+ * Four variants rather than one nullable shape, because these are genuinely
+ * different charts: a number is measured against its row, an index against the
+ * base it declares, an ordinal against the scale it declares, and a two-column
+ * index against neither — against the distance between its own two ends.
  */
 export type MetricGrid =
   | {
@@ -70,11 +200,25 @@ export type MetricGrid =
       rows: Array<{ label: string; cells: GridNumberCell[] }>;
     }
   | {
+      kind: "lollipop";
+      columns: string[];
+      rows: Array<{ label: string; cells: GridIndexCell[] }>;
+      /** Where the index base sits on the shared axis. */
+      baselineShare: number;
+      baselineColumn: string;
+    }
+  | {
+      kind: "dumbbell";
+      rows: GridDeltaRow[];
+    }
+  | {
       kind: "ratings";
       columns: string[];
       /** The ordinal steps, weakest first. Rendered as the grid's key. */
       steps: string[];
       rows: Array<{ label: string; cells: GridRatingCell[] }>;
+      /** The column the visitor is deciding about, when it is on the grid. */
+      anchorColumn?: string;
     };
 
 interface ShownBase {
@@ -106,7 +250,12 @@ export type ShownMetric =
        */
       offset: number;
     })
-  | (ShownBase & { shape: "breakdown"; parts: MetricPart[] })
+  | (ShownBase & {
+      shape: "breakdown";
+      parts: MetricPart[];
+      /** Which chart draws these parts. See `breakdownDisplay`. */
+      display: BreakdownDisplay;
+    })
   | (ShownBase & { shape: "grid"; grid: MetricGrid });
 
 /** A metric whose figures are withheld. Cardinality and nothing else. */
@@ -230,39 +379,126 @@ export function rowScale(values: readonly number[]): number {
   return Math.max(...values, 1);
 }
 
+/**
+ * The whole tool's subject, and the column a visitor is deciding about.
+ *
+ * A magic string, and a deliberate one — the same kind `geo.ts` carries when it
+ * hardcodes India's city coordinates and `screen1.ts` carries in
+ * `COMMON_FUNCTIONS`. The tool is about India; a comparison grid that contains an
+ * India column is comparing India with alternatives, and the reader should find
+ * it first.
+ *
+ * It degrades safely rather than breaking: the columns are admin-editable, so if
+ * this one is renamed the grid simply loses its emphasis and falls back to the
+ * index-base rule below. Nothing throws and no figure moves.
+ */
+export const SUBJECT_COLUMN = "India";
+
+/**
+ * Which column a grid is read outward from.
+ *
+ * Two rules, in order. The subject wins where it is present. Failing that, the
+ * index base is the column whose value is IDENTICAL in every row — which is what
+ * an index base is, and is true of "Tier 1 cities = 100" and "Bengaluru = 100"
+ * without either string appearing here.
+ *
+ * Derived from the cells rather than read out of `indexBaseline`, because that
+ * field is free text an admin types. A rule that parsed it would break on a typo
+ * and, worse, would break silently.
+ */
+export function anchorColumnFor(
+  columns: readonly string[],
+  rows: ReadonlyArray<readonly unknown[]>,
+): string | undefined {
+  if (columns.includes(SUBJECT_COLUMN)) return SUBJECT_COLUMN;
+  if (rows.length === 0) return undefined;
+  for (const [index, column] of columns.entries()) {
+    const first = rows[0]?.[index];
+    if (first === undefined) continue;
+    if (rows.every((row) => row[index] === first)) return column;
+  }
+  return undefined;
+}
+
+/**
+ * Which of the four grid readings a matrix gets. Structure and values only.
+ */
+export function gridDisplay(
+  hasRatingScale: boolean,
+  hasIndexBaseline: boolean,
+  columnCount: number,
+): GridDisplay {
+  if (hasRatingScale) return "ratings";
+  if (!hasIndexBaseline) return "numbers";
+  return columnCount === 2 ? "dumbbell" : "lollipop";
+}
+
 /* ==========================================================================
    Order
 
    Ascending render width, and stable within a step.
    ========================================================================== */
 
-const SHAPE_ORDER: Record<ShownMetric["shape"], number> = {
-  scalar: 0,
-  range: 1,
-  breakdown: 2,
-  grid: 3,
+const WIDTH_ORDER: Record<MetricWidth, number> = {
+  third: 0,
+  half: 1,
+  full: 2,
 };
 
 /**
- * A single figure first, a grid last.
+ * Narrowest first, widest last.
  *
- * Ordering by how much of the eye a metric needs, rather than by lens or by
- * catalogue position. Two things come out of it at once: a tab opens on the
- * figures that read in one glance and ends on the ones that need study, and the
- * card grid fills cleanly, because narrow cards are not interleaved with
- * full-width ones leaving half-rows of white behind them.
+ * Ordering by the width a card takes rather than by lens or catalogue position,
+ * which buys two things at once. A tab opens on the figures that read in one
+ * glance and ends on the ones that need study. And the grid packs: three thirds
+ * fill a row exactly, then halves, then the full-width charts — so no row is left
+ * with a card stretched to a taller neighbour's height beside it.
+ *
+ * Ordering by width rather than by shape matters now that width is decided by the
+ * data: a percentage split that sums to a whole is drawn as one stacked bar and
+ * wants the full measure, while a two-part percentage does not, and both are
+ * `breakdown`.
  *
  * Stable inside a step, so the catalogue's own order still decides between two
- * metrics of the same shape and the screen does not reshuffle when a value is
+ * metrics of the same width and the screen does not reshuffle when a value is
  * edited.
  */
-function compareByShape(a: ShownMetric, b: ShownMetric): number {
-  return SHAPE_ORDER[a.shape] - SHAPE_ORDER[b.shape];
+function compareByWidth(a: ShownMetric, b: ShownMetric): number {
+  return WIDTH_ORDER[metricWidth(a)] - WIDTH_ORDER[metricWidth(b)];
 }
 
-/** How wide a card is. Grids need the full measure; everything else pairs up. */
-export function metricSpan(shape: ShownMetric["shape"]): "half" | "full" {
-  return shape === "grid" ? "full" : "half";
+/**
+ * How much of the row a card takes, on a twelve-column grid.
+ *
+ * Weighted by what the card actually has to draw, rather than one width for
+ * everything. That is what fixes the layout's worst artefact: a single figure
+ * paired with a nine-part breakdown used to stretch to the taller card's height,
+ * leaving a card that was four fifths empty white space with one number in the
+ * corner of it. Three narrow cards to a row instead, so a scalar sits beside
+ * scalars.
+ *
+ * Returned as a token rather than a class string: the mapping to Tailwind belongs
+ * in the component, and a view model that emitted `sm:col-span-6` would be a data
+ * layer with an opinion about breakpoints.
+ */
+export type MetricWidth = "third" | "half" | "full";
+
+export function metricWidth(shown: ShownMetric): MetricWidth {
+  switch (shown.shape) {
+    case "scalar":
+      return "third";
+    case "range":
+      return "half";
+    case "breakdown":
+      // A stacked whole and a long parts list both want the full measure: the
+      // stack because its segments have to be wide enough to label, and a long
+      // list because nine rows in a half-width card is a column of hairlines.
+      if (shown.display === "stack") return "full";
+      if (shown.display === "figures") return "half";
+      return shown.parts.length > 5 ? "full" : "half";
+    case "grid":
+      return "full";
+  }
 }
 
 /* ==========================================================================
@@ -315,6 +551,7 @@ function resolve(metric: OpenMetric): ShownMetric | null {
       return {
         metric,
         shape: "breakdown",
+        display: breakdownDisplay(metric.format, numbers, metric.unit),
         parts: metric.structure.entries.map((label, index) => {
           // In bounds: the length check above is what makes this safe. The
           // fallback exists only because the compiler cannot see that.
@@ -333,47 +570,155 @@ function resolve(metric: OpenMetric): ShownMetric | null {
       const { rows, columns } = metric.structure;
       const scale = metric.ratingScale;
 
-      if (scale) {
+      const display = gridDisplay(
+        scale !== undefined,
+        metric.indexBaseline !== undefined,
+        columns.length,
+      );
+
+      if (display === "ratings") {
+        // Narrowed by `gridDisplay`, which returns "ratings" only when a scale is
+        // present. Kept as a guard rather than an assertion.
+        if (!scale) return null;
         const built: Array<{ label: string; cells: GridRatingCell[] }> = [];
+        const ordinals: string[][] = [];
         for (const [rowIndex, label] of rows.entries()) {
           const cells: GridRatingCell[] = [];
+          const raw: string[] = [];
           for (let column = 0; column < columns.length; column += 1) {
             const cell = value.cells[rowIndex]?.[column];
             if (typeof cell !== "string") return null;
             const step = scale.indexOf(cell);
             if (step < 0) return null;
             cells.push({ rating: cell, step: step + 1 });
+            raw.push(cell);
           }
+          ordinals.push(raw);
           built.push({ label, cells });
         }
         return {
           metric,
           shape: "grid",
-          grid: { kind: "ratings", columns: [...columns], steps: [...scale], rows: built },
+          grid: {
+            kind: "ratings",
+            columns: [...columns],
+            steps: [...scale],
+            rows: built,
+            anchorColumn: anchorColumnFor(columns, ordinals),
+          },
         };
       }
 
-      const built: Array<{ label: string; cells: GridNumberCell[] }> = [];
-      for (const [rowIndex, label] of rows.entries()) {
+      // Every numeric reading needs the whole grid read before any cell can be
+      // scaled, because three of the four share one axis across every row.
+      const numeric: number[][] = [];
+      for (const [rowIndex] of rows.entries()) {
         const raw: number[] = [];
         for (let column = 0; column < columns.length; column += 1) {
           const cell = value.cells[rowIndex]?.[column];
           if (typeof cell !== "number") return null;
           raw.push(cell);
         }
-        const peak = rowScale(raw);
-        built.push({
-          label,
-          cells: raw.map((n) => ({
-            figure: fig(n),
-            share: Math.min(Math.max(n / peak, 0), 1),
-          })),
-        });
+        numeric.push(raw);
       }
+
+      if (display === "numbers") {
+        return {
+          metric,
+          shape: "grid",
+          grid: {
+            kind: "numbers",
+            columns: [...columns],
+            rows: rows.map((label, rowIndex) => {
+              const raw = numeric[rowIndex] ?? [];
+              const peak = rowScale(raw);
+              return {
+                label,
+                cells: raw.map((n) => ({
+                  figure: fig(n),
+                  share: Math.min(Math.max(n / peak, 0), 1),
+                })),
+              };
+            }),
+          },
+        };
+      }
+
+      const anchor = anchorColumnFor(columns, numeric);
+      const anchorIndex = anchor ? columns.indexOf(anchor) : -1;
+      // Shared across every row, which is what makes the rows comparable — and
+      // what stops the base column drawing as the shortest mark in its own row.
+      const axisMax = Math.max(...numeric.flat(), 1);
+
+      if (display === "dumbbell") {
+        // Two columns and an identified base. Without one there is no direction
+        // to the gap, so it falls back to the shared-axis reading.
+        if (anchorIndex === 0 || anchorIndex === 1) {
+          const otherIndex = anchorIndex === 0 ? 1 : 0;
+          const fromColumn = columns[anchorIndex];
+          const toColumn = columns[otherIndex];
+          if (fromColumn !== undefined && toColumn !== undefined) {
+            return {
+              metric,
+              shape: "grid",
+              grid: {
+                kind: "dumbbell",
+                rows: rows.map((label, rowIndex) => {
+                  const raw = numeric[rowIndex] ?? [];
+                  const from = raw[anchorIndex] ?? 0;
+                  const to = raw[otherIndex] ?? 0;
+                  const difference = to - from;
+                  return {
+                    label,
+                    from: {
+                      column: fromColumn,
+                      figure: fig(from),
+                      share: Math.min(Math.max(from / axisMax, 0), 1),
+                    },
+                    to: {
+                      column: toColumn,
+                      figure: fig(to),
+                      share: Math.min(Math.max(to / axisMax, 0), 1),
+                    },
+                    // Signed with a real minus sign rather than a hyphen, and
+                    // formatted here so the component does no arithmetic.
+                    delta: `${difference > 0 ? "+" : difference < 0 ? "\u2212" : ""}${formatFigure(
+                      metric.format,
+                      Math.abs(difference),
+                    )}`,
+                  };
+                }),
+              },
+            };
+          }
+        }
+      }
+
+      const baseValue = anchorIndex >= 0 ? numeric[0]?.[anchorIndex] : undefined;
       return {
         metric,
         shape: "grid",
-        grid: { kind: "numbers", columns: [...columns], rows: built },
+        grid: {
+          kind: "lollipop",
+          columns: [...columns],
+          baselineShare:
+            baseValue !== undefined
+              ? Math.min(Math.max(baseValue / axisMax, 0), 1)
+              : 0,
+          baselineColumn: anchor ?? columns[0] ?? "",
+          rows: rows.map((label, rowIndex) => {
+            const raw = numeric[rowIndex] ?? [];
+            return {
+              label,
+              cells: raw.map((n, columnIndex) => ({
+                column: columns[columnIndex] ?? "",
+                figure: fig(n),
+                share: Math.min(Math.max(n / axisMax, 0), 1),
+                anchor: columnIndex === anchorIndex,
+              })),
+            };
+          }),
+        },
       };
     }
   }
@@ -402,7 +747,7 @@ export function buildFunctionAreaView(
   return {
     functionArea,
     label: METRIC_FUNCTION_LABELS[functionArea],
-    shown: shown.sort(compareByShape),
+    shown: shown.sort(compareByWidth),
     held,
   };
 }

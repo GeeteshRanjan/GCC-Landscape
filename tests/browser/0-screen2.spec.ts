@@ -1,5 +1,7 @@
 import { expect, test, type Page } from "@playwright/test";
 
+import { band } from "./helpers";
+
 /**
  * Screen 2, the public Function View, against a real production build.
  *
@@ -31,9 +33,7 @@ async function openFunctionView(page: Page): Promise<void> {
   await page.getByLabel("Headquarters").selectOption("USA");
   await page.getByRole("radio", { name: "No India GCC yet" }).check();
   await page.getByRole("button", { name: "Show me the landscape" }).click();
-  await expect(
-    page.getByRole("region", { name: /companies match you closely/ }),
-  ).toBeVisible();
+  await expect(band(page, "peers")).toBeVisible();
   await page.getByRole("button", { name: "See the function view" }).click();
 }
 
@@ -49,7 +49,7 @@ test.describe("getting there and back", () => {
 
     const heading = page.getByRole("heading", {
       level: 1,
-      name: /What it would take to run these functions in India/,
+      name: /What an India GCC would give you/,
     });
     await expect(heading).toBeVisible();
     // Nothing announces a phase change, because no navigation happened.
@@ -60,18 +60,17 @@ test.describe("getting there and back", () => {
     expect(new URL(page.url()).pathname).toBe("/");
 
     // The peer view is gone rather than scrolled past.
-    await expect(
-      page.getByRole("region", { name: /companies match you closely/ }),
-    ).toHaveCount(0);
+    await expect(band(page, "peers")).toHaveCount(0);
 
     await page.getByRole("button", { name: "Back to your peer view" }).click();
-    const peerHeading = page.getByRole("heading", { level: 1, name: /already run GCCs/ });
+    const peerHeading = page.getByRole("heading", {
+      level: 1,
+      name: /would not be first/,
+    });
     await expect(peerHeading).toBeVisible();
     await expect(peerHeading).toBeFocused();
     // The answer is the one already computed, not a re-fetch.
-    await expect(
-      page.getByRole("region", { name: /companies match you closely/ }),
-    ).toBeVisible();
+    await expect(band(page, "peers")).toBeVisible();
   });
 
   test("carries the visitor's answers across without asking again", async ({
@@ -203,26 +202,63 @@ test.describe("the four functions", () => {
     }
   });
 
-  test("renders a grid as a table with headers on both axes", async ({ page }) => {
+  test("renders a rated grid as a table with headers on both axes", async ({
+    page,
+  }) => {
+    // An ordinal grid stays a real table: a row and a column header is exactly what
+    // it is, the semantics are free, and a screen-reader user hears "Data and AI,
+    // Poland, Strong" rather than a bare word.
+    await openFunctionView(page);
+    const table = page
+      .getByRole("table")
+      .filter({ hasText: "Product engineering" });
+    await expect(table).toBeVisible();
+    await expect(table.getByRole("columnheader", { name: "Poland" })).toBeVisible();
+    await expect(
+      table.getByRole("rowheader", { name: "Cybersecurity" }),
+    ).toBeVisible();
+    // The label is the whole reading. The filled steps beside it are a second,
+    // positional one and are hidden, so an ordinal is never colour alone.
+    await expect(
+      table
+        .getByRole("row", { name: /Product engineering/ })
+        .getByText("Very strong")
+        .first(),
+    ).toBeVisible();
+  });
+
+  test("draws a two-column index as a gap, with the difference stated", async ({
+    page,
+  }) => {
+    /**
+     * Deliberately NOT a table, and this test is the record of that change.
+     *
+     * The answer to "what would we save by going beyond the established hubs" is
+     * neither figure but the distance between them, and two table cells make the
+     * reader subtract. The previous rendering also scaled each row to its own
+     * maximum, so the tier-1 base drew a FULL bar and tier 2 a shorter one - which
+     * reads as tier 2 being worse at the exact moment the number says it is cheaper.
+     */
     await openFunctionView(page);
     await page.getByRole("tab", { name: "Finance", exact: true }).click();
 
-    const table = page
-      .getByRole("table")
-      .filter({ hasText: "All-in operating cost" });
-    await expect(table).toBeVisible();
-    await expect(
-      table.getByRole("columnheader", { name: "Tier 2 cities" }),
-    ).toBeVisible();
-    await expect(
-      table.getByRole("rowheader", { name: "Compensation" }),
-    ).toBeVisible();
-    await expect(
-      table.getByRole("row", { name: /Compensation/ }).getByText("85"),
-    ).toBeVisible();
+    const card = page
+      .getByRole("listitem")
+      .filter({ hasText: "Tier 1 and tier 2 operating cost spread" });
+    await expect(card).toBeVisible();
+    await expect(card.getByRole("table")).toHaveCount(0);
 
-    // An index says what it is indexed on. One with no stated base is unreadable.
-    await expect(page.getByText("Indexed: Tier 1 cities = 100")).toBeVisible();
+    // The gap, already formatted by the view model, with a real minus sign rather
+    // than a hyphen.
+    await expect(card.getByText("\u221215")).toBeVisible();
+    await expect(card.getByText("85")).toBeVisible();
+
+    // An index says what it is indexed on, and which way is better. One with no
+    // stated base is unreadable; one with no stated direction leaves the reader to
+    // guess whether the short mark is the good news.
+    await expect(
+      page.getByText("Indexed: Tier 1 cities = 100. Lower is cheaper."),
+    ).toBeVisible();
   });
 
 });
@@ -234,7 +270,12 @@ test.describe("the gate", () => {
 
     const group = page.getByRole("region", { name: /work through with you/ });
     await expect(group).toBeVisible();
-    await expect(group.getByText(/nothing here to uncover/)).toBeVisible();
+    // Why they are held, which is the part worth saying: a national number without
+    // the reader's own roles and cities behind it would mislead. The block used to
+    // also promise that the values are omitted server-side so there is nothing to
+    // uncover — true, enforced in `publicMetric`, and a promise made to a reader who
+    // had not accused us of anything.
+    await expect(group.getByText(/would mislead more than it would inform/)).toBeVisible();
 
     const cards = group.getByRole("listitem");
     await expect(cards).toHaveCount(2);
@@ -301,7 +342,7 @@ test.describe("the gate", () => {
 
     // Said out loud where the cost figures are, rather than in a footer.
     await expect(
-      page.getByText(/We do not publish a per-head salary figure/),
+      page.getByText(/We publish no per-head salary figure/),
     ).toBeVisible();
   });
 });

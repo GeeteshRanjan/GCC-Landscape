@@ -195,9 +195,27 @@ export interface PeerCard {
   headcount: string;
   establishedYear: number;
   fortuneGlobal500: boolean;
+  /**
+   * 0 to 1 against the largest centre in the set this card came back in.
+   *
+   * It exists so a set of cards can carry a magnitude, which a grid of equal boxes
+   * cannot. "Companies like yours are already here" invites "and how big did they
+   * get" immediately, and five headcount BANDS in five separate boxes make the
+   * reader compare "300–400" against "900–1,000" against "under 50" by reading
+   * rather than by looking.
+   *
+   * Deliberately not a number on the screen, in either block that uses it: a ratio
+   * derived from band midpoints is honest as a bar's length and would not be honest
+   * as a published statistic. The visible figure stays the band.
+   *
+   * One definition, one meaning. `LargestEntry` used to carry its own copy of this
+   * against the same peak, which is exactly how two fields holding one number start
+   * disagreeing.
+   */
+  sizeShare: number;
 }
 
-function toCard(company: Company): PeerCard {
+function toCard(company: Company, peak: number): PeerCard {
   return {
     id: company.id,
     name: company.name,
@@ -205,6 +223,7 @@ function toCard(company: Company): PeerCard {
     headcount: fteDisplay(company.fte),
     establishedYear: company.establishedYear,
     fortuneGlobal500: company.fortuneGlobal500,
+    sizeShare: peak > 0 ? fteMidpoint(company.fte) / peak : 0,
   };
 }
 
@@ -266,24 +285,112 @@ export interface IndustryBlock {
    * kept for `data:verify`, where a precise figure is what is wanted.
    */
   businessType: { name: string; count: number; exactTypeCount: number } | null;
+  /**
+   * The industry, divided into the named peers and what surrounds them.
+   *
+   * The reason this exists rather than being three subtractions in a component:
+   * the block it draws is the one that has to carry a thin peer set, and it can
+   * only do that if the five named companies are visibly the LEADING SLICE of a
+   * much larger number rather than a number on their own. Five is small until it
+   * is drawn as a selection out of fifty-nine, at which point a reader can see
+   * that the five were chosen rather than scraped together.
+   *
+   * The segments always sum to `total`, and there are one, two or three of them
+   * depending on what the data supports — which is also the degenerate-case
+   * handling. An exhaustive industry produces a single segment, and the copy
+   * beside it already says the peers are the whole industry.
+   */
+  split: IndustrySegment[];
+}
+
+export interface IndustrySegment {
+  label: string;
+  count: number;
+  /** 0 to 1 of `total`. */
+  share: number;
+  /** The named peers. Drawn first and deepest. */
+  lead: boolean;
+}
+
+/**
+ * The industry split, as three nested populations.
+ *
+ * Peers shown, then the rest of the population they were drawn from, then the
+ * rest of the industry. Ordered widest-out, so the bar reads from the most
+ * comparable to the least — the same order the whole screen's bands run in.
+ *
+ * `closeMatches` is the population above the similarity floor, NOT companies
+ * carrying the visitor's exact business type. That has to be the case or the bar
+ * disagrees with the cards above it: the peers were drawn from the close matches,
+ * so a segment labelled "in your line of business" that counted something narrower
+ * could come out smaller than the number of peers sitting on top of it.
+ */
+export function industrySplit(
+  total: number,
+  peersShown: number,
+  closeMatches: number | null,
+): IndustrySegment[] {
+  const share = (count: number) => (total > 0 ? count / total : 0);
+  const segments: IndustrySegment[] = [];
+
+  const named = Math.min(peersShown, total);
+  if (named > 0) {
+    segments.push({
+      label: "Named above",
+      count: named,
+      share: share(named),
+      lead: true,
+    });
+  }
+
+  // Clamped, not trusted: `closeMatches` and `total` are counted over the same
+  // population, but a floor-shortened set means the peers shown can be fewer than
+  // the close matches while the arithmetic still has to land on `total`.
+  if (closeMatches !== null) {
+    const rest = Math.max(Math.min(closeMatches, total) - named, 0);
+    if (rest > 0) {
+      segments.push({
+        label: "More in a comparable line of business",
+        count: rest,
+        share: share(rest),
+        lead: false,
+      });
+    }
+    const beyond = Math.max(total - Math.max(named, Math.min(closeMatches, total)), 0);
+    if (beyond > 0) {
+      segments.push({
+        label: "Elsewhere in your industry",
+        count: beyond,
+        share: share(beyond),
+        lead: false,
+      });
+    }
+    return segments;
+  }
+
+  const beyond = Math.max(total - named, 0);
+  if (beyond > 0) {
+    segments.push({
+      label: "Elsewhere in your industry",
+      count: beyond,
+      share: share(beyond),
+      lead: false,
+    });
+  }
+  return segments;
 }
 
 /**
  * One company in the largest-in-industry ranking.
  *
- * `sizeShare` is a ratio against the largest GCC in the set, not a headcount —
- * it exists so the panel can draw a magnitude, which is the whole claim the block
- * makes and the one thing a grid of cards cannot show. It is deliberately not a
- * number on the screen: the visible figure stays the band, because a share
- * derived from band midpoints is fine for a bar's length and not fine as a
- * published statistic.
+ * The magnitude the panel draws lives on `company.sizeShare` rather than here.
+ * It used to be duplicated at both levels against the same peak — two fields
+ * holding one number, which is the shape of a bug rather than a convenience.
  */
 export interface LargestEntry {
   company: PeerCard;
   /** Already shown in the peer set above, so the panel can avoid repeating it. */
   alsoPeer: boolean;
-  /** 0 to 1, against the largest in this set. */
-  sizeShare: number;
 }
 
 export interface LargestBlock {
@@ -325,11 +432,28 @@ export interface MapBlock {
   unplotted: string[];
 }
 
+/**
+ * The size of the Fortune Global 500. In the name, and it does not move.
+ *
+ * Here rather than in a component because it is the denominator of a real claim:
+ * "181" is a number, "181 of the 500" is evidence, and the second is what the
+ * block is for. Sitting in the view model means the share is computed and tested
+ * in one place instead of being a division inside a style attribute.
+ */
+export const FORTUNE_GLOBAL_500_SIZE = 500;
+
+/** Likewise, and for the same reason. */
+export const FORBES_GLOBAL_2000_SIZE = 2000;
+
 export interface ScaleBlock {
   /** Every GCC in the dataset, not the peer set. That is the point of the block. */
   companyCount: number;
   fortuneGlobal500Count: number;
+  /** 0 to 1 of the Fortune Global 500. */
+  fortuneGlobal500Share: number;
   forbesGlobal2000Count: number;
+  /** 0 to 1 of the Forbes Global 2000. */
+  forbesGlobal2000Share: number;
   /** Rounded. See `roundProfessionals`. */
   professionals: number;
   /** Rounded. Professionals inside Fortune Global 500 companies only. */
@@ -365,7 +489,21 @@ export function buildPeerView(
   limit: number = DEFAULT_PEER_LIMIT,
 ): PeerView {
   const match = matchPeers(dataset, input, limit);
-  const peers = match.peers.map(toCard);
+  /**
+   * Each set is scaled against its own largest member, not against the other set's.
+   *
+   * The two blocks make different claims. The peer cards say "these are comparable
+   * to you, and here is how they compare with each other"; the largest panel says
+   * "this is the upper end of the industry". Sharing one peak would flatten every
+   * peer bar to a sliver whenever the industry happened to contain an Amazon, which
+   * is most industries — and the peer block's comparison would be lost to a company
+   * it does not even show.
+   */
+  const peerPeak = match.peers.reduce(
+    (most, company) => Math.max(most, fteMidpoint(company.fte)),
+    0,
+  );
+  const peers = match.peers.map((company) => toCard(company, peerPeak));
   const peerIds = new Set(peers.map((peer) => peer.id));
 
   const selectedType = input.businessTypeId
@@ -380,9 +518,8 @@ export function buildPeerView(
     0,
   );
   const largestEntries: LargestEntry[] = largest.companies.map((company) => ({
-    company: toCard(company),
+    company: toCard(company, largestPeak),
     alsoPeer: peerIds.has(company.id),
-    sizeShare: largestPeak > 0 ? fteMidpoint(company.fte) / largestPeak : 0,
   }));
 
   const bands = dataset.taxonomy.revenueBands;
@@ -421,6 +558,11 @@ export function buildPeerView(
             exactTypeCount: match.sameBusinessType,
           }
         : null,
+      split: industrySplit(
+        match.industryTotal,
+        peers.length,
+        selectedType ? match.closeMatches : null,
+      ),
     },
     largest: {
       entries: largestEntries,
@@ -449,7 +591,15 @@ export function buildPeerView(
     scale: {
       companyCount: scale.companyCount,
       fortuneGlobal500Count: scale.fortuneGlobal500Count,
+      fortuneGlobal500Share: Math.min(
+        scale.fortuneGlobal500Count / FORTUNE_GLOBAL_500_SIZE,
+        1,
+      ),
       forbesGlobal2000Count: scale.forbesGlobal2000Count,
+      forbesGlobal2000Share: Math.min(
+        scale.forbesGlobal2000Count / FORBES_GLOBAL_2000_SIZE,
+        1,
+      ),
       professionals: roundProfessionals(scale.professionals),
       fortuneGlobal500Professionals: roundProfessionals(
         scale.fortuneGlobal500Professionals,

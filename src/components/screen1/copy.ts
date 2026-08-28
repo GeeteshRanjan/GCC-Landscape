@@ -8,8 +8,27 @@ import type { PeerView } from "@/data/screen1";
  * a copywriter edits, and hunting it through six JSX files is how "we changed one
  * word" becomes a code review. The components own layout; this owns language.
  *
- * Two rules the copy has to carry, both of them product invariants rather than
- * style preferences:
+ * **Who this is written for.** Not ANSR, and not an analyst. A CIO, COO, CHRO or
+ * CFO at a large global company with no India centre yet, who has arrived from an
+ * ansr.com page or an email and will give this ninety seconds. They want to know
+ * whether companies like theirs are already here and what that looked like. Three
+ * things follow, and each of them cost the previous version something:
+ *
+ *   - **Every heading states the finding, not the mechanism.** A section called
+ *     "The wider industry" makes the reader work out what they are being shown; one
+ *     that says how many of their industry are already here does not.
+ *   - **Sentences carry one fact.** The leads ran to three clauses joined by dashes
+ *     — "comparable companies, the wider industry picture, and the scale of the
+ *     India base, so you can size the decision" — which is a table of contents in
+ *     prose form, restating the section headings the reader is about to scroll past.
+ *   - **The tool never describes its own integrity.** Lines like "we would rather
+ *     show you three defensible comparisons than pad the list" and "we do not
+ *     publish a per-company figure we cannot stand behind" are true, and are the
+ *     reason the data is trustworthy, and are still the wrong words on the page:
+ *     they raise a doubt the reader did not have. The behaviour stays; the
+ *     narration goes.
+ *
+ * Two rules on top of that, both product invariants rather than style:
  *
  *   - A thin peer set is stated plainly, in one line, and reframed as first-mover
  *     ground. It is never padded and never hidden. The industry count that
@@ -41,16 +60,24 @@ export function framing(view: PeerView): Framing {
   const name = subject(view);
   const industry = view.industry.industry;
 
+  /**
+   * One sentence, and it says what the reader can do with the page.
+   *
+   * All three used to open with the same twenty-word list of the sections below —
+   * comparable companies, the wider industry picture, the scale of the India base
+   * — which is a table of contents written as prose, immediately above the
+   * headings it lists. The reader is about to scroll past all three.
+   */
   switch (view.input.gccStatus) {
     case "operating":
       return {
         title: name
           ? `How ${name}'s India GCC compares`
           : "How your India GCC compares",
-        lead: `Comparable companies in ${industry}, the wider industry picture, and the scale of the India base — so you can benchmark what you already run.`,
+        lead: `Everything below is drawn from companies like yours that already operate here.`,
         ctaHeading: "Getting more out of what you already run",
         ctaBody:
-          "ANSR has built and run GCCs for global companies at every one of these scales. A conversation is the fastest way to find out what a benchmark like this means for your own operation.",
+          "ANSR builds and runs India centres for global companies at every scale on this page. A conversation is the quickest way to find out what this benchmark means for yours.",
         ctaLabel: "Talk to ANSR about your India GCC",
       };
     case "expanding":
@@ -58,21 +85,21 @@ export function framing(view: PeerView): Framing {
         title: name
           ? `The ground ${name} is expanding into`
           : "The ground you are expanding into",
-        lead: `Comparable companies in ${industry}, the wider industry picture, and the scale of the India base — so you can size the next phase against what peers have already built.`,
+        lead: `What comparable companies have already built here, and how far the market goes beyond them.`,
         ctaHeading: "Sizing the next phase",
         ctaBody:
-          "ANSR has taken GCCs from a first hire to several thousand people. A conversation is the fastest way to work out what the next phase costs and how quickly it can stand up.",
+          "ANSR has taken India centres from a first hire to several thousand people. A conversation is the quickest way to size the next phase and how fast it can stand up.",
         ctaLabel: "Talk to ANSR about scaling your India GCC",
       };
     case "evaluating":
       return {
         title: name
-          ? `Companies comparable to ${name} already run GCCs in India`
-          : "Comparable companies already run GCCs in India",
-        lead: `Comparable companies in ${industry}, the wider industry picture, and the scale of the India base — so you can size the decision against what peers have already done.`,
-        ctaHeading: "Working out whether this is right for you",
+          ? `${name} would not be first. Here is who already is.`
+          : "You would not be first. Here is who already is.",
+        lead: `Comparable ${industry} companies with a centre in India — what they built, where, and when.`,
+        ctaHeading: "What this would look like for you",
         ctaBody:
-          "ANSR has built India GCCs for global companies across every industry on this page. A conversation is the fastest way to find out what one would look like for yours.",
+          "ANSR has built India centres for global companies in every industry on this page. A conversation is the quickest way to find out what one would look like for yours.",
         ctaLabel: "Talk to ANSR about building your India GCC",
       };
   }
@@ -185,7 +212,7 @@ export function matchBasisFor(view: PeerView): string {
   if (businessMatched && businessType) {
     const phrases = phraseTags(sharedTags);
     const shared = phrases.length > 0 ? `, and share ${joinPhrases(phrases)}` : "";
-    return `Matched on your line of business — ${businessType.name.toLowerCase()}${shared}. Revenue band is a preference, not a filter, so a closer business beats a closer size.`;
+    return `Matched on line of business — ${businessType.name.toLowerCase()}${shared}. Revenue band is a preference rather than a filter, so a closer business beats a closer size.`;
   }
 
   return matchBasis(basis, view.input.revenueBand);
@@ -211,7 +238,7 @@ export function peerLead(view: PeerView): string {
   if (view.peers.businessMatched && businessType) {
     // Named first because it is the strongest signal and the one the visitor
     // chose. Revenue band is mentioned as the secondary sort it actually is.
-    return `Companies in the same line of business, closest revenue size second. Those headquartered in your own market come first only where the rest is equal.`;
+    return "Ranked by how close their business is to yours, then by size.";
   }
 
   // No line of business given: matching really is band-led, and the old sentence
@@ -245,24 +272,30 @@ export function shortfallLine(view: PeerView): string | null {
 
   if (peers.length === 0) {
     if (businessType) {
-      return `No other ${businessType.name.toLowerCase()} in our data runs an India GCC yet. That is genuinely open ground.`;
+      return `No other ${businessType.name.toLowerCase()} in our data runs an India centre yet. That is open ground.`;
     }
-    return `No other ${industry} company in our data runs an India GCC yet. That is genuinely open ground.`;
+    return `No other ${industry} company in our data runs an India centre yet. That is open ground.`;
   }
 
-  const count = peers.length === 1 ? "one company" : `${peers.length} companies`;
+  const count = peers.length === 1 ? "one" : String(peers.length);
 
   /**
    * A floor-shortened set is a DIFFERENT claim from a thin industry, and they must
    * not share a sentence. Here the industry has plenty of companies; what it does
    * not have is more that are genuinely comparable. Saying "this industry is thin"
    * over a 656-company industry would be visibly false.
+   *
+   * Both sentences lost their closing clause — "we would rather show you three
+   * defensible comparisons than pad the list". It was the most quotable line on the
+   * screen and the most self-regarding: the reader has not asked whether we pad
+   * lists, and answering it plants the question. The behaviour is unchanged and is
+   * an invariant; only the narration is gone.
    */
   if (floorShortened && businessType) {
-    return `${industry} is not short of companies in India — but only ${count} are close enough to your line of business to be worth naming. We would rather show you ${peers.length} defensible comparisons than pad the list.`;
+    return `${industry} is not short of companies in India — but only ${count} are close enough to your line of business to be worth naming.`;
   }
 
-  return `${industry} is thin in India at any size — ${count} rather than ${limit}. Fewer peers is early ground, not absent ground, and we would rather show you ${peers.length} defensible comparisons than pad the list.`;
+  return `${industry} is thin in India at any size: ${count} rather than ${limit}. Early ground, not absent ground.`;
 }
 
 /**
@@ -277,7 +310,7 @@ export function industryHeading(view: PeerView): string {
   if (view.industry.exhaustive) {
     return `All of ${view.industry.industry} in India, in one view`;
   }
-  return "Your industry in India is bigger than five names";
+  return "The five above were a selection, not the supply";
 }
 
 /**
@@ -288,36 +321,30 @@ export function industryHeading(view: PeerView): string {
  * many more are in the industry at all. That is what turns a thin peer set from a
  * weakness into a floor.
  */
+/**
+ * The label beside the industry total. Short, because the chart carries the parts.
+ *
+ * It used to be the whole block: a sentence that named the line of business, the
+ * count within it and the remainder across the industry — three numbers in one
+ * sentence, sitting beside a fourth at display size. `industrySplit` now draws
+ * those three as a divided bar with each count labelled, so a sentence restating
+ * them is the same information twice and the reader has to check whether the two
+ * agree.
+ *
+ * What is left is the one thing the chart cannot say: what the total counts.
+ */
 export function industryLine(view: PeerView): string {
-  const { total, others, industry, exhaustive, businessType } = view.industry;
+  const { total, industry, exhaustive } = view.industry;
+
   if (exhaustive) {
     return total === 1
-      ? `That is the only ${industry} company in our India GCC data.`
-      : `Those are every ${industry} company in our India GCC data.`;
+      ? `${industry} company with a centre in India — the only one in our data.`
+      : `${industry} companies with a centre in India, and that is all of them in our data.`;
   }
 
-  if (businessType && businessType.count > 0) {
-    // The business-type name is used as a LABEL rather than folded into the
-    // sentence, because the names are singular ("Apparel & footwear brand") and
-    // pluralising them in code produces "29 other companies in apparel & footwear
-    // brand runs a GCC". A label sidesteps agreement entirely and reads cleanly
-    // for all 158 of them.
-    const same =
-      businessType.count === 1
-        ? "one other company in a comparable line of business runs a GCC in India"
-        : `${businessType.count.toLocaleString("en-US")} companies in a comparable line of business run a GCC in India`;
-    const rest = total - businessType.count;
-    if (rest > 0) {
-      return `${businessType.name} — ${same}, and ${rest.toLocaleString("en-US")} more across ${industry}.`;
-    }
-    return `${businessType.name} — ${same}.`;
-  }
-
-  const clause =
-    others === 1
-      ? "one more beyond the companies above"
-      : `${others.toLocaleString("en-US")} more beyond the companies above`;
-  return `${industry} companies running a GCC in India — ${clause}.`;
+  return total === 1
+    ? `other ${industry} company already runs a centre in India.`
+    : `other ${industry} companies already run a centre in India.`;
 }
 
 /** The largest-in-industry panel's framing, including its two degraded shapes. */
@@ -332,9 +359,9 @@ export function largestLine(view: PeerView): string {
     return `At ${industry}'s current depth in India, the largest companies here are the same ones shown above.`;
   }
   if (belowTopBand && topBand) {
-    return `The largest ${industry} companies with an India GCC. None sits in the top revenue band yet, so this starts at ${topBand}.`;
+    return `The largest ${industry} companies in India. None sits in the top revenue band yet, so this starts at ${topBand}.`;
   }
-  return `The largest ${industry} companies with an India GCC, by the size of the GCC itself.`;
+  return `The largest ${industry} companies in India, by the size of the centre itself.`;
 }
 
 /**
@@ -350,8 +377,8 @@ export function largestLine(view: PeerView): string {
  * public label.
  */
 export const ADVANCE = {
-  kicker: "The numbers behind it",
-  title: "What running a function here actually looks like",
-  lead: "Talent depth, how quickly a function stands up, what the location gives you, and how the cost moves — across technology, operations, HR and finance.",
+  kicker: "Next",
+  title: "Now the numbers behind it",
+  lead: "Talent depth, how fast a function stands up, what the location gives you and how the cost moves — for technology, operations, HR and finance.",
   label: "See the function view",
 } as const;

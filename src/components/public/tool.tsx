@@ -96,16 +96,28 @@ export function GccLandscapeTool({
    * An effect keyed on the phase runs after commit, so the heading is mounted by
    * definition and the ref cannot be null for the phase being focused.
    */
-  const hasRendered = useRef(false);
+  /**
+   * The guard records the PREVIOUS phase, not whether the effect has run before.
+   *
+   * The difference is observable. A `hasRendered` boolean says "this is not the
+   * first run", and under React's development double-invoke the second run of the
+   * mount effect is not the first run — so an arriving visitor had the keyboard
+   * moved to the `h1` and the frame scrolled to it, with a focus ring drawn around
+   * the headline, before they had done anything. It was visible in every
+   * screenshot of the entry point.
+   *
+   * Comparing phases instead says what is actually meant: focus moves on a
+   * TRANSITION. A repeated run at the same phase is not one, so the double-invoke
+   * is correctly ignored, and the effect stays right for the reason it exists
+   * rather than by arithmetic on how many times it has fired.
+   */
+  const previousPhase = useRef<Phase["kind"] | null>(null);
   useEffect(() => {
-    // Not on first paint. The effect fires on mount as well as on change, and
-    // focusing the `h1` of a page nobody has interacted with would move the
-    // keyboard and scroll the frame for a visitor who has just arrived. Only a
-    // TRANSITION needs announcing.
-    if (!hasRendered.current) {
-      hasRendered.current = true;
-      return;
-    }
+    const changed =
+      previousPhase.current !== null && previousPhase.current !== phase.kind;
+    previousPhase.current = phase.kind;
+    if (!changed) return;
+
     const ref =
       phase.kind === "ask"
         ? askHeadingRef

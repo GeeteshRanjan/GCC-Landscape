@@ -4,7 +4,8 @@ inclusion: always
 
 # Skill Router
 
-134 design/UI skills are installed in `.kiro/skills/`. Their name + description are already
+135 design/UI skills are installed in `.kiro/skills/` — 134 vendored packs pinned in
+`.kiro/skill-sources.json`, plus project-authored `ansr-brand-assets`. Their name + description are already
 in context. This file is the decision layer: it says **which to activate, in what order, and
 when to stop** — so no time is spent scanning descriptions or guessing.
 

@@ -28,7 +28,7 @@ The system is complete. Eight families, all defined:
 | — ramps | `--ansr-{teal,orange,grey}-{900..50}` | Oklab interpolations of brand anchors |
 | — aliases | `--ansr-{surface,text,border,action,accent,focus,status}-*` | **Components use these** |
 | Gradients | `--ansr-gradient-{teal,orange,conic}` | Exactly two are brand; conic is a reconstruction |
-| Type | `--ansr-{font,text,leading,weight,tracking,measure}-*` | Inter; 12→60px scale |
+| Type | `--ansr-{font,text,leading,weight,tracking,measure}-*` | Inter for UI, `font-display` for display; 12→80px scale |
 | Spacing | `--ansr-space-{0..32}` | 4px base unit |
 | Radius | `--ansr-radius-{none,sm,md,lg,xl,pill}` | Minimal — brand geometry is hard-edged |
 | Elevation | `--ansr-shadow-{xs..lg}`, `--ansr-z-*` | Teal-tinted, shallow |
@@ -52,8 +52,23 @@ Hard rules:
   verified. See `assets/brand/BRAND.md`. Nothing is blocked while it is pending.
 
 Project decisions not sourced from the brand doc (each a one-token swap if brand supplies a
-standard): typeface Inter, 4px spacing base, minimal radius scale, teal-tinted elevation,
-motion timings, status mapping.
+standard): 4px spacing base, minimal radius scale, teal-tinted elevation, motion timings,
+status mapping.
+
+**The typeface is no longer one of them. The brand has one: Moderat.** ansr.com sets it on every
+heading and paragraph, and `Group 149.svg`'s outlined glyph widths match its advance widths to
+within 1%. Two consequences that are not optional if a screen is to read as ANSR:
+
+- **Body copy is Moderat Light 300**, not Regular. Their own CSS says `Moderat 300` on every `<p>`,
+  and the measured stem confirms it. This is the single biggest tell of the brand.
+- The live site licenses only Light and Regular `.woff` files, so its 500/600/700 rules are
+  browser-synthesised faux bold. Do not replicate that — specify real weights, load real files.
+
+Moderat is commercial and its licence for an embedded tool is unresolved, so `--ansr-font-display`
+resolves to **Hanken Grotesk**, which ansr.com already loads as its second family and which is free
+to self-host. Put Moderat at the front of that token once the licence is confirmed; nothing else
+changes. `--ansr-font-sans` stays Inter for UI and admin. Full measurement, including the type
+scale, grid, band system and motif parameters, is in `docs/ansrx-visual-language.md`.
 
 ## Brand assets
 `assets/brand/` — `logo/` (3 lockups), `motif/` (16 pin/arc graphics), `texture/` (2 full-bleed

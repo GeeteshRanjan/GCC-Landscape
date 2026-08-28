@@ -53,16 +53,25 @@ interface FieldProps {
   label: string;
   error?: string;
   optional?: boolean;
+  /**
+   * How much of the six-column field row this control takes.
+   *
+   * Five controls do not tile a two-column grid, and the leftover cell landed
+   * beside Headquarters — a hole in the middle of the one thing on the entry point
+   * a visitor has to DO. Six columns divide by both two and three, so the two text
+   * inputs take three each and the three selects take two each, and both rows fill.
+   */
+  span?: string;
   children: (ids: { controlId: string; describedBy?: string }) => React.ReactNode;
 }
 
-function Field({ label, error, optional, children }: FieldProps) {
+function Field({ label, error, optional, span, children }: FieldProps) {
   const controlId = useId();
   const errorId = `${controlId}-error`;
   const describedBy = error ? errorId : undefined;
 
   return (
-    <div className="flex flex-col gap-2">
+    <div className={cn("flex min-w-0 flex-col gap-2", span)}>
       <label htmlFor={controlId} className="text-sm font-semibold text-text">
         {label}
         {optional ? (
@@ -212,15 +221,21 @@ export function InputPanel({
 
   return (
     <form noValidate onSubmit={handleSubmit} className="flex flex-col gap-8">
-      <div className="grid gap-6 md:grid-cols-2">
-        <Field label="Company name" optional>
+      {/* Six columns, so five controls fill two rows exactly. See `FieldProps.span`. */}
+      <div className="grid gap-6 md:grid-cols-6">
+        <Field label="Company name" optional span="md:col-span-3">
           {({ controlId, describedBy }) => (
             <input
               id={controlId}
               type="text"
               value={companyName}
               autoComplete="organization"
-              placeholder="Acme Corporation"
+              // Deliberately no example text in the field. It carried a stock
+              // company name, which restated a control already labelled "Company
+              // name (optional)" and spent the only piece of sample copy on either
+              // screen on something invented — in front of the audience this tool
+              // exists to look credible to. Hint text that repeats its own label is
+              // noise, and it is noise at reduced contrast.
               aria-describedby={describedBy}
               onChange={(event) => setCompanyName(event.target.value)}
               className={CONTROL_CLASS}
@@ -231,6 +246,7 @@ export function InputPanel({
         <Field
           label="Industry"
           error={errors.industry}
+          span="md:col-span-3"
         >
           {({ controlId, describedBy }) => (
             <select
@@ -264,7 +280,7 @@ export function InputPanel({
           of state. Disabled-then-enabled keeps the form's shape fixed, and the
           status line below is an aria-live region so the enabling IS announced.
         */}
-        <Field label="Line of business" optional>
+        <Field label="Line of business" optional span="md:col-span-2">
           {({ controlId, describedBy }) => (
             <>
               <select
@@ -305,6 +321,7 @@ export function InputPanel({
         <Field
           label="Annual revenue"
           error={errors.revenueBand}
+          span="md:col-span-2"
         >
           {({ controlId, describedBy }) => (
             <select
@@ -331,6 +348,7 @@ export function InputPanel({
         <Field
           label="Headquarters"
           error={errors.hqCountry}
+          span="md:col-span-2"
         >
           {({ controlId, describedBy }) => (
             <select
@@ -434,7 +452,9 @@ export function InputPanel({
             // fill is 6.52:1. The palette is left alone and a legal pairing is
             // used instead; see the note in handoff.md about the token itself.
             className={cn(
-              "inline-flex min-h-11 items-center justify-center rounded-md px-6 text-base font-semibold",
+              // Pill, matching the close's own primary action — this is the entry
+              // point's one ask, so it takes the same shape as the exit's.
+              "inline-flex min-h-12 items-center justify-center rounded-full px-7 text-base font-semibold",
               "bg-action text-text transition-colors duration-fast ease-standard",
               "hover:bg-action-hover disabled:opacity-60",
             )}

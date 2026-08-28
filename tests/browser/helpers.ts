@@ -58,3 +58,46 @@ export async function discardEverything(page: Page): Promise<void> {
  * an argument rather than read from the enclosing scope.
  */
 export const DRAFT_STORAGE_KEY = "gcc-admin-draft-v3";
+
+/* ==========================================================================
+   The public screens' bands
+   ========================================================================== */
+
+/**
+ * One evidence band, located by its stable id rather than by its heading text.
+ *
+ * Twenty public specs used to locate bands with
+ * `getByRole("region", { name: /companies match you closely/ })`, which couples
+ * every structural and gate assertion in the suite to a sentence a copywriter is
+ * expected to change. They all broke on a copy pass that changed nothing they were
+ * testing — and a suite that fails for a reason unrelated to its subject is a suite
+ * people learn to re-run rather than read.
+ *
+ * The id IS the contract: `peers`, `industry`, `largest`, `functions`, `map`,
+ * `scale`, `advance` are the band identifiers in `peer-view.tsx`, and they are also
+ * what `aria-labelledby` is built from. So this still asserts the landmark — a
+ * `<section>` with no accessible name is not a `region` and would not match — while
+ * leaving the wording free.
+ *
+ * Where the COPY is the subject, a spec should assert on its text directly instead
+ * of reaching for this.
+ */
+export function band(page: Page, id: string) {
+  return page.locator(`section#${id}[role], section#${id}`).first();
+}
+
+/**
+ * Asserts a band is present AND is a real landmark with an accessible name.
+ *
+ * The two halves matter separately. Present-and-unnamed is the failure mode the
+ * original name-based locators caught by accident: a `<section>` whose heading id
+ * stopped matching its `aria-labelledby` is invisible to a screen-reader user
+ * navigating by region, and looks perfect on screen.
+ */
+export async function expectBand(page: Page, id: string): Promise<void> {
+  const section = band(page, id);
+  await expect(section).toBeVisible();
+  const labelledBy = await section.getAttribute("aria-labelledby");
+  expect(labelledBy, `#${id} must be a named region`).toBeTruthy();
+  await expect(page.locator(`#${labelledBy}`)).toHaveText(/\S/);
+}

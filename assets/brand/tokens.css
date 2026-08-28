@@ -65,14 +65,33 @@
   --ansr-surface-inverse:    var(--ansr-teal-deep);
   --ansr-surface-accent:     var(--ansr-teal);
 
+  /* The pale TEAL ground, distinct from `surface-subtle`'s neutral grey.
+     Both exist because they do different jobs: grey-50 separates two panels
+     inside one field, and this separates two BANDS that each need to announce
+     themselves. A page built only from white and grey-50 has no ground the eye
+     can rest on, which is measurably what the public screens' first pass got
+     wrong — 95% of the canvas was one value. Text 17.06:1, muted 6.97:1,
+     accent 6.94:1 on it, so nothing that sits on white has to change. */
+  --ansr-surface-tint:       var(--ansr-teal-100);
+  /* One step off the inverse ground, for a card that has to read as raised
+     against it without a shadow. White at 14.29:1. */
+  --ansr-surface-inverse-soft: var(--ansr-teal-800);
+
   --ansr-text:               var(--ansr-black);
   --ansr-text-muted:         var(--ansr-grey-700);
   --ansr-text-inverse:       var(--ansr-white);
   --ansr-text-on-accent:     var(--ansr-white);
+  /* Secondary copy on an inverse ground. White at 80% opacity was used for this
+     before it had a name, which meant every dark band re-derived it and one of
+     them would eventually pick 60%. 6.27:1 on teal-900, 5.51:1 on teal-800. */
+  --ansr-text-inverse-muted: var(--ansr-teal-300);
 
   --ansr-border:             var(--ansr-grey-100);
   --ansr-border-strong:      var(--ansr-grey-300);
   --ansr-border-inverse:     color-mix(in oklab, var(--ansr-white) 20%, transparent);
+  /* A hairline that survives on the pale teal ground. `border` is grey-100,
+     which is lighter than `surface-tint` and therefore invisible on it. */
+  --ansr-border-tint:        var(--ansr-teal-200);
 
   --ansr-action:             var(--ansr-orange);
   --ansr-action-hover:       var(--ansr-orange-400);
@@ -110,6 +129,13 @@
   --ansr-motif-ink-light:    var(--ansr-teal-200);
   --ansr-motif-ink-accent:   var(--ansr-orange);
   --ansr-motif-opacity:      0.18;
+  /* Ornament on an INVERSE ground is a different problem and needs its own
+     posture. 0.18 of a light ink over deep teal composites to within a couple of
+     RGB values of the ground — measurably present, visibly absent, which is the
+     bug the closing band already had to override by hand. Light ink also cannot
+     hurt the text contrast the way dark ink on white can, because the copy on a
+     dark band is white and sits ABOVE the ceiling the motif raises. */
+  --ansr-motif-opacity-inverse: 0.4;
 
   /* ======================================================================
      2. GRADIENTS
@@ -175,15 +201,28 @@
 
   /* ======================================================================
      3. TYPOGRAPHY
-     The brand doc specifies no typeface, so this is a project decision:
-     Inter, for its tabular numerals and small-size legibility — both of
-     which a benchmarking product leans on hard. Swap the family tokens if
-     brand supplies a licensed face; nothing else needs to change.
+     The palette doc specifies no typeface, but the BRAND has one — Moderat,
+     which ansr.com sets on every heading and paragraph. See the display token
+     below and .kiro/steering/design-stack.md; body copy there is Light 300,
+     which is the single biggest tell of this brand.
+     `--ansr-font-sans` stays Inter, for its tabular numerals and small-size
+     legibility — both of which a benchmarking product and a dense admin lean
+     on hard.
      ====================================================================== */
   --ansr-font-sans: Inter, ui-sans-serif, system-ui, -apple-system,
                     "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
   --ansr-font-mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo,
                     Consolas, monospace;
+
+  /* The DISPLAY family slot. ansr.com sets Moderat on every heading and
+     paragraph, and `Group 149.svg`'s outlined glyph widths match Moderat's
+     advance widths to within 1% — so the brand does have a typeface, it just
+     is not in the palette doc. Moderat is commercial and its licence for an
+     embedded tool is an open question, so this token resolves to the licensable
+     stand-in ansr.com already loads as its second family. Put Moderat at the
+     front of the list once the licence is confirmed; nothing else changes.
+     See docs/ansrx-visual-language.md §1. */
+  --ansr-font-display: "Hanken Grotesk", var(--ansr-font-sans);
 
   /* Scale. Tight at the bottom for dense UI, ~1.25 at the display end. */
   --ansr-text-xs:   0.75rem;  /* 12px  captions, table meta       */
@@ -194,9 +233,24 @@
   --ansr-text-2xl:  1.5rem;   /* 24px  section heading            */
   --ansr-text-3xl:  1.875rem; /* 30px                             */
   --ansr-text-4xl:  2.375rem; /* 38px  page title                 */
-  --ansr-text-5xl:  3rem;     /* 48px  hero                       */
-  --ansr-text-6xl:  3.75rem;  /* 60px  hero, desktop only         */
+  --ansr-text-5xl:  3rem;     /* 48px  section head, desktop      */
+  --ansr-text-6xl:  3.75rem;  /* 60px  hero                       */
+  /* 72px. Added when the public screens were art-directed against ansr.com,
+     whose own hero sets around this size: the scale stopped one step below the
+     brand's actual display voice, so every headline built from it came out
+     mid-scale. Desktop hero only — it is capped back down below `lg`. */
+  --ansr-text-7xl:  4.5rem;   /* 72px  display, desktop only      */
+  /* 80px. Measured off `Group 149.svg`'s hero, whose h1 is 80/81. The scale
+     stopped at 72, so a hero built from it lands one step under the brand's
+     own display voice. Desktop only, and one place only — a second 80px thing
+     on a screen spends what this step is for. */
+  --ansr-text-8xl:  5rem;     /* 80px  hero display, desktop only */
 
+  /* Flush display leading. The reference sets its 80px hero at 1.01 and its
+     70px section headings at 1.10; `tight` at 1.15 is a step loose for both,
+     and the difference is whether a three-line headline reads as one object or
+     as three lines. Never for anything under 48px. */
+  --ansr-leading-display: 1.05;
   --ansr-leading-tight:   1.15; /* display only */
   --ansr-leading-snug:    1.3;  /* headings     */
   --ansr-leading-normal:  1.5;  /* body         */
@@ -231,6 +285,7 @@
   --ansr-space-16: 4rem;    /* 64px */
   --ansr-space-20: 5rem;    /* 80px */
   --ansr-space-24: 6rem;    /* 96px */
+  --ansr-space-28: 7rem;    /* 112px */
   --ansr-space-32: 8rem;    /* 128px — section rhythm */
 
   /* ======================================================================
@@ -312,6 +367,74 @@
 .ansr-stripes--fade-right { mask-image: linear-gradient(to right,  #000, transparent); }
 .ansr-stripes--fade-left  { mask-image: linear-gradient(to left,   #000, transparent); }
 .ansr-stripes--fade-down  { mask-image: linear-gradient(to bottom, #000, transparent); }
+
+/* ==========================================================================
+   Bar ramp
+   The reference page's signature ornament: vertical bars at a CONSTANT pitch
+   whose WIDTH grows linearly, so density ramps across the field. Measured off
+   `Group 149.svg`: 10 bars, widths 7.3 -> 18.4 (+1.23 a step), pitch 20.2, so
+   the gap closes from 12.9 to 1.8.
+
+   `.ansr-stripes` cannot express this and should not be stretched to try: a
+   repeating gradient has exactly one width, which is the whole difference
+   between a flat stripe field and a ramp. Ten explicit layers is the cost of
+   the effect. Each uses the hard-stop idiom — a stop position lower than the
+   one before it is clamped up to it, so `0` means "where the last stop was".
+   ========================================================================== */
+.ansr-bar-ramp {
+  --bar-pitch: 20px;
+  --bar-w: 7px;      /* first bar    */
+  --bar-step: 1.25px; /* added per bar */
+  --bar-color: var(--ansr-motif-ink);
+  background-image:
+    linear-gradient(to right, transparent calc(var(--bar-pitch) * 9), var(--bar-color) 0, var(--bar-color) calc(var(--bar-pitch) * 9 + var(--bar-w) + var(--bar-step) * 9), transparent 0),
+    linear-gradient(to right, transparent calc(var(--bar-pitch) * 8), var(--bar-color) 0, var(--bar-color) calc(var(--bar-pitch) * 8 + var(--bar-w) + var(--bar-step) * 8), transparent 0),
+    linear-gradient(to right, transparent calc(var(--bar-pitch) * 7), var(--bar-color) 0, var(--bar-color) calc(var(--bar-pitch) * 7 + var(--bar-w) + var(--bar-step) * 7), transparent 0),
+    linear-gradient(to right, transparent calc(var(--bar-pitch) * 6), var(--bar-color) 0, var(--bar-color) calc(var(--bar-pitch) * 6 + var(--bar-w) + var(--bar-step) * 6), transparent 0),
+    linear-gradient(to right, transparent calc(var(--bar-pitch) * 5), var(--bar-color) 0, var(--bar-color) calc(var(--bar-pitch) * 5 + var(--bar-w) + var(--bar-step) * 5), transparent 0),
+    linear-gradient(to right, transparent calc(var(--bar-pitch) * 4), var(--bar-color) 0, var(--bar-color) calc(var(--bar-pitch) * 4 + var(--bar-w) + var(--bar-step) * 4), transparent 0),
+    linear-gradient(to right, transparent calc(var(--bar-pitch) * 3), var(--bar-color) 0, var(--bar-color) calc(var(--bar-pitch) * 3 + var(--bar-w) + var(--bar-step) * 3), transparent 0),
+    linear-gradient(to right, transparent calc(var(--bar-pitch) * 2), var(--bar-color) 0, var(--bar-color) calc(var(--bar-pitch) * 2 + var(--bar-w) + var(--bar-step) * 2), transparent 0),
+    linear-gradient(to right, transparent calc(var(--bar-pitch) * 1), var(--bar-color) 0, var(--bar-color) calc(var(--bar-pitch) * 1 + var(--bar-w) + var(--bar-step) * 1), transparent 0),
+    linear-gradient(to right, var(--bar-color) 0, var(--bar-color) var(--bar-w), transparent 0);
+  background-repeat: no-repeat;
+}
+/* The mirrored copy. The reference stacks one under the other so the ramp
+   reads as a single field folded back on itself. */
+.ansr-bar-ramp--flip { transform: scaleX(-1); }
+/* Ten bars is the measured count, so the default covers 10 x pitch and stops —
+   which is right for a panel and leaves a full-bleed band mostly empty. This
+   tiles the ramp instead, giving the sawtooth density the reference's closing
+   band has across its full width. */
+.ansr-bar-ramp--tile {
+  background-size: calc(var(--bar-pitch) * 10) 100%;
+  background-repeat: repeat-x;
+}
+
+/* ==========================================================================
+   Line dissolve
+   How a card ends without an edge: the reference runs a card's content to its
+   true bottom and then dissolves the fill into the band below with 27
+   hairlines at a 5.66px pitch. Applied as a mask, so it works on whatever the
+   element's own fill is.
+
+   One deviation, stated because it is a real one: the reference thins each bar
+   (5.2px -> 0.2px) while this drops each bar's alpha, because a per-bar height
+   ramp is the same ten-layer problem as the bar ramp above and this needs 27.
+   At a 5.66px pitch the two are not resolvable on screen, and the pattern stays
+   crisp under zoom either way — which is the property a plain gradient fade
+   loses and the reason the effect is worth having at all.
+   ========================================================================== */
+.ansr-dissolve {
+  --dissolve-pitch: 5.66px;
+  --dissolve-line: 5px;
+  mask-image:
+    repeating-linear-gradient(to bottom,
+      #000 0 var(--dissolve-line),
+      transparent var(--dissolve-line) var(--dissolve-pitch)),
+    linear-gradient(to bottom, #000, transparent);
+  mask-composite: intersect;
+}
 
 /* ==========================================================================
    Motif placement

@@ -1,12 +1,14 @@
 "use client";
 
 import { ClosingCta } from "@/components/public/closing-cta";
-import { Section } from "@/components/public/primitives";
+import { Section, type Ground } from "@/components/public/primitives";
 import {
   HeaderKicker,
+  HeaderLead,
   InputSummary,
   QuietButton,
   ScreenHeader,
+  ScreenTitle,
   type HeaderMotif,
 } from "@/components/public/screen-header";
 import { GCC_STATUS_LABELS, type PeerView, type PeerViewInput } from "@/data/screen1";
@@ -40,21 +42,22 @@ import { InputPanel } from "./input-panel";
  */
 
 /**
- * `arc-dome` recoloured to `--ansr-teal-600` and trimmed with
- * `scripts/brand_asset.py`, then held back by `.ansr-motif` and masked to a
- * horizon — see `.gcc-horizon` in globals.css. Never placed unmodified.
+ * `pin-diagonal` recoloured onto three light ramp steps and trimmed with
+ * `scripts/brand_asset.py` — see `.gcc-hero-diagonal` in globals.css for the
+ * commands and the placement. Never placed unmodified.
  *
- * Two things learned by looking at it, worth not relearning: stretched wide enough
- * to bleed across the header, the only part of the dome that fits inside a
- * header's height is its flattest slice, which reads as diagonal wallpaper rather
- * than arcs; and the headline is leading-aligned and capped at the reading measure,
- * so the trailing side is the ground the ornament should take.
+ * It replaces the `arc-dome` horizon, which was the right instinct on a white
+ * header and the wrong asset once the header became the brand's teal gradient: an
+ * arc dome at 0.18 on white was a smudge nobody could see, and the part of a dome
+ * that fits inside a header's height is its flattest slice, which reads as
+ * diagonal wallpaper rather than arcs. If the flattest slice of a dome is what
+ * reads, the honest asset is the one that is actually diagonal.
  */
 const PEER_MOTIF: HeaderMotif = {
-  src: "/brand/header-horizon.svg",
-  width: 784,
-  height: 280,
-  placement: "gcc-horizon",
+  src: "/brand/hero-diagonal.svg",
+  width: 1080,
+  height: 437,
+  placement: "gcc-hero-diagonal",
 };
 
 export function PeerViewAsk({
@@ -81,41 +84,65 @@ export function PeerViewAsk({
   return (
     <>
       <ScreenHeader motif={PEER_MOTIF}>
-        <div className="flex max-w-measure flex-col gap-4">
+        <div className="flex max-w-measure flex-col gap-5">
           <HeaderKicker>India GCC landscape</HeaderKicker>
-          <h1
-            ref={headingRef}
-            tabIndex={-1}
-            className="text-4xl leading-tight font-bold tracking-display text-text md:text-5xl"
-          >
+          <ScreenTitle headingRef={headingRef}>
             See who in your industry already runs a GCC in India
-          </h1>
-          <p className="text-lg text-text-muted">
-            Four answers and you get the comparable companies, the cities they
-            chose, and the scale of the India base — drawn from{" "}
-            <strong className="font-semibold text-text">
-              1,834 mapped India GCCs
-            </strong>
-            .
-          </p>
+          </ScreenTitle>
+          {/* One promise and one proof point. The previous version listed the three
+              things the answer contains, which the answer's own headings say — and
+              said it in the same breath as the number, so neither landed. */}
+          <HeaderLead>
+            Name your industry and we will show you the comparable companies,
+            where they went and how big they got. Drawn from{" "}
+            <strong className="font-semibold text-text-inverse">
+              1,834 India centres
+            </strong>{" "}
+            we have mapped.
+          </HeaderLead>
         </div>
       </ScreenHeader>
 
-      <section aria-labelledby="ask-heading" className="bg-surface-subtle py-16">
+      <section
+        aria-labelledby="ask-heading"
+        className="bg-surface-tint py-16 md:py-20"
+      >
         <div className="mx-auto max-w-content px-6 md:px-12">
-          <h2 id="ask-heading" className="sr-only">
-            Tell us about your company
-          </h2>
-          <InputPanel
-            industries={industries}
-            revenueBands={revenueBands}
-            hqCountries={hqCountries}
-            businessTypesByIndustry={businessTypesByIndustry}
-            initial={initial}
-            pending={pending}
-            submitError={submitError}
-            onSubmit={onSubmit}
-          />
+          {/* The form sits on its own surface rather than loose on the band, and
+              its heading is visible rather than screen-reader only.
+
+              Both were the same problem: this is the one thing on the entry point
+              a visitor has to DO, and it was rendered as five labelled controls
+              floating on grey with no edge and no title. A panel makes it one
+              object with a beginning and an end.
+
+              The border is gone now that the band beneath it is the teal tint: a
+              white panel on a tinted ground already has an edge, and ansr.com's own
+              cards are borderless for exactly that reason. On grey-50 it needed the
+              outline because the two values were two steps apart. */}
+          <div className="flex flex-col gap-8 bg-surface p-6 md:p-10 lg:p-12">
+            <div className="flex flex-col gap-2">
+              <h2
+                id="ask-heading"
+                className="text-2xl font-bold tracking-heading text-text md:text-3xl"
+              >
+                Tell us about your company
+              </h2>
+              <p className="max-w-measure text-base text-text-muted">
+                Four answers. Twenty seconds.
+              </p>
+            </div>
+            <InputPanel
+              industries={industries}
+              revenueBands={revenueBands}
+              hqCountries={hqCountries}
+              businessTypesByIndustry={businessTypesByIndustry}
+              initial={initial}
+              pending={pending}
+              submitError={submitError}
+              onSubmit={onSubmit}
+            />
+          </div>
         </div>
       </section>
     </>
@@ -153,53 +180,93 @@ export function PeerViewAnswer({
   const copy = framing(view);
   const peerCount = view.peers.peers.length;
 
-  const bands = [
+  /**
+   * Declared rather than inferred, because the bands no longer share one shape:
+   * `lead` and `layout` are present on some and not others, and an inferred union
+   * has neither key on every member — so reading `band.layout` in the render below
+   * would not compile.
+   */
+  type Band = {
+    id: string;
+    kicker: string;
+    title: string;
+    lead?: string;
+    ground: Ground;
+    weight: "connective" | "standard" | "pivotal";
+    layout?: "stack" | "split";
+    body: React.ReactNode;
+  };
+
+  /**
+   * The bands, in the order they build the argument.
+   *
+   * Every title states the finding rather than naming the section. "The wider
+   * industry" and "The upper end" made the reader work out what they were being
+   * shown; a heading that says it is the same number of words and does the work
+   * for them. The kickers stay as the connective tissue — they are the numbering,
+   * not the label.
+   */
+  const bands: Band[] = [
     {
       id: "peers",
       kicker: "Comparable companies",
       title:
         peerCount === 1
-          ? "One company matches you closely"
-          : `${peerCount} companies match you closely`,
+          ? "One company like yours is already here"
+          : `${peerCount} companies like yours are already here`,
       lead: peerLead(view),
-      tint: true,
+      ground: "tint" as const,
+      weight: "pivotal" as const,
       body: <PeerBlockView view={view} />,
     },
     {
       id: "industry",
-      kicker: "The wider industry",
+      kicker: "Your industry",
       title: industryHeading(view),
-      tint: false,
+      // A figure band. One number is the whole argument here, so it gets the
+      // inverse ground and the display size — the most emphatic thing this palette
+      // can do without touching orange, which is committed to the CTA.
+      ground: "inverse" as const,
+      weight: "pivotal" as const,
+      layout: "split" as const,
       body: <IndustryCountView view={view} />,
     },
     {
       id: "largest",
       kicker: "The upper end",
-      title: "The largest companies in your industry here",
-      tint: true,
+      title: `How large ${view.industry.industry} centres get here`,
+      // Stack, not split: five ranked bars with figures at their trailing end need
+      // the whole measure, and a 7-column well would crush them.
+      ground: "surface" as const,
+      weight: "standard" as const,
       body: <LargestBlockView view={view} />,
     },
     {
       id: "functions",
       kicker: "What they run",
-      title: "The functions India GCCs carry",
-      tint: false,
+      title: "The work India centres typically carry",
+      ground: "tint" as const,
+      weight: "standard" as const,
+      layout: "split" as const,
       body: <CommonFunctionsView view={view} />,
     },
     {
       id: "map",
-      kicker: "Where they are",
-      title: `${view.industry.industry} GCCs across India`,
-      lead: "Density by city, filtered to your industry.",
-      tint: true,
+      kicker: "Where they went",
+      title: `${view.industry.industry} clusters in a handful of cities`,
+      lead: "GCCs per city, filtered to your industry.",
+      ground: "surface" as const,
+      weight: "standard" as const,
       body: <CityMap map={view.map} />,
     },
     {
       id: "scale",
       kicker: "The whole base",
-      title: "The scale you would be joining",
+      title: "How much of the global index is already here",
       lead: "Across all of India, not just your industry.",
-      tint: false,
+      // The second figure band, and the last piece of evidence before the ask.
+      ground: "inverse" as const,
+      weight: "pivotal" as const,
       body: <NationalScaleView view={view} />,
     },
     {
@@ -207,7 +274,14 @@ export function PeerViewAnswer({
       kicker: ADVANCE.kicker,
       title: ADVANCE.title,
       lead: ADVANCE.lead,
-      tint: true,
+      ground: "tint" as const,
+      weight: "connective" as const,
+      // Deliberately `stack`, and the empty trailing width is not a defect worth
+      // fixing. `split` was tried and rendered worse: the column is `items-start`,
+      // so a single pill top-aligned with the kicker, which put the action ahead of
+      // the sentence that motivates it in reading order and detached it from its
+      // own heading. A left-aligned connective band with air beside it is the
+      // normal shape here; a floating trailing button is not.
       body: <AdvanceToFunctions onOpenFunctions={onOpenFunctions} />,
     },
   ];
@@ -215,17 +289,11 @@ export function PeerViewAnswer({
   return (
     <>
       <ScreenHeader motif={PEER_MOTIF}>
-        <div className="flex flex-col gap-6">
-          <div className="flex max-w-measure flex-col gap-4">
+        <div className="flex flex-col gap-8">
+          <div className="flex max-w-measure flex-col gap-5">
             <HeaderKicker>India GCC landscape</HeaderKicker>
-            <h1
-              ref={headingRef}
-              tabIndex={-1}
-              className="text-4xl leading-tight font-bold tracking-display text-text md:text-5xl"
-            >
-              {copy.title}
-            </h1>
-            <p className="text-lg text-text-muted">{copy.lead}</p>
+            <ScreenTitle headingRef={headingRef}>{copy.title}</ScreenTitle>
+            <HeaderLead>{copy.lead}</HeaderLead>
           </div>
 
           {/* A polite live region, because the answer replaced the form without a
@@ -268,14 +336,9 @@ export function PeerViewAnswer({
             kicker={band.kicker}
             title={band.title}
             lead={band.lead}
-            tint={band.tint}
-            weight={
-              band.id === "peers"
-                ? "pivotal"
-                : band.id === "advance"
-                  ? "connective"
-                  : "standard"
-            }
+            ground={band.ground}
+            weight={band.weight}
+            layout={band.layout}
           >
             {band.body}
           </Section>
@@ -306,7 +369,9 @@ function AdvanceToFunctions({
         type="button"
         onClick={onOpenFunctions}
         className={cn(
-          "inline-flex min-h-11 items-center rounded-md bg-surface-accent px-6",
+          // Pill and teal. Same shape as the orange close, so both read as
+          // actions; different fill, so only one reads as THE action.
+          "inline-flex min-h-12 items-center rounded-full bg-surface-accent px-7",
           "text-base font-semibold text-text-on-accent",
           "transition-colors duration-fast ease-standard hover:bg-surface-inverse",
         )}

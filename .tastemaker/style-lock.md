@@ -18,6 +18,29 @@ All eight token families are already defined and authoritative in
 generated and none should be. Use the semantic aliases (`--ansr-surface-*`, `--ansr-text-*`,
 `--ansr-action*`, `--ansr-accent`), never the ramps directly.
 
+## Type scale — use the display end of it
+
+The scale had a 48px step neither public screen ever reached: section headings sat at 24/30px
+and the h1 at 38/48px, against a 1280px canvas. Everything came out mid-scale, which is half
+of why the screens read as a document.
+
+- **h1 (`ScreenTitle`): 48 / 60 / 72px**, bold, `tracking-display`, `text-balance`. 72px is
+  `--ansr-text-7xl`, added in this pass — ansr.com's own hero sets around there and the scale
+  stopped one step below the brand's actual display voice. Desktop only.
+- **Section heading: 30 / 38 / 48px**, bold. Set by `Section`, so no band improvises one.
+- **A figure that is a band: 48 / 60px** (`Stat size="display"`, `FractionBar`). Capped at 60
+  deliberately — 72px is the h1's, and at 72 in a one-third column "1.06 million" broke across
+  two lines mid-figure, which reads as two numbers.
+- **A figure inside a card: 30 / 38px** (`ScalarValue`). Unchanged, and it should stay: a
+  metric card's figure is evidence inside an argument, not the headline of a band, and eight
+  of them at display size spend the emphasis until none of them has any.
+- `text-balance` matters once type is this large — an unbalanced 72px headline drops one short
+  word onto its own line.
+
+**Figures are the persuasion, so they carry a rule.** `Stat` puts a hairline under the figure
+with the label below it: it separates the number from its label without a box and gives a lone
+figure an edge to sit on. Straight from ansr.com's own stat shape.
+
 ## Colour contract — the one measured correction
 
 The brand's own pairing for a primary action is white on `--ansr-orange`. **Measured at
@@ -36,11 +59,23 @@ Pairings verified for the public screens:
 | `--ansr-text` on `--ansr-surface` | 21:1 | body, headings |
 | `--ansr-text-muted` on `--ansr-surface` | 9.0:1 | secondary copy, captions |
 | `--ansr-accent` on `--ansr-surface` | 8.55:1 | kickers, figures, the industry count |
-| `--ansr-accent` on `--ansr-surface-subtle` | 7.77:1 | same, on a tinted band |
+| `--ansr-accent` on `--ansr-surface-subtle` | 7.77:1 | same, on a neutral panel |
+| `--ansr-text` on `--ansr-surface-tint` | 17.06:1 | body and headings on the teal band |
+| `--ansr-text-muted` on `--ansr-surface-tint` | 6.97:1 | secondary copy on the teal band |
+| `--ansr-accent` on `--ansr-surface-tint` | 6.94:1 | kickers and figures on the teal band |
 | `--ansr-white` on `--ansr-accent` | 8.55:1 | accent chips |
-| `--ansr-white` on `--ansr-surface-inverse` | 16.26:1 | the closing band |
+| `--ansr-white` on `--ansr-surface-inverse` | 16.26:1 | inverse bands |
+| `--ansr-white` on `--ansr-surface-inverse-soft` | 14.29:1 | a raised card on an inverse band |
+| `--ansr-text-inverse-muted` on `--ansr-surface-inverse` | 6.27:1 | leads and kickers on an inverse band |
+| `--ansr-text-inverse-muted` on `--ansr-surface-inverse-soft` | 5.51:1 | same, and the `FractionBar` fill on its track |
+| `--ansr-white` on the teal gradient's brightest point | 8.55:1 | the hero, worst case |
 | `--ansr-text` on `--ansr-action` | 6.52:1 | **primary CTA label** |
 | ~~`--ansr-white` on `--ansr-action`~~ | 3.22:1 | **do not use** |
+
+The gradient row is the one that needed thinking about rather than measuring once.
+`--ansr-gradient-teal` runs from `--ansr-teal` at its origin to `--ansr-teal-deep` at its
+edge, so white over it is bounded below by 8.55:1 and above by 16.26:1 — every point on the
+band clears AA, and no per-placement measurement is needed.
 
 Re-measure with `python3 .kiro/skills/tastemaker/scripts/check_contrast.py <fg> <bg>` before
 introducing any pairing not listed.
@@ -53,27 +88,58 @@ Admin is a dense internal tool and keeps its own density. These apply to the pub
   phone and a first-time visitor. This is why `src/components/screen1/input-panel.tsx` has
   its own field primitives rather than importing `components/admin/fields.tsx` — sharing
   them would mean an admin tweak silently changing the public screen.
-- Section padding is **weighted by role**: connective `py-12` (48px), standard `py-16` (64px),
-  pivotal `py-20` (80px). Deliberately tighter than a standalone landing page's
-  128–192px tiers, because this is an embedded tool inside a page that already has its own
-  rhythm — 192px of air inside an iframe spends the host page's scroll on nothing.
+- Section padding is **weighted by role**: connective `py-14 md:py-16`, standard
+  `py-16 md:py-24`, pivotal `py-20 md:py-28`. Still tighter than a standalone landing page's
+  128–192px tiers, and still for the iframe reason — 192px of air inside an iframe spends the
+  host page's scroll on nothing. But the first pass read that constraint as "uniformly tight"
+  and capped everything between 48 and 80px, which is why no band had a moment of its own. A
+  pivotal band now genuinely outweighs a connective one.
 - Card internal padding `p-6` (24px). Content cards, not compact tiles.
 - Body copy capped at `max-w-measure` (the token's own 68ch), never a hand-picked `ch`.
 
-## Section separation
+## Section separation — three grounds, assigned by role
 
-**Alternating surface tint**, `--ansr-surface` ↔ `--ansr-surface-subtle`, applied at every
-boundary. One mechanism, never mixed with dividers — the brand's geometry is already
-hard-edged and hairline-heavy, and rules between full-width bands read as noise on top of it.
+**`--ansr-surface` (white), `--ansr-surface-tint` (teal-100), `--ansr-surface-inverse`
+(teal-deep).** Never a divider rule between bands — the brand's geometry is already
+hard-edged and hairline-heavy, and rules between full-width bands read as noise on top of
+it. The ground is the separation.
 
-**One exception, used exactly once per screen:** the closing call to action sits on
-`--ansr-surface-inverse`. It is the only band that asks for something rather than showing
-something, and it earns the inversion. Do not add a second inverse band to Screen 2.
+The first pass used two grounds, white against `--ansr-surface-subtle`, alternated at every
+boundary, and reserved the inverse ground for the close. **That is what made both screens
+read as a form rather than as ANSR.** Measured against `Group 149.svg`, a real ansr.com page:
+its hero viewport is ~59% saturated teal and ~20% white, and it alternates three grounds
+down the page. Ours was ~95% one value, so no band announced itself and nothing had an entry
+point. Two grounds two steps apart is not a sectioning mechanism.
+
+Grounds are chosen **by what a band does**, not alternated blindly:
+
+| Band role | Ground | Why |
+| --- | --- | --- |
+| Hero | the teal gradient | The brand's own display ground. See below. |
+| Evidence in cards | `tint` | A white card needs a tinted ground to have an edge without a border. |
+| A band that IS one figure | `inverse` | The most emphatic thing this palette can do without orange. |
+| Dense charts, wide tables | `surface` | A ranked chart wants a calm ground and the full measure. |
+| The close | `inverse` + the orange pill | The orange is what marks it now, not the darkness. |
+
+**The hero is `--ansr-gradient-teal`, through `.gcc-ground-gradient`.** Not a `bg-*` utility,
+and this is a trap worth knowing: `--ansr-gradient-teal` and `--ansr-gradient-orange` are
+`background` **shorthand** values — a gradient layer over a solid ground colour — so aliasing
+them into Tailwind's `--background-image-*` namespace emits a `background-image` whose last
+layer is a colour. That is invalid, so it paints nothing, and it does so **silently** while
+still generating a utility class. The alias existed from the start and survived because
+nothing had used it. Only `--ansr-gradient-conic` is a real image and stays aliased.
+
+**Two inverse bands per screen plus the close is correct, not excessive.** What distinguishes
+the close is the one orange pill, once per screen — not being the only dark band.
 
 ## Shape language
 
-- Radius `md` (4px) by default, `pill` for chips and counters only, `none` against a motif.
-  Straight from the token scale's own rules.
+- Radius `md` (4px) by default, `none` against a motif. Straight from the token scale's own
+  rules.
+- **`pill` is for chips, counters, and the ACTIONS** — the primary CTA (`PrimaryCta`), the
+  form's submit, the advance-to-Screen-2 button, and the header's quiet button. ansr.com's own
+  controls are pills and the radius scale allows it. It works as a signal only because
+  nothing else borrows it: every card, panel and field on both screens stays hard-edged.
 - **No shadows on the public screens.** Separation is carried by tint and hairline borders.
   The brand is graphic, not glossy, and elevation tokens exist for admin's overlays.
 
@@ -98,17 +164,31 @@ Wrapped in `prefers-reduced-motion: no-preference` as an opt-in, on top of the g
 **One motif moment per screen, on the entry point only.** The evidence bands get none —
 ornament is not a substitute for hierarchy, and a dense evidence block wants no competition.
 
-Screen 1 uses `assets/brand/motif/arc-dome.svg`, recoloured to `--ansr-teal-600` and trimmed
-with `scripts/brand_asset.py`, written to `public/brand/header-horizon.svg`. Placed with
-`.ansr-motif` plus `.gcc-horizon`: anchored to the trailing bottom corner at 62% width and
-masked to fade away from its anchor. Hidden below `md`, where the header text runs full width
-and there is no empty ground for it to occupy.
+**Ornament on an inverse ground is its own posture, `.gcc-motif-inverse`.** The
+`.ansr-motif` token opacity of 0.18 is calibrated for dark ink over a light ground, where the
+job is to stop a graphic competing with black text. Over deep teal, 0.18 of a *light* ink
+composites to within a couple of RGB values of the ground — measurably present, visibly
+absent. `--ansr-motif-opacity-inverse` (0.4) is the named posture; the closing band had
+already needed a hand-rolled override for exactly this, and now does not. Raising it costs no
+contrast, because copy on an inverse band is white and a light motif raises the floor beneath
+it rather than lowering the ceiling above it.
 
-Two things learned by looking at it, worth not relearning: stretched wide enough to bleed
-across the header, the only part of the dome that fits inside a header's height is its
-flattest slice, which reads as diagonal wallpaper rather than arcs; and the headline is
-leading-aligned and capped at the reading measure, so the trailing side is the ground the
-ornament should take.
+Screen 1 uses **`pin-diagonal`**, recoloured onto three light ramp steps and trimmed to
+`public/brand/hero-diagonal.svg`, placed with `.gcc-hero-diagonal` — oversized, anchored past
+the trailing edge, cropped by the header's own `overflow-hidden` and masked away from the
+headline. Three ramp steps rather than one flat tint, so the streaks keep their internal depth
+instead of flattening to a silhouette.
+
+It replaced `arc-dome`, and why is worth keeping: the dome was the right instinct on a white
+header and the wrong asset on a teal one. Stretched wide enough to bleed across a header, the
+only part of a dome that fits inside that height is its flattest slice — which reads as
+diagonal wallpaper rather than as arcs. If the flattest slice is what reads, the honest asset
+is the one that is actually diagonal. The manifest's warning about chart-like motifs does not
+apply on a header; there are no bars on it.
+
+Both motifs stay hidden below `md`, where the header text runs full width and there is no
+empty ground to occupy. Nothing is lost — they were never carrying meaning, and on mobile the
+gradient carries the hero on its own.
 
 No logo on the public screens — the host ansr.com page already carries it, and a second
 lockup inside the iframe duplicates it.
@@ -125,13 +205,40 @@ Every band is a `<section>` with `aria-labelledby`. A `<section>` with no access
 not a `region` landmark, so it is unreachable by role for a screen-reader user and untestable
 by role in the browser suite.
 
+**Two band shapes, `stack` and `split`, chosen by what the band draws.** `split` puts the
+heading in a leading 5-of-12 column beside the content — ansr.com's dominant section shape,
+and the one thing that lets a heading be genuinely large without pushing the evidence off the
+fold. It is for grids and lists (`industry`, `functions`). `stack` keeps the heading above
+full-width content and is for anything needing the whole measure: ranked bars with figures at
+their trailing end, the city map, the three-figure scale row. A ranked chart in a 7-column
+well is crushed.
+
+One consequence to remember: `CommonFunctionsView` went from two columns to two columns inside
+a 7-column well, which is tighter than it looks on paper. Check a split band's content at `lg`
+rather than assuming the well is as wide as the band.
+
 ## Reference intelligence
 
 - Design read: an **embedded evidence tool** for CIO/CTO/COO/HR and finance leaders at large
   global companies, mode **Persuade — by evidence, not by pitch**, in an institutional,
   hard-edged visual lane set by the brand.
 - Dials: variance **3** (this must look like ANSR, not like something novel), motion **3**,
-  density **6**, art direction **4**.
+  density **6**, art direction **7**.
+- **Art direction was 4 and that was the error.** "Institutional, restrained" was read as
+  "quiet", and quiet on a white ground with mid-scale type is indistinguishable from
+  unfinished. ansr.com is itself heavily art-directed — full-bleed saturated grounds, 72px
+  display type, graphics bleeding off the canvas. Matching the brand *requires* a high setting
+  here; 4 was a misreading of the brand, not a safe interpretation of it.
+- **The reference is `Group 149.svg`** in the repo root, a 1440×5531 export of an ANSRx page.
+  Render it to look at it — it is 7.4MB with outlined text and 7 embedded rasters, so reading
+  the path data tells you nothing. Its **palette is pre-brand deck art** (mint `#00B8A9`, the
+  old logo orange), all of which `brand_lint.py` rejects on sight: take composition, scale and
+  rhythm from it, never colour.
+- **It is now fully measured in `docs/ansrx-visual-language.md`** — typeface and weights, the
+  type scale with real line-height ratios, the 12×86/21 grid, the four-ground band system and
+  its rhythm, every measured hex against its token, the five motifs as reproducible parameters,
+  and the anatomy of all eight components. Read that instead of re-deriving; it also records how
+  each figure was obtained, so a suspect number can be re-measured rather than argued about.
 - Anti-reference: the SaaS marketing page. This audience discounts a screen that reads as
   marketing, and one fabricated-looking detail discredits the rest. Show, caption, cite the
   method, state the limits.
@@ -152,8 +259,11 @@ unnoticed until Screen 2 arrived with figures in the millions.
 
 ## Screen 2 — the decisions it settled
 
-Carried over unchanged: the colour contract, 44px controls, weighted section padding,
-alternating tint with a single inverse close, the `.gcc-enter` stagger, one motif on the header.
+Carried over unchanged: the colour contract, 44px controls, weighted section padding, the
+`.gcc-enter` stagger, one motif on the header. Its grounds are the hero gradient, one `tint`
+field holding the tabs and cards, and the inverse close — thinner than Screen 1's alternation
+because a tabbed data view is one field by nature, and the white cards on the tint are what
+carry it.
 
 **Motif: `arc-quarter`**, recoloured to `--ansr-teal-500` and trimmed, at `.gcc-rings`. Same arc
 family as Screen 1's horizon so the two read as one system, but a quarter rather than a dome — a
@@ -185,11 +295,148 @@ cost of that rule is short bars for growth rates. The alternative — scaling pe
 set's own maximum — draws 35% as a full bar, and a bar that overstates a value is worse than one
 that understates a difference. Same instinct as the catalogue's own range-collapse rule.
 
-**Charts were considered and declined.** `bklit-ui` (`@visx` + `motion`) would add a client
-dependency and an 1100ms default enter animation to what are labelled comparisons of two to
-seven values. CSS bars in a `dl`, and grids as real `<table>`s with `scope` on both axes, carry
-the same information with the figure always in text beside the mark.
+**Charts were considered and declined as a LIBRARY, then built as a vocabulary.** See the
+next section — `src/components/public/charts.tsx` is now the shared chart layer for both
+screens, and the reasons for not reaching for `bklit-ui` (`@visx` + `motion`) hardened rather
+than changed.
 
 **Motion is the tab switch.** Radix unmounts the inactive panel, so the panel's three blocks
 replay `.gcc-enter` on every switch. Three steps rather than one per card: twelve staggered
 cards would put the last most of a second behind the first.
+
+## The chart vocabulary — what both screens draw with
+
+`src/components/public/charts.tsx`, shared so a bar means the same thing on both screens.
+Eleven marks: `RankedBars`, `BarTrack`, `StackedShare`, `RangeBar`, `NestedBar`, `FigureRow`,
+`IndexLollipop`, `Dumbbells`, `OrdinalGrid`, `NumberGridChart`, `FractionBar`,
+`ProportionSplit`.
+
+**The governing rule: every mark carries its figure in text beside it, and nothing is behind
+a hover.** That is what rules out a charting library here rather than taste. A tooltip-driven
+chart puts the number one pointer-hover away, which on a phone is nowhere — and this tool is
+embedded in a marketing page a CIO will open on a phone. It is also why every mark is
+`aria-hidden`: a mark is a SECOND reading of a figure already present, so hiding it loses
+nothing. `bklit-ui` is a good library and its charts are hover-first; that is the mismatch,
+not the dependency weight.
+
+**Which chart draws what is decided in the view model, not the component.** `breakdownDisplay`
+and `gridDisplay` in `src/data/screen2.ts`, so a chart choice is a property of the data that a
+test can pin, and `metric-card.tsx` has no selection logic in it at all. Three of those rules
+exist because the obvious version drew something false:
+
+- **A shared axis across a whole index grid, with the base drawn as a rule.** Per-row scaling
+  made "India = 100" the *shortest* mark in a row where the United States drew a full one. The
+  numbers were right and the picture said the opposite. Direction now lives in the metric's own
+  `indexBaseline` text ("Lower is cheaper"), because only the author of a metric knows it.
+- **A two-column index is a gap, not two bars.** The answer to "what would we save" is the
+  distance, so the delta is formatted in the view model and sits beside the row label. Both
+  `Dumbbells` and `IndexLollipop` draw a visible zero tick — a cost index clusters at the top
+  of its own scale, and a truncated axis is exactly how you would fake this chart.
+- **Stop drawing bars where a bar would mislead.** 99.95% against 99.5% is two identical bars
+  on an honest axis and a fabricated difference on a truncated one, so `FigureRow` shows the
+  figures alone. And nesting a part inside its total requires the two parts to share a
+  `unit` — without that test, 1,400 meetup groups and 120 conferences were drawn as
+  containment, asserting that a conference is a kind of meetup group.
+
+**Part-to-whole gets one divided bar, never a row of bars.** Four bars against a 100% axis say
+"each of these is some of it"; one divided bar says "these four are all of it". Same reasoning
+puts Screen 1's industry count on `ProportionSplit` — five named peers as the leading slice of
+fifty-nine is what makes them read as a selection rather than as the supply, which is the
+block's whole job.
+
+**Order is never re-sorted by value.** The catalogue's own orders are meaningful — graduate
+output groups by discipline family, latency runs outward by distance, milestones run by size —
+and sorting would destroy all three to buy a comparison the shared axis already gives.
+
+**Colour in a chart is ordinal only, on the teal ramp: darker means more.** Categorical hue is
+not available — the teal steps sit within ΔE 0.087 — so anything that must survive greyscale is
+carried by form: fill against outline, or a labelled step count.
+
+## Card width is weighted by what a card draws
+
+`metricWidth` returns `third | half | full` onto a twelve-column grid, and the panel is
+`items-start`. Both halves matter: on a two-column stretch grid a single figure beside a
+nine-part breakdown rendered as a card four fifths full of nothing, which was the worst
+artefact on either screen. Ordering is by width, so thirds fill a row exactly before halves
+begin.
+
+**Rows are then packed so none is left part-empty** — `packWidths` in `function-view.tsx`, in the
+component because "how much of this row is left over" is a layout question. It replaced a
+narrower rule that promoted a LONE third to a half: that fixed finance's single scalar and missed
+the common case, because technology has five thirds and drew three, then two beside a visible gap,
+then a lone half card with an empty half-row next to it. Two holes in a tab, and an empty cell in
+a grid of figures reads as a card that failed to load.
+
+Three properties hold it together. Widths only ever **widen** — a narrower card is the metric's
+own shape being misrepresented. Nothing is **reordered**, because the order is by how much of the
+eye a metric needs. And a **scalar is never promoted to full**: one figure across twelve columns
+is the four-fifths-empty card this whole weighting exists to prevent, so finance keeps one
+part-empty row deliberately, as the cheaper of the two artefacts.
+
+## The same rule, applied to Screen 1's two grids
+
+Both were three-to-a-row on a grid that could only divide by three, so both left holes at `lg`.
+Six columns divide by two and by three, which is what lets a row be filled either way.
+
+- **Peer cards** — `peerSpans` in `evidence.tsx`. A card takes two columns or three, whichever
+  tiles the set exactly: five peers draw 3 + 2, four draw 2 + 2, three fill a row already. Only a
+  single peer cannot tile, and it keeps the narrow width — a lone card stretched across a row is
+  not a comparison, and a thin industry is supposed to look thin. Widening rather than equalising
+  heights, because `items-start` is there to stop a six-city company setting the height of the
+  four beside it.
+- **The ask form** — `FieldProps.span` in `input-panel.tsx`. Five controls cannot tile two
+  columns and the leftover cell landed beside Headquarters, a hole in the middle of the one thing
+  on the entry point a visitor has to *do*. The two text inputs take three columns each and the
+  three selects take two each, so both rows fill and the panel is 96px shorter. DOM order is
+  untouched, so tab order and the spec asserting the six inputs are unaffected. The two rows
+  divide differently and therefore do not share internal edges; that is the price of filling
+  them, and it is cheaper than the hole.
+
+**The advance band's empty trailing width is not one of these.** `split` was tried there and
+rendered worse: the content column is `items-start`, so a single pill top-aligned with the kicker,
+which put the action ahead of the sentence motivating it in reading order and detached it from its
+own heading. It stays `stack`, and it reads as a deliberate pair with the closing CTA below it —
+same heading-lead-pill shape, teal then orange. Do not re-try `split` here.
+
+## Screen 1 — what the refinement pass settled
+
+- **The ask is a bordered panel with a visible heading**, not five controls loose on the tinted
+  band under an `sr-only` h2. It is the one thing on the entry point a visitor has to *do*.
+- **Peer cards lead with the year** — "In India since 2013" as the kicker above the name. For
+  someone evaluating a first centre, that a comparable company has been doing this for a decade
+  is the fact on the card that changes a mind. Cities are plain text, not a chip each: five
+  chips wrapped to three rows of pills and read as filters, which nothing here is.
+- **Peer cards carry one bar**, scaled against the largest of the five, because "companies like
+  yours are already here" invites "and how big did they get" immediately. `PeerCard.sizeShare`
+  is the single definition of that ratio; `LargestEntry` no longer carries its own copy.
+- **The city map is a plotted field, not a scatter.** A faint graticule (a reference, not a
+  boundary — invariant 8 still holds and the caption still says so), density carried by fill
+  depth as well as by dot area, and the leading three cities labelled in place on whichever
+  side has room, decided from the dot's own position rather than tuned per city.
+
+## The one brand texture, and where it sits
+
+`texture/deep-teal-diagonal-wide.svg` cropped to a 480-unit band via `brand_asset.py` and
+placed on the closing CTA as `.gcc-close-streaks`. The close earns it: it is the only band that
+asks for something rather than showing something, and it was a flat rectangle. The motif
+opacity is overridden for this placement — the token's value is the posture for ink over a
+*light* ground, and over the inverse band it composited to within a couple of RGB values of the
+ground. Contrast measured, not eyeballed: white 10.48:1, the 80% body copy 7.31:1.
+
+## Copy — who it is for
+
+Not ANSR, and not an analyst. A CIO, COO, CHRO or CFO at a large global company with no India
+centre yet, who will give this ninety seconds. Three rules the rewrite applied, each of which
+cost the previous version something:
+
+- **Every heading states the finding, not the mechanism.** "The wider industry" made the reader
+  work out what they were being shown; "The five above were a selection, not the supply" does
+  not.
+- **Leads carry one fact.** All three framings opened with the same twenty-word list of the
+  sections below — a table of contents in prose, immediately above the headings it listed.
+- **The tool never narrates its own integrity.** "We would rather show you three defensible
+  comparisons than pad the list" was the most quotable line on the screen and the most
+  self-regarding: it answers a doubt the reader did not have, and plants it by answering. Not
+  padding a peer set is an invariant enforced in `matchPeers` and asserted in `data:verify` —
+  it does not also need to be a promise on the page. A browser spec now asserts the line is
+  absent.

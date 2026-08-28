@@ -4,14 +4,22 @@ import { useState } from "react";
 import { Tabs as TabsPrimitive } from "radix-ui";
 
 import { GCC_STATUS_LABELS, type PeerViewInput } from "@/data/screen1";
-import type { FunctionAreaView, FunctionView } from "@/data/screen2";
+import {
+  metricWidth,
+  type FunctionAreaView,
+  type FunctionView,
+  type MetricWidth,
+  type ShownMetric,
+} from "@/data/screen2";
 import { ClosingCta } from "@/components/public/closing-cta";
 import { Provenance } from "@/components/public/primitives";
 import {
   HeaderKicker,
+  HeaderLead,
   InputSummary,
   QuietButton,
   ScreenHeader,
+  ScreenTitle,
   type HeaderMotif,
 } from "@/components/public/screen-header";
 import { cn } from "@/lib/utils";
@@ -105,16 +113,10 @@ export function FunctionViewScreen({
     <>
       <ScreenHeader motif={FUNCTION_MOTIF}>
         <div className="flex flex-col gap-6">
-          <div className="flex max-w-measure flex-col gap-4">
+          <div className="flex max-w-measure flex-col gap-5">
             <HeaderKicker>India GCC landscape</HeaderKicker>
-            <h1
-              ref={headingRef}
-              tabIndex={-1}
-              className="text-4xl leading-tight font-bold tracking-display text-text md:text-5xl"
-            >
-              {copy.title}
-            </h1>
-            <p className="text-lg text-text-muted">{copy.lead}</p>
+            <ScreenTitle headingRef={headingRef}>{copy.title}</ScreenTitle>
+            <HeaderLead>{copy.lead}</HeaderLead>
           </div>
 
           <div className="flex flex-wrap items-center gap-x-6 gap-y-3">
@@ -133,12 +135,12 @@ export function FunctionViewScreen({
 
       <section
         aria-labelledby="functions-heading"
-        className="bg-surface-subtle py-20"
+        className="bg-surface-tint py-16 md:py-24"
       >
-        <div className="mx-auto flex max-w-content flex-col gap-8 px-6 md:px-12">
+        <div className="mx-auto flex max-w-content flex-col gap-10 px-6 md:px-12">
           <h2
             id="functions-heading"
-            className="text-2xl font-semibold tracking-heading text-text md:text-3xl"
+            className="text-3xl leading-tight font-bold tracking-display text-text md:text-4xl lg:text-5xl"
           >
             The four functions, measured
           </h2>
@@ -152,7 +154,7 @@ export function FunctionViewScreen({
           >
             <TabsPrimitive.List
               aria-label={TABS_LABEL}
-              className="flex flex-wrap gap-x-2 border-b border-border-strong"
+              className="flex flex-wrap border-b border-border-tint"
             >
               {view.areas.map((area) => (
                 <TabsPrimitive.Trigger
@@ -161,10 +163,18 @@ export function FunctionViewScreen({
                   className={cn(
                     // 44px, the public screens' control height, against the
                     // registry wrapper's 36. A first-time visitor on a phone.
-                    "-mb-px inline-flex min-h-11 items-center border-b-2 border-transparent px-3",
+                    "-mb-px inline-flex min-h-12 items-center border-b-2 border-transparent px-5",
                     "text-base font-semibold text-text-muted",
-                    "transition-colors duration-fast ease-standard hover:text-text",
-                    "data-[state=active]:border-accent-teal data-[state=active]:text-text",
+                    // Colour and border only, never `transition-all` — that was one
+                    // of the three reasons the registry's tab wrapper was removed.
+                    "transition-colors duration-fast ease-standard",
+                    "hover:text-text",
+                    // The active tab takes a tinted ground as well as the rule, so
+                    // it reads as a selected surface rather than as one word that
+                    // happens to be darker than the three beside it. It is the only
+                    // navigation on this screen and it was the faintest thing on it.
+                    "data-[state=active]:border-accent-teal data-[state=active]:bg-surface",
+                    "data-[state=active]:text-accent-teal",
                   )}
                 >
                   {area.label}
@@ -206,6 +216,55 @@ export function FunctionViewScreen({
  * — staggering twelve cards individually would have put the last one most of a
  * second behind the first.
  */
+/**
+ * Every card's width, packed so no row is left part-empty.
+ *
+ * `metricWidth` is a property of a single metric and stays that way — it is what
+ * the ordering sorts by, and a width that changed with its neighbours would make
+ * that sort circular. But a card's width is a bet about what sits BESIDE it, and
+ * that is a row-level question, so the adjustment lives here in the component,
+ * which is the only thing this file is allowed to have an opinion about.
+ *
+ * This replaces a narrower rule that promoted a LONE third to a half. That fixed
+ * the one-scalar case on finance and left the commonest one untouched: technology
+ * has five thirds, which drew three, then two beside a visible gap, and then a
+ * lone half card with an empty half-row next to it. Two holes in a tab. An empty
+ * cell in a grid of figures reads as a card that failed to load — which on a
+ * screen whose whole argument is "these numbers are solid" is expensive.
+ *
+ * Widths only ever widen. Nothing is narrowed to make a row tile, because a
+ * narrower card is the metric's own shape being misrepresented, and nothing is
+ * reordered, because the order is by how much of the eye a metric needs.
+ */
+function packWidths(shown: ShownMetric[]): MetricWidth[] {
+  const widths = shown.map(metricWidth);
+
+  // Thirds come first in the sort, so they are a leading run. Three fill a row; a
+  // remainder of two widens to two halves, which fills one exactly. A remainder of
+  // ONE cannot fill a row on its own, so it is widened to a half and left to pair
+  // with the halves run behind it.
+  const thirds = widths.filter((w) => w === "third").length;
+  const remainder = thirds % 3;
+  if (remainder > 0) {
+    for (let i = thirds - remainder; i < thirds; i++) widths[i] = "half";
+  }
+
+  // Halves — the promoted ones and the metrics that were always halves — tile two
+  // to a row. An odd one out goes full width, EXCEPT a single figure: a scalar
+  // across twelve columns is the four-fifths-empty card the weighting exists to
+  // prevent, and one part-empty row is the cheaper of the two.
+  const lastHalf = widths.lastIndexOf("half");
+  const odd = shown[lastHalf];
+  if (odd) {
+    const halves = widths.filter((w) => w === "half").length;
+    if (halves % 2 === 1 && odd.shape !== "scalar") {
+      widths[lastHalf] = "full";
+    }
+  }
+
+  return widths;
+}
+
 function AreaPanel({ area }: { area: FunctionAreaView }) {
   const provenance = AREA_PROVENANCE[area.functionArea];
   let step = 0;
@@ -222,13 +281,26 @@ function AreaPanel({ area }: { area: FunctionAreaView }) {
       </p>
 
       {area.shown.length > 0 ? (
+        // Twelve columns and `items-start`, which together are the fix for this
+        // screen's worst layout artefact. On a two-column grid every card
+        // stretched to its row's tallest neighbour, so a single figure sitting
+        // beside a nine-part breakdown rendered as a card four fifths full of
+        // nothing. Widths are now weighted by what a card draws — `metricWidth` —
+        // and height follows content.
         <ul
-          className="gcc-enter grid grid-cols-1 gap-4 sm:grid-cols-2"
+          className="gcc-enter grid grid-cols-1 items-start gap-4 sm:grid-cols-12"
           style={enter()}
         >
-          {area.shown.map((shown) => (
-            <MetricCard key={shown.metric.id} shown={shown} />
-          ))}
+          {(() => {
+            const widths = packWidths(area.shown);
+            return area.shown.map((shown, i) => (
+              <MetricCard
+                key={shown.metric.id}
+                shown={shown}
+                width={widths[i] ?? metricWidth(shown)}
+              />
+            ));
+          })()}
         </ul>
       ) : null}
 
@@ -247,7 +319,7 @@ function AreaPanel({ area }: { area: FunctionAreaView }) {
             </h3>
             <p className="max-w-measure text-sm text-text-muted">{HELD_BODY}</p>
           </div>
-          <ul className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <ul className="grid grid-cols-1 items-start gap-4 sm:grid-cols-12">
             {area.held.map((held) => (
               <HeldMetricCard key={held.metric.id} held={held} />
             ))}
