@@ -6,8 +6,8 @@ Volatile. Rewritten each session, never appended to. Cap 120 lines. Present tens
 
 ## Where we are
 
-**Shipped and verified live.** `main` is `9c27766`, production is built from it, and the peer view is
-tested in a real browser against `gcc-landscape.vercel.app` — not just locally. The repo is `main` only.
+**Shipped and verified live.** `main` is `9d5b699`, production is built from it, and the public specs run
+in a real browser against `gcc-landscape.vercel.app` — three consecutive clean runs. Repo is `main` only.
 
 A Nike visitor choosing Retail / "Apparel & footwear brand" gets **TJX · H&M · Adidas · GAP · Lululemon
 Athletica** — the case the whole change existed for. It used to return Amazon, Walmart, Target, Lowe's
@@ -16,19 +16,20 @@ and 7-Eleven.
 **The gate is green:** 339 Vitest, 111 Playwright local, 30 against live production, `tsc`,
 `brand_lint.py`, `npm run build`, `data:verify` with every invariant holding.
 
-**`SIMILARITY_FLOOR` is 0.20**, chosen by sweep: a utilities and grid-operations visitor now gets
-NationalGrid, Nextracker, LM Wind Power and Aggreko, honestly one short, where 0.15 gave five oil majors.
-Costs 147 short sets of 1064 against 112. Reasoning sits beside the constant in `similarity.ts`.
-
-**Two things were cut, both recorded durably in `project.md`:** company-name autocomplete (suggestions
-could only come from our own 1834, so an unmapped visitor reads an empty dropdown as a statement about
-ANSR's coverage) and industry-as-a-weighted-tag in its proposed form.
+**`SIMILARITY_FLOOR` is 0.20**, chosen by sweep: a utilities and grid visitor now gets NationalGrid,
+Nextracker, LM Wind Power and Aggreko, honestly one short, where 0.15 gave five oil majors. Costs 147
+short sets of 1064 against 112; reasoning sits beside the constant in `similarity.ts`.
 
 **The browser suite can now run against a deployment** — the gap that let a false copy line ship.
 `GCC_TEST_BASE_URL=https://... npm run test:deployed`: **30 pass against live production**, 33 seconds.
 Unset, nothing changes. Only the public specs exist in that mode, deliberately: the admin specs publish
 and the lockout spec exhausts the rate limiter, so against production they would commit to the client's
 dataset and lock the real admin out.
+
+**It has already earned itself twice.** Its second production run caught a focus race 111 local tests
+never could: transitions set state then guessed a `requestAnimationFrame` to focus the new `h1`, so when
+React committed later the ref was null and the call vanished — silently dropping the only announcement a
+screen reader gets for a phase change. Now an effect keyed on the phase, running after commit.
 
 ## Next action
 
@@ -89,22 +90,21 @@ Ours, not urgent: **self-host Inter** (no web font loads); **the HR tab's short 
 Invariants are in `project.md`, brand rules in `design-stack.md`. These bite only in the code.
 
 - **A guard that is always false makes a test pass while asserting nothing**, and a name counting things
-  the assertions do not check is decoration. Both happened here: a test read `hqCountry` off a
-  `PeerCard`, which drops it, so `undefined` vs `undefined` ran nothing; and "offers exactly the five
-  inputs" had six and never asserted the sixth. Make a regression test fail against the old behaviour
-  before keeping it.
-- **Visitor-facing copy hardcoded in a component drifts.** The peer lead sat inline in `peer-view.tsx`
-  describing the band ladder long after matching went continuous, contradicting the method line three
-  lines below it. Every sentence belongs in the screen's `copy.ts`.
+  the assertions do not check is decoration. A test read `hqCountry` off a `PeerCard`, which drops it, so
+  `undefined` vs `undefined` ran nothing; "offers exactly the five inputs" had six. Make a regression test
+  fail against the old behaviour before keeping it.
+- **Visitor-facing copy hardcoded in a component drifts** — the peer lead sat inline in `peer-view.tsx`
+  describing the band ladder long after matching went continuous. Sentences belong in `copy.ts`.
+- **Never pair `setState` with a `requestAnimationFrame` that reads a ref.** React may commit later; the
+  ref is null and the call vanishes. Use an effect keyed on the state.
 - **A check that hardcodes a constant measures the constant.** `sweep-floor.ts` asserted it reproduced
   `matchPeers` "at 0.15"; raising the floor made it declare itself UNSOUND and refuse to run. It reads
   `SIMILARITY_FLOOR` now.
-- **Pure IDF scores every tag zero when all tagged companies in an industry share one type**, which
-  emptied Electrical & Electronics until `businessSimilarity` fell back to unweighted overlap — keep that
-  branch. Use **`log(N/f)`, not `log(1 + N/f)`**: the smoothed form kept a universal tag at 0.69 and made
-  all of Retail eligible against a footwear brand.
-- **Peer-set assertions must be scoped to `#peers`** — Walmart legitimately appears on Nike's result,
-  since the largest-in-industry panel is meant to name the biggest retailers.
+- **Pure IDF scores every tag zero when one industry's tagged companies share a type** — that emptied
+  Electrical & Electronics until `businessSimilarity` fell back to unweighted overlap; keep the branch.
+  Use **`log(N/f)`, not `log(1 + N/f)`**: smoothed kept a universal tag at 0.69, making all of Retail
+  eligible against a footwear brand.
+- **Peer-set assertions must be scoped to `#peers`** — Walmart legitimately appears on Nike's result.
 - **`tsc` covers `scripts/`, but `tsx` does not typecheck** — a script that runs fine still breaks the
   gate under `noUncheckedIndexedAccess`. **`hqCountry` is `"USA"`**, not `"United States"`; a wrong value
   silently disables the HQ tiebreak. There is no "SaaS" business type.
