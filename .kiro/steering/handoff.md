@@ -8,15 +8,14 @@ Volatile. Rewritten each session, never appended to. Cap 120 lines. Present tens
 
 **PR #1 is open and awaiting review**, reported mergeable with no conflicts.
 `github.com/GeeteshRanjan/GCC-Landscape/pull/1` — `feat/business-type-similarity` → `main`, 44 files.
-`main` is still at `4f9c138`; nothing is merged yet.
+`main` is still at `4f9c138`; nothing is merged, and production is therefore still the pre-change build.
 
-Two substantive commits, the rest documentation. No count given — every handoff rewrite lands on this
-branch, so any number here is stale on arrival; use `git log origin/main..`.
+**Vercel builds a preview on every push and they all succeed** — but a preview URL cannot be opened: it
+returns Vercel's login page, not the tool. See `project.md`.
 
-| Commit | What it is |
-| --- | --- |
-| `f5a9d58` | The scored peer engine, 44 files. Was the uncommitted working tree. |
-| `b5a1754` | `SIMILARITY_FLOOR` 0.15 → 0.20, with the re-accepted baseline. |
+Two substantive commits, the rest documentation — `f5a9d58` the scored peer engine, `b5a1754` the floor
+move. No count given: every handoff rewrite lands on this branch, so a number is stale on arrival; use
+`git log origin/main..`.
 
 **The gate is green:** 336 Vitest, 110 Playwright against a real production build, `tsc`,
 `brand_lint.py`, `npm run build`, `data:verify`, every invariant holding.
@@ -37,10 +36,12 @@ the intended outcome.
 1. **Review and merge PR #1.** It must land `data/dataset.json` and `data/verify-baseline.json`
    together — the baseline carries the new coverage figures, and splitting them breaks `data:verify`
    for whoever pulls next. Squashing is fine; splitting the data files is not.
-2. **Then walk the live deployment**, never yet done. Verified by fetching `gcc-landscape.vercel.app`:
-   it still has no "Line of business" field, because a branch push builds a *preview*, not production.
-   `curl` cannot drive it either — the peer set arrives via a server action — so it needs a browser.
-   Pointing Playwright's `public` project at the deployed URL would close that gap permanently.
+2. **Walk a real deployment — still never done, and now the known gap.** Two routes, differing in risk.
+   Either **disable preview protection** (or mint a bypass token) and walk the branch preview *before*
+   anything is live — safer, and it also lets Playwright's `public` project point at a deployment,
+   closing the "only ever a local build" gap permanently. Or **merge and walk production**, which is
+   public but means shipping first. Note `curl` cannot do it either way: the peer set arrives via a
+   server action, so it needs a browser.
 
 Ours, not urgent: **self-host Inter** (no web font loads), **the HR tab's short bars**.
 

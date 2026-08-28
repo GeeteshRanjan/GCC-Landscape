@@ -179,6 +179,14 @@ Decided. Reasons recorded because they constrain later choices.
   assume viewport height and a sticky header. Do not carry those patterns back into the public
   screens, and do not "simplify" them out of admin to match.
 
+**Preview deployments are behind Vercel Deployment Protection, and that partly defeats the reason
+Vercel was chosen.** Every push builds a preview, but fetching one returns Vercel's own login page, not
+the tool — so an ANSR stakeholder cannot open a preview link, and neither can any automated check. Only
+`gcc-landscape.vercel.app`, built from `main`, is publicly reachable. Either disable protection for
+previews or mint a bypass token before treating a preview URL as something a reviewer can use; until
+then "review it on the preview" is not a workflow that exists. This is also why the browser suite runs
+against a local production build rather than a deployed one.
+
 **Vercel is a host, not a platform.** ANSR may take this in-house, so nothing host-specific gets
 used. Concretely:
 
