@@ -68,8 +68,36 @@ export const BAND_WEIGHT = 0.3;
  * defensible comparisons than pad the list" — and `shortfallLine` in
  * `screen1/copy.ts` already says so. `data:verify` tracks how often the floor
  * bites, so the trade between quality and length is a number ANSR can see.
+ *
+ * ── Why 0.20 and not 0.15 ───────────────────────────────────────────────────
+ *
+ * 0.15 was the first value shipped. Swept against the real dataset at 0.10, 0.15,
+ * 0.20 and 0.25, with the median peer count staying at 5 throughout and no value
+ * ever emptying a set, 0.20 was measurably better for one reason that is not
+ * obvious: raising the floor does not merely truncate.
+ *
+ * Because the combined score gives a perfect band match 0.3 while similarity
+ * carries 0.7, a company BELOW the floor can outrank one above it —
+ * 0.7 × 0.13 + 0.3 × 1 = 0.39 beats 0.7 × 0.5 + 0.3 × 0 = 0.35. Raising the floor
+ * evicts that interloper and promotes a more similar company into view. Measured
+ * at 0.20 against 0.15: seven peer sets changed membership, and in all seven the
+ * company that appeared was MORE similar than the one it replaced. A utilities and
+ * grid-operations visitor stopped being shown Shell, BP, ExxonMobil and Chevron
+ * (similarity 0.190) and started being shown Nextracker, LM Wind Power and Aggreko
+ * (0.291). An aircraft-engines visitor stopped being shown Boeing (0.156) and
+ * started being shown Moog (0.325).
+ *
+ * The price is 35 more short sets out of 1064, three percentage points, all in
+ * thin low-band combinations where the shortfall copy is already honest.
+ *
+ * 0.10 was rejected because it admits Caterpillar, Holcim and WillScot to a
+ * SHIPBUILDING visitor on `discrete-manufacturing, engineering-construction, b2b`
+ * alone — generic tags, similarity 0.126, and Holcim makes cement. That is
+ * invariant 3's failure in one line. 0.25 was rejected because it costs seven more
+ * sets than 0.20 while removing no new class of bad peer: its three- and four-peer
+ * counts are identical to 0.20's, so it only pushes three-peer sets down to two.
  */
-export const SIMILARITY_FLOOR = 0.15;
+export const SIMILARITY_FLOOR = 0.2;
 
 /** Same band, adjacent band, anything else. See the note above on why three steps. */
 export const BAND_SAME = 1;

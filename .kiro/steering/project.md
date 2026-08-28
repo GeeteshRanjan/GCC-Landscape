@@ -316,11 +316,18 @@ otherwise.
 mismatch is the first thing they see. HQ country is still a preference and never a filter, so it
 cannot change how many peers come back.
 
-**A similarity floor of 0.15 applies to `businessSimilarity` ALONE, never the combined score.** A
+**A similarity floor of 0.20 applies to `businessSimilarity` ALONE, never the combined score.** A
 perfect band match is worth 0.3; on the combined score it would drag a business-irrelevant company
 over the line, which is the bug the whole mechanism exists to prevent. The floor can shorten a set —
-that is invariant 3, not a defect — and `data:verify` counts how often, so the trade is measured
-rather than guessed.
+that is invariant 3, not a defect — and `data:verify` counts how often (147 of 1064), so the trade is
+measured rather than guessed.
+
+**Raising the floor does not merely truncate, which is why 0.20 rather than 0.15.** Since a perfect
+band match is worth 0.3 of the combined score, a company below the floor can outrank one above it, so
+lifting the floor evicts that interloper and promotes a more similar peer. Measured over the whole
+dataset, every set whose membership changed between 0.15 and 0.20 gained a company more similar than
+the one it lost. The reasoning and the rejected values are in `similarity.ts` beside the constant;
+`docs/business-types.md` carries the version for ANSR.
 
 **The old three-rung band ladder survives as `matchPeersByBandLadder`, as the test oracle.** With no
 line of business selected the scored engine returns its output company-for-company; that equivalence

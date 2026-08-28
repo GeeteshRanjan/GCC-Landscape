@@ -82,7 +82,7 @@ drops `revenueBand`, so the peer card never shows it — a band mismatch is invi
 the visitor while a business mismatch is the first thing they see. The same reasoning
 demotes HQ country from the comparator's first key to a tiebreak.
 
-**The similarity floor (0.15) is applied to `businessSimilarity` alone**, never to the
+**The similarity floor (0.20) is applied to `businessSimilarity` alone**, never to the
 combined score. A perfect band match is worth 0.3; if the floor were on the combined
 score, a business-irrelevant company in the right revenue band would qualify, which is
 the exact bug the module exists to prevent.
@@ -90,6 +90,18 @@ the exact bug the module exists to prevent.
 The floor can **shorten** a peer set. That is invariant 3 working as intended, and
 `data:verify` records how often it happens (see below) so the trade between quality and
 length is a number rather than a guess.
+
+**Why 0.20.** Swept at 0.10, 0.15, 0.20 and 0.25 against the real dataset. The median peer
+count is 5 at every value and no value ever empties a set, so the choice is decided at the
+margin. Raising the floor does more than shorten: because a perfect band match is worth 0.3
+of the combined score, a company *below* the floor can outrank one above it, so lifting the
+floor evicts that interloper and promotes a better peer. Moving 0.15 → 0.20 changed the
+membership of seven sets and in all seven the newcomer was more similar than the company it
+replaced — a utilities and grid-operations visitor stopped seeing Shell, BP, ExxonMobil and
+Chevron (0.190) and started seeing Nextracker, LM Wind Power and Aggreko (0.291); an
+aircraft-engines visitor stopped seeing Boeing (0.156) and started seeing Moog (0.325).
+0.10 was rejected because it shows Caterpillar and Holcim to a shipbuilding visitor on three
+generic tags. 0.25 costs seven more short sets while removing no new class of bad peer.
 
 ## Guarantees
 
@@ -168,13 +180,15 @@ The live figures are pinned in `data/verify-baseline.json` and reproduced by
 | Companies with two business types | 50 |
 | Industries fully tagged | 18 |
 | Business types with no company | 6 |
-| **Peer sets the floor shortens** | **112 of 1064** |
+| **Peer sets the floor shortens** | **147 of 1064** |
 
-That last row is the one to watch. It is the price of the quality gain: 112 of the
-1064 industry × business-type × band combinations now return fewer than five peers
+That last row is the one to watch. It is the price of the quality gain: 147 of the
+1064 industry × business-type × band combinations return fewer than five peers
 because the rest were not close enough to name. If ANSR judges that price too high,
 `SIMILARITY_FLOOR` in `src/data/similarity.ts` is the single number to move, and this
-figure is how the effect is measured.
+figure is how the effect is measured. At the previous floor of 0.15 it was 112; the 35
+extra are the cost of the seven improved sets described above, and they fall in thin
+low-band combinations rather than in the industries most visitors arrive from.
 
 ## The types, by industry
 
