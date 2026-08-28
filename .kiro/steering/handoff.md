@@ -35,11 +35,11 @@ change. Mechanism and fix are in `project.md` under `tool.tsx`.
 
 Nothing is half-finished; the next move is a choice rather than a continuation.
 
-1. **A stray `Group 149.svg` (7.1 MB) sits untracked in the repo root.** Not referenced anywhere. Brand
-   art belongs under `assets/brand/`, adapted rather than dropped in — move or delete it, but do not
-   commit it where it is.
-2. **Run `test:deployed` after each production deploy.** 33 seconds, and the only check that looks at
+1. **Run `test:deployed` after each production deploy.** 33 seconds, and the only check that looks at
    what a visitor actually gets.
+2. **`Group 149.svg` (7.1 MB, a Figma export) is still on disk at the repo root, now gitignored.** Kept
+   rather than deleted because it was not mine to throw away; `/*.svg` stops it reaching history. Delete
+   it when you know you do not need it.
 
 Ours, not urgent: **self-host Inter** (no web font loads); **the HR tab's short bars**.
 
@@ -71,8 +71,7 @@ Ours, not urgent: **self-host Inter** (no web font loads); **the HR tab's short 
   semiconductor firm at 0.16. It breaks the invariant "a business type never returns a peer from another
   industry", and leaves `industryOthers` / `sameBusinessType` industry-scoped so "and 54 others in
   Retail" stops describing the peers shown — a copy decision before any code.
-- **Whether the two analysis scripts are committed or deleted.** Both untracked, both runnable, neither
-  a maintenance tool.
+
 - **Whether to disable Vercel preview protection** or mint a bypass token. Production can now be tested
   with `test:deployed`; a *preview* still cannot, so a change is only verifiable on a deployment after it
   is already live. The remaining half of this gap.

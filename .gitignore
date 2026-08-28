@@ -35,3 +35,8 @@ test-results/
 # place. Steering, hooks and settings ARE tracked — they are ours and they are
 # what makes a session reproducible.
 .kiro/skills/
+
+# Stray design exports dropped at the repo root. Brand art belongs in
+# assets/brand/ (source) or public/brand/ (adapted output), never here — a 7 MB
+# Figma export committed by a careless `git add .` is in the history forever.
+/*.svg
