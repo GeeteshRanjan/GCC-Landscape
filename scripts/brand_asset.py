@@ -29,16 +29,21 @@ import sys
 import tempfile
 
 # --------------------------------------------------------------------------
-# Core brand palette. Source of truth: Branding_Palette.docx.
-# Do not add hues here without a brand-doc reference.
+# Core brand palette. Source of truth: Group 149.svg, measured in
+# docs/ansrx-visual-language.md. Branding_Palette.docx is superseded and
+# survives as CMYK/PMS provenance only.
+#
+# Mirrors assets/brand/tokens.css, which governs. If the two disagree, the CSS
+# is right and this is stale.
 # --------------------------------------------------------------------------
 CORE = {
-    "black":     "#000000",
-    "white":     "#FFFFFF",
-    "grey":      "#E6E6E6",
-    "teal":      "#005465",  # Light Teal, PMS 7714
-    "teal-deep": "#00242E",  # Deep Teal, PMS 548
-    "orange":    "#FF5400",  # Orange Highlight, PMS Orange 021 - CTA/hover only
+    "black":       "#000000",
+    "white":       "#FFFFFF",
+    "grey":        "#E6E6E6",
+    "teal":        "#004C4D",  # headings on a light ground
+    "teal-deep":   "#08252F",  # the dark ground
+    "teal-bright": "#00BAA8",  # the accent, on dark grounds only
+    "orange":      "#FD4E11",  # the action, once per band
 }
 
 
@@ -94,25 +99,40 @@ def mix(c1, c2, t):
 
 
 def build_ramps():
-    """Derive illustration ramps from the two brand teals / one brand orange.
+    """Derive illustration ramps from the measured brand anchors.
 
-    Motifs need 4-9 depth steps; the brand palette has 2 teals. Rather than
-    inventing new hues, every step is interpolated between brand anchors
-    (and toward white for tints) so the family stays on-brand.
+    Motifs need 4-9 depth steps. The teal family has FOUR measured anchors
+    rather than the docx's two, so the interpolations sit between real values
+    instead of running from a midpoint to white:
+
+        900 the dark ground        600 headings on a light ground
+        800 a card on it           400 the bright accent
+        300 a muted label          100 the pale ground
+
+    Interpolated: 700, 500, 200. Monotonic in Oklab lightness end to end, which
+    is the property the chart layer's ordinal ramp depends on.
+
+    The two measured steps that are NOT interpolations of their neighbours
+    (800 and 300) are why this is a table rather than a formula: 300 is a
+    desaturated grey-teal sitting at almost the same lightness as the bright
+    400 above it, so interpolating 400 -> 100 would have produced a saturated
+    mint where the comp has a muted label colour.
     """
-    deep, light, orange, grey, white = (
-        CORE["teal-deep"], CORE["teal"], CORE["orange"], CORE["grey"], CORE["white"])
+    deep, light, bright, orange, grey, white = (
+        CORE["teal-deep"], CORE["teal"], CORE["teal-bright"],
+        CORE["orange"], CORE["grey"], CORE["white"])
+    card, muted, pale = "#063239", "#85B3AF", "#D1E9E7"  # measured
     return {
         "teal": {
             900: deep,
-            800: mix(deep, light, 0.25),
-            700: mix(deep, light, 0.50),
-            600: mix(deep, light, 0.75),
-            500: light,
-            400: mix(light, white, 0.28),
-            300: mix(light, white, 0.50),
-            200: mix(light, white, 0.72),
-            100: mix(light, white, 0.88),
+            800: card,
+            700: mix(card, light, 0.50),
+            600: light,
+            500: mix(light, bright, 0.45),
+            400: bright,
+            300: muted,
+            200: mix(muted, pale, 0.55),
+            100: pale,
         },
         "orange": {
             500: orange,
@@ -133,30 +153,49 @@ def build_ramps():
 
 
 def drift_map():
-    """Figma-export colours -> brand tokens.
+    """Any colour that has ever been in this project -> the current tokens.
 
-    The SVG exports were built on a wider deck palette (bright mint #00B8A9,
-    vermilion #F05A30, amber #F47F20) that the brand doc does not sanction.
-    This table is the correction applied on import. Amber and mint collapse
-    into the teal/orange ramps rather than surviving as extra hues.
+    Two generations of source now feed this table, and it has to handle both:
+
+      1. The original Figma deck exports (bright mint #00B8A9, vermilion
+         #F05A30, amber #F47F20). Mint used to be folded into a desaturated
+         grey-teal because the docx palette had no bright accent. It now maps to
+         the real one, `teal-bright`, which is what it was always trying to be.
+      2. The FIRST GENERATION OF OUR OWN OUTPUT — the 26 assets under
+         assets/brand/ and public/brand/ were already recoloured onto the old
+         docx ramp. Re-running `recolor --to-tokens` on them has to find those
+         values, or an asset silently keeps a retired colour and brand_lint.py
+         does not scan assets/ to catch it. Every old ramp step is listed for
+         exactly that reason.
+
+    A value appearing on both sides of the table is not a problem: recolor
+    substitutes in one pass over the source, so a mapping is never re-applied to
+    its own output.
     """
     r = build_ramps()
     t, o, g = r["teal"], r["orange"], r["grey"]
     return {
-        # deep navy-teals -> deep teal end of the ramp
-        "#08252F": t[900], "#00242E": t[900], "#002630": t[900], "#082832": t[900],
+        # ---- our own first-generation output: the old docx-derived ramp ----
+        "#00242E": t[900], "#002F3B": t[800], "#003B49": t[700],
+        "#004757": t[600], "#005465": t[600],
+        "#54818E": t[500], "#87A6AF": t[300], "#BBCDD2": t[200], "#E1E9EB": t[100],
+        "#FF5400": o[500], "#FF865D": o[400], "#FFAE91": o[300],
+        "#FFD1C0": o[200], "#FFEBE3": o[100],
+
+        # ---- deep navy-teals -> the dark end of the ramp ----
+        "#002630": t[900], "#082832": t[900],
         "#073038": t[800], "#053E44": t[800], "#053E45": t[800], "#00323F": t[800],
-        "#004C4C": t[700], "#004C4D": t[700], "#005557": t[700], "#005465": t[500],
+        "#004C4C": t[600], "#005557": t[600],
         # mid teals
-        "#006968": t[600], "#006B69": t[600], "#00867F": t[600], "#2B7A7F": t[500],
-        # bright mint / aqua -> light teal tints (off-brand hue, folded in)
+        "#006968": t[500], "#006B69": t[500], "#00867F": t[500], "#2B7A7F": t[500],
+        # bright mint / aqua -> the real bright accent, at last
         "#00B8A9": t[400], "#00B3A5": t[400], "#00AEBA": t[400],
         "#45CBC0": t[300], "#47B3B2": t[300],
         "#A2D9DA": t[200], "#BBE3E2": t[200], "#C8E1E0": t[200], "#D7EEEE": t[200],
         "#DAE6EB": t[100], "#CEDEE1": t[100], "#F2FBFA": t[100],
         "#C6D2D2": t[100],
         # oranges -> single brand orange + tints
-        "#F05A30": o[500], "#F05722": o[500], "#FF5400": o[500],
+        "#F05A30": o[500], "#F05722": o[500],
         "#E55422": o[500], "#F26F31": o[400], "#F1644A": o[400],
         "#A34626": t[800], "#6B3A29": t[800], "#40312B": t[900], "#212A2D": t[900],
         "#0E262E": t[900],

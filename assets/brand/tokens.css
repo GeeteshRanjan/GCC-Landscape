@@ -1,12 +1,30 @@
 /* ==========================================================================
    ANSR design tokens — single source of truth.
 
-   Colour and gradients derive from Branding_Palette.docx (preserved as
-   assets/brand/reference/*.png; written up in assets/brand/BRAND.md).
+   COLOUR COMES FROM `Group 149.svg`, measured in docs/ansrx-visual-language.md.
+   Branding_Palette.docx is superseded: the comp is the newer art direction, and
+   it was not built from the docx at all — its own CTA is #FD4E11 rather than the
+   docx's stated Orange Highlight and its ground is a navy rather than the
+   docx's Deep Teal. Values are named rather than quoted throughout these
+   comments: `token_hexes()` in brand_lint.py reads THIS FILE for its raw-hex
+   allow-list and does not distinguish a comment from a declaration, so quoting
+   a retired value here would quietly legitimise it project-wide. The
+   docx survives as CMYK/PMS provenance in assets/brand/BRAND.md and as the
+   fitted GRADIENT GEOMETRY below, which the comp does not restate.
+
+   The substantive change is that the teal family now has THREE anchors, not two.
+   The docx gave a deep teal and a light teal; the comp adds a bright mint-teal
+   that carries 141 of its own marks — every sub-heading on a dark ground, the
+   closing heading, the bar motifs, the icon fills. A two-anchor interpolation
+   cannot produce it, which is why the old ramp's light end was a desaturated
+   grey-teal and why every screen built from it read as institutional-quiet
+   rather than as ANSR.
+
    Ramps regenerate with: python3 scripts/brand_asset.py ramp
 
    Nothing in this project may contain a raw hex value, a magic pixel size,
-   or an ad-hoc duration. Use these. `scripts/brand_lint.py` enforces it.
+   or an ad-hoc duration. Use these. `scripts/brand_lint.py` enforces it —
+   including the OLD values, which it now names as off-brand.
    ========================================================================== */
 
 :root {
@@ -15,38 +33,53 @@
      1. COLOUR
      ====================================================================== */
 
-  /* ---- Core palette. Verbatim from the brand doc. Do not edit. ---------
-     Sampled from the source board to confirm; all within PNG compression
-     error of these stated values, which govern.                          */
-  --ansr-black:      #000000; /* Rich Black       CMYK 0 0 0 100          */
-  --ansr-white:      #FFFFFF; /* White            CMYK 0 0 0 0            */
-  --ansr-grey:       #E6E6E6; /* Light Grey       CMYK 0 0 0 10           */
-  --ansr-teal:       #005465; /* Light Teal       CMYK 100 60 50 20  PMS 7714 */
-  --ansr-teal-deep:  #00242E; /* Deep Teal        CMYK 90 68 57 65   PMS 548  */
-  --ansr-orange:     #FF5400; /* Orange Highlight CMYK 0 80 100 0    PMS Orange 021 */
+  /* ---- Core palette. Measured off `Group 149.svg`. --------------------
+     Occurrence counts are how many marks in the comp carry each value, which
+     is the evidence that these are the anchors rather than incidental fills.
+     CMYK/PMS provenance for the two the docx also named is in BRAND.md.   */
+  --ansr-black:       #000000; /* Rich Black       CMYK 0 0 0 100         */
+  --ansr-white:       #FFFFFF; /* White            CMYK 0 0 0 0           */
+  --ansr-grey:        #E6E6E6; /* Light Grey       CMYK 0 0 0 10          */
+  --ansr-teal:        #004C4D; /*  7 marks. Headings on a light ground.    */
+  --ansr-teal-deep:   #08252F; /* 12 marks. The dark ground.              */
+  --ansr-teal-bright: #00BAA8; /* 141 marks. The accent, on dark only.    */
+  --ansr-orange:      #FD4E11; /* 41 marks. The action, once per band.    */
 
   /* ---- Teal ramp -------------------------------------------------------
-     Motifs need up to 9 depth steps; the brand gives 2 teals. Steps 900-500
-     are Oklab interpolations between the two brand anchors, 400-100 are tints
-     toward white. No new hues.                                           */
-  --ansr-teal-900: #00242E; /* = teal-deep */
-  --ansr-teal-800: #002F3B;
-  --ansr-teal-700: #003B49;
-  --ansr-teal-600: #004757;
-  --ansr-teal-500: #005465; /* = teal */
-  --ansr-teal-400: #54818E;
-  --ansr-teal-300: #87A6AF;
-  --ansr-teal-200: #BBCDD2;
-  --ansr-teal-100: #E1E9EB;
+     FOUR measured anchors, Oklab-interpolated between them, monotonic in
+     Oklab lightness end to end (0.248 -> 0.916, checked step by step):
+
+       900  the dark ground            600  headings on a light ground
+       800  a card on that ground      400  the bright accent
+       300  a muted label              100  the pale ground
+
+     Note `--ansr-teal` lands on **600**, not 500. The old ramp had only two
+     anchors so its midpoint was its light end; this one has a bright accent
+     above the heading teal, so the heading teal sits mid-ramp where it
+     belongs. Steps 700, 500 and 200 are the interpolations.
+
+     `--ansr-teal-bright` is 400 and NOT usable on a light ground: 2.44:1 on
+     white, 1.92:1 on the pale ground. It is an ink for dark grounds, which is
+     the only way the comp uses it. `--ansr-accent-inverse` is its alias.  */
+  --ansr-teal-900: #08252F; /* = teal-deep    */
+  --ansr-teal-800: #063239; /* measured       */
+  --ansr-teal-700: #043F43;
+  --ansr-teal-600: #004C4D; /* = teal         */
+  --ansr-teal-500: #007B74;
+  --ansr-teal-400: #00BAA8; /* = teal-bright  */
+  --ansr-teal-300: #85B3AF; /* measured       */
+  --ansr-teal-200: #AFD0CD;
+  --ansr-teal-100: #D1E9E7; /* measured       */
 
   /* ---- Orange ramp -----------------------------------------------------
-     Tints only. The brand doc restricts orange to CTAs and hover states, so
-     these exist for motif falloff — not for surfaces, and not for text.   */
-  --ansr-orange-500: #FF5400; /* = orange */
-  --ansr-orange-400: #FF865D;
-  --ansr-orange-300: #FFAE91;
-  --ansr-orange-200: #FFD1C0;
-  --ansr-orange-100: #FFEBE3;
+     Tints only. Orange stays restricted to CTAs and hover states — the comp
+     agrees with the docx here and goes further, using it exactly once per
+     band. These exist for motif falloff, not for surfaces and not for text. */
+  --ansr-orange-500: #FD4E11; /* = orange */
+  --ansr-orange-400: #FF835F;
+  --ansr-orange-300: #FFAB92;
+  --ansr-orange-200: #FFCFC0;
+  --ansr-orange-100: #FFEBE4;
 
   /* ---- Grey ramp ------------------------------------------------------- */
   --ansr-grey-900: #000000; /* = black */
@@ -58,7 +91,8 @@
 
   /* ---- Semantic aliases ------------------------------------------------
      Components reference these. Never the ramp directly, never a raw hex.
-     Contrast on white: text 21:1, text-muted 9.0:1, accent 8.9:1.        */
+     Contrast on white: text 21:1, text-muted 8.59:1, accent 9.81:1. Every
+     pairing is tabulated in .tastemaker/style-lock.md.                    */
   --ansr-surface:            var(--ansr-white);
   --ansr-surface-subtle:     var(--ansr-grey-50);
   --ansr-surface-sunken:     var(--ansr-grey-100);
@@ -70,11 +104,15 @@
      inside one field, and this separates two BANDS that each need to announce
      themselves. A page built only from white and grey-50 has no ground the eye
      can rest on, which is measurably what the public screens' first pass got
-     wrong — 95% of the canvas was one value. Text 17.06:1, muted 6.97:1,
-     accent 6.94:1 on it, so nothing that sits on white has to change. */
+     wrong — 95% of the canvas was one value. Text 16.52:1, muted 6.76:1,
+     accent 7.72:1 on it, so nothing that sits on white has to change.
+
+     It is now the comp's own measured ground and visibly greener than the old
+     grey-teal it replaces, which is most of why a tinted band now reads as a
+     band rather than as an off-white. */
   --ansr-surface-tint:       var(--ansr-teal-100);
   /* One step off the inverse ground, for a card that has to read as raised
-     against it without a shadow. White at 14.29:1. */
+     against it without a shadow. White at 13.79:1. */
   --ansr-surface-inverse-soft: var(--ansr-teal-800);
 
   --ansr-text:               var(--ansr-black);
@@ -83,7 +121,12 @@
   --ansr-text-on-accent:     var(--ansr-white);
   /* Secondary copy on an inverse ground. White at 80% opacity was used for this
      before it had a name, which meant every dark band re-derived it and one of
-     them would eventually pick 60%. 6.27:1 on teal-900, 5.51:1 on teal-800. */
+     them would eventually pick 60%. 6.89:1 on teal-900, 5.95:1 on teal-800.
+
+     It is a MUTED tint, so it has a ceiling: it clears AA up to teal-700 and
+     fails above it. That is the bound `--ansr-gradient-teal` is capped at, and
+     the reason a bright display ground gets its own token rather than pushing
+     this one past where it works. */
   --ansr-text-inverse-muted: var(--ansr-teal-300);
 
   --ansr-border:             var(--ansr-grey-100);
@@ -95,28 +138,44 @@
 
   --ansr-action:             var(--ansr-orange);
   --ansr-action-hover:       var(--ansr-orange-400);
+  /* Named for the brand's own stated pairing, and MEASURED AT 3.35:1, which
+     fails AA for text at any size a control uses. Re-measured against the new
+     orange rather than carried over: the comp puts white on its pill twice and
+     is wrong both times. Black on the same fill is 6.27:1, and that is what the
+     public screens use. The token stays so the brand's intent is recorded. */
   --ansr-action-text:        var(--ansr-white);
   --ansr-accent:             var(--ansr-teal);
+  /* The accent on a DARK ground, which is a different colour rather than the
+     same one reused — 6.53:1 on the inverse band, 2.44:1 on white. The comp
+     keys its whole dark-ground voice to this and the old palette had no
+     equivalent, so every inverse band was carried by white alone. */
+  --ansr-accent-inverse:     var(--ansr-teal-bright);
   --ansr-focus:              var(--ansr-orange);
 
   /* ---- Feedback / status -----------------------------------------------
      A measured constraint, not a stylistic preference. Two findings from
      `python3 scripts/brand_status_analysis.py`:
 
-       - Teal steps sit within dE 0.044-0.087 of one another. The threshold
-         for "clearly different" is 0.15. So success and info CANNOT be
-         separated by colour inside this palette.
-       - The brand doc commits orange to CTAs and hover states. Reusing it for
-         danger makes a Delete button identical to Save. (The earlier
-         --ansr-status-danger did exactly that, and at 3.22:1 on white it also
-         failed text contrast. Both bugs are removed.)
+       - 9 of the teal ramp's 36 step pairs are still under the dE 0.15
+         "clearly different" threshold, and the whole DARK end (900 through
+         600) sits between 0.043 and 0.046. So success and info CANNOT be
+         separated by colour inside this palette. Adding the bright accent
+         raised the ramp's ceiling — two adjacent steps now reach 0.151 and
+         0.187 — and re-running the analysis was worth doing for exactly that
+         reason, but it did not overturn the finding.
+       - The brand commits orange to CTAs and hover states. Reusing it for
+         danger makes a Delete button identical to Save — dE 0.000, since it
+         would BE the same colour. (The earlier --ansr-status-danger did
+         exactly that, and at 3.35:1 on white it also failed text contrast.
+         Both bugs are removed.)
 
      So colour carries only two signals here; icon, label, weight and form
      carry the rest. WCAG 1.4.1 requires that anyway.
 
      There is deliberately NO danger colour. Destructive controls use the
      .ansr-destructive pattern below. See the open brand ask in BRAND.md.  */
-  --ansr-feedback-neutral:   var(--ansr-teal-500);   /* info, success, pending  */
+  --ansr-feedback-neutral:   var(--ansr-teal-500);   /* info, success, pending
+                                                        5.14:1 on white         */
   --ansr-feedback-attention: var(--ansr-orange-500); /* caution — in banners and
                                                         badges, never a button  */
   --ansr-feedback-critical:  var(--ansr-black);      /* errors: 21:1, always
@@ -139,8 +198,9 @@
 
   /* ======================================================================
      2. GRADIENTS
-     Exactly two exist. Each is a light gradient layer with a transparent
-     background composited over a solid ground.
+     Three. The first two are a light gradient layer with a transparent
+     background composited over a solid ground; the third is the comp's own
+     display ground and is opaque.
 
      Geometry is measured, not eyeballed. A 5x5 grid was sampled from each
      board swatch, then origin / radius / inner plateau / falloff exponent were
@@ -148,24 +208,35 @@
      (see BRAND.md). Stop tables below are that fitted curve.
 
      Peak COLOUR is deliberately not taken from the board: its colour
-     management is unreliable (the Orange Highlight swatch reads #EF5921
-     against a stated #FF5400, and the error is not uniform across swatches),
-     so the doc's stated hexes govern. What is taken from the board is the
-     shape.
+     management is unreliable — the Orange Highlight swatch samples about six
+     percent darker and redder than the value the doc states for it, and the
+     error is not uniform across swatches. So the geometry is the board's and
+     the colour is a token. What is taken from the board is the shape.
+     (Both sampled figures are in BRAND.md, which the lint does not read.)
      ====================================================================== */
 
-  /* Fitted: origin 95% 85%, radius 100%, opaque to 30%, then quadratic. */
+  /* Fitted: origin 95% 85%, radius 100%, opaque to 30%, then quadratic.
+
+     Its peak moved DOWN a step, from the light teal to `teal-700`, and that is
+     a fix rather than a side effect of the palette change. The old peak was the
+     old `--ansr-teal`, where `--ansr-text-inverse-muted` measured 3.30:1 — a
+     latent AA failure on every band using this gradient, never listed because
+     the pairing table only ever measured that ink against the two flat inverse
+     grounds. Capped at teal-700, the worst point on the whole band is now
+     white 11.68:1, inverse-muted 5.04:1, accent-inverse 4.78:1. Every ink that
+     is allowed on an inverse ground clears AA anywhere on it, with no
+     per-placement measurement. */
   --ansr-gradient-teal:
     radial-gradient(100% 100% at 95% 85%,
-      var(--ansr-teal)                                          0%,
-      var(--ansr-teal)                                         30%,
-      color-mix(in oklab, var(--ansr-teal) 73%, transparent)    40%,
-      color-mix(in oklab, var(--ansr-teal) 51%, transparent)    50%,
-      color-mix(in oklab, var(--ansr-teal) 33%, transparent)    60%,
-      color-mix(in oklab, var(--ansr-teal) 18%, transparent)    70%,
-      color-mix(in oklab, var(--ansr-teal)  8%, transparent)    80%,
-      color-mix(in oklab, var(--ansr-teal)  2%, transparent)    90%,
-      transparent                                             100%),
+      var(--ansr-teal-700)                                          0%,
+      var(--ansr-teal-700)                                         30%,
+      color-mix(in oklab, var(--ansr-teal-700) 73%, transparent)    40%,
+      color-mix(in oklab, var(--ansr-teal-700) 51%, transparent)    50%,
+      color-mix(in oklab, var(--ansr-teal-700) 33%, transparent)    60%,
+      color-mix(in oklab, var(--ansr-teal-700) 18%, transparent)    70%,
+      color-mix(in oklab, var(--ansr-teal-700)  8%, transparent)    80%,
+      color-mix(in oklab, var(--ansr-teal-700)  2%, transparent)    90%,
+      transparent                                                 100%),
     var(--ansr-teal-deep);
 
   /* Fitted: origin 85% 105%, radius 110%, plateau 10%, exponent 2.5.
@@ -195,6 +266,33 @@
       var(--ansr-teal-600) 206deg,
       var(--ansr-teal-400) 253deg,
       var(--ansr-teal-900) 360deg);
+
+  /* The comp's own hero ground: a plain top-to-bottom LINEAR ramp from the dark
+     navy toward the bright accent. Not expressible from the two above, which is
+     why docs/ansrx-visual-language.md §10 pre-authorised a third token if the
+     bright mint was adopted. It has been.
+
+     **The ramp is bounded at 60% of the way to the accent, and the bound is the
+     whole reason this is a separate token.** Run to a full `teal-bright` the
+     way the comp draws it, white measures 2.44:1 at the bottom edge — the comp
+     gets away with it only because its hero copy sits in the top third, which
+     is a per-placement guarantee rather than a property of the ground. At 60%
+     the darkest point is 15.96:1 and the brightest is 5.18:1, so WHITE clears
+     AA anywhere on the band and the ground can be used without knowing where
+     the text will land. The comp itself only exposes 3%-82% of its own ramp for
+     the same kind of reason.
+
+     Nothing muted may sit on it: `--ansr-text-inverse-muted` is 2.23:1 at the
+     bright end and `--ansr-accent-inverse` is 2.12:1. On this ground hierarchy
+     is carried by SIZE AND WEIGHT in one ink, which is what the comp's hero
+     does — it has no muted lead at all. Bands that need a muted ink use
+     `--ansr-gradient-teal` or a flat inverse ground instead. */
+  --ansr-gradient-hero:
+    linear-gradient(to bottom,
+      var(--ansr-teal-900)                                              0%,
+      color-mix(in oklab, var(--ansr-teal-bright) 22%, var(--ansr-teal-900))  40%,
+      color-mix(in oklab, var(--ansr-teal-bright) 45%, var(--ansr-teal-900))  72%,
+      color-mix(in oklab, var(--ansr-teal-bright) 60%, var(--ansr-teal-900)) 100%);
 
   /* Replaces the deleted 40MB Rectangle-1 blur raster. */
   --ansr-blur-wash: blur(96px);

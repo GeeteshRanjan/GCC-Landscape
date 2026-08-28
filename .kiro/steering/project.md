@@ -94,9 +94,13 @@ in a marketing page a CIO opens on a phone. It is also why every mark is `aria-h
 second reading of a figure already present, so hiding it loses nothing. `bklit-ui` is a good library
 and hover-first; that is the mismatch.
 
-Colour inside a chart is **ordinal only, on the teal ramp — darker means more.** Categorical hue is
-not available here (the teal steps sit within ΔE 0.087), so any distinction that must survive
-greyscale is carried by form: fill against outline, or a labelled step count.
+Colour inside a chart is **ordinal only, on the teal ramp — darker means more.** That survived the
+palette swap for a reason worth keeping: an ordinal ramp needs monotonic lightness, not separable
+hue, and the four-anchor ramp is monotonic in Oklab lightness end to end. What it still does not
+supply is categorical hue — 9 of its 36 step pairs sit under the ΔE 0.15 "clearly different"
+threshold and the whole dark end is at 0.043–0.046 — so any distinction that must survive greyscale
+is carried by form: fill against outline, or a labelled step count. **`--ansr-teal-bright` is not
+available inside a chart on a light ground at all**, at 2.44:1 on white.
 
 **Which chart draws a metric is a property of the DATA, decided in `screen2.ts`, never in the
 component.** `breakdownDisplay` and `gridDisplay` own it; `metric-card.tsx` draws what it is handed.
@@ -203,7 +207,9 @@ Violating any of these breaks the product, not just the build.
 5. **Excel is a seed, never a runtime dependency.** Nothing reads `.xlsx` on request, and after the
    first import admin is the system of record.
 6. **No raw hex, magic pixel, or ad-hoc duration.** `assets/brand/tokens.css` governs;
-   `scripts/brand_lint.py` enforces. See `design-stack.md`.
+   `scripts/brand_lint.py` enforces. The palette itself comes from `Group 149.svg`, measured in
+   `docs/ansrx-visual-language.md`; Branding_Palette.docx is superseded and its values are now
+   what the lint rejects. See `design-stack.md`.
 7. **The public surface never hints that an admin exists.** No login link, no admin nav, no
    "sign in". Admin is reached by typing the URL and is behind real auth — an unguessable path is
    not access control.

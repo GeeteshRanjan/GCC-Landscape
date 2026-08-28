@@ -9,34 +9,34 @@
 </g>
 <defs>
 <linearGradient id="paint0_linear_1_6884" x1="1226.78" y1="495.816" x2="23.4241" y2="449.917" gradientUnits="userSpaceOnUse">
-<stop stop-color="#004757"/>
-<stop offset="0.26" stop-color="#003B49"/>
-<stop offset="0.74" stop-color="#00242E"/>
+<stop stop-color="#004C4D"/>
+<stop offset="0.26" stop-color="#043F43"/>
+<stop offset="0.74" stop-color="#08252F"/>
 </linearGradient>
 <linearGradient id="paint1_linear_1_6884" x1="-64.2717" y1="409.923" x2="1411.39" y2="409.923" gradientUnits="userSpaceOnUse">
-<stop stop-color="#004757"/>
-<stop offset="0.26" stop-color="#003B49"/>
-<stop offset="0.74" stop-color="#00242E"/>
+<stop stop-color="#004C4D"/>
+<stop offset="0.26" stop-color="#043F43"/>
+<stop offset="0.74" stop-color="#08252F"/>
 </linearGradient>
 <linearGradient id="paint2_linear_1_6884" x1="1127.27" y1="315.728" x2="-458.051" y2="315.728" gradientUnits="userSpaceOnUse">
-<stop stop-color="#004757"/>
-<stop offset="0.26" stop-color="#003B49"/>
-<stop offset="0.74" stop-color="#00242E"/>
+<stop stop-color="#004C4D"/>
+<stop offset="0.26" stop-color="#043F43"/>
+<stop offset="0.74" stop-color="#08252F"/>
 </linearGradient>
 <linearGradient id="paint3_linear_1_6884" x1="-0.00175606" y1="224.149" x2="1508.24" y2="238.504" gradientUnits="userSpaceOnUse">
-<stop stop-color="#004757"/>
-<stop offset="0.26" stop-color="#003B49"/>
-<stop offset="0.74" stop-color="#00242E"/>
+<stop stop-color="#004C4D"/>
+<stop offset="0.26" stop-color="#043F43"/>
+<stop offset="0.74" stop-color="#08252F"/>
 </linearGradient>
 <linearGradient id="paint4_linear_1_6884" x1="1214.5" y1="130.826" x2="-428.252" y2="144.549" gradientUnits="userSpaceOnUse">
-<stop stop-color="#004757"/>
-<stop offset="0.26" stop-color="#003B49"/>
-<stop offset="0.74" stop-color="#00242E"/>
+<stop stop-color="#004C4D"/>
+<stop offset="0.26" stop-color="#043F43"/>
+<stop offset="0.74" stop-color="#08252F"/>
 </linearGradient>
 <linearGradient id="paint5_linear_1_6884" x1="-146.782" y1="33.7533" x2="1508.21" y2="55.0995" gradientUnits="userSpaceOnUse">
-<stop stop-color="#004757"/>
-<stop offset="0.26" stop-color="#003B49"/>
-<stop offset="0.775864" stop-color="#00242E"/>
+<stop stop-color="#004C4D"/>
+<stop offset="0.26" stop-color="#043F43"/>
+<stop offset="0.775864" stop-color="#08252F"/>
 </linearGradient>
 <clipPath id="clip0_1_6884">
 <rect width="1080" height="540" fill="white"/>

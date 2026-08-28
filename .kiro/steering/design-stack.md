@@ -10,24 +10,33 @@ facts* those skills need. Keep it current — a stale value here silently corrup
 ## Brand source of truth
 | Input | Path | Status |
 | --- | --- | --- |
-| Brand palette | `assets/brand/BRAND.md` + `reference/*.png` | extracted; source docx removed |
-| Brand SVG library | `assets/brand/` (+ `manifest.json`) | curated, recolored to tokens |
-| Project brief / landscape | `GCC Lansdscape.pdf` | not yet summarised |
+| **Palette, type, grid, bands, motifs** | `docs/ansrx-visual-language.md` | `Group 149.svg` measured; **the authority** |
+| Palette provenance (CMYK/PMS, gradient fits) | `assets/brand/BRAND.md` + `reference/*.png` | superseded for values, kept for provenance |
+| Brand SVG library | `assets/brand/` (+ `manifest.json`) | curated, recoloured to the current tokens |
+| Project brief / landscape | `docs/brief.md` | transcribed |
+
+**The palette came from `Group 149.svg`, not from Branding_Palette.docx.** The docx is superseded
+and the change is settled, not pending: the comp is the newer art direction, and it was not built
+from the docx at all — its CTA is `#FD4E11` rather than `#FF5400`, its ground is a navy rather than
+a deep teal, and its most-used accent is a bright mint-teal the docx does not contain. What survives
+from the docx is CMYK/PMS provenance and the two **fitted gradient geometries**, which the comp
+does not restate.
 
 ## Design tokens
 **`assets/brand/tokens.css` is the single source of truth.** Read it; do not restate its values
-anywhere else; generate any Tailwind theme from it. `assets/brand/BRAND.md` is the written
-rationale — including CMYK/PMS values, gradient fits, and which decisions were project calls
-rather than brand mandates.
+anywhere else; generate any Tailwind theme from it. Every value in it now carries its occurrence
+count in the reference or the interpolation that produced it, so a suspect step can be re-derived
+rather than argued about: `python3 scripts/brand_asset.py ramp` reproduces all three ramps and must
+agree with the CSS.
 
 The system is complete. Eight families, all defined:
 
 | Family | Prefix | Notes |
 | --- | --- | --- |
-| Colour | `--ansr-{black,white,grey,teal,teal-deep,orange}` | Core, verbatim from brand doc |
-| — ramps | `--ansr-{teal,orange,grey}-{900..50}` | Oklab interpolations of brand anchors |
-| — aliases | `--ansr-{surface,text,border,action,accent,focus,status}-*` | **Components use these** |
-| Gradients | `--ansr-gradient-{teal,orange,conic}` | Exactly two are brand; conic is a reconstruction |
+| Colour | `--ansr-{black,white,grey,teal,teal-deep,teal-bright,orange}` | Core, measured off the reference |
+| — ramps | `--ansr-{teal,orange,grey}-{900..50}` | Oklab interpolations between measured anchors. Teal has four; `--ansr-teal` is **600**, not 500 |
+| — aliases | `--ansr-{surface,text,border,action,accent,focus,feedback}-*` | **Components use these** |
+| Gradients | `--ansr-gradient-{teal,orange,hero,conic}` | `teal`/`orange` are the docx's fitted geometry; `hero` is the reference's linear ground; conic is a reconstruction |
 | Type | `--ansr-{font,text,leading,weight,tracking,measure}-*` | Inter for UI, `font-display` for display; 12→80px scale |
 | Spacing | `--ansr-space-{0..32}` | 4px base unit |
 | Radius | `--ansr-radius-{none,sm,md,lg,xl,pill}` | Minimal — brand geometry is hard-edged |
@@ -37,23 +46,50 @@ The system is complete. Eight families, all defined:
 
 Hard rules:
 - Orange is a highlight, restricted to CTAs and hover states. Not a surface, not body text.
+  **Once per band**, which is stricter than "restricted to CTAs" and is the reference's own rule.
 - Never a raw hex, magic pixel value, or ad-hoc duration. `scripts/brand_lint.py` enforces it.
-- Reject on sight: mint `#00B8A9`, vermilion `#F05A30`, amber `#F47F20`, deck teal `#006968`,
-  old logo orange `#DD6236`. All are pre-brand deck art, already folded into the ramps.
-- Radius defaults to `md` (4px), and `none` for anything sitting against a brand motif.
-- **Status is carried by form, not colour.** Measured: this palette supports exactly two
-  semantic colour signals — `--ansr-feedback-neutral` (teal) and `--ansr-feedback-attention`
-  (orange). Teal steps are within ΔE 0.087 of each other so success/info cannot be separated by
-  hue, and orange belongs to CTAs so danger cannot borrow it. Success, warning and danger are
-  carried by icon + label + weight + form. Destructive controls use `.ansr-destructive`.
+- **The teal family has three anchors, and the bright one is for dark grounds only.**
+  `--ansr-teal` is the heading teal on a light ground; `--ansr-teal-bright` (= `teal-400`,
+  = `--ansr-accent-inverse`) is the accent on a dark one, and measures 2.44:1 on white. Putting
+  it on a light ground is the single easiest way to break a screen with an on-brand colour.
+- **Reject on sight: the retired docx palette.** Light Teal `#005465`, Deep Teal `#00242E`,
+  Orange Highlight `#FF5400`, and every step of the ramps derived from them. They are not deck
+  art, they were this project's palette until `Group 149.svg` superseded it, so they will keep
+  turning up in older files and older screenshots. Also still rejected: vermilion `#F05A30`,
+  amber `#F47F20`, deck teal `#006968`, old logo orange `#DD6236`, and the near-miss drifts
+  around the new anchors (`#00B8A9`, `#00544C`, `#072228`). `brand_lint.py` names each with its
+  replacement token.
+- Radius defaults to `md` (4px), and `none` for anything sitting against a brand motif. The
+  reference is one step harder-edged than that: its cards, panels and accordion rows are true 0,
+  and only the pill CTA and one stat card are round. Prefer `none` on the public screens.
+- **Status is carried by form, not colour.** Re-measured against the new palette rather than
+  carried over, because a bright accent could have overturned it: it did not. This palette
+  supports exactly two semantic colour signals — `--ansr-feedback-neutral` (teal) and
+  `--ansr-feedback-attention` (orange). 9 of the teal ramp's 36 step pairs are still under the
+  ΔE 0.15 "clearly different" threshold and the whole dark end sits at 0.043–0.046, so
+  success/info cannot be separated by hue; orange belongs to CTAs, so danger cannot borrow it.
+  Success, warning and danger are carried by icon + label + weight + form. Destructive controls
+  use `.ansr-destructive`. Re-run `python3 scripts/brand_status_analysis.py` after any palette
+  change — it derives from the ramps rather than hardcoding, so it re-checks itself.
 - The four `--ansr-status-*` tokens are **retired** and lint-blocked. `--ansr-status-danger`
   resolved to the CTA orange, making Delete look identical to Save. Do not reintroduce them.
-- One open brand ask: a single functional red for destructive actions, `#BC4757` recommended and
-  verified. See `assets/brand/BRAND.md`. Nothing is blocked while it is pending.
+- One open brand ask: a single functional red for destructive actions. Against the new palette
+  the best verified candidate is `#B3505B` (4.98:1 on white, 3.20:1 on the dark ground, and
+  separable from the CTA orange under both protanopia and deuteranopia). See
+  `assets/brand/BRAND.md`. Nothing is blocked while it is pending.
 
-Project decisions not sourced from the brand doc (each a one-token swap if brand supplies a
+Project decisions not sourced from a brand document (each a one-token swap if ANSR supplies a
 standard): 4px spacing base, minimal radius scale, teal-tinted elevation, motion timings,
-status mapping.
+status mapping, and the two bounds below — both of which exist because a measurement forced them
+rather than because they looked better.
+
+- **`--ansr-gradient-teal` is capped at `teal-700`.** Its old peak put
+  `--ansr-text-inverse-muted` at 3.30:1, a latent AA failure on every band using it. Capped, the
+  worst point on the band clears AA for every ink allowed on an inverse ground.
+- **`--ansr-gradient-hero` is capped at 60% of the way to the bright accent.** Run to the full
+  accent the way the reference draws it, white measures 2.44:1 at the bottom edge. The reference
+  survives that only because its hero copy sits in the top third, which is a per-placement
+  guarantee rather than a property of the ground.
 
 **The typeface is no longer one of them. The brand has one: Moderat.** ansr.com sets it on every
 heading and paragraph, and `Group 149.svg`'s outlined glyph widths match its advance widths to

@@ -27,7 +27,7 @@ import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from brand_asset import (hex_to_rgb, rgb_to_hex, rgb_to_oklab, oklab_to_rgb,
-                         _srgb_to_lin, _lin_to_srgb, CORE)
+                         _srgb_to_lin, _lin_to_srgb, CORE, build_ramps)
 
 # ---------------------------------------------------------------- CVD ------
 CVD = {
@@ -159,9 +159,13 @@ def main():
     L, C, H = oklch(TEAL)
     print(f"  Teal       {TEAL}  OkLCh L={L:.3f} C={C:.3f} h={H:.1f}deg")
 
-    print("\n  Current token mapping, measured:")
-    cur = {"status-danger": "#FF5400", "status-warning": "#FF865D",
-           "status-success": "#004757", "status-info": "#005465"}
+    print("\n  The retired --ansr-status-* mapping, re-measured on the CURRENT palette.")
+    print("  Re-derived from the ramps rather than hardcoded, so the argument for")
+    print("  removing them is re-checked against whatever the palette is now — a")
+    print("  brighter accent could in principle have overturned it.")
+    _r = build_ramps()
+    cur = {"status-danger": _r["orange"][500], "status-warning": _r["orange"][400],
+           "status-success": _r["teal"][600], "status-info": _r["teal"][500]}
     for name, hx in cur.items():
         print(f"    {name:16} {hx}  dE from CTA orange {de(hx, ORANGE):.3f}"
               f"   on white {contrast(hex_to_rgb(hx), hex_to_rgb(WHITE)):.2f}:1")
@@ -171,6 +175,27 @@ def main():
           f"  <- effectively the same colour")
     print(f"    danger vs CTA orange     dE {de(cur['status-danger'], ORANGE):.3f}"
           f"  <- IDENTICAL. Delete looks like Save.")
+
+    print("\n" + "=" * 74)
+    print("IS THE TEAL RAMP SEPARABLE BY COLOUR? (the claim status mapping rests on)")
+    print("=" * 74)
+    print("  Adjacent-step dE. >0.15 is 'clearly different'; the old two-anchor")
+    print("  ramp sat at 0.044-0.087 throughout, which is what ruled out using two")
+    print("  teal steps to mean two different things.")
+    steps = sorted(_r["teal"], reverse=True)
+    worst, best = 1.0, 0.0
+    for a, b in zip(steps, steps[1:]):
+        d = de(_r["teal"][a], _r["teal"][b])
+        worst, best = min(worst, d), max(best, d)
+        note = "  clearly different" if d >= 0.15 else ""
+        print(f"    teal-{a} vs teal-{b}   dE {d:.3f}{note}")
+    print(f"\n    range {worst:.3f} - {best:.3f}")
+    pairs = list(itertools.combinations(steps, 2))
+    collapsed = [(a, b) for a, b in pairs if de(_r["teal"][a], _r["teal"][b]) < 0.15]
+    print(f"    {len(collapsed)} of {len(pairs)} step pairs are still under 0.15,"
+          f" so colour alone still cannot")
+    print("    carry a semantic distinction across the family. Ordinal use (darker")
+    print("    means more) is unaffected — it needs monotonic lightness, not hue.")
 
     print("\n" + "=" * 74)
     print("CAN AN ADDED RED SOLVE IT? (searching hue 15-40deg)")

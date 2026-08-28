@@ -18,6 +18,14 @@ All eight token families are already defined and authoritative in
 generated and none should be. Use the semantic aliases (`--ansr-surface-*`, `--ansr-text-*`,
 `--ansr-action*`, `--ansr-accent`), never the ramps directly.
 
+**The palette was replaced on 2026-08-28, and this file was written under the old one.** Every
+composition decision below survived; every colour figure was re-measured. The values now come from
+`Group 149.svg` (measured in `docs/ansrx-visual-language.md`) rather than from
+Branding_Palette.docx: the action orange is `#FD4E11`, the dark ground is a navy, and there is a
+**bright mint-teal accent that the old palette had no equivalent for**. One rule below reversed
+outright as a result — see the reference-intelligence section — and one new rule appeared:
+`--ansr-accent-inverse` is legible only on a dark ground, at 2.44:1 on white.
+
 ## Type scale — use the display end of it
 
 The scale had a 48px step neither public screen ever reached: section headings sat at 24/30px
@@ -41,41 +49,58 @@ of why the screens read as a document.
 with the label below it: it separates the number from its label without a box and gives a lone
 figure an edge to sit on. Straight from ansr.com's own stat shape.
 
-## Colour contract — the one measured correction
+## Colour contract — re-measured against the new palette
 
-The brand's own pairing for a primary action is white on `--ansr-orange`. **Measured at
-3.22:1, which fails WCAG AA for text at any size the CTA actually uses.** Black on the same
-fill is **6.52:1**.
+**Black on the orange fill still stands, and now it is measured twice.** The brand's own pairing
+for a primary action is white on `--ansr-orange`. On the old orange that was 3.22:1; on `#FD4E11`
+it is **3.35:1** — still a WCAG AA failure at every size a control uses. Black on the same fill is
+**6.27:1**. The reference puts white on its pill twice and is wrong both times; do not copy it.
 
-So the public screens put **black on the orange fill**, not `--ansr-action-text`. The palette
-was left alone and a legal pairing used instead, per the ordered failure path: reuse a
-pairing that already passes before touching a token. Applied in
-`src/components/screen1/input-panel.tsx` and the closing CTA in `peer-view.tsx`.
+So the public screens put **black on the orange fill**, not `--ansr-action-text`. The palette is
+left alone and a legal pairing used instead, per the ordered failure path: reuse a pairing that
+already passes before touching a token. Applied in `src/components/screen1/input-panel.tsx` and the
+closing CTA in `peer-view.tsx`.
 
 Pairings verified for the public screens:
 
 | Pairing | Ratio | Use |
 | --- | --- | --- |
 | `--ansr-text` on `--ansr-surface` | 21:1 | body, headings |
-| `--ansr-text-muted` on `--ansr-surface` | 9.0:1 | secondary copy, captions |
-| `--ansr-accent` on `--ansr-surface` | 8.55:1 | kickers, figures, the industry count |
-| `--ansr-accent` on `--ansr-surface-subtle` | 7.77:1 | same, on a neutral panel |
-| `--ansr-text` on `--ansr-surface-tint` | 17.06:1 | body and headings on the teal band |
-| `--ansr-text-muted` on `--ansr-surface-tint` | 6.97:1 | secondary copy on the teal band |
-| `--ansr-accent` on `--ansr-surface-tint` | 6.94:1 | kickers and figures on the teal band |
-| `--ansr-white` on `--ansr-accent` | 8.55:1 | accent chips |
-| `--ansr-white` on `--ansr-surface-inverse` | 16.26:1 | inverse bands |
-| `--ansr-white` on `--ansr-surface-inverse-soft` | 14.29:1 | a raised card on an inverse band |
-| `--ansr-text-inverse-muted` on `--ansr-surface-inverse` | 6.27:1 | leads and kickers on an inverse band |
-| `--ansr-text-inverse-muted` on `--ansr-surface-inverse-soft` | 5.51:1 | same, and the `FractionBar` fill on its track |
-| `--ansr-white` on the teal gradient's brightest point | 8.55:1 | the hero, worst case |
-| `--ansr-text` on `--ansr-action` | 6.52:1 | **primary CTA label** |
-| ~~`--ansr-white` on `--ansr-action`~~ | 3.22:1 | **do not use** |
+| `--ansr-text-muted` on `--ansr-surface` | 8.59:1 | secondary copy, captions |
+| `--ansr-accent` on `--ansr-surface` | 9.81:1 | kickers, figures, the industry count |
+| `--ansr-accent` on `--ansr-surface-subtle` | 8.92:1 | same, on a neutral panel |
+| `--ansr-text` on `--ansr-surface-tint` | 16.52:1 | body and headings on the teal band |
+| `--ansr-text-muted` on `--ansr-surface-tint` | 6.76:1 | secondary copy on the teal band |
+| `--ansr-accent` on `--ansr-surface-tint` | 7.72:1 | kickers and figures on the teal band |
+| `--ansr-white` on `--ansr-accent` | 9.81:1 | accent chips |
+| `--ansr-white` on `--ansr-surface-inverse` | 15.96:1 | inverse bands |
+| `--ansr-white` on `--ansr-surface-inverse-soft` | 13.79:1 | a raised card on an inverse band |
+| `--ansr-text-inverse-muted` on `--ansr-surface-inverse` | 6.89:1 | leads and kickers on an inverse band |
+| `--ansr-text-inverse-muted` on `--ansr-surface-inverse-soft` | 5.95:1 | same, and the `FractionBar` fill on its track |
+| `--ansr-accent-inverse` on `--ansr-surface-inverse` | 6.53:1 | the accent on a dark band |
+| `--ansr-accent-inverse` on `--ansr-surface-inverse-soft` | 5.64:1 | same, on a raised card |
+| `--ansr-white` on `--ansr-gradient-teal`, worst point | 11.68:1 | Screen 2 and the answer header |
+| `--ansr-text-inverse-muted` on `--ansr-gradient-teal`, worst point | 5.04:1 | leads on those headers |
+| `--ansr-white` on `--ansr-gradient-hero`, worst point | 5.18:1 | **the ask hero, and the only ink allowed on it** |
+| `--ansr-text` on `--ansr-action` | 6.27:1 | **primary CTA label** |
+| ~~`--ansr-white` on `--ansr-action`~~ | 3.35:1 | **do not use** |
+| ~~`--ansr-accent-inverse` on `--ansr-surface`~~ | 2.44:1 | **do not use — dark grounds only** |
+| ~~`--ansr-text-inverse-muted` on `--ansr-gradient-hero`~~ | 2.23:1 | **do not use** |
 
-The gradient row is the one that needed thinking about rather than measuring once.
-`--ansr-gradient-teal` runs from `--ansr-teal` at its origin to `--ansr-teal-deep` at its
-edge, so white over it is bounded below by 8.55:1 and above by 16.26:1 — every point on the
-band clears AA, and no per-placement measurement is needed.
+**The two gradient rows are the ones that needed thinking about rather than measuring once, and
+both are now bounded at the token so a placement cannot get them wrong.**
+
+- `--ansr-gradient-teal` is capped at `teal-700`. It used to peak at the old `--ansr-teal`, where
+  `--ansr-text-inverse-muted` measured **3.30:1** — a latent AA failure on every band using that
+  gradient, which survived because the table above only ever measured that ink against the two
+  *flat* inverse grounds. Capped, every ink allowed on an inverse ground clears AA anywhere on the
+  band.
+- `--ansr-gradient-hero` is the reference's own linear navy-to-mint, capped at 60% of the way to
+  the accent. Run to the full accent as the reference draws it, white is 2.44:1 at the bottom
+  edge; the reference survives that only because its hero copy sits in the top third, which is a
+  per-placement guarantee rather than a property of the ground. **Nothing muted may sit on it** —
+  hierarchy there is carried by size and weight in one ink, which is what the reference's own hero
+  does. It has no muted lead at all.
 
 Re-measure with `python3 .kiro/skills/tastemaker/scripts/check_contrast.py <fg> <bg>` before
 introducing any pairing not listed.
@@ -229,12 +254,19 @@ rather than assuming the well is as wide as the band.
   unfinished. ansr.com is itself heavily art-directed — full-bleed saturated grounds, 72px
   display type, graphics bleeding off the canvas. Matching the brand *requires* a high setting
   here; 4 was a misreading of the brand, not a safe interpretation of it.
-- **The reference is `Group 149.svg`** in the repo root, a 1440×5531 export of an ANSRx page.
-  Render it to look at it — it is 7.4MB with outlined text and 7 embedded rasters, so reading
-  the path data tells you nothing. Its **palette is pre-brand deck art** (mint `#00B8A9`, the
-  old logo orange), all of which `brand_lint.py` rejects on sight: take composition, scale and
-  rhythm from it, never colour.
-- **It is now fully measured in `docs/ansrx-visual-language.md`** — typeface and weights, the
+- **The reference is `Group 149.svg`**, a 1440×5531 export of an ANSRx page. It is fully measured
+  in `docs/ansrx-visual-language.md` and **the export itself is no longer needed** — read the
+  measurement, not the file.
+- **Take its colour too.** This line said the opposite for a day: that the reference's palette was
+  pre-brand deck art and only its composition could be trusted. That reading came from
+  `brand_lint.py` rejecting the reference's own most-used accent, which looked like evidence and
+  was actually just the lint being older than the art direction. The reference was not built from
+  the docx palette at all — different action orange, different ground, and an accent the docx does
+  not contain — so "newer direction" and "built from the old deck" were the two candidate
+  explanations, and it was the first. **Everything now comes from the reference: colour,
+  composition, scale and rhythm.** The one thing still refused is its accessibility: white on its
+  orange pill, and its 1.11 body leading.
+- Measured in `docs/ansrx-visual-language.md` — typeface and weights, the
   type scale with real line-height ratios, the 12×86/21 grid, the four-ground band system and
   its rhythm, every measured hex against its token, the five motifs as reproducible parameters,
   and the anatomy of all eight components. Read that instead of re-deriving; it also records how

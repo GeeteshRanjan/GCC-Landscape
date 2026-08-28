@@ -118,6 +118,10 @@
   --color-action-hover: var(--ansr-action-hover);
   --color-action-text: var(--ansr-action-text);
   --color-accent-teal: var(--ansr-accent);
+  /* The accent on a DARK ground. A different colour, not the same one reused —
+     see the token. 6.53:1 on the inverse band and 2.44:1 on white, so it is only
+     ever correct on an inverse ground. */
+  --color-accent-inverse: var(--ansr-accent-inverse);
   --color-focus: var(--ansr-focus);
 
   --color-feedback-neutral: var(--ansr-feedback-neutral);
@@ -156,7 +160,11 @@
      it survived until something actually tried to use it.
 
      Those two are consumed through `.gcc-ground-gradient` below, which uses the
-     `background` shorthand the tokens are written for. */
+     `background` shorthand the tokens are written for. `--ansr-gradient-hero` is
+     a real `<image>` and could be aliased, but it is not: it comes with a
+     contrast contract (white only, nothing muted) that a `bg-*` utility would
+     let any component opt into silently. It is reached through
+     `.gcc-ground-hero`, where the contract is written down beside it. */
   --background-image-gradient-conic: var(--ansr-gradient-conic);
 
   /* ---- Type ------------------------------------------------------------ */

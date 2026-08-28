@@ -31,15 +31,51 @@ SKIP_DIR = {"node_modules", ".git", "dist", "build", ".next", "out",
             # colours nobody in this project chose or can change.
             "playwright-report", "test-results", "coverage"}
 
+# Hexes that must never appear, each with the token that replaces it.
+#
+# **This list was inverted when the palette moved to `Group 149.svg`.** It used to
+# name the comp's bright mint as off-brand deck art; the mint is now the accent
+# and the DOCX PALETTE IS WHAT IS RETIRED. Every step of the old two-anchor ramp
+# is listed, not just the two core colours, for one specific reason: the raw-hex
+# check reads its allow-list out of tokens.css, so the moment a value leaves that
+# file it stops being allowed — but "raw-hex" is a generic message that reads like
+# a style nit. A stale `#005465` is not a style nit, it is a colour from a palette
+# this project no longer uses, and it should say so.
+#
+# Nothing here may still be present in tokens.css: off-brand is checked BEFORE the
+# allow-list, so listing a live token would fail the lint on the token file itself.
 OFF_BRAND = {
-    "#00B8A9": "bright mint - not a brand colour; use --ansr-teal-400",
-    "#00B3A5": "bright mint - not a brand colour; use --ansr-teal-400",
-    "#F05A30": "vermilion - not a brand colour; use --ansr-orange",
-    "#F05722": "vermilion - not a brand colour; use --ansr-orange",
-    "#F47F20": "amber - not a brand colour; use --ansr-orange-400",
-    "#F58A28": "amber - not a brand colour; use --ansr-orange-400",
-    "#006968": "deck teal - use --ansr-teal-600",
+    # ---- the retired docx palette: core ----
+    "#005465": "retired Light Teal (docx) - use --ansr-teal or --ansr-teal-600",
+    "#00242E": "retired Deep Teal (docx) - use --ansr-teal-deep",
+    "#FF5400": "retired Orange Highlight (docx) - use --ansr-orange (#FD4E11)",
+    # ---- the retired docx-derived ramps ----
+    "#002F3B": "retired teal ramp step - use --ansr-teal-800",
+    "#003B49": "retired teal ramp step - use --ansr-teal-700",
+    "#004757": "retired teal ramp step - use --ansr-teal-600",
+    "#54818E": "retired teal ramp step - use --ansr-teal-500",
+    "#87A6AF": "retired teal ramp step - use --ansr-teal-300",
+    "#BBCDD2": "retired teal ramp step - use --ansr-teal-200",
+    "#E1E9EB": "retired teal ramp step - use --ansr-teal-100 (now the pale mint)",
+    "#FF865D": "retired orange ramp step - use --ansr-orange-400",
+    "#FFAE91": "retired orange ramp step - use --ansr-orange-300",
+    "#FFD1C0": "retired orange ramp step - use --ansr-orange-200",
+    "#FFEBE3": "retired orange ramp step - use --ansr-orange-100",
+    # ---- deck art that was never on brand under either palette ----
+    "#F05A30": "vermilion - deck art; use --ansr-orange",
+    "#F05722": "vermilion - deck art; use --ansr-orange",
+    "#F47F20": "amber - deck art; use --ansr-orange-400",
+    "#F58A28": "amber - deck art; use --ansr-orange-400",
+    "#006968": "deck teal - use --ansr-teal-500",
     "#DD6236": "old logo orange - use --ansr-orange",
+    # ---- drift AROUND the new anchors, which is now the common mistake ----
+    # These are near-misses for real tokens, so they are the values most likely to
+    # be pasted from a Figma inspector and least likely to be noticed by eye.
+    "#00B8A9": "drifted bright teal - use --ansr-teal-bright (#00BAA8)",
+    "#00B3A5": "drifted bright teal - use --ansr-teal-bright (#00BAA8)",
+    "#072228": "drifted dark ground - use --ansr-teal-deep (#08252F)",
+    "#082D36": "drifted dark ground - use --ansr-teal-deep (#08252F)",
+    "#00544C": "drifted heading teal - use --ansr-teal (#004C4D)",
 }
 
 HEX = re.compile(r"#[0-9A-Fa-f]{6}\b|#[0-9A-Fa-f]{3}\b")
