@@ -6,15 +6,17 @@ Volatile. Rewritten each session, never appended to. Cap 120 lines. Present tens
 
 ## Where we are
 
-**PR #1 is open and awaiting review.** `github.com/GeeteshRanjan/GCC-Landscape/pull/1` —
-`feat/business-type-similarity` → `main`, 4 commits, 44 files. `main` is still at `4f9c138`; nothing is
-merged yet.
+**PR #1 is open and awaiting review**, reported mergeable with no conflicts.
+`github.com/GeeteshRanjan/GCC-Landscape/pull/1` — `feat/business-type-similarity` → `main`, 44 files.
+`main` is still at `4f9c138`; nothing is merged yet.
+
+Two substantive commits, the rest documentation. No count given — every handoff rewrite lands on this
+branch, so any number here is stale on arrival; use `git log origin/main..`.
 
 | Commit | What it is |
 | --- | --- |
 | `f5a9d58` | The scored peer engine, 44 files. Was the uncommitted working tree. |
 | `b5a1754` | `SIMILARITY_FLOOR` 0.15 → 0.20, with the re-accepted baseline. |
-| `09ea0ee`, `047fd71` | Handoff rewrite; the autocomplete cut recorded as durable, five/six input drift fixed. |
 
 **The gate is green:** 336 Vitest, 110 Playwright against a real production build, `tsc`,
 `brand_lint.py`, `npm run build`, `data:verify`, every invariant holding.
@@ -25,28 +27,27 @@ power-and-grid peers, honestly one short — where 0.15 gave five oil majors. Ae
 Boeing. Cost is 112 → 147 short sets of 1064. Reasoning sits beside the constant in `similarity.ts`.
 
 **Company-name autocomplete was built and then removed** on ANSR's call; the reasoning is durable and
-now lives in `project.md`. Nothing partial is left — plain text input, and the form's promise is back to
-"Nothing you enter is stored or sent to us." The remote branch is deleted. The three commits survive
-only as the **local** ref `feat/company-name-autocomplete` (`b4324c4`), which is the sole copy — it goes
-when this clone does, and that is the intended outcome.
+lives in `project.md`. Nothing partial is left — plain text input, and the form's promise is back to
+"Nothing you enter is stored or sent to us." The remote branch is deleted; the commits survive only as
+the **local** ref `feat/company-name-autocomplete` (`b4324c4`), so they go when this clone does. That is
+the intended outcome.
 
 ## Next action
 
 1. **Review and merge PR #1.** It must land `data/dataset.json` and `data/verify-baseline.json`
    together — the baseline carries the new coverage figures, and splitting them breaks `data:verify`
    for whoever pulls next. Squashing is fine; splitting the data files is not.
-2. **Then walk the live deployment**, which has not been done and could not be. Verified by fetching
-   `gcc-landscape.vercel.app`: it still has no "Line of business" field, because a branch push builds a
-   *preview*, not production. `curl` cannot drive it either — the peer set arrives via a server action —
-   so it needs a browser. Pointing Playwright's `public` project at the deployed URL would close the
-   "only covers a local build" gap permanently.
+2. **Then walk the live deployment**, never yet done. Verified by fetching `gcc-landscape.vercel.app`:
+   it still has no "Line of business" field, because a branch push builds a *preview*, not production.
+   `curl` cannot drive it either — the peer set arrives via a server action — so it needs a browser.
+   Pointing Playwright's `public` project at the deployed URL would close that gap permanently.
 
 Ours, not urgent: **self-host Inter** (no web font loads), **the HR tab's short bars**.
 
 ## Blocked / needs the user
 
 1. **Rotate the admin password** — shared in a chat transcript, deployment publicly reachable.
-   `npm run admin:hash`, update `ADMIN_PASSWORD_HASH` in Vercel, redeploy. The only item with a live
+   `npm run admin:hash`, update `ADMIN_PASSWORD_HASH` in Vercel, redeploy. The only item with live
    exposure behind it.
 2. **Calendar the `GCC_GITHUB_TOKEN` expiry.** When it lapses, publishing fails with a GitHub 401
    that reads like a bug rather than an expiry.
@@ -61,10 +62,10 @@ Ours, not urgent: **self-host Inter** (no web font loads), **the HR tab's short 
 ## Open decisions, not yet made
 
 - **Whether to relax the industry boundary, and if so only as a fallback.** Prototyped in
-  `scripts/proto-industry-tag.ts` (uncommitted); **the obvious form does not work.** Making industry a
-  heavily-weighted tag produces **zero** cross-industry peers for six test visitors at any weight,
-  because a same-industry same-business company scores near 1.0 while the best outsider caps far below —
-  Nike never sees P&G while twenty apparel retailers exist. Weight industry high enough to matter and
+  `scripts/proto-industry-tag.ts` (uncommitted); **the obvious form does not work.** Industry as a
+  heavily-weighted tag produces **zero** cross-industry peers for six test visitors at any weight, since
+  a same-industry same-business company scores near 1.0 while the best outsider caps far below — Nike
+  never sees P&G while twenty apparel retailers exist. Weight it high enough to matter and
   within-industry discrimination collapses instead, bringing Amazon and Best Buy back for Nike.
   **The variant worth deciding on** is cross-industry as a *fallback only*, above a 0.40 similarity
   bar: 105 of the 119 short sets lengthen, 14 stay short, and an agribusiness card fills with FMC,
@@ -73,8 +74,8 @@ Ours, not urgent: **self-host Inter** (no web font loads), **the HR tab's short 
   `sameBusinessType` are industry-scoped, so "and 54 others in Retail" would stop describing the peers
   shown. That second one needs a copy decision before any code.
 - **Whether the two analysis scripts are committed or deleted.** `sweep-floor.ts` backs the applied
-  floor decision, `proto-industry-tag.ts` the open one above. Neither is a maintenance tool; both
-  untracked.
+  floor decision, `proto-industry-tag.ts` the open one above. Both untracked, both currently runnable,
+  neither a maintenance tool. If they are kept, they need to stay runnable — see the trap below.
 - **Whether anything replaces the Screen 2 sample stamp.** Nothing does; `data:verify` counts the 35
   of 35 metrics stating no provenance.
 - **The white-on-orange token.** White on `--ansr-orange` is 3.22:1, a real AA failure, so both screens
@@ -82,7 +83,7 @@ Ours, not urgent: **self-host Inter** (no web font loads), **the HR tab's short 
 - **Whether to switch on `ADMIN_TOTP_SECRET`.** Built and verified, currently removed. Only enable it
   while able to test a code immediately.
 - **Whether the browser suite runs in CI** (needs Chromium and a minute; no ESLint either), and that
-  **nothing verifies how the screens LOOK** — no visual regression, no automated a11y audit.
+  **nothing verifies how the screens LOOK** — no visual regression, no a11y audit.
 
 ## Traps worth remembering
 
@@ -90,8 +91,9 @@ Invariants are in `project.md`, brand rules in `design-stack.md`. These bite onl
 
 - **`matchPeersByBandLadder` is the equivalence oracle, not dead code.** It proves the scored engine
   returns byte-identical peers where nothing is tagged. Deleting it deletes that guarantee.
-- **The floor applies to `businessSimilarity` alone, never the combined score** — and raising it is not
-  pure truncation, because a below-floor company can outrank an above-floor one on the band term.
+- **A check that hardcodes a constant measures the constant, not the thing.** `sweep-floor.ts` asserted
+  it reproduced `matchPeers` "at 0.15"; raising the floor made it declare itself UNSOUND and refuse to
+  run. It reads `SIMILARITY_FLOOR` now.
 - **Pure IDF scores every tag zero when all tagged companies in an industry share one type.** That
   emptied Electrical & Electronics until `businessSimilarity` learned to fall back to unweighted
   overlap. Do not remove that branch.
@@ -104,14 +106,14 @@ Invariants are in `project.md`, brand rules in `design-stack.md`. These bite onl
 - **There is no "SaaS" business type** (the software vocabulary is by domain, not delivery model) and
   **`hqCountry` is `"USA"`**, not `"United States"` — a wrong value silently disables the HQ tiebreak.
 - **Per-company keys must be industry-scoped.** "STATS Perform" (Software) and "Stats Perform" (Media)
-  differ only in case. The source also hides a non-breaking space inside a value — `cleanText`
-  normalises it, Python's `.strip()` does not.
+  differ only in case. The source also hides a non-breaking space in a value — `cleanText` normalises
+  it, Python's `.strip()` does not.
 - **Tag slugs must never reach the page** — `TAG_PHRASES` in `screen1/copy.ts` maps them to English —
   and the industry-count figure must come from the same population as the peers.
-- **`src/app/page.tsx` is `force-dynamic` on purpose** — a prerender bakes the taxonomy in.
+- **`src/app/page.tsx` is `force-dynamic` on purpose** — a prerender bakes the taxonomy in. **The draft
+  `STORAGE_KEY` is at v3**; `tests/browser/helpers.ts` owns the copy and moves with it.
 - **A browser spec must be numbered inside a project's `testMatch`** — `0-` public, `[2345]-` admin,
   `1-`/`6-` auth and lockout. A `7-` or `9-` spec matches no project and silently never runs.
-- **The draft `STORAGE_KEY` is at v3**; `tests/browser/helpers.ts` owns the copy and moves with it.
 - **`data:verify -- --accept` is for profile drift only**; an INVARIANT FAILURE is a bug.
-- **`server-only` throws outside a bundler's server graph**, including `tsx`. And a `<section>` with no
+- **`server-only` throws outside a bundler's server graph**, including `tsx`. A `<section>` with no
   accessible name is not a `region` landmark — every band names itself.
