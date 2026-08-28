@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 import { fetchPeerView } from "@/app/actions";
 import type { PeerView, PeerViewInput } from "@/data/screen1";
@@ -74,16 +74,46 @@ export function GccLandscapeTool({
   const functionsHeadingRef = useRef<HTMLHeadingElement>(null);
 
   /**
-   * Focus after the phase has actually rendered. A ref on a component that is not
-   * mounted yet is null, so this waits a frame rather than reading it in the same
-   * tick as the state update.
+   * Move focus to the new phase's `h1`, after React has committed it.
+   *
+   * This is an effect on `phase.kind` rather than a call beside each `setPhase`,
+   * and the difference is a real bug rather than a preference. The previous version
+   * did:
+   *
+   *     setPhase({ kind: "peers", view });
+   *     requestAnimationFrame(() => ref.current?.focus());
+   *
+   * which assumes React commits the new tree before the next animation frame. It
+   * usually does, so this passed locally every time. It is not guaranteed —
+   * rendering can land in a later frame, and then `ref.current` is still `null`,
+   * `?.focus()` is a silent no-op and nothing retries. Caught by running the suite
+   * against the deployed build, where it fails intermittently.
+   *
+   * The cost of that failure is not cosmetic: no navigation happens between phases,
+   * so this focus move is the only thing that tells a screen reader the screen
+   * changed. Losing it means the announcement is silently skipped.
+   *
+   * An effect keyed on the phase runs after commit, so the heading is mounted by
+   * definition and the ref cannot be null for the phase being focused.
    */
-  const focusHeading = useCallback(
-    (ref: React.RefObject<HTMLHeadingElement | null>) => {
-      requestAnimationFrame(() => ref.current?.focus());
-    },
-    [],
-  );
+  const hasRendered = useRef(false);
+  useEffect(() => {
+    // Not on first paint. The effect fires on mount as well as on change, and
+    // focusing the `h1` of a page nobody has interacted with would move the
+    // keyboard and scroll the frame for a visitor who has just arrived. Only a
+    // TRANSITION needs announcing.
+    if (!hasRendered.current) {
+      hasRendered.current = true;
+      return;
+    }
+    const ref =
+      phase.kind === "ask"
+        ? askHeadingRef
+        : phase.kind === "peers"
+          ? peersHeadingRef
+          : functionsHeadingRef;
+    ref.current?.focus();
+  }, [phase.kind]);
 
   const submit = useCallback(
     async (input: PeerViewInput) => {
@@ -97,7 +127,6 @@ export function GccLandscapeTool({
           return;
         }
         setPhase({ kind: "peers", view: result.view });
-        focusHeading(peersHeadingRef);
       } catch {
         setError(
           "Something went wrong reaching our data. Please try again in a moment.",
@@ -106,28 +135,25 @@ export function GccLandscapeTool({
         setPending(false);
       }
     },
-    [focusHeading],
+    [],
   );
 
   const backToAsk = useCallback(() => {
     setPhase({ kind: "ask" });
     setError(null);
-    focusHeading(askHeadingRef);
-  }, [focusHeading]);
+  }, []);
 
   const openFunctions = useCallback(() => {
     setPhase((current) =>
       current.kind === "ask" ? current : { kind: "functions", view: current.view },
     );
-    focusHeading(functionsHeadingRef);
-  }, [focusHeading]);
+  }, []);
 
   const backToPeers = useCallback(() => {
     setPhase((current) =>
       current.kind === "ask" ? current : { kind: "peers", view: current.view },
     );
-    focusHeading(peersHeadingRef);
-  }, [focusHeading]);
+  }, []);
 
   return (
     <main className="bg-surface">
