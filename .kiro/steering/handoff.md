@@ -24,12 +24,10 @@ grid-operations visitor gets NationalGrid, Nextracker, LM Wind Power and Aggreko
 power-and-grid peers, honestly one short — where 0.15 gave five oil majors. Aerospace gains Moog over
 Boeing. Cost is 112 → 147 short sets of 1064. Reasoning sits beside the constant in `similarity.ts`.
 
-**Company-name autocomplete was built and then removed, on ANSR's call.** Completions could only come
-from our own 1834, so a visitor at a large company we have not mapped reads an empty dropdown as "we are
-not on their radar" — the opposite of the tool's purpose. Nothing partial is left: the field is a plain
-text input and the form's promise is back to "Nothing you enter is stored or sent to us." The abandoned
-work sits on `feat/company-name-autocomplete` (`b4324c4`) if the idea returns with a different data
-source. **Do not merge that branch.**
+**Company-name autocomplete was built and then removed** on ANSR's call; the reasoning is durable and
+now lives in `project.md`. Nothing partial is left — plain text input, and the form's promise is back to
+"Nothing you enter is stored or sent to us." The abandoned work sits on
+`feat/company-name-autocomplete` (`b4324c4`). **Do not merge that branch.**
 
 ## Next action
 

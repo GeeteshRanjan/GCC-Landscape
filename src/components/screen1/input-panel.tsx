@@ -11,17 +11,29 @@ import {
 import { cn } from "@/lib/utils";
 
 /**
- * The ask: five inputs, four of them required.
+ * The ask: six inputs, four of them required.
  *
- * Every input has a consumer. There is deliberately no sixth field, no revenue
- * *figure* (the data holds bands, so the input is a band) and no email: this tool
- * informs and earns a conversation, and there is no lead capture anywhere in the
- * codebase.
+ * Every input has a consumer. Company name and line of business are the two
+ * optional ones — the name personalises copy, and line of business narrows the
+ * peer set to companies in the same business. There is deliberately no seventh
+ * field, no revenue *figure* (the data holds bands, so the input is a band) and no
+ * email: this tool informs and earns a conversation, and there is no lead capture
+ * anywhere in the codebase.
+ *
+ * **No company-name autocomplete.** It was built and removed. Completions could
+ * only ever come from the 1834 companies in our own database, so a visitor at a
+ * large company we have not mapped would type their name, see an empty dropdown,
+ * and read it as "this tool does not know who we are" — the opposite of what the
+ * screen is for. There is no version of the feature that avoids this, because the
+ * absence of a suggestion is itself the message. Left as a plain text input.
  *
  * **No per-field help text.** Each field carried a line explaining what it was
- * for — why we ask for a band rather than a figure, what the HQ answer sorts. Five
- * labels each trailing an explanation is five times the reading for a form that
- * takes twenty seconds, and "Industry" does not need a sentence under it. What the
+ * for — why we ask for a band rather than a figure, what the HQ answer sorts. A
+ * label per field each trailing an explanation is several times the reading for a
+ * form that takes twenty seconds, and "Industry" does not need a sentence under
+ * it. The one exception is the line-of-business status line, which is a live
+ * region announcing that the control became available rather than a description of
+ * it. What the
  * matching actually did with the answers is said on the result, where it is
  * evidence for the peer set rather than an instruction; see `matchBasis` in
  * `copy.ts`. The one line kept is the storage promise beside the submit button,
