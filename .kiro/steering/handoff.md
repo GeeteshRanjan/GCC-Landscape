@@ -6,8 +6,9 @@ Volatile. Rewritten each session, never appended to. Cap 120 lines. Present tens
 
 ## Where we are
 
-**Shipped and verified live.** `main` is `9d5b699`, production is built from it, and the public specs run
-in a real browser against `gcc-landscape.vercel.app` — three consecutive clean runs. Repo is `main` only.
+**Shipped and verified live.** Production is built from `main`, and the public specs run in a real browser
+against `gcc-landscape.vercel.app` — three consecutive clean runs. Repo is `main` only, nothing in flight.
+No SHA recorded here: every handoff rewrite lands on `main`, so one would be stale on arrival.
 
 A Nike visitor choosing Retail / "Apparel & footwear brand" gets **TJX · H&M · Adidas · GAP · Lululemon
 Athletica** — the case the whole change existed for. It used to return Amazon, Walmart, Target, Lowe's
@@ -27,9 +28,8 @@ and the lockout spec exhausts the rate limiter, so against production they would
 dataset and lock the real admin out.
 
 **It has already earned itself twice.** Its second production run caught a focus race 111 local tests
-never could: transitions set state then guessed a `requestAnimationFrame` to focus the new `h1`, so when
-React committed later the ref was null and the call vanished — silently dropping the only announcement a
-screen reader gets for a phase change. Now an effect keyed on the phase, running after commit.
+never could: a focus race that silently dropped the only announcement a screen reader gets for a phase
+change. Mechanism and fix are in `project.md` under `tool.tsx`.
 
 ## Next action
 
@@ -95,8 +95,8 @@ Invariants are in `project.md`, brand rules in `design-stack.md`. These bite onl
   fail against the old behaviour before keeping it.
 - **Visitor-facing copy hardcoded in a component drifts** — the peer lead sat inline in `peer-view.tsx`
   describing the band ladder long after matching went continuous. Sentences belong in `copy.ts`.
-- **Never pair `setState` with a `requestAnimationFrame` that reads a ref.** React may commit later; the
-  ref is null and the call vanishes. Use an effect keyed on the state.
+- **Never pair `setState` with a `requestAnimationFrame` that reads a ref** — React may commit later, so
+  the ref is null and the call vanishes. Effect keyed on the state; see `project.md` on `tool.tsx`.
 - **A check that hardcodes a constant measures the constant.** `sweep-floor.ts` asserted it reproduced
   `matchPeers` "at 0.15"; raising the floor made it declare itself UNSOUND and refuse to run. It reads
   `SIMILARITY_FLOOR` now.
