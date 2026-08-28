@@ -61,7 +61,7 @@ Ours, not urgent: **self-host Inter** (no web font loads); **the HR tab's short 
 ## Open decisions, not yet made
 
 - **Whether to relax the industry boundary, and if so only as a fallback.** Prototyped in
-  `scripts/proto-industry-tag.ts` (untracked); **the obvious form does not work.** Industry as a
+  `scripts/proto-industry-tag.ts`, now committed; **the obvious form does not work.** Industry as a
   heavily-weighted tag gives **zero** cross-industry peers at any weight, since a same-industry
   same-business company scores near 1.0 while the best outsider caps far below — Nike never sees P&G
   while twenty apparel retailers exist. Weight it high enough to matter and within-industry
