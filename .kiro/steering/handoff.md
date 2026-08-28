@@ -6,18 +6,18 @@ Volatile. Rewritten each session, never appended to. Cap 120 lines. Present tens
 
 ## Where we are
 
-**`feat/business-type-similarity` is the branch to ship.** `main` and `origin/main` are still at
-`4f9c138`; the branch is two commits ahead and pushed.
+**PR #1 is open and awaiting review.** `github.com/GeeteshRanjan/GCC-Landscape/pull/1` —
+`feat/business-type-similarity` → `main`, 4 commits, 44 files. `main` is still at `4f9c138`; nothing is
+merged yet.
 
 | Commit | What it is |
 | --- | --- |
 | `f5a9d58` | The scored peer engine, 44 files. Was the uncommitted working tree. |
-| *(floor)* | `SIMILARITY_FLOOR` 0.15 → 0.20, with the re-accepted baseline. |
+| `b5a1754` | `SIMILARITY_FLOOR` 0.15 → 0.20, with the re-accepted baseline. |
+| `09ea0ee`, `047fd71` | Handoff rewrite; the autocomplete cut recorded as durable, five/six input drift fixed. |
 
-**No PR is open.** `gh` is not installed, there is no `brew`, and `.env.local` holds no GitHub token.
-Open one at `github.com/GeeteshRanjan/GCC-Landscape/pull/new/feat/business-type-similarity`; the commit
-messages are written to serve as the body. **The gate is green:** 336 Vitest, 110 Playwright against a
-real production build, `tsc`, `brand_lint.py`, `npm run build`, `data:verify`, every invariant holding.
+**The gate is green:** 336 Vitest, 110 Playwright against a real production build, `tsc`,
+`brand_lint.py`, `npm run build`, `data:verify`, every invariant holding.
 
 **The floor is now 0.20.** Verified in the shipped engine, not just the sweep: a utilities and
 grid-operations visitor gets NationalGrid, Nextracker, LM Wind Power and Aggreko — four real
@@ -26,20 +26,20 @@ Boeing. Cost is 112 → 147 short sets of 1064. Reasoning sits beside the consta
 
 **Company-name autocomplete was built and then removed** on ANSR's call; the reasoning is durable and
 now lives in `project.md`. Nothing partial is left — plain text input, and the form's promise is back to
-"Nothing you enter is stored or sent to us." The abandoned work sits on
-`feat/company-name-autocomplete` (`b4324c4`). **Do not merge that branch.**
+"Nothing you enter is stored or sent to us." The remote branch is deleted. The three commits survive
+only as the **local** ref `feat/company-name-autocomplete` (`b4324c4`), which is the sole copy — it goes
+when this clone does, and that is the intended outcome.
 
 ## Next action
 
-1. **Open the PR for `feat/business-type-similarity` and merge it.** It must land `data/dataset.json`
-   and `data/verify-baseline.json` together — the baseline carries the new coverage figures, and
-   splitting them breaks `data:verify` for whoever pulls next.
+1. **Review and merge PR #1.** It must land `data/dataset.json` and `data/verify-baseline.json`
+   together — the baseline carries the new coverage figures, and splitting them breaks `data:verify`
+   for whoever pulls next. Squashing is fine; splitting the data files is not.
 2. **Then walk the live deployment**, which has not been done and could not be. Verified by fetching
    `gcc-landscape.vercel.app`: it still has no "Line of business" field, because a branch push builds a
    *preview*, not production. `curl` cannot drive it either — the peer set arrives via a server action —
    so it needs a browser. Pointing Playwright's `public` project at the deployed URL would close the
    "only covers a local build" gap permanently.
-3. **Delete `feat/company-name-autocomplete` from the remote**, so nobody merges a reverted feature.
 
 Ours, not urgent: **self-host Inter** (no web font loads), **the HR tab's short bars**.
 
