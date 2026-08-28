@@ -20,7 +20,7 @@ import {
   NationalScaleView,
   PeerBlockView,
 } from "./evidence";
-import { ADVANCE, framing, industryHeading } from "./copy";
+import { ADVANCE, framing, industryHeading, peerLead } from "./copy";
 import { InputPanel } from "./input-panel";
 
 /**
@@ -161,7 +161,7 @@ export function PeerViewAnswer({
         peerCount === 1
           ? "One company matches you closely"
           : `${peerCount} companies match you closely`,
-      lead: "Same industry, closest revenue band, and companies from your own market first.",
+      lead: peerLead(view),
       tint: true,
       body: <PeerBlockView view={view} />,
     },
