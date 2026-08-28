@@ -19,6 +19,8 @@ import {
   industryLine,
   largestLine,
   matchBasis,
+  matchBasisFor,
+  peerLead,
   shortfallLine,
 } from "@/components/screen1/copy";
 
@@ -411,5 +413,78 @@ describe("the shared formatters", () => {
     expect(formatProfessionals(1_060_000)).toBe("1.06 million");
     expect(formatProfessionals(2_610_000)).toBe("2.61 million");
     expect(formatProfessionals(720_000)).toBe("720,000");
+  });
+});
+
+/**
+ * The peer section's lead line.
+ *
+ * Caught by walking the live deployment, not by any check in here: the lead was a
+ * hardcoded "closest revenue band, and companies from your own market first" that
+ * contradicted `matchBasisFor` three lines below it, and was observably false on
+ * the flagship example. These tests pin the two claims to each other so the pair
+ * cannot drift apart again.
+ */
+describe("the peer lead and the match basis agree", () => {
+  const apparel = input({
+    industry: "Retail",
+    revenueBand: TOP_BAND,
+    businessTypeId: "ret-apparel",
+    hqCountry: "USA",
+    companyName: "Nike",
+  });
+
+  it("does not claim revenue band leads when a line of business was chosen", () => {
+    const view = buildPeerView(dataset, apparel);
+    expect(view.peers.businessMatched).toBe(true);
+
+    const lead = peerLead(view);
+    const basis = matchBasisFor(view);
+
+    // The old sentence, and the two claims inside it that were false.
+    expect(lead).not.toBe(
+      "Same industry, closest revenue band, and companies from your own market first.",
+    );
+    expect(lead).not.toMatch(/closest revenue band/);
+    expect(lead).not.toMatch(/your own market first/);
+
+    // The lead must lead on the same thing the basis does.
+    expect(lead).toMatch(/line of business/i);
+    expect(basis).toMatch(/preference, not a filter/);
+  });
+
+  it("still says band-led when no line of business was given, because then it is", () => {
+    const view = buildPeerView(
+      dataset,
+      input({ industry: "Retail", revenueBand: TOP_BAND, hqCountry: "USA" }),
+    );
+    expect(view.peers.businessMatched).toBe(false);
+    expect(peerLead(view)).toMatch(/closest revenue band/);
+  });
+
+  it("never promises own-market-first while showing foreign peers above domestic ones", () => {
+    // The concrete failure: a US apparel visitor is shown H&M (Sweden) and Adidas
+    // (Germany) above GAP (USA). Any lead promising own-market-first is
+    // contradicted by the cards beside it.
+    //
+    // HQ country is read from the DATASET, not from the card. `toCard` drops it, so
+    // reading `card.hqCountry` yields undefined and the comparison below silently
+    // becomes vacuous — which is exactly how the first version of this test passed
+    // while asserting nothing.
+    const view = buildPeerView(dataset, apparel);
+    const countryOf = (name: string) =>
+      dataset.companies.find((c) => c.name === name)?.hqCountry;
+    const countries = view.peers.peers.map((p) => countryOf(p.name));
+
+    expect(countries.every((c) => typeof c === "string")).toBe(true);
+
+    const firstForeign = countries.findIndex((c) => c !== "USA");
+    const lastDomestic = countries.lastIndexOf("USA");
+    // Guard the guard: if this ever stops holding, the test must fail loudly rather
+    // than quietly stop testing.
+    expect(firstForeign).toBeGreaterThanOrEqual(0);
+    expect(lastDomestic).toBeGreaterThan(firstForeign);
+
+    expect(peerLead(view)).not.toMatch(/own market first/);
   });
 });

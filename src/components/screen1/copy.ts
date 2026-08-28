@@ -191,6 +191,34 @@ export function matchBasisFor(view: PeerView): string {
   return matchBasis(basis, view.input.revenueBand);
 }
 
+/**
+ * The peer section's lead — the one line under the heading.
+ *
+ * It used to be a hardcoded string in `peer-view.tsx`: "Same industry, closest
+ * revenue band, and companies from your own market first." That was true of the
+ * band ladder and became false when matching went continuous, and it contradicted
+ * `matchBasisFor` three lines below it on the same card, which says revenue band
+ * is a preference rather than a filter. It was also observably wrong on the
+ * flagship example — a US apparel visitor is shown H&M and Adidas, so "your own
+ * market first" is not what happened.
+ *
+ * So it is derived rather than written, and it lives here because `copy.ts` holds
+ * every visitor-facing sentence on this screen.
+ */
+export function peerLead(view: PeerView): string {
+  const businessType = view.industry.businessType;
+
+  if (view.peers.businessMatched && businessType) {
+    // Named first because it is the strongest signal and the one the visitor
+    // chose. Revenue band is mentioned as the secondary sort it actually is.
+    return `Companies in the same line of business, closest revenue size second. Those headquartered in your own market come first only where the rest is equal.`;
+  }
+
+  // No line of business given: matching really is band-led, and the old sentence
+  // is accurate again.
+  return "Same industry, closest revenue band, and companies from your own market first.";
+}
+
 export function matchBasis(basis: PeerTier, revenueBand: string): string {
   switch (basis) {
     case "same-band":
