@@ -1,4 +1,5 @@
 import { getDataset } from "@/data/dataset";
+import { businessTypesForIndustry } from "@/data/screen1";
 import { buildFunctionView } from "@/data/screen2";
 import { GccLandscapeTool } from "@/components/public/tool";
 
@@ -49,11 +50,28 @@ export const dynamic = "force-dynamic";
 export default async function Page() {
   const dataset = await getDataset();
 
+  /**
+   * Business-type options per industry, built here rather than shipped from the
+   * dataset.
+   *
+   * This is ids and labels only — a few kilobytes — and it deliberately excludes
+   * the tag sets. Tags are the scoring substrate and belong on the server; the
+   * browser needs nothing but a dropdown. Same discipline as everywhere else on
+   * this route: the dataset never crosses whole.
+   */
+  const businessTypesByIndustry = Object.fromEntries(
+    dataset.taxonomy.industries.map((industry) => [
+      industry,
+      businessTypesForIndustry(dataset, industry),
+    ]),
+  );
+
   return (
     <GccLandscapeTool
       industries={dataset.taxonomy.industries}
       revenueBands={dataset.taxonomy.revenueBands}
       hqCountries={dataset.taxonomy.hqCountries}
+      businessTypesByIndustry={businessTypesByIndustry}
       functionView={buildFunctionView(dataset)}
       ctaHref={CTA_HREF}
     />

@@ -1,7 +1,12 @@
 "use server";
 
 import { getDataset } from "@/data/dataset";
-import { buildPeerView, peerViewInputSchema, type PeerView } from "@/data/screen1";
+import {
+  buildPeerView,
+  businessTypesForIndustry,
+  peerViewInputSchema,
+  type PeerView,
+} from "@/data/screen1";
 
 /**
  * Screen 1's only server call.
@@ -40,7 +45,20 @@ export async function fetchPeerView(input: unknown): Promise<PeerViewResult> {
     };
   }
 
-  const parsed = peerViewInputSchema(dataset.taxonomy).safeParse(input);
+  // The business-type list is scoped to the chosen industry, so validation needs
+  // the industry first. Read loosely here and let the schema reject anything that
+  // is not a real industry — this only decides WHICH id list to validate against.
+  const industry =
+    typeof input === "object" && input !== null && "industry" in input
+      ? String((input as { industry: unknown }).industry)
+      : "";
+  const allowedBusinessTypes = businessTypesForIndustry(dataset, industry).map(
+    (type) => type.id,
+  );
+
+  const parsed = peerViewInputSchema(dataset.taxonomy, allowedBusinessTypes).safeParse(
+    input,
+  );
   if (!parsed.success) {
     // Deliberately not the zod message: the only way to see this is to send
     // something the form cannot produce, and the field names are of no use to a

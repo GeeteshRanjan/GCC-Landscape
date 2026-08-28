@@ -29,6 +29,7 @@ function company(overrides: Partial<Company> = {}): Company {
     fte: { min: 100, max: 500 },
     fortuneGlobal500: false,
     forbesGlobal2000: false,
+    businessTypes: [],
     ...overrides,
   };
 }
@@ -45,6 +46,7 @@ function dataset(overrides: Partial<Dataset> = {}): Dataset {
       hqCountries: ["USA"],
     },
     companies: [company()],
+    businessTypes: [],
     metrics: [],
     ...overrides,
   };

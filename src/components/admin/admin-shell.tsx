@@ -23,6 +23,7 @@ import { Button } from "@/components/ui/button";
 const TABS = [
   { href: "/admin", label: "Companies" },
   { href: "/admin/taxonomy", label: "Taxonomy" },
+  { href: "/admin/business-types", label: "Business types" },
   { href: "/admin/metrics", label: "Metrics" },
   { href: "/admin/publish", label: "Publish" },
 ] as const;

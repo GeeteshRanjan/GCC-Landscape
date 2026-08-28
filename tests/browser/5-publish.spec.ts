@@ -76,7 +76,17 @@ test("counts additions, removals and edits separately", async ({ page }) => {
   await dialog.getByLabel("GCC established").fill("2023");
   await dialog.getByLabel("Lower").fill("10");
   await dialog.getByLabel("Upper").fill("60");
-  await dialog.getByRole("checkbox").first().check();
+  // Groups named rather than `.first()`. This used to be a bare
+  // `getByRole("checkbox").first()`, which happened to land on the first CITY —
+  // satisfying the "at least one India city" rule by accident. The editor now has a
+  // "Lines of business" group above it, so the ordinal moved and the row silently
+  // stopped validating. Naming both makes the intent survive the next field added.
+  await dialog
+    .getByRole("group", { name: "India cities" })
+    .getByRole("checkbox")
+    .first()
+    .check();
+  await dialog.getByRole("checkbox", { name: "Fortune Global 500" }).check();
   await dialog.getByRole("button", { name: "Add to draft" }).click();
   await waitForDraftSaved(page);
 

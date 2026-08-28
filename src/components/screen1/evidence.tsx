@@ -1,6 +1,6 @@
 import type { PeerCard, PeerView } from "@/data/screen1";
 import { cn } from "@/lib/utils";
-import { industryLine, largestLine, matchBasis, shortfallLine } from "./copy";
+import { industryLine, largestLine, matchBasisFor, shortfallLine } from "./copy";
 import {
   Chip,
   FactList,
@@ -102,7 +102,7 @@ export function PeerBlockView({ view }: { view: PeerView }) {
       ) : null}
 
       <Provenance>
-        {matchBasis(view.peers.basis, view.input.revenueBand)} Headcount is shown
+        {matchBasisFor(view)} Headcount is shown
         as a band because that is how it is held — we do not publish a per-company
         figure we cannot stand behind.
       </Provenance>

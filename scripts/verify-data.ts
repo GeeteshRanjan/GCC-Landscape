@@ -40,9 +40,17 @@ import {
   companiesInIndustry,
   largestInIndustry,
   matchPeers,
+  matchPeersByBandLadder,
   nationalScale,
 } from "../src/data/peers";
 import { METRIC_FUNCTIONS, type Company, type Dataset } from "../src/data/schema";
+import { businessTypesForIndustry } from "../src/data/screen1";
+import {
+  SIMILARITY_FLOOR,
+  buildSimilarityModel,
+  scoreCompany,
+  visitorTags,
+} from "../src/data/similarity";
 import { createFsDataStore } from "../src/data/store/fs-store";
 
 const BASELINE_PATH = path.join(process.cwd(), "data", "verify-baseline.json");
@@ -309,6 +317,139 @@ async function main(): Promise<void> {
   }
   invariant("a metric on several tabs carries one set of figures", forked.sort(), []);
 
+  /* ----------------------------------------------------------------------
+     Business-type similarity matching.
+
+     Invariants rather than profile figures, because none of these has a
+     legitimate edit that would move it. How MANY companies are tagged is a
+     profile figure and sits further down; whether the tagging can produce a
+     nonsensical peer set is not negotiable.
+     ---------------------------------------------------------------------- */
+
+  console.log("\nInvariants — business-type similarity");
+
+  const typeById = new Map(dataset.businessTypes.map((t) => [t.id, t]));
+
+  // A tag on a single business type is functionally dead: it can only ever be
+  // shared in a type-against-itself comparison, which already scores maximum. This
+  // is what stops the vocabulary drifting back towards 620 values of one member
+  // each — the exact failure that made the source sub-industry column unusable.
+  const tagCarriers = new Map<string, string[]>();
+  for (const type of dataset.businessTypes) {
+    for (const tag of type.tags) {
+      tagCarriers.set(tag, [...(tagCarriers.get(tag) ?? []), type.id]);
+    }
+  }
+  invariant(
+    "every tag is carried by at least two business types",
+    [...tagCarriers.entries()].filter(([, ids]) => ids.length < 2).map(([tag]) => tag),
+    [],
+  );
+
+  invariant(
+    "every business type belongs to a real industry",
+    dataset.businessTypes
+      .filter((t) => !dataset.taxonomy.industries.includes(t.industry))
+      .map((t) => t.id),
+    [],
+  );
+
+  invariant(
+    "a company never carries a business type from another industry",
+    dataset.companies
+      .filter((c) =>
+        c.businessTypes.some((id) => typeById.get(id)?.industry !== c.industry),
+      )
+      .map((c) => c.id),
+    [],
+  );
+
+  /**
+   * The equivalence guarantee, checked on the published data.
+   *
+   * A visitor who skips the line-of-business question must get precisely the peer
+   * set they would have got before business types existed. This is what makes the
+   * whole feature additive: the optional input can be ignored with no consequence,
+   * and an industry nobody has tagged yet cannot move.
+   */
+  const ladderDrift: string[] = [];
+  for (const industry of dataset.taxonomy.industries) {
+    for (const revenueBand of dataset.taxonomy.revenueBands) {
+      const input = { industry, revenueBand, hqCountry: "USA" };
+      const scored = matchPeers(dataset, input).peers.map((p) => p.id).join(",");
+      const ladder = matchPeersByBandLadder(dataset, input)
+        .peers.map((p) => p.id)
+        .join(",");
+      if (scored !== ladder) ladderDrift.push(`${industry} / ${revenueBand}`);
+    }
+  }
+  invariant(
+    "no business type selected reproduces the old band ladder exactly",
+    ladderDrift,
+    [],
+  );
+
+  /**
+   * The floor is the one mechanism that can return FEWER peers than before, so it
+   * must never return a peer BELOW itself — and it must never empty a set that the
+   * industry could otherwise fill. The second half is not theoretical: pure IDF
+   * scores every tag zero in an industry where all tagged companies carry the same
+   * type, which emptied Electrical & Electronics entirely until `businessSimilarity`
+   * learned to fall back to unweighted overlap.
+   */
+  const belowFloor: string[] = [];
+  const emptiedByFloor: string[] = [];
+  let flooredSets = 0;
+  let scoredSets = 0;
+
+  for (const industry of dataset.taxonomy.industries) {
+    const model = buildSimilarityModel(dataset, industry);
+    for (const type of businessTypesForIndustry(dataset, industry)) {
+      const visitor = visitorTags(dataset.businessTypes, type.id);
+      for (const revenueBand of dataset.taxonomy.revenueBands) {
+        const input = { industry, revenueBand, businessTypeId: type.id };
+        const result = matchPeers(dataset, input);
+        scoredSets += 1;
+        if (result.floorShortened) flooredSets += 1;
+        if (result.peers.length === 0 && result.industryTotal > 0) {
+          emptiedByFloor.push(`${industry} / ${type.id} / ${revenueBand}`);
+        }
+        for (const peer of result.peers) {
+          const scored = scoreCompany(peer, {
+            model,
+            revenueBands: dataset.taxonomy.revenueBands,
+            visitorTags: visitor,
+            visitorBand: revenueBand,
+          });
+          if (scored.businessSimilarity < SIMILARITY_FLOOR) {
+            belowFloor.push(`${industry} / ${type.id} / ${peer.id}`);
+          }
+        }
+      }
+    }
+  }
+
+  invariant("no peer is ever shown below the similarity floor", belowFloor, []);
+  invariant(
+    "the floor never empties a peer set an industry could fill",
+    emptiedByFloor,
+    [],
+  );
+  invariant(
+    "a business type never returns a peer from another industry",
+    dataset.businessTypes
+      .filter((type) =>
+        matchPeers(dataset, {
+          industry: type.industry,
+          revenueBand: dataset.taxonomy.revenueBands.at(-1) ?? "",
+          businessTypeId: type.id,
+        }).peers.some((p) => p.industry !== type.industry),
+      )
+      .map((type) => type.id),
+    [],
+  );
+  report("scored peer sets exercised", scoredSets);
+
   /* ======================================================================
      PROFILE FIGURES — pinned to a baseline, moved deliberately
      ====================================================================== */
@@ -371,6 +512,47 @@ async function main(): Promise<void> {
    * counted, so a metric quietly losing its gate shows up as a named change in the
    * baseline diff rather than as a number going down by one.
    */
+  /**
+   * Business-type coverage.
+   *
+   * Profile figures, not invariants, and the split matters as much here as it does
+   * for the metrics: tagging is rolled out industry by industry, so every one of
+   * these numbers is SUPPOSED to move as more companies are classified. An
+   * invariant would have to be edited on every legitimate batch.
+   *
+   * "peer sets the floor shortens" is the figure to watch. It is the price of the
+   * quality gain — the count of visitor situations that now return fewer than five
+   * peers because the rest were not close enough to name. If ANSR judges that price
+   * too high, `SIMILARITY_FLOOR` is the one number to move, and this figure is how
+   * the effect is measured rather than guessed.
+   */
+  console.log("\nProfile — business-type coverage");
+  const tagged = dataset.companies.filter((c) => c.businessTypes.length > 0);
+  profile("business types defined", dataset.businessTypes.length, baseline);
+  profile("distinct tags in use", tagCarriers.size, baseline);
+  profile("companies with a business type", tagged.length, baseline);
+  profile(
+    "companies with two business types",
+    dataset.companies.filter((c) => c.businessTypes.length > 1).length,
+    baseline,
+  );
+  profile(
+    "industries fully tagged",
+    dataset.taxonomy.industries.filter((industry) => {
+      const inIndustry = dataset.companies.filter((c) => c.industry === industry);
+      return inIndustry.length > 0 && inIndustry.every((c) => c.businessTypes.length > 0);
+    }).length,
+    baseline,
+  );
+  profile("peer sets the floor shortens", flooredSets, baseline);
+  profile(
+    "business types with no company",
+    dataset.businessTypes.filter(
+      (type) => !dataset.companies.some((c) => c.businessTypes.includes(type.id)),
+    ).length,
+    baseline,
+  );
+
   console.log("\nProfile — Screen 2 function metrics");
   const metricStats = metricProgress(dataset.metrics);
   profile("metrics defined", metricStats.total, baseline);

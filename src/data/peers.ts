@@ -1,5 +1,13 @@
 import { fteMidpoint, sumProfessionals } from "./derive";
 import type { Company, Dataset } from "./schema";
+import {
+  BAND_ADJACENT,
+  BAND_SAME,
+  buildSimilarityModel,
+  meetsFloor,
+  scoreCompany,
+  visitorTags,
+} from "./similarity";
 
 /**
  * Peer matching and the counts that sit beside it. Pure functions over an
@@ -33,14 +41,39 @@ export interface VisitorInput {
   revenueBand: string;
   /** Country. Sort preference only. */
   hqCountry?: string;
+  /**
+   * The visitor's own business type, from `dataset.businessTypes`. Optional: left
+   * unset — or set to a type nobody in the industry carries — the score collapses
+   * to band proximity and the result is identical to the old three-rung ladder.
+   */
+  businessTypeId?: string;
 }
 
 export type PeerTier = "same-band" | "adjacent-band" | "industry";
+
+/**
+ * What the peer set was matched on, for the "matched on" line.
+ *
+ * `basis` still reports a band tier so the existing copy keeps working untouched
+ * for an untagged industry. `sharedTags` and `businessMatched` are additive: when
+ * the visitor named a business type, the copy can say what the peers actually
+ * have in common instead of naming a revenue band the card does not even show.
+ */
+export interface MatchBasis {
+  /** The deepest band rung represented in the returned set. */
+  tier: PeerTier;
+  /** True when business similarity, not just revenue band, drove the ordering. */
+  businessMatched: boolean;
+  /** Characteristics shared across the returned peers, most discriminating first. */
+  sharedTags: string[];
+}
 
 export interface PeerResult {
   peers: Company[];
   /** The deepest rung the ladder had to reach to fill the slots. */
   tier: PeerTier;
+  /** What drove the match, for the copy. */
+  basis: MatchBasis;
   limit: number;
   /** limit - peers.length. Non-zero means the copy must say so. */
   shortfall: number;
@@ -48,6 +81,35 @@ export interface PeerResult {
   industryTotal: number;
   /** industryTotal minus the peers shown — the "and N others" number. */
   industryOthers: number;
+  /**
+   * Companies in the industry that clear the similarity floor, excluding the
+   * visitor. Zero when no business type was given.
+   *
+   * This is what makes the industry-count block stronger rather than merely
+   * different: "12 other apparel and footwear companies, and 47 others across
+   * retail" is better evidence than one number, and it is the block that has to
+   * carry a thin peer set.
+   */
+  closeMatches: number;
+  /**
+   * Companies carrying the visitor's EXACT business type, excluding the visitor.
+   *
+   * Separate from `closeMatches` because the two answer different questions and
+   * only one of them is safe to print. `closeMatches` is a threshold on a
+   * continuous score — useful for diagnostics and for `data:verify`, but "410
+   * close matches" is not a sentence anyone should have to defend. This is a
+   * countable fact: "29 other apparel and footwear companies run an India GCC".
+   */
+  sameBusinessType: number;
+  /**
+   * The floor removed companies that would otherwise have filled a slot.
+   *
+   * Tracked rather than hidden, because it is the one way this change can return
+   * FEWER peers than before. That is deliberate — invariant 3 prefers three
+   * defensible comparisons to five padded ones — but it must be visible, both to
+   * the copy and to `data:verify`.
+   */
+  floorShortened: boolean;
 }
 
 function normalizeName(value: string): string {
@@ -97,11 +159,21 @@ export function companiesInIndustry(
   return dataset.companies.filter((company) => company.industry === industry);
 }
 
-export function matchPeers(
+/**
+ * The old three-rung ladder, kept as the ORACLE for the scored engine.
+ *
+ * `similarity.test.ts` asserts that `matchPeers` reproduces this function's output
+ * company-for-company across every industry that has no business types, for every
+ * band and HQ country. That equivalence is what makes the change provably
+ * additive: an industry nobody has tagged yet cannot move.
+ *
+ * Not exported to the app. Delete it only together with that test.
+ */
+export function matchPeersByBandLadder(
   dataset: Dataset,
   input: VisitorInput,
   limit: number = DEFAULT_PEER_LIMIT,
-): PeerResult {
+): { peers: Company[]; tier: PeerTier } {
   const pool = companiesInIndustry(dataset, input.industry).filter(
     (company) => !isVisitorsOwn(company, input),
   );
@@ -136,13 +208,123 @@ export function matchPeers(
     peers.push(...sorted.slice(0, limit - peers.length));
   }
 
+  return { peers, tier };
+}
+
+/** Which band rung a proximity value corresponds to, for the copy. */
+function tierOf(proximity: number): PeerTier {
+  if (proximity === BAND_SAME) return "same-band";
+  if (proximity === BAND_ADJACENT) return "adjacent-band";
+  return "industry";
+}
+
+/**
+ * The peer set: every company in the industry, scored and ordered.
+ *
+ * One engine, not two code paths. An industry with no business types is the
+ * DEGENERATE CASE of the same computation — business similarity is zero for
+ * everyone, so the score reduces to `BAND_WEIGHT * {1, 0.66, 0}` and the ordering
+ * is the old ladder's, tiebreak for tiebreak. That is asserted, not assumed.
+ *
+ * The industry remains a HARD boundary. Nothing here can return a company from
+ * another industry, which keeps the `data:verify` invariant intact. Relaxing it —
+ * making industry a heavily weighted tag rather than a filter, so a footwear brand
+ * could see a global personal-care brand — is a real option the tag architecture
+ * makes cheap, and a separate decision.
+ */
+export function matchPeers(
+  dataset: Dataset,
+  input: VisitorInput,
+  limit: number = DEFAULT_PEER_LIMIT,
+): PeerResult {
+  const pool = companiesInIndustry(dataset, input.industry).filter(
+    (company) => !isVisitorsOwn(company, input),
+  );
+
+  const model = buildSimilarityModel(dataset, input.industry);
+  const visitor = visitorTags(dataset.businessTypes, input.businessTypeId);
+  const bands = dataset.taxonomy.revenueBands;
+
+  const scored = pool.map((company) =>
+    scoreCompany(company, {
+      model,
+      revenueBands: bands,
+      visitorTags: visitor,
+      visitorBand: input.revenueBand,
+    }),
+  );
+
+  const eligible = scored.filter((entry) => meetsFloor(entry, visitor.size));
+
+  /**
+   * Score first, then HQ country, then size, then age, then name.
+   *
+   * Country sits BELOW the score rather than above it, which is a change from the
+   * old comparator. Recognisability used to outrank everything; it now outranks
+   * only ties, because a peer from the visitor's own market that is in the wrong
+   * business is still the wrong peer. It remains a preference and never a filter,
+   * so it still cannot change how many peers come back.
+   */
+  eligible.sort((a, b) => {
+    if (b.score !== a.score) return b.score - a.score;
+    if (input.hqCountry) {
+      const aHome = a.company.hqCountry === input.hqCountry ? 0 : 1;
+      const bHome = b.company.hqCountry === input.hqCountry ? 0 : 1;
+      if (aHome !== bHome) return aHome - bHome;
+    }
+    const sizeDelta = fteMidpoint(b.company.fte) - fteMidpoint(a.company.fte);
+    if (sizeDelta !== 0) return sizeDelta;
+    if (a.company.establishedYear !== b.company.establishedYear) {
+      return a.company.establishedYear - b.company.establishedYear;
+    }
+    return a.company.name.localeCompare(b.company.name);
+  });
+
+  const chosen = eligible.slice(0, limit);
+  const peers = chosen.map((entry) => entry.company);
+
+  // The deepest band rung actually represented, so the existing copy still reads
+  // true. Taken from the chosen set rather than from the fill order, because with
+  // a continuous score there is no fill order to read it from.
+  const tier = chosen.reduce<PeerTier>((deepest, entry) => {
+    const rung = tierOf(entry.bandProximity);
+    if (deepest === "industry" || rung === "industry") return "industry";
+    if (deepest === "adjacent-band" || rung === "adjacent-band") return "adjacent-band";
+    return "same-band";
+  }, "same-band");
+
+  // Tags shared by EVERY peer shown, so the "matched on" line cannot claim a
+  // characteristic one of the named companies does not have.
+  const sharedTags =
+    chosen.length > 0
+      ? chosen
+          .map((entry) => entry.sharedTags)
+          .reduce((common, tags) => common.filter((tag) => tags.includes(tag)))
+          .slice()
+      : [];
+
+  const closeMatches = visitor.size === 0 ? 0 : eligible.length;
+  const sameBusinessType = input.businessTypeId
+    ? pool.filter((c) => c.businessTypes.includes(input.businessTypeId!)).length
+    : 0;
+
   return {
     peers,
     tier,
+    basis: {
+      tier,
+      businessMatched: visitor.size > 0 && sharedTags.length > 0,
+      sharedTags,
+    },
     limit,
     shortfall: Math.max(0, limit - peers.length),
     industryTotal: pool.length,
     industryOthers: Math.max(0, pool.length - peers.length),
+    closeMatches,
+    sameBusinessType,
+    // Only a floor effect if there WERE companies left over that the floor removed.
+    floorShortened:
+      peers.length < limit && eligible.length < Math.min(limit, pool.length),
   };
 }
 

@@ -12,6 +12,7 @@ import {
 import { GCC_STATUS_LABELS, type PeerView, type PeerViewInput } from "@/data/screen1";
 import { cn } from "@/lib/utils";
 import { CityMap } from "./city-map";
+import type { BusinessTypeOption } from "./input-panel";
 import {
   CommonFunctionsView,
   IndustryCountView,
@@ -61,6 +62,7 @@ export function PeerViewAsk({
   industries,
   revenueBands,
   hqCountries,
+  businessTypesByIndustry,
   initial,
   pending,
   submitError,
@@ -70,6 +72,7 @@ export function PeerViewAsk({
   industries: readonly string[];
   revenueBands: readonly string[];
   hqCountries: readonly string[];
+  businessTypesByIndustry: Readonly<Record<string, readonly BusinessTypeOption[]>>;
   initial?: PeerViewInput;
   pending: boolean;
   submitError: string | null;
@@ -107,6 +110,7 @@ export function PeerViewAsk({
             industries={industries}
             revenueBands={revenueBands}
             hqCountries={hqCountries}
+            businessTypesByIndustry={businessTypesByIndustry}
             initial={initial}
             pending={pending}
             submitError={submitError}

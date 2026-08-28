@@ -6,104 +6,115 @@ Volatile. Rewritten each session, never appended to. Cap 120 lines. Present tens
 
 ## Where we are
 
-**Both public screens are built, and STILL NOT COMMITTED.** The Peer View and Function View exist only
-in the working tree — `src/components/screen1|screen2|public/`, `src/data/screen1|screen2|geo.ts`,
-`src/app/actions.ts`, `public/`, `.tastemaker/` and four specs are untracked; `page.tsx`, `globals.css`,
-`playwright.config.ts`, `.env.example`, both files in `data/`, the steering files, the catalogue, the
-schema and four test files are unstaged. One `git checkout` loses five sessions of work — commit before
-anything else. Next.js 16, TypeScript, Tailwind v4, shadcn/ui, tokens from `assets/brand/tokens.css`.
+**PR #1 is open and awaiting review**, reported mergeable with no conflicts.
+`github.com/GeeteshRanjan/GCC-Landscape/pull/1` — `feat/business-type-similarity` → `main`, 44 files.
+`main` is still at `4f9c138`; nothing is merged, and production is therefore still the pre-change build.
 
-Every check green: **309** Vitest unit tests, **101** Playwright tests against a real production build,
-`tsc --noEmit`, `brand_lint.py`, `npm run build` (the plain-Node test), and `data:verify` — clean, with
-"metrics a visitor would receive" reading **9 / 9 / 11 / 6**.
+**Vercel builds a preview on every push and they all succeed** — but a preview URL cannot be opened: it
+returns Vercel's login page, not the tool. See `project.md`.
 
-**One route, three phases.** `src/app/page.tsx` serves everything and
-`src/components/public/tool.tsx` owns the state: ask → Peer View → Function View. Not routes — the tool
-is iframed and cannot own the URL bar — so there are no deep links, the back button does not step back a
-phase, and each phase carries its own way back. Focus moves to the new `h1` on every transition.
+Two substantive commits, the rest documentation — `f5a9d58` the scored peer engine, `b5a1754` the floor
+move. No count given: every handoff rewrite lands on this branch, so a number is stale on arrival; use
+`git log origin/main..`.
 
-**The catalogue carries ANSR's reviewed figures**, 35 metrics, every slot filled. The tabs are four
-views of one national picture rather than four datasets — the rule and its invariant are in
-`project.md`, the figures and their provenance in `docs/data-audit.md`.
+**The gate is green:** 336 Vitest, 110 Playwright against a real production build, `tsc`,
+`brand_lint.py`, `npm run build`, `data:verify`, every invariant holding.
+
+**The floor is now 0.20.** Verified in the shipped engine, not just the sweep: a utilities and
+grid-operations visitor gets NationalGrid, Nextracker, LM Wind Power and Aggreko — four real
+power-and-grid peers, honestly one short — where 0.15 gave five oil majors. Aerospace gains Moog over
+Boeing. Cost is 112 → 147 short sets of 1064. Reasoning sits beside the constant in `similarity.ts`.
+
+**Company-name autocomplete was built and then removed** on ANSR's call; the reasoning is durable and
+lives in `project.md`. Nothing partial is left — plain text input, and the form's promise is back to
+"Nothing you enter is stored or sent to us." The remote branch is deleted; the commits survive only as
+the **local** ref `feat/company-name-autocomplete` (`b4324c4`), so they go when this clone does. That is
+the intended outcome.
 
 ## Next action
 
-**Commit everything, then push.** The tool is feature-complete against `docs/brief.md` as revised, and
-`origin/main` is two commits behind `HEAD`, so the live site is still admin-only and has neither the
-public screens nor the current figures. After that, the blocked list below plus these two, neither urgent:
+1. **Review and merge PR #1.** It must land `data/dataset.json` and `data/verify-baseline.json`
+   together — the baseline carries the new coverage figures, and splitting them breaks `data:verify`
+   for whoever pulls next. Squashing is fine; splitting the data files is not.
+2. **Walk a real deployment — still never done, and now the known gap.** Two routes, differing in risk.
+   Either **disable preview protection** (or mint a bypass token) and walk the branch preview *before*
+   anything is live — safer, and it also lets Playwright's `public` project point at a deployment,
+   closing the "only ever a local build" gap permanently. Or **merge and walk production**, which is
+   public but means shipping first. Note `curl` cannot do it either way: the peer set arrives via a
+   server action, so it needs a browser.
 
-- **Self-host Inter.** No web font is loaded, so a visitor sees the token's fallback stack.
-- **The HR tab's short salary-growth bars.** Percent bars scale to 100 by rule, so 7.5% draws as a
-  sliver. The honest fix, if ANSR dislikes it, is a different mark — not a different scale.
+Ours, not urgent: **self-host Inter** (no web font loads), **the HR tab's short bars**.
 
 ## Blocked / needs the user
 
-1. **Rotate the admin password** — the current one was shared in a chat transcript.
-   `npm run admin:hash`, then update `ADMIN_PASSWORD_HASH` in Vercel and redeploy.
+1. **Rotate the admin password** — shared in a chat transcript, deployment publicly reachable.
+   `npm run admin:hash`, update `ADMIN_PASSWORD_HASH` in Vercel, redeploy. The only item with live
+   exposure behind it.
 2. **Calendar the `GCC_GITHUB_TOKEN` expiry.** When it lapses, publishing fails with a GitHub 401
    that reads like a bug rather than an expiry.
-3. **The CTA destination.** Both screens' closes link to `NEXT_PUBLIC_GCC_CTA_URL`, falling back to
-   `https://www.ansr.com/`. Next inlines `NEXT_PUBLIC_*` at build time: it needs a redeploy.
-4. **Hosting details** — which ansr.com page hosts the iframe, who adds the embed snippet, and
-   the origin for `NEXT_PUBLIC_GCC_FRAME_TARGET_ORIGIN`. The parent must listen for the
-   `gcc-landscape:height` message; the snippet is in the header comment of `use-frame-height.ts`.
-5. **Confirm the figures are publishable as-is**, because **nothing on the page says any of them is
-   provisional any more**. Four sets are still filled from judgement rather than supplied data, named in
-   `docs/data-audit.md`: Vietnam's column in the capability grid, the cells in `hr-fully-loaded-cost`,
-   the depth row for Pune and tier 2 in `fin-cost-vs-ecosystem-depth`, and the three non-technology rows
-   of `fin-india-vs-hubs`.
-6. **Sign off the common-function list** — eight hardcoded entries in `COMMON_FUNCTIONS`
-   (`src/data/screen1.ts`). The brief permits the hardcode; the wording and order are ANSR's call.
-7. **Confirm two judgement calls visible on Screen 2.** The shared supply figures are the national
-   technology workforce, not a per-function subset, and the tech, operations and HR tabs each say so in
-   a provenance line. Grade A office stock shows total and vacant rather than picking one.
+3. **Two unset env vars, both needing a redeploy** (`NEXT_PUBLIC_*` is inlined at build time):
+   `NEXT_PUBLIC_GCC_CTA_URL`, so both screens fall back to `https://www.ansr.com/`, and
+   `NEXT_PUBLIC_GCC_FRAME_TARGET_ORIGIN`, so height posts to `*`. Plus the hosting details — which
+   ansr.com page carries the iframe, and who adds the snippet.
+4. **Three sign-offs from ANSR:** the Screen 2 figures as publishable (nothing flags any as
+   provisional, four sets are judgement — `docs/data-audit.md`), `COMMON_FUNCTIONS`, and the business
+   types per industry (tables at the end of `docs/business-types.md`, an hour's read not 1834 rows).
 
 ## Open decisions, not yet made
 
-- **Whether anything replaces the sample stamp.** Removing it was ANSR's call, but it was the mechanism
-  that made a not-yet-final figure arrive labelled. Nothing replaces it; `data:verify` counts metrics
-  stating no provenance (35 of 35), so the milestone is in the script rather than on the page.
-- **The white-on-orange token.** White on `--ansr-orange` measures **3.22:1** — a real AA failure — so
-  both screens use **black on orange (6.52:1)** at the one call site each, `public/closing-cta.tsx`.
-  Either change `--ansr-action-text` or keep overriding there.
+- **Whether to relax the industry boundary, and if so only as a fallback.** Prototyped in
+  `scripts/proto-industry-tag.ts` (uncommitted); **the obvious form does not work.** Industry as a
+  heavily-weighted tag produces **zero** cross-industry peers for six test visitors at any weight, since
+  a same-industry same-business company scores near 1.0 while the best outsider caps far below — Nike
+  never sees P&G while twenty apparel retailers exist. Weight it high enough to matter and
+  within-industry discrimination collapses instead, bringing Amazon and Best Buy back for Nike.
+  **The variant worth deciding on** is cross-industry as a *fallback only*, above a 0.40 similarity
+  bar: 105 of the 119 short sets lengthen, 14 stay short, and an agribusiness card fills with FMC,
+  Corteva, Yara and Nutrien at 0.66 rather than a semiconductor firm at 0.16. Two costs: it breaks the
+  invariant "a business type never returns a peer from another industry", and `industryOthers` /
+  `sameBusinessType` are industry-scoped, so "and 54 others in Retail" would stop describing the peers
+  shown. That second one needs a copy decision before any code.
+- **Whether the two analysis scripts are committed or deleted.** `sweep-floor.ts` backs the applied
+  floor decision, `proto-industry-tag.ts` the open one above. Both untracked, both currently runnable,
+  neither a maintenance tool. If they are kept, they need to stay runnable — see the trap below.
+- **Whether anything replaces the Screen 2 sample stamp.** Nothing does; `data:verify` counts the 35
+  of 35 metrics stating no provenance.
+- **The white-on-orange token.** White on `--ansr-orange` is 3.22:1, a real AA failure, so both screens
+  use black on orange (6.52:1) at `public/closing-cta.tsx`. Change the token or keep the override.
 - **Whether to switch on `ADMIN_TOTP_SECRET`.** Built and verified, currently removed. Only enable it
-  while able to test a code immediately — see `project.md`.
-- **Whether the browser suite runs in CI.** Needs Chromium and a minute. No ESLint either.
-- **Nothing verifies how the screens LOOK.** No visual regression testing and no automated
-  accessibility audit; the motif placements and "the held placeholder reads as sealed rather than
-  loading" are judgements made from screenshots. The specs check names, roles and cardinality.
+  while able to test a code immediately.
+- **Whether the browser suite runs in CI** (needs Chromium and a minute; no ESLint either), and that
+  **nothing verifies how the screens LOOK** — no visual regression, no a11y audit.
 
 ## Traps worth remembering
 
-Invariants are in `project.md`, brand rules in `design-stack.md`, the visual decisions and their
-reasoning in `.tastemaker/style-lock.md`. These bite only in the code.
+Invariants are in `project.md`, brand rules in `design-stack.md`. These bite only in the code.
 
-- **Never read `dataset.metrics` from a public screen.** `publicMetricsFor` is the gate; `screen2.ts`
-  imports it rather than the raw array on purpose.
-- **A substring test for a leaked label passes by luck.** "Human resources" is a gated grid row, a
-  graduate-output discipline AND an open grid row, so asserting on it fails while the gate works.
-  `screen2.test.ts` checks the held metric's KEYS and spot-checks "Senior manager" only.
-- **A shared metric is one definition, several rows.** Editing the figure on one tab in admin and not
-  the others trips the `data:verify` invariant — fix the data, not the check. Admin's Edit button names
-  the function area for the same reason, and `openMetric` in `4-metrics.spec.ts` takes it.
-- **Never use a gap in the catalogue as a test fixture.** Build a synthetic metric for a rule, and
-  treat a count as the snapshot it is.
-- **`asOf` is public and free text, not a date**, rendered verbatim, and unset on every seeded metric.
-  **`atLeast` belongs to the definition** and is not admin-editable — the metric editor preserves it by
-  spreading the original, so do not rebuild that object field by field.
-- **`src/app/page.tsx` is `force-dynamic` on purpose** — a prerender bakes the taxonomy into the
-  build and defeats `dataset.ts`'s mtime cache.
-- **A new browser spec must be numbered inside a project's `testMatch`** — `0-` public, `[2345]-` admin,
-  `1-`/`6-` auth and lockout. A `7-` spec matches no project and never runs.
-- **`0-screen1.spec.ts` and `0-screen2.spec.ts` run before `5-publish.spec.ts` mutates the fixture.**
-- **A grid inside a card needs `grid-cols-1` and `min-w-0`**, or the table's `min-w-md` propagates
-  out and the document scrolls sideways at 320px.
-- **Do not focus a field by querying `[aria-invalid="true"]` after `setErrors`** — state has not
-  flushed; `input-panel.tsx` holds refs, and `tool.tsx` focuses in a rAF for the same reason.
+- **`matchPeersByBandLadder` is the equivalence oracle, not dead code.** It proves the scored engine
+  returns byte-identical peers where nothing is tagged. Deleting it deletes that guarantee.
+- **A check that hardcodes a constant measures the constant, not the thing.** `sweep-floor.ts` asserted
+  it reproduced `matchPeers` "at 0.15"; raising the floor made it declare itself UNSOUND and refuse to
+  run. It reads `SIMILARITY_FLOOR` now.
+- **Pure IDF scores every tag zero when all tagged companies in an industry share one type.** That
+  emptied Electrical & Electronics until `businessSimilarity` learned to fall back to unweighted
+  overlap. Do not remove that branch.
+- **`log(N/f)`, not `log(1 + N/f)`.** The smoothed form kept a universal tag at 0.69, which made all
+  of Retail eligible against a footwear brand.
+- **Peer-set assertions must be scoped to `#peers`.** Walmart legitimately appears on Nike's result —
+  the largest-in-industry panel is supposed to name the biggest retailers.
+- **`tsc` covers `scripts/`, but `tsx` does not typecheck.** A script that runs fine still breaks the
+  gate under `noUncheckedIndexedAccess`.
+- **There is no "SaaS" business type** (the software vocabulary is by domain, not delivery model) and
+  **`hqCountry` is `"USA"`**, not `"United States"` — a wrong value silently disables the HQ tiebreak.
+- **Per-company keys must be industry-scoped.** "STATS Perform" (Software) and "Stats Perform" (Media)
+  differ only in case. The source also hides a non-breaking space in a value — `cleanText` normalises
+  it, Python's `.strip()` does not.
+- **Tag slugs must never reach the page** — `TAG_PHRASES` in `screen1/copy.ts` maps them to English —
+  and the industry-count figure must come from the same population as the peers.
+- **`src/app/page.tsx` is `force-dynamic` on purpose** — a prerender bakes the taxonomy in. **The draft
+  `STORAGE_KEY` is at v3**; `tests/browser/helpers.ts` owns the copy and moves with it.
+- **A browser spec must be numbered inside a project's `testMatch`** — `0-` public, `[2345]-` admin,
+  `1-`/`6-` auth and lockout. A `7-` or `9-` spec matches no project and silently never runs.
 - **`data:verify -- --accept` is for profile drift only**; an INVARIANT FAILURE is a bug.
-- **Bump the draft's `STORAGE_KEY` when the editable SHAPE changes**; `helpers.ts` owns the key. A new
-  optional field is not a shape change — a reseed moves `generatedAt`, so an existing draft surfaces as
-  the stale-baseline conflict it is.
-- **`server-only` throws outside a bundler's server graph**, including `tsx` — hence
-  `src/lib/admin/constants.ts`. `src/data/screen2.ts` is deliberately NOT `server-only`.
-- A `<section>` with no accessible name is not a `region` landmark; every band names itself.
+- **`server-only` throws outside a bundler's server graph**, including `tsx`. A `<section>` with no
+  accessible name is not a `region` landmark — every band names itself.

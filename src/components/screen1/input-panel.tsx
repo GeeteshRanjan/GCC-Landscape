@@ -11,17 +11,29 @@ import {
 import { cn } from "@/lib/utils";
 
 /**
- * The ask: five inputs, four of them required.
+ * The ask: six inputs, four of them required.
  *
- * Every input has a consumer. There is deliberately no sixth field, no revenue
- * *figure* (the data holds bands, so the input is a band) and no email: this tool
- * informs and earns a conversation, and there is no lead capture anywhere in the
- * codebase.
+ * Every input has a consumer. Company name and line of business are the two
+ * optional ones — the name personalises copy, and line of business narrows the
+ * peer set to companies in the same business. There is deliberately no seventh
+ * field, no revenue *figure* (the data holds bands, so the input is a band) and no
+ * email: this tool informs and earns a conversation, and there is no lead capture
+ * anywhere in the codebase.
+ *
+ * **No company-name autocomplete.** It was built and removed. Completions could
+ * only ever come from the 1834 companies in our own database, so a visitor at a
+ * large company we have not mapped would type their name, see an empty dropdown,
+ * and read it as "this tool does not know who we are" — the opposite of what the
+ * screen is for. There is no version of the feature that avoids this, because the
+ * absence of a suggestion is itself the message. Left as a plain text input.
  *
  * **No per-field help text.** Each field carried a line explaining what it was
- * for — why we ask for a band rather than a figure, what the HQ answer sorts. Five
- * labels each trailing an explanation is five times the reading for a form that
- * takes twenty seconds, and "Industry" does not need a sentence under it. What the
+ * for — why we ask for a band rather than a figure, what the HQ answer sorts. A
+ * label per field each trailing an explanation is several times the reading for a
+ * form that takes twenty seconds, and "Industry" does not need a sentence under
+ * it. The one exception is the line-of-business status line, which is a live
+ * region announcing that the control became available rather than a description of
+ * it. What the
  * matching actually did with the answers is said on the result, where it is
  * evidence for the peer set rather than an instruction; see `matchBasis` in
  * `copy.ts`. The one line kept is the storage promise beside the submit button,
@@ -76,10 +88,23 @@ const CONTROL_CLASS = cn(
   "aria-invalid:border-feedback-attention aria-invalid:border-2",
 );
 
+export interface BusinessTypeOption {
+  id: string;
+  name: string;
+}
+
 export interface InputPanelProps {
   industries: readonly string[];
   revenueBands: readonly string[];
   hqCountries: readonly string[];
+  /**
+   * Industry -> the lines of business on offer within it.
+   *
+   * Passed whole rather than fetched on change, because the payload is a few
+   * kilobytes of labels and a round trip per industry selection would put a
+   * spinner inside a dropdown for no gain.
+   */
+  businessTypesByIndustry: Readonly<Record<string, readonly BusinessTypeOption[]>>;
   /** Set when returning to the form, so a correction starts from the last answer. */
   initial?: Partial<PeerViewInput>;
   pending: boolean;
@@ -94,6 +119,7 @@ export function InputPanel({
   industries,
   revenueBands,
   hqCountries,
+  businessTypesByIndustry,
   initial,
   pending,
   submitError,
@@ -103,12 +129,34 @@ export function InputPanel({
   const [industry, setIndustry] = useState(initial?.industry ?? "");
   const [revenueBand, setRevenueBand] = useState(initial?.revenueBand ?? "");
   const [hqCountry, setHqCountry] = useState(initial?.hqCountry ?? "");
+  const [businessTypeId, setBusinessTypeId] = useState(initial?.businessTypeId ?? "");
   const [gccStatus, setGccStatus] = useState<GccStatus | "">(
     initial?.gccStatus ?? "",
   );
   const [errors, setErrors] = useState<Errors>({});
 
   const statusLegendId = useId();
+  const businessTypeStatusId = useId();
+
+  const businessTypeOptions = businessTypesByIndustry[industry] ?? [];
+
+  /**
+   * Changing industry replaces the list, so a selection made under the old one is
+   * cleared rather than carried over.
+   *
+   * Left in place it would be an id that does not exist in the new industry, which
+   * the server rejects — and rejects correctly, since silently ignoring it would
+   * return an industry-wide peer set while the visitor believes they narrowed it.
+   * Better to clear it here than to fail at submit.
+   */
+  function handleIndustryChange(next: string) {
+    setIndustry(next);
+    setBusinessTypeId((current) => {
+      if (!current) return current;
+      const allowed = businessTypesByIndustry[next] ?? [];
+      return allowed.some((option) => option.id === current) ? current : "";
+    });
+  }
 
   /**
    * Direct handles on the controls that can fail validation, in the order they
@@ -157,6 +205,7 @@ export function InputPanel({
       industry,
       revenueBand,
       hqCountry,
+      businessTypeId: businessTypeId || undefined,
       gccStatus: gccStatus as GccStatus,
     });
   }
@@ -192,7 +241,7 @@ export function InputPanel({
               value={industry}
               aria-invalid={errors.industry ? true : undefined}
               aria-describedby={describedBy}
-              onChange={(event) => setIndustry(event.target.value)}
+              onChange={(event) => handleIndustryChange(event.target.value)}
               className={CONTROL_CLASS}
             >
               <option value="">Choose your industry</option>
@@ -202,6 +251,54 @@ export function InputPanel({
                 </option>
               ))}
             </select>
+          )}
+        </Field>
+
+        {/*
+          Line of business — the one optional select, and the only field on this
+          form that is disabled until another is answered.
+
+          Rendered unconditionally rather than appearing on industry selection: a
+          control that materialises mid-form moves everything below it and is
+          announced to a screen reader as a change of document rather than a change
+          of state. Disabled-then-enabled keeps the form's shape fixed, and the
+          status line below is an aria-live region so the enabling IS announced.
+        */}
+        <Field label="Line of business" optional>
+          {({ controlId, describedBy }) => (
+            <>
+              <select
+                id={controlId}
+                value={businessTypeId}
+                disabled={businessTypeOptions.length === 0}
+                aria-describedby={`${describedBy ?? ""} ${businessTypeStatusId}`.trim()}
+                onChange={(event) => setBusinessTypeId(event.target.value)}
+                className={cn(
+                  CONTROL_CLASS,
+                  businessTypeOptions.length === 0 && "opacity-60",
+                )}
+              >
+                <option value="">
+                  {businessTypeOptions.length === 0
+                    ? "Choose an industry first"
+                    : "All of my industry"}
+                </option>
+                {businessTypeOptions.map((option) => (
+                  <option key={option.id} value={option.id}>
+                    {option.name}
+                  </option>
+                ))}
+              </select>
+              <p
+                id={businessTypeStatusId}
+                aria-live="polite"
+                className="text-[length:var(--ansr-text-xs)] leading-[var(--ansr-leading-normal)] text-[var(--ansr-text-muted)]"
+              >
+                {businessTypeOptions.length === 0
+                  ? "Available once you choose an industry."
+                  : `${businessTypeOptions.length} to choose from. Narrows your comparison to companies in the same business.`}
+              </p>
+            </>
           )}
         </Field>
 

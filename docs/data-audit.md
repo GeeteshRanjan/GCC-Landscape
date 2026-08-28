@@ -15,7 +15,7 @@ Read this before designing the schema, the peer-matching rule, or the importer.
 | 3 | Company Type | 2 | Public / Private. Dropped — nothing in the brief uses it. |
 | 4 | Company Revenue Band (2025) | 7 | Clean, well distributed. The similarity axis. |
 | 5 | Industry / Sector | 24 | Clean, usable as-is. The match key. |
-| 6 | Sub-Industry | **620** | Unusable as a match key. Dropped. See below. |
+| 6 | Sub-Industry | **620** | Unusable as a match key. Read on import, collapsed into a business type, then discarded — never stored. See below. |
 | 7 | GCC Establish Year | 74 | **Mixed types**: `2022` and `2022.0` are stored as distinct values. |
 | 8 | GCC Location(s) | 277 | Comma-joined city list. Needs splitting into a relation. |
 | 9 | Location Presence | 8 | Count of col 8. **Derive, don't store.** |
@@ -39,7 +39,7 @@ Read this before designing the schema, the peer-matching rule, or the importer.
 | ≥5 | 58 | 1065 (58%) |
 | ≥10 | 23 | 848 (46%) |
 
-**Resolution: sub-industry is dropped entirely, from both the schema and the input form.** Measured
+**Resolution: sub-industry is never a match key, and is not stored.** Measured
 coverage of every candidate match key, counting a company as covered when its bucket holds at least
 six members so five peers can be shown:
 
@@ -52,11 +52,30 @@ six members so five peers can be shown:
 | Industry + revenue band + HQ country | 1082 (59.0%) | 556 |
 | Sub-industry + revenue band *(original spec)* | 657 (35.8%) | 932 |
 
-So the ladder is industry + revenue band, then industry + adjacent revenue band, then whatever
-exists. That reaches 98% and needs no sub-industry taxonomy work at all.
+So the band ladder is industry + revenue band, then industry + adjacent revenue band, then
+whatever exists. That reaches 98% and needs no sub-industry taxonomy work at all.
 
 The HQ-country row is the reason country priority must be a **sort preference rather than a
 filter**: filtering on it costs 33 points of coverage.
+
+### What the 35.8% figure does and does not settle
+
+Every number above measures a candidate match key **as a filter competing with industry**. That
+is the right measurement for a filter and it settled the question for filters: sub-industry
+cannot be one.
+
+It does not settle whether the column is *useful*, and the peer sets showed it was not settled.
+Industry alone put Amazon, Walmart, Target, Lowe's and 7-Eleven in front of a visitor from Nike —
+all Retail, all in the right revenue band, and none of them a comparable operation. A better-sized
+bucket would not have fixed it either: Retail has 60 companies and five slots, so once apparel is
+exhausted the next peer is whoever is biggest in the industry, which is exactly how Lowe's got
+there.
+
+**Resolution: the 620 values are collapsed into 158 business types carrying a 137-tag vocabulary,
+and similarity is scored continuously rather than filtered.** Coverage does not move, because a
+visitor who selects no line of business gets the band ladder's peers unchanged — asserted as an
+invariant, not assumed. The design, the vetting and the coverage figures are in
+`docs/business-types.md`.
 
 ## Cell comments: three of them, dropped
 
@@ -158,6 +177,21 @@ Every one of these is a real defect in the current file, not a hypothetical.
 5. Coerce Yes/No columns to boolean.
 6. Recompute location count and tier-2 presence, and **report any disagreement with the supplied
    values** as an import warning. A mismatch means the source row is stale.
+7. Collapse Sub-Industry into a business type through `scripts/business-type-map.ts`. An
+   unmapped value leaves the company untagged and is reported as a warning rather than failing
+   the import — a future batch will contain strings nobody has seen, and untagged is safe.
+
+## Two whitespace defects worth naming
+
+Both were invisible until they broke a lookup, and both are handled by `cleanText`.
+
+- At least one cell contains a **non-breaking space** inside the value:
+  `"Healthcare\u00a0Enterprise Management"`. JavaScript's `\s` matches U+00A0 so `cleanText`
+  normalises it, but any tool that only calls `.strip()` will not, and the mismatch shows up as a
+  silent lookup miss rather than an error.
+- Company names are **not unique, even case-insensitively**. "STATS Perform" (Software & Internet)
+  and "Stats Perform" (Media & Entertainment) are different companies. Any per-company lookup keyed
+  on name must also be scoped by industry; keyed on name alone it gives both rows the same value.
 
 ## What the product needs and this file does not have
 

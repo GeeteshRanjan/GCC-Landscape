@@ -50,6 +50,12 @@ export function CompanyManager() {
   const [editing, setEditing] = useState<{ company: Company | null } | null>(null);
   const [confirmDelete, setConfirmDelete] = useState<Company | null>(null);
 
+  /** Id -> name, so the table and the search show labels rather than slugs. */
+  const typeNames = useMemo(
+    () => new Map(draft.businessTypes.map((type) => [type.id, type.name])),
+    [draft.businessTypes],
+  );
+
   const filtered = useMemo(() => {
     const needle = query.trim().toLowerCase();
     return draft.companies.filter((company) => {
@@ -58,10 +64,17 @@ export function CompanyManager() {
       return (
         company.name.toLowerCase().includes(needle) ||
         company.cities.some((city) => city.toLowerCase().includes(needle)) ||
-        company.hqCountry.toLowerCase().includes(needle)
+        company.hqCountry.toLowerCase().includes(needle) ||
+        // Business type by NAME, not id, so "apparel" pulls up every apparel
+        // company — which is how a tagging decision gets spot-checked in bulk
+        // rather than one row at a time. "not set" finds the untagged ones.
+        (company.businessTypes.length === 0 && "not set".includes(needle)) ||
+        company.businessTypes.some((id) =>
+          (typeNames.get(id) ?? id).toLowerCase().includes(needle),
+        )
       );
     });
-  }, [draft.companies, query, industry]);
+  }, [draft.companies, query, industry, typeNames]);
 
   const pageCount = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   // A filter change can strand the viewer past the end of the new result set.
@@ -157,6 +170,7 @@ export function CompanyManager() {
               <TableRow>
                 <TableHead scope="col">Company</TableHead>
                 <TableHead scope="col">Industry</TableHead>
+                <TableHead scope="col">Line of business</TableHead>
                 <TableHead scope="col">Revenue band</TableHead>
                 <TableHead scope="col">Cities</TableHead>
                 <TableHead scope="col">FTE</TableHead>
@@ -178,6 +192,26 @@ export function CompanyManager() {
                     </span>
                   </TableCell>
                   <TableCell className="text-text-muted">{company.industry}</TableCell>
+                  {/*
+                    Named rather than counted, and untagged called out explicitly.
+                    Peer similarity is driven entirely by this column, so an admin
+                    checking a row needs to see it without opening the editor — and
+                    needs "not set" to look different from a blank cell, because
+                    untagged is a real state (the company matches on industry and
+                    revenue band only) rather than missing data.
+                  */}
+                  <TableCell className="text-text-muted">
+                    {company.businessTypes.length === 0 ? (
+                      <span className="text-xs italic">Not set</span>
+                    ) : (
+                      company.businessTypes
+                        .map(
+                          (id) =>
+                            typeNames.get(id) ?? `${id} (unknown)`,
+                        )
+                        .join(" · ")
+                    )}
+                  </TableCell>
                   <TableCell className="text-text-muted">{company.revenueBand}</TableCell>
                   <TableCell className="text-text-muted">
                     {company.cities.length > 2 ? (

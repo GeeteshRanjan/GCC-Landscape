@@ -79,12 +79,118 @@ export function framing(view: PeerView): Framing {
 }
 
 /**
+ * Plain-English names for the tags the peers share.
+ *
+ * The tag vocabulary is an internal filing system, exactly like Screen 2's
+ * lenses — `supply-chain-heavy` is a slug, not a sentence. Anything without an
+ * entry here is dropped rather than shown with its hyphens knocked out, so a new
+ * tag can never leak a slug onto the page.
+ */
+const TAG_PHRASES: Readonly<Record<string, string>> = {
+  apparel: "apparel",
+  footwear: "footwear",
+  "sporting-goods": "sportswear",
+  luxury: "luxury goods",
+  "brand-owner": "owning consumer brands",
+  "retail-operator": "running retail outlets",
+  "physical-stores": "a physical store estate",
+  dtc: "selling direct to consumers",
+  ecommerce: "online retail",
+  "supply-chain-heavy": "a global supply chain",
+  "fashion-cycle": "seasonal product cycles",
+  pharmaceutical: "pharmaceuticals",
+  biotech: "biotechnology",
+  "medical-device": "medical devices",
+  diagnostics: "diagnostics",
+  "hospital-care": "care delivery",
+  "clinical-research": "clinical research",
+  "clinical-regulated": "clinical regulation",
+  "banking-lending": "lending",
+  "insurance-underwriting": "underwriting",
+  "balance-sheet-risk": "carrying risk on the balance sheet",
+  "asset-management": "asset management",
+  "capital-markets": "capital markets",
+  "payments-processing": "payment processing",
+  fintech: "financial technology",
+  security: "security products",
+  "data-analytics": "data and analytics",
+  "ai-ml": "machine learning",
+  "cloud-infrastructure": "cloud infrastructure",
+  "developer-tools": "developer tooling",
+  "core-business-systems": "systems of record",
+  saas: "subscription software",
+  "software-product": "software products",
+  "serves-healthcare": "selling to healthcare",
+  "serves-financial": "selling to financial services",
+  "serves-retail": "selling to retailers",
+  "serves-industrial": "selling to industry",
+  "enterprise-accounts": "enterprise sales",
+  "r-and-d-intensive": "heavy R&D",
+  "capital-intensive": "capital intensity",
+  regulated: "a regulated environment",
+  "safety-critical": "safety-critical engineering",
+  "field-operations": "field operations",
+  "billable-hours": "billable professional work",
+  "project-revenue": "project-based delivery",
+  "discrete-manufacturing": "discrete manufacturing",
+  "process-manufacturing": "process manufacturing",
+  "vehicle-components": "vehicle components",
+  "vehicle-oem": "vehicle manufacturing",
+  semiconductor: "semiconductors",
+  "fabless-design": "fabless chip design",
+  "telecom-services": "network operations",
+  "freight-logistics": "freight and logistics",
+  "engineering-construction": "engineering and construction",
+  "packaged-food": "packaged food",
+  beverages: "beverages",
+  "personal-care": "personal care",
+  "building-materials": "building materials",
+  "oil-gas": "oil and gas",
+  "power-generation": "power generation",
+};
+
+/** At most three, so the sentence stays a sentence. */
+function phraseTags(tags: readonly string[], limit = 3): string[] {
+  const phrases: string[] = [];
+  for (const tag of tags) {
+    const phrase = TAG_PHRASES[tag];
+    if (phrase && !phrases.includes(phrase)) phrases.push(phrase);
+    if (phrases.length === limit) break;
+  }
+  return phrases;
+}
+
+function joinPhrases(phrases: readonly string[]): string {
+  if (phrases.length <= 1) return phrases[0] ?? "";
+  if (phrases.length === 2) return `${phrases[0]} and ${phrases[1]}`;
+  return `${phrases.slice(0, -1).join(", ")} and ${phrases.at(-1)}`;
+}
+
+/**
  * How the peer set was matched, said out loud.
  *
- * A CIO trusts a comparison more when the method is on the page, and the ladder
- * is defensible enough to show: same industry throughout, revenue band widening
- * only when it has to, and the visitor's own market first.
+ * A CIO trusts a comparison more when the method is on the page. Two shapes,
+ * because there are two genuinely different methods:
+ *
+ *  - With a line of business, the sentence names WHAT THE PEERS HAVE IN COMMON.
+ *    That is both more useful and more honest than naming a revenue band, which
+ *    the peer card does not even display.
+ *  - Without one, the original three sentences are used verbatim, so an untagged
+ *    industry reads exactly as it did before any of this existed.
  */
+export function matchBasisFor(view: PeerView): string {
+  const { businessMatched, sharedTags, basis } = view.peers;
+  const businessType = view.industry.businessType;
+
+  if (businessMatched && businessType) {
+    const phrases = phraseTags(sharedTags);
+    const shared = phrases.length > 0 ? `, and share ${joinPhrases(phrases)}` : "";
+    return `Matched on your line of business — ${businessType.name.toLowerCase()}${shared}. Revenue band is a preference, not a filter, so a closer business beats a closer size.`;
+  }
+
+  return matchBasis(basis, view.input.revenueBand);
+}
+
 export function matchBasis(basis: PeerTier, revenueBand: string): string {
   switch (basis) {
     case "same-band":
@@ -103,15 +209,31 @@ export function matchBasis(basis: PeerTier, revenueBand: string): string {
  * reassuring line nobody needed.
  */
 export function shortfallLine(view: PeerView): string | null {
-  const { shortfall, peers, limit } = view.peers;
+  const { shortfall, peers, limit, floorShortened } = view.peers;
   if (shortfall === 0) return null;
 
   const industry = view.industry.industry;
+  const businessType = view.industry.businessType;
+
   if (peers.length === 0) {
+    if (businessType) {
+      return `No other ${businessType.name.toLowerCase()} in our data runs an India GCC yet. That is genuinely open ground.`;
+    }
     return `No other ${industry} company in our data runs an India GCC yet. That is genuinely open ground.`;
   }
 
   const count = peers.length === 1 ? "one company" : `${peers.length} companies`;
+
+  /**
+   * A floor-shortened set is a DIFFERENT claim from a thin industry, and they must
+   * not share a sentence. Here the industry has plenty of companies; what it does
+   * not have is more that are genuinely comparable. Saying "this industry is thin"
+   * over a 656-company industry would be visibly false.
+   */
+  if (floorShortened && businessType) {
+    return `${industry} is not short of companies in India — but only ${count} are close enough to your line of business to be worth naming. We would rather show you ${peers.length} defensible comparisons than pad the list.`;
+  }
+
   return `${industry} is thin in India at any size — ${count} rather than ${limit}. Fewer peers is early ground, not absent ground, and we would rather show you ${peers.length} defensible comparisons than pad the list.`;
 }
 
@@ -130,14 +252,39 @@ export function industryHeading(view: PeerView): string {
   return "Your industry in India is bigger than five names";
 }
 
-/** The industry-count band. `total` leads because `others` can be zero. */
+/**
+ * The industry-count band. `total` leads because `others` can be zero.
+ *
+ * With a line of business it becomes a two-level count, which is strictly stronger
+ * evidence: a named set of peers, then how many others do the same thing, then how
+ * many more are in the industry at all. That is what turns a thin peer set from a
+ * weakness into a floor.
+ */
 export function industryLine(view: PeerView): string {
-  const { total, others, industry, exhaustive } = view.industry;
+  const { total, others, industry, exhaustive, businessType } = view.industry;
   if (exhaustive) {
     return total === 1
       ? `That is the only ${industry} company in our India GCC data.`
       : `Those are every ${industry} company in our India GCC data.`;
   }
+
+  if (businessType && businessType.count > 0) {
+    // The business-type name is used as a LABEL rather than folded into the
+    // sentence, because the names are singular ("Apparel & footwear brand") and
+    // pluralising them in code produces "29 other companies in apparel & footwear
+    // brand runs a GCC". A label sidesteps agreement entirely and reads cleanly
+    // for all 158 of them.
+    const same =
+      businessType.count === 1
+        ? "one other company in a comparable line of business runs a GCC in India"
+        : `${businessType.count.toLocaleString("en-US")} companies in a comparable line of business run a GCC in India`;
+    const rest = total - businessType.count;
+    if (rest > 0) {
+      return `${businessType.name} — ${same}, and ${rest.toLocaleString("en-US")} more across ${industry}.`;
+    }
+    return `${businessType.name} — ${same}.`;
+  }
+
   const clause =
     others === 1
       ? "one more beyond the companies above"

@@ -11,7 +11,7 @@ import {
 } from "react";
 
 import { alignValue } from "@/data/metrics";
-import type { Company, Dataset, Metric, Taxonomy } from "@/data/schema";
+import type { BusinessType, Company, Dataset, Metric, Taxonomy } from "@/data/schema";
 import { slugify, uniqueSlug } from "@/data/normalize";
 
 /**
@@ -35,19 +35,25 @@ import { slugify, uniqueSlug } from "@/data/normalize";
  */
 
 /**
- * Bumped to v2 when the function metrics joined the editable slice.
+ * Bumped to v3 when the business-type catalogue joined the editable slice; v2
+ * added the function metrics.
  *
- * Not cosmetic. A draft stored under v1 has no `metrics` key, and restoring it
- * would produce a draft whose catalogue is missing — which the publish gate
- * rejects with a schema error the admin has no way to fix from the UI. A new key
- * means those drafts are simply not found, which is the honest outcome: the key
- * was versioned for exactly this.
+ * Not cosmetic. A draft stored under an older key is missing a whole editable
+ * collection, and restoring it would produce a draft the publish gate rejects
+ * with a schema error the admin has no way to fix from the UI. A new key means
+ * those drafts are simply not found, which is the honest outcome: the key was
+ * versioned for exactly this.
+ *
+ * `tests/browser/helpers.ts` owns `DRAFT_STORAGE_KEY` and must move with it.
  */
-const STORAGE_KEY = "gcc-admin-draft-v2";
+const STORAGE_KEY = "gcc-admin-draft-v3";
 const AUTOSAVE_DEBOUNCE_MS = 800;
 
 /** Everything the admin can edit. Metadata is server-owned. */
-type EditableDataset = Pick<Dataset, "taxonomy" | "companies" | "metrics">;
+type EditableDataset = Pick<
+  Dataset,
+  "taxonomy" | "companies" | "businessTypes" | "metrics"
+>;
 
 export type TaxonomyKey = keyof Taxonomy;
 
@@ -91,6 +97,11 @@ interface DraftContextValue {
   /** Back to no numbers at all, leaving the definition alone. */
   clearMetricValue: (id: string) => void;
 
+  businessTypeById: (id: string) => BusinessType | undefined;
+  addBusinessType: (type: BusinessType) => void;
+  updateBusinessType: (id: string, patch: Partial<Omit<BusinessType, "id">>) => void;
+  removeBusinessType: (id: string) => void;
+
   setTaxonomyValues: (key: TaxonomyKey, values: string[]) => void;
   addTaxonomyValue: (key: TaxonomyKey, value: string) => void;
   renameTaxonomyValue: (key: TaxonomyKey, from: string, to: string) => void;
@@ -111,6 +122,7 @@ function editableOf(dataset: Dataset): EditableDataset {
   return {
     taxonomy: dataset.taxonomy,
     companies: dataset.companies,
+    businessTypes: dataset.businessTypes,
     metrics: dataset.metrics,
   };
 }
@@ -312,6 +324,7 @@ export function DraftProvider({
       source: currentBaseline.source,
       taxonomy: editable.taxonomy,
       companies: editable.companies,
+      businessTypes: editable.businessTypes,
       metrics: editable.metrics,
     }),
     [currentBaseline, editable],
@@ -404,6 +417,51 @@ export function DraftProvider({
     }));
   }, [applyEdit]);
 
+  const addBusinessType = useCallback((type: BusinessType) => {
+    applyEdit((current) => {
+      if (current.businessTypes.some((existing) => existing.id === type.id)) return current;
+      return { ...current, businessTypes: [...current.businessTypes, type] };
+    });
+  }, [applyEdit]);
+
+  /**
+   * Spread the original rather than rebuilding the object field by field, so a field
+   * this editor does not surface is preserved rather than silently dropped — the same
+   * discipline `atLeast` needs in the metric editor.
+   */
+  const updateBusinessType = useCallback(
+    (id: string, patch: Partial<Omit<BusinessType, "id">>) => {
+      applyEdit((current) => ({
+        ...current,
+        businessTypes: current.businessTypes.map((type) =>
+          type.id === id ? { ...type, ...patch } : type,
+        ),
+      }));
+    },
+    [applyEdit],
+  );
+
+  /**
+   * Removing a type also clears it from every company that carried it.
+   *
+   * Without the sweep the dataset fails referential integrity at publish — a company
+   * pointing at a business type that no longer exists. Deliberately a cascade rather
+   * than a refusal, unlike taxonomy deletion: a business type is a matching signal, so
+   * losing it degrades a company to industry-level matching, which is a safe state.
+   * A taxonomy value cannot degrade like that, which is why that one is refused instead.
+   */
+  const removeBusinessType = useCallback((id: string) => {
+    applyEdit((current) => ({
+      ...current,
+      businessTypes: current.businessTypes.filter((type) => type.id !== id),
+      companies: current.companies.map((company) =>
+        company.businessTypes.includes(id)
+          ? { ...company, businessTypes: company.businessTypes.filter((t) => t !== id) }
+          : company,
+      ),
+    }));
+  }, [applyEdit]);
+
   const setTaxonomyValues = useCallback((key: TaxonomyKey, values: string[]) => {
     applyEdit((current) => ({
       ...current,
@@ -458,10 +516,29 @@ export function DraftProvider({
           return company[field] === from ? { ...company, [field]: next } : company;
         });
 
+        /**
+         * Industries are referenced from a SECOND place, and missing it breaks the
+         * publish rather than merely leaving stale text.
+         *
+         * A business type is scoped to an industry, and the schema rejects a company
+         * carrying a type from a different one. So renaming "Retail" without
+         * rewriting `businessTypes[].industry` leaves every retailer pointing at a
+         * type that now belongs to an industry nobody is in — a referential-integrity
+         * error at publish time, from an edit the UI reported as successful. Exactly
+         * the failure the company cascade exists to prevent, one level along.
+         */
+        const businessTypes =
+          key === "industries"
+            ? current.businessTypes.map((type) =>
+                type.industry === from ? { ...type, industry: next } : type,
+              )
+            : current.businessTypes;
+
         return {
           ...current,
           taxonomy: { ...current.taxonomy, [key]: deduped },
           companies,
+          businessTypes,
         };
       });
     },
@@ -469,13 +546,25 @@ export function DraftProvider({
   );
 
   const removeTaxonomyValue = useCallback((key: TaxonomyKey, value: string) => {
-    applyEdit((current) => ({
-      ...current,
-      taxonomy: {
-        ...current.taxonomy,
-        [key]: current.taxonomy[key].filter((v) => v !== value),
-      },
-    }));
+    applyEdit((current) => {
+      // Removing an industry orphans any business type scoped to it, and the schema
+      // rejects a business type whose industry is not in the taxonomy. The editor
+      // already refuses to delete a value still referenced by a company, so nothing
+      // can still be pointing at these.
+      const businessTypes =
+        key === "industries"
+          ? current.businessTypes.filter((type) => type.industry !== value)
+          : current.businessTypes;
+
+      return {
+        ...current,
+        taxonomy: {
+          ...current.taxonomy,
+          [key]: current.taxonomy[key].filter((v) => v !== value),
+        },
+        businessTypes,
+      };
+    });
   }, [applyEdit]);
 
   /** Reorder by one step. Only revenueBands needs it, but nothing breaks elsewhere. */
@@ -518,6 +607,7 @@ export function DraftProvider({
         ...metadata,
         taxonomy: editable.taxonomy,
         companies: editable.companies,
+        businessTypes: editable.businessTypes,
         metrics: editable.metrics,
       }));
       pinnedBaseline.current = metadata.generatedAt;
@@ -540,6 +630,10 @@ export function DraftProvider({
       saveState,
       conflict,
       companyById: (id) => companyIndex.get(id),
+      businessTypeById: (id) => editable.businessTypes.find((t) => t.id === id),
+      addBusinessType,
+      updateBusinessType,
+      removeBusinessType,
       addCompany,
       updateCompany,
       deleteCompany,
@@ -568,6 +662,10 @@ export function DraftProvider({
       metricIndex,
       replaceMetric,
       clearMetricValue,
+      editable.businessTypes,
+      addBusinessType,
+      updateBusinessType,
+      removeBusinessType,
       setTaxonomyValues,
       addTaxonomyValue,
       renameTaxonomyValue,

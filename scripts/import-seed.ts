@@ -5,6 +5,7 @@
  *   npm run data:import -- --dry-run         # everything except the write
  *   npm run data:import -- --in <path>       # a later batch of new companies
  *   npm run data:import -- --reseed-metrics  # adopt the catalogue in code over the stored one
+ *   npm run data:import -- --reseed-business-types   # same, for business types
  *
  * The spreadsheet is a SEED, not a system of record. It is read once, cleaned on
  * the way in, and after that admin is the authoritative editor. This script is
@@ -20,9 +21,15 @@ import process from "node:process";
 
 import ExcelJS from "exceljs";
 
+import { BUSINESS_TYPE_CATALOGUE } from "../src/data/business-type-catalogue";
 import { hasTier2Presence, locationCount } from "../src/data/derive";
 import { diffDatasets, renderDiffText } from "../src/data/diff";
 import { seedMetricCatalogue } from "../src/data/metric-catalogue";
+import {
+  COMPANY_TO_TYPES,
+  SUB_INDUSTRY_TO_TYPE,
+  VAGUE_SUB_INDUSTRIES,
+} from "./business-type-map";
 import {
   SEED_REVENUE_BAND_ORDER,
   cleanText,
@@ -49,6 +56,12 @@ const COLUMNS = {
   hqCountry: "Company HQ",
   revenueBand: "Company Revenue Band (2025)",
   industry: "Industry / Sector",
+  /**
+   * Read to be MAPPED, never stored. 620 values over 1834 companies is unusable
+   * as a match key — see docs/data-audit.md — so it is collapsed through
+   * `SUB_INDUSTRY_TO_TYPE` into a business type and then discarded.
+   */
+  subIndustry: "Sub-Industry",
   establishedYear: "GCC Establish Year",
   cities: "GCC Location(s)",
   fteRange: "GCC FTE Range",
@@ -65,14 +78,21 @@ interface Args {
   input: string;
   dryRun: boolean;
   reseedMetrics: boolean;
+  reseedBusinessTypes: boolean;
 }
 
 function parseArgs(argv: string[]): Args {
-  const args: Args = { input: DEFAULT_SOURCE, dryRun: false, reseedMetrics: false };
+  const args: Args = {
+    input: DEFAULT_SOURCE,
+    dryRun: false,
+    reseedMetrics: false,
+    reseedBusinessTypes: false,
+  };
   for (let i = 0; i < argv.length; i += 1) {
     const arg = argv[i];
     if (arg === "--dry-run") args.dryRun = true;
     else if (arg === "--reseed-metrics") args.reseedMetrics = true;
+    else if (arg === "--reseed-business-types") args.reseedBusinessTypes = true;
     else if (arg === "--in") {
       const next = argv[i + 1];
       if (!next) fail("--in needs a path");
@@ -132,6 +152,53 @@ async function readRows(
   return { rows, sheetName: sheet.name };
 }
 
+/**
+ * Lookup of the per-company table, keyed by industry and a case-folded name.
+ *
+ * Industry is part of the key because company names are not unique across
+ * industries even case-insensitively — "STATS Perform" (Software & Internet) and
+ * "Stats Perform" (Media & Entertainment) are different companies.
+ */
+const COMPANY_TYPE_LOOKUP = new Map(
+  Object.entries(COMPANY_TO_TYPES).map(([key, types]) => {
+    const separator = key.indexOf("||");
+    const industry = key.slice(0, separator);
+    const name = key.slice(separator + 2);
+    return [`${industry}||${cleanText(name).toLowerCase()}`, types] as const;
+  }),
+);
+
+/**
+ * A company's business types, from the per-company table first and the
+ * sub-industry collapse second.
+ *
+ * Returns a `gap` rather than throwing, because an unmapped value must not block
+ * an import: a future spreadsheet batch will contain sub-industry strings nobody
+ * has seen, and the right outcome is an untagged company plus a loud report, not
+ * a failed import. Untagged is safe — the company still matches at industry
+ * level, exactly as before business types existed.
+ */
+function classifyBusiness(
+  name: string,
+  industry: string,
+  subIndustry: string,
+): { types: string[]; gap: string | null } {
+  const byName = COMPANY_TYPE_LOOKUP.get(
+    `${industry}||${cleanText(name).toLowerCase()}`,
+  );
+  if (byName) return { types: [...byName], gap: null };
+
+  const key = `${industry}||${subIndustry}`;
+  const bySub = SUB_INDUSTRY_TO_TYPE[key];
+  if (bySub) return { types: [bySub], gap: null };
+
+  // A known catch-all with no per-company decision recorded. Expected for the
+  // 58 deliberately untagged; anything else here wants a look.
+  if (VAGUE_SUB_INDUSTRIES.has(key)) return { types: [], gap: null };
+
+  return { types: [], gap: `unmapped sub-industry "${subIndustry}" in ${industry}` };
+}
+
 interface BuildResult {
   companies: Company[];
   errors: string[];
@@ -142,6 +209,7 @@ function buildCompanies(rows: Array<Record<ColumnKey, string>>): BuildResult {
   const companies: Company[] = [];
   const errors: string[] = [];
   const warnings: string[] = [];
+  const businessTypeGaps: string[] = [];
   const slugs = new Set<string>();
   const namesSeen = new Map<string, number>();
 
@@ -203,6 +271,13 @@ function buildCompanies(rows: Array<Record<ColumnKey, string>>): BuildResult {
     }
     namesSeen.set(name.toLowerCase(), sheetRow);
 
+    const { types: businessTypes, gap } = classifyBusiness(
+      name,
+      row.industry,
+      row.subIndustry,
+    );
+    if (gap) businessTypeGaps.push(`${gap} (row ${sheetRow}, ${name})`);
+
     const company: Company = {
       id: uniqueSlug(name, slugs),
       name,
@@ -214,6 +289,7 @@ function buildCompanies(rows: Array<Record<ColumnKey, string>>): BuildResult {
       fte,
       fortuneGlobal500,
       forbesGlobal2000,
+      businessTypes,
     };
 
     // Defect 6: recompute the two derived columns the source shipped as stored
@@ -238,6 +314,16 @@ function buildCompanies(rows: Array<Record<ColumnKey, string>>): BuildResult {
 
     companies.push(company);
   });
+
+  // Loud, but not fatal. A new sub-industry string in a later batch leaves its
+  // company untagged, which is safe; silence is what would not be.
+  if (businessTypeGaps.length > 0) {
+    const unique = [...new Set(businessTypeGaps)];
+    warnings.push(
+      `${unique.length} unmapped sub-industry value(s) — those companies are untagged and match at industry level only. ` +
+        `Add them to scripts/business-type-map.ts:\n    ${unique.slice(0, 20).join("\n    ")}`,
+    );
+  }
 
   return { companies, errors, warnings };
 }
@@ -333,12 +419,49 @@ async function main(): Promise<void> {
     );
   }
 
+  /**
+   * Business types, on the same terms as the metric catalogue: preserved unless
+   * asked to reseed.
+   *
+   * The reason differs, though. Metrics are preserved because their VALUES are
+   * typed in over months. Business types are preserved because an admin may have
+   * added a type or re-pointed a company, and a monthly spreadsheet append should
+   * not undo that. The company ASSIGNMENTS come from the spreadsheet's
+   * sub-industry column through the map either way, so a reseed here replaces the
+   * catalogue, not the per-company work.
+   */
+  const hasExistingTypes = Boolean(previous?.businessTypes?.length);
+  const businessTypes =
+    hasExistingTypes && !args.reseedBusinessTypes
+      ? (previous?.businessTypes as Dataset["businessTypes"])
+      : BUSINESS_TYPE_CATALOGUE.map((type) => ({ ...type, tags: [...type.tags] }));
+
+  if (hasExistingTypes && args.reseedBusinessTypes) {
+    console.log(
+      `\n  --reseed-business-types: REPLACING ${previous?.businessTypes.length} stored business types with\n` +
+        `  the ${businessTypes.length} in src/data/business-type-catalogue.ts. Any type added through admin\n` +
+        `  is discarded, and a company pointing at one becomes untagged. The diff below is the record.`,
+    );
+  } else {
+    console.log(
+      hasExistingTypes
+        ? `  keeping ${businessTypes.length} existing business types untouched`
+        : `  seeding ${businessTypes.length} business types from the catalogue`,
+    );
+  }
+
+  const tagged = companies.filter((c) => c.businessTypes.length > 0).length;
+  console.log(
+    `  tagged ${tagged}/${companies.length} companies (${Math.round((tagged / companies.length) * 100)}%) with a business type`,
+  );
+
   const dataset: Dataset = {
     version: DATASET_VERSION,
     generatedAt: new Date().toISOString(),
     source: path.basename(inputPath),
     taxonomy: buildTaxonomy(companies),
     companies,
+    businessTypes,
     metrics,
   };
 

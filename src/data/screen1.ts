@@ -59,6 +59,45 @@ export interface PeerViewInput {
   /** Country. A sort preference on the peer set, never a filter. */
   hqCountry: string;
   gccStatus: GccStatus;
+  /**
+   * The visitor's line of business, from `dataset.businessTypes`.
+   *
+   * The one OPTIONAL input with a data consumer, and the sixth overall. It earns
+   * its place because industry alone cannot tell a footwear brand from a
+   * home-improvement chain, and unanswered it costs nothing: peer matching falls
+   * back to the revenue-band ladder and returns exactly what it returned before
+   * this existed.
+   */
+  businessTypeId?: string;
+}
+
+/**
+ * The business types on offer for one industry: those actually carried by a
+ * company in it.
+ *
+ * Derived rather than stored, and filtered by presence rather than by the
+ * catalogue, for a reason that matters to the visitor. Offering a type nobody in
+ * their industry carries would let them select an option that returns no close
+ * matches at all — the dropdown would be advertising precision the data cannot
+ * honour. Ordered by how many companies carry each, so the largest lines of
+ * business lead.
+ */
+export function businessTypesForIndustry(
+  dataset: Dataset,
+  industry: string,
+): Array<{ id: string; name: string }> {
+  const counts = new Map<string, number>();
+  for (const company of dataset.companies) {
+    if (company.industry !== industry) continue;
+    for (const id of company.businessTypes) {
+      counts.set(id, (counts.get(id) ?? 0) + 1);
+    }
+  }
+  return dataset.businessTypes
+    .filter((type) => type.industry === industry && counts.has(type.id))
+    .map((type) => ({ id: type.id, name: type.name, count: counts.get(type.id) ?? 0 }))
+    .sort((a, b) => b.count - a.count || a.name.localeCompare(b.name))
+    .map(({ id, name }) => ({ id, name }));
 }
 
 /**
@@ -71,21 +110,39 @@ export interface PeerViewInput {
  * through to "whatever matches" would return a peer set for a different
  * industry, which is worse than an error.
  */
-export function peerViewInputSchema(taxonomy: Taxonomy) {
+export function peerViewInputSchema(taxonomy: Taxonomy, businessTypeIds?: readonly string[]) {
   const oneOf = (values: readonly string[], field: string) =>
     z.string().refine((value) => values.includes(value), {
       message: `unknown ${field}`,
     });
 
-  return z.object({
-    // Trimmed, length-capped, and never stored or logged anywhere. There is no
-    // lead capture in this codebase.
-    companyName: z.string().trim().max(120).optional(),
-    industry: oneOf(taxonomy.industries, "industry"),
-    revenueBand: oneOf(taxonomy.revenueBands, "revenue band"),
-    hqCountry: oneOf(taxonomy.hqCountries, "HQ location"),
-    gccStatus: z.enum(GCC_STATUSES),
-  });
+  return z
+    .object({
+      // Trimmed, length-capped, and never stored or logged anywhere. There is no
+      // lead capture in this codebase.
+      companyName: z.string().trim().max(120).optional(),
+      industry: oneOf(taxonomy.industries, "industry"),
+      revenueBand: oneOf(taxonomy.revenueBands, "revenue band"),
+      hqCountry: oneOf(taxonomy.hqCountries, "HQ location"),
+      gccStatus: z.enum(GCC_STATUSES),
+      /**
+       * Optional, and validated only if a list is supplied. An id that is not on
+       * the list is REJECTED rather than dropped: silently ignoring it would
+       * return an industry-wide peer set while the visitor believes they narrowed
+       * it, which is the one failure mode worse than an error here.
+       */
+      businessTypeId: z.string().trim().min(1).optional(),
+    })
+    .superRefine((input, ctx) => {
+      if (input.businessTypeId === undefined || businessTypeIds === undefined) return;
+      if (!businessTypeIds.includes(input.businessTypeId)) {
+        ctx.addIssue({
+          code: "custom",
+          path: ["businessTypeId"],
+          message: "unknown line of business",
+        });
+      }
+    });
 }
 
 /* ==========================================================================
@@ -153,11 +210,27 @@ function toCard(company: Company): PeerCard {
 
 export interface PeerBlock {
   peers: PeerCard[];
-  /** The deepest rung the ladder reached. Drives the "matched on" line. */
+  /** The deepest band rung reached. Kept for the untagged "matched on" line. */
   basis: PeerTier;
+  /**
+   * True when business similarity drove the ordering, so the copy can name what
+   * the peers have in common instead of naming a revenue band the card does not
+   * show.
+   */
+  businessMatched: boolean;
+  /** Characteristics every shown peer shares, most discriminating first. */
+  sharedTags: string[];
   limit: number;
   /** Non-zero means the copy must say so, in one line, and never pad. */
   shortfall: number;
+  /**
+   * The similarity floor cut the set short rather than the industry running out.
+   *
+   * A different sentence from a thin industry: this one is "we would rather show
+   * you three defensible comparisons than pad the list", not "this industry is
+   * early ground". Both are honest and they are not interchangeable.
+   */
+  floorShortened: boolean;
 }
 
 export interface IndustryBlock {
@@ -172,6 +245,27 @@ export interface IndustryBlock {
   others: number;
   /** `others === 0`: the peers shown are the whole industry. */
   exhaustive: boolean;
+  /**
+   * The visitor's own line of business, and how many other companies run one.
+   *
+   * Null when no business type was selected, in which case this block renders as
+   * it always did. When present it makes the block strictly stronger: "29 other
+   * apparel and footwear companies, and 30 others across retail" is better
+   * evidence than a single industry number, and this is the block that has to
+   * carry a thin peer set.
+   *
+   * `count` is companies in a COMPARABLE line of business — the same population
+   * the peers were drawn from — and not companies carrying the visitor's exact
+   * business type.
+   *
+   * That distinction was a bug before it was a decision. Counting the exact type
+   * gave Nike "one other sportswear brand" directly above five named apparel
+   * companies, which contradicts the page: the peer set is drawn from everything
+   * above the similarity floor, so the count beside it has to be drawn from the
+   * same place or the two disagree in front of the visitor. `exactTypeCount` is
+   * kept for `data:verify`, where a precise figure is what is wanted.
+   */
+  businessType: { name: string; count: number; exactTypeCount: number } | null;
 }
 
 /**
@@ -274,6 +368,10 @@ export function buildPeerView(
   const peers = match.peers.map(toCard);
   const peerIds = new Set(peers.map((peer) => peer.id));
 
+  const selectedType = input.businessTypeId
+    ? dataset.businessTypes.find((type) => type.id === input.businessTypeId)
+    : undefined;
+
   const largest = largestInIndustry(dataset, input.industry, limit, input);
   // The set is already ordered by GCC size, so the first is the largest and every
   // share is against it.
@@ -305,14 +403,24 @@ export function buildPeerView(
     peers: {
       peers,
       basis: match.tier,
+      businessMatched: match.basis.businessMatched,
+      sharedTags: match.basis.sharedTags,
       limit: match.limit,
       shortfall: match.shortfall,
+      floorShortened: match.floorShortened,
     },
     industry: {
       industry: input.industry,
       total: match.industryTotal,
       others: match.industryOthers,
       exhaustive: match.industryOthers === 0,
+      businessType: selectedType
+        ? {
+            name: selectedType.name,
+            count: match.closeMatches,
+            exactTypeCount: match.sameBusinessType,
+          }
+        : null,
     },
     largest: {
       entries: largestEntries,
