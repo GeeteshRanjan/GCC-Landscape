@@ -1,5 +1,7 @@
 "use client";
 
+import { useRef } from "react";
+
 import { ClosingCta } from "@/components/public/closing-cta";
 import { Section, type Ground } from "@/components/public/primitives";
 import {
@@ -22,7 +24,8 @@ import {
   NationalScaleView,
   PeerBlockView,
 } from "./evidence";
-import { ADVANCE, framing, industryHeading, peerLead } from "./copy";
+import { ADVANCE, ASK, framing, industryHeading, peerLead } from "./copy";
+import { AskHero } from "./ask-hero";
 import { InputPanel } from "./input-panel";
 
 /**
@@ -42,6 +45,10 @@ import { InputPanel } from "./input-panel";
  */
 
 /**
+ * The ANSWER state's motif. The ask has its own hero and its own fan now — see
+ * `ask-hero.tsx` — so this is no longer shared between the two states of this
+ * screen.
+ *
  * `pin-diagonal` recoloured onto three light ramp steps and trimmed with
  * `scripts/brand_asset.py` — see `.gcc-hero-diagonal` in globals.css for the
  * commands and the placement. Never placed unmodified.
@@ -60,6 +67,18 @@ const PEER_MOTIF: HeaderMotif = {
   placement: "gcc-hero-diagonal",
 };
 
+/**
+ * The ask: the hero, then the form panel. Two bands, no divider between them, and
+ * one motif each.
+ *
+ * **The whole screen is on the display face** (`font-display`), which no other
+ * surface is yet. Body copy on it is Light 300, which is the brand's single
+ * biggest typographic tell and the thing this screen most obviously got wrong
+ * before. It is scoped here rather than set on `body` deliberately: the answer
+ * state and Screen 2 are a separate pass, and admin is a dense internal tool that
+ * keeps Inter. Rolling it outward is the next screen's job, not a side effect of
+ * this one.
+ */
 export function PeerViewAsk({
   headingRef,
   industries,
@@ -81,71 +100,126 @@ export function PeerViewAsk({
   submitError: string | null;
   onSubmit: (input: PeerViewInput) => void;
 }) {
+  /**
+   * The hero pill's target. A ref handed down to the form rather than a DOM query
+   * or a fragment link:
+   *
+   *   - A fragment link would push a history entry inside the iframe, and the tool
+   *     does not own its URL.
+   *   - `document.getElementById` would need an id on a control whose id comes
+   *     from `useId`, so it would have to be hardcoded and could collide.
+   *
+   * `focus()` scrolls the control into view as a side effect of the browser doing
+   * its job, which is the only scrolling mechanism the iframe constraints allow —
+   * nothing here reads scroll position or observes intersection.
+   */
+  const industryRef = useRef<HTMLSelectElement>(null);
+
   return (
-    <>
-      <ScreenHeader motif={PEER_MOTIF}>
-        <div className="flex max-w-measure flex-col gap-5">
-          <HeaderKicker>India GCC landscape</HeaderKicker>
-          <ScreenTitle headingRef={headingRef}>
-            See who in your industry already runs a GCC in India
-          </ScreenTitle>
-          {/* One promise and one proof point. The previous version listed the three
-              things the answer contains, which the answer's own headings say — and
-              said it in the same breath as the number, so neither landed. */}
-          <HeaderLead>
-            Name your industry and we will show you the comparable companies,
-            where they went and how big they got. Drawn from{" "}
-            <strong className="font-semibold text-text-inverse">
-              1,834 India centres
-            </strong>{" "}
-            we have mapped.
-          </HeaderLead>
-        </div>
-      </ScreenHeader>
+    <div className="font-display">
+      <AskHero
+        headingRef={headingRef}
+        onJumpToForm={() => industryRef.current?.focus()}
+      />
 
       <section
+        id="ask"
         aria-labelledby="ask-heading"
-        className="bg-surface-tint py-16 md:py-20"
+        // No top padding below `md`. With the panel full-bleed on a phone, 64px of
+        // padding left a strip of mint between the hero and the panel that was too
+        // thin to read as a band and too thick to read as nothing. The brand draws no
+        // rule between bands and the ground change IS the separation, so two
+        // full-bleed blocks meeting is the correct mobile shape; the panel's own top
+        // shoulder carries the air. From `md` the panel is inset and the band needs
+        // its padding back.
+        className="relative overflow-hidden bg-surface-tint pb-16 md:pt-20 md:pb-24"
       >
-        <div className="mx-auto max-w-content px-6 md:px-12">
-          {/* The form sits on its own surface rather than loose on the band, and
-              its heading is visible rather than screen-reader only.
+        {/* Motif B, the reference's signature ornament, and the first thing in this
+            project to use `.ansr-bar-ramp`.
 
-              Both were the same problem: this is the one thing on the entry point
-              a visitor has to DO, and it was rendered as five labelled controls
-              floating on grey with no edge and no title. A panel makes it one
-              object with a beginning and an end.
+            It is a VERTICAL FIELD IN THE TRAILING GROUND, not a full-bleed band, and
+            the difference is the whole placement. Run across the band's width it
+            drew a picket fence — the loudest thing on the screen after the headline,
+            reading as a divider rule between the two bands, which the brand never
+            draws, and continuing down either side of the panel as though the panel
+            had been dropped on top of it. Confined to a strip beside the panel it is
+            what the reference actually does with it: band 4 puts a 219-wide bar-ramp
+            panel flush to the trailing edge of a card and nothing else. See
+            `.gcc-ask-ramp`. */}
+        <div
+          className="ansr-motif gcc-ask-ramp ansr-bar-ramp ansr-bar-ramp--tile hidden lg:block"
+          aria-hidden="true"
+        />
 
-              The border is gone now that the band beneath it is the teal tint: a
-              white panel on a tinted ground already has an edge, and ansr.com's own
-              cards are borderless for exactly that reason. On grey-50 it needed the
-              outline because the two values were two steps apart. */}
-          <div className="flex flex-col gap-8 bg-surface p-6 md:p-10 lg:p-12">
-            <div className="flex flex-col gap-2">
-              <h2
-                id="ask-heading"
-                className="text-2xl font-bold tracking-heading text-text md:text-3xl"
-              >
-                Tell us about your company
-              </h2>
-              <p className="max-w-measure text-base text-text-muted">
-                Four answers. Twenty seconds.
-              </p>
+        {/* `px-0` below `md`, so the panel is full-bleed on a phone.
+            Two things it buys, and both were visible in the render: the panel's own
+            padding then puts its content at the same inset as the hero's text
+            instead of 24px further in, and the fields get 48px back on a 390px
+            screen, where they were the narrowest thing on either screen. From `md`
+            up the panel is an inset card again, which is what gives it an edge. */}
+        <div className="relative mx-auto max-w-content px-0 md:px-12">
+          <div className="grid lg:grid-cols-12">
+            {/* Ten of twelve, leaving the trailing ground for the ramp.
+                Deliberately not centred — the reference's own stat card sits right of
+                centre with empty ground beside it rather than balanced in its band.
+
+                The panel is the reference's offer-card anatomy rather than a bordered
+                box, and each part of that is load-bearing:
+
+                  - **Radius 0.** Every panel, card and accordion row in the
+                    reference is a true 0; only the pill CTA and one stat card round.
+                  - **A generous top shoulder.** The reference leaves 95px of empty
+                    card above its first ink. That emptiness is what makes a
+                    hard-edged panel read as composed rather than as a container,
+                    and it is the cheapest thing here to spoil by tightening.
+                  - **No border and no shadow.** A white panel on the tinted ground
+                    already has an edge, and the brand is graphic, not glossy.
+                  - **It ends in a dissolve rather than an edge.** */}
+            <div className="lg:col-span-10">
+              <div className="flex flex-col gap-10 bg-surface px-6 pt-16 pb-12 md:px-10 md:pt-20 md:pb-16 lg:px-12">
+                <h2
+                  id="ask-heading"
+                  className="text-3xl leading-tight font-bold tracking-display text-balance text-text md:text-4xl lg:text-5xl"
+                >
+                  {ASK.panelTitle}
+                </h2>
+                <InputPanel
+                  industryRef={industryRef}
+                  industries={industries}
+                  revenueBands={revenueBands}
+                  hqCountries={hqCountries}
+                  businessTypesByIndustry={businessTypesByIndustry}
+                  initial={initial}
+                  pending={pending}
+                  submitError={submitError}
+                  onSubmit={onSubmit}
+                />
+              </div>
+
+              {/* Motif C, and the first thing to use `.ansr-dissolve`: 27 hairlines of
+                  the panel's own white decaying into the band, so the panel has no
+                  bottom edge. It stays crisp at any zoom, which a gradient fade does
+                  not.
+
+                  **A sibling of the panel, not a child of it.** As a child it
+                  inherited the panel's own white fill underneath itself, so the
+                  masked hairlines were white on white — invisible — while the
+                  panel's background still filled the box and drew exactly the hard
+                  edge this exists to remove. It rendered as 96px of blank card. The
+                  effect only exists where the fill it carries is against a
+                  DIFFERENT ground. */}
+              <div
+                // 112px against the reference's 154. The effect is white-on-mint at
+                // 1.27:1 by construction, so it needs length to read at all — at
+                // 80px it was a smudge rather than a dissolve.
+                className="ansr-dissolve gcc-panel-dissolve h-16 md:h-28"
+                aria-hidden="true"
+              />
             </div>
-            <InputPanel
-              industries={industries}
-              revenueBands={revenueBands}
-              hqCountries={hqCountries}
-              businessTypesByIndustry={businessTypesByIndustry}
-              initial={initial}
-              pending={pending}
-              submitError={submitError}
-              onSubmit={onSubmit}
-            />
           </div>
         </div>
       </section>
-    </>
+    </div>
   );
 }
 

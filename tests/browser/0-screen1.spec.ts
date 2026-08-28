@@ -47,12 +47,11 @@ test.describe("the ask", () => {
   }) => {
     await page.goto("/");
 
-    await expect(
-      page.getByRole("heading", {
-        level: 1,
-        name: /already runs a GCC in India/,
-      }),
-    ).toBeVisible();
+    // Located by id, not by heading text — the same reasoning as `band()` in
+    // helpers.ts. This test's subject is which inputs exist, so coupling it to the
+    // headline's wording makes a copy pass break an assertion about something
+    // else. The headline's own words are asserted once, on their own, below.
+    await expect(page.locator("h1#ask-title")).toBeVisible();
 
     await expect(page.getByLabel(/^Company name/)).toBeVisible();
     await expect(page.getByLabel("Industry")).toBeVisible();
@@ -91,6 +90,44 @@ test.describe("the ask", () => {
     expect(html.toLowerCase()).not.toMatch(/sign in|log in|login/);
   });
 
+  /**
+   * The entry point's own words, asserted as the subject rather than as a way to
+   * find something else.
+   *
+   * The three negative assertions are each a line that shipped and was wrong:
+   *
+   *  - "Four answers. Twenty seconds." promised a length, above a form with six
+   *    fields. A count on the page that disagrees with the thing under it is worse
+   *    than no count.
+   *  - "Nothing you enter is stored or sent to us" was false in the half that
+   *    matters. The answers are sent, to a server action, because peer matching
+   *    cannot happen in the browser without shipping the dataset there.
+   *  - "(optional)" beside the company name talked visitors out of the one input
+   *    that personalises every sentence of the result.
+   */
+  test("says what it is, once, and makes no claim it cannot keep", async ({
+    page,
+  }) => {
+    await page.goto("/");
+
+    await expect(page.locator("h1#ask-title")).toHaveText(
+      "Your industry is already in India",
+    );
+    await expect(
+      page.getByText("1,834 global companies run a centre here."),
+    ).toBeVisible();
+
+    const text = (await page.locator("body").innerText()).toLowerCase();
+    expect(text).not.toContain("twenty seconds");
+    expect(text).not.toContain("or sent to us");
+
+    // Line of business is the only field that carries the marker.
+    expect(
+      await page.locator("form label", { hasText: "(optional)" }).count(),
+    ).toBe(1);
+    await expect(page.getByLabel(/^Line of business/)).toBeVisible();
+  });
+
   test("validates on submit and puts focus on the first problem", async ({
     page,
   }) => {
@@ -107,9 +144,31 @@ test.describe("the ask", () => {
     await expect(page.getByLabel("Industry")).toBeFocused();
 
     // Still on the form; nothing was submitted.
-    await expect(
-      page.getByRole("heading", { level: 1, name: /already runs a GCC in India/ }),
-    ).toBeVisible();
+    await expect(page.locator("h1#ask-title")).toBeVisible();
+  });
+
+  /**
+   * The hero's pill, which is the reference's hero anatomy and is genuinely load
+   * bearing on a phone, where the form is entirely below the fold.
+   *
+   * It moves focus rather than linking: the tool cannot own its URL, so a fragment
+   * would push a history entry inside the iframe, and nothing in the public screens
+   * may read scroll position. This also pins the two-refs-on-one-node arrangement in
+   * `input-panel.tsx` — passing the hero's ref as a second `ref` prop would have
+   * silently replaced the validation ref, and the only symptom would have been
+   * focus quietly not moving on a failed submit.
+   */
+  test("the hero's pill puts the keyboard on the industry select", async ({
+    page,
+  }) => {
+    await page.goto("/");
+
+    await page.getByRole("button", { name: "Choose your industry" }).click();
+    await expect(page.getByLabel("Industry")).toBeFocused();
+
+    // And the validation ref still works, on the same node.
+    await page.getByRole("button", { name: "Show me the landscape" }).click();
+    await expect(page.getByLabel("Industry")).toBeFocused();
   });
 });
 

@@ -319,8 +319,17 @@
      embedded tool is an open question, so this token resolves to the licensable
      stand-in ansr.com already loads as its second family. Put Moderat at the
      front of the list once the licence is confirmed; nothing else changes.
-     See docs/ansrx-visual-language.md §1. */
-  --ansr-font-display: "Hanken Grotesk", var(--ansr-font-sans);
+     See docs/ansrx-visual-language.md §1.
+
+     The `var()` is how a self-hosted copy gets in front of the literal name.
+     `next/font` registers a face under a HASHED family name and hands it back as
+     a custom property, so naming "Hanken Grotesk" here would never resolve to the
+     file the app actually loads — it would silently fall through to the sans
+     stack, which is the failure this whole token exists to prevent. The app sets
+     `--gcc-font-display-loaded`; the literal name remains the fallback so this
+     file still means something on its own, outside the build. */
+  --ansr-font-display: var(--gcc-font-display-loaded, "Hanken Grotesk"),
+                       var(--ansr-font-sans);
 
   /* Scale. Tight at the bottom for dense UI, ~1.25 at the display end. */
   --ansr-text-xs:   0.75rem;  /* 12px  captions, table meta       */
@@ -354,6 +363,13 @@
   --ansr-leading-normal:  1.5;  /* body         */
   --ansr-leading-relaxed: 1.65; /* long form    */
 
+  /* 300. The reference's body weight, measured at a 0.075 em stem and confirmed
+     by ansr.com's own CSS, which sets `Moderat 300` on every paragraph. It is the
+     single biggest tell of this brand: a page set in Regular body will not read
+     as ANSR no matter what else is right. Only meaningful with a real display
+     face loaded — synthesised light does not exist, so an unloaded face silently
+     renders Regular and the tell is lost with no warning. */
+  --ansr-weight-light:    300;
   --ansr-weight-regular:  400;
   --ansr-weight-medium:   500;
   --ansr-weight-semibold: 600;

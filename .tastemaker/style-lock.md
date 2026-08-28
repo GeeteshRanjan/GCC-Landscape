@@ -26,6 +26,22 @@ Branding_Palette.docx: the action orange is `#FD4E11`, the dark ground is a navy
 outright as a result — see the reference-intelligence section — and one new rule appeared:
 `--ansr-accent-inverse` is legible only on a dark ground, at 2.44:1 on white.
 
+## Typeface — the display face, and Light 300
+
+**A web font now loads.** Until the reference pass nothing did, so `--ansr-font-display` fell
+through its whole stack to `system-ui` and with it the one typographic fact that most identifies
+this brand: **body copy is the display face's Light 300**. A missing face does not fail loudly — it
+renders in the system sans at Regular, which looks deliberate.
+
+Hanken Grotesk, self-hosted through `next/font` in `layout.tsx`, with real 300/400/500/600/700
+files. It is the stand-in; the brand's face is Moderat and its licence for an embedded tool is
+ANSR's to answer. When it is, Moderat goes in front of it in `--ansr-font-display` and nothing else
+changes.
+
+**Opted into per surface, not set on `body`.** The ask screen carries `font-display`; the answer
+state, Screen 2 and admin still resolve to `--ansr-font-sans`. Admin stays on Inter deliberately —
+tabular numerals and small-size legibility matter more there than brand voice.
+
 ## Type scale — use the display end of it
 
 The scale had a 48px step neither public screen ever reached: section headings sat at 24/30px
@@ -125,7 +141,9 @@ Admin is a dense internal tool and keeps its own density. These apply to the pub
 ## Section separation — three grounds, assigned by role
 
 **`--ansr-surface` (white), `--ansr-surface-tint` (teal-100), `--ansr-surface-inverse`
-(teal-deep).** Never a divider rule between bands — the brand's geometry is already
+(teal-deep)**, plus the two gradient grounds. The reference uses four and **repeats them rather
+than alternating** — pale mint appears twice and navy twice, and no two adjacent bands share one.
+Never a divider rule between bands — the brand's geometry is already
 hard-edged and hairline-heavy, and rules between full-width bands read as noise on top of
 it. The ground is the separation.
 
@@ -429,6 +447,100 @@ rendered worse: the content column is `items-start`, so a single pill top-aligne
 which put the action ahead of the sentence motivating it in reading order and detached it from its
 own heading. It stays `stack`, and it reads as a deliberate pair with the closing CTA below it —
 same heading-lead-pill shape, teal then orange. Do not re-try `split` here.
+
+## The ask screen — what the reference pass settled
+
+The entry point, rebuilt against `Group 149.svg` rather than refined. **Only this screen.** The
+answer state and Screen 2 keep their own header, their own gradient and Inter, and rolling any of
+this outward is their pass, not a side effect of this one. Two bands, one motif each, no rule
+between them.
+
+**A separate hero component, and the reason is a contrast bound rather than taste.**
+`ScreenHeader` is shared by the answer state and Screen 2, and both need something the reference's
+display ground cannot carry: a muted ink for a lead, a facts summary, a way back. On
+`--ansr-gradient-hero` a muted ink measures 2.23:1. So a shared header would have had to give up
+either the ground or AA on two screens. `ask-hero.tsx` exists because the ask has no muted copy on
+it and can therefore use the real ground.
+
+**The hero is white-only, and hierarchy is size and weight.** 80px at 1.05 leading in Regular,
+then 20px in Light 300, then a pill. That is the reference's own hero — it has no muted lead at all
+— and it is what the ground allows. The 1.05 is load-bearing: at our `tight` 1.15 a two-line
+headline reads as two lines rather than as one object.
+
+**The hero's pill is outlined, not orange, and it moves focus rather than linking.** The
+reference's hero pill is orange because its hero is the only action in that band; ours is not, and a
+screen with two orange controls has no primary action. It focuses the industry select, which is the
+only scrolling mechanism the iframe constraints leave — a fragment link would push a history entry
+inside a frame that does not own its URL, and nothing may read scroll position. It is genuinely
+load-bearing on a phone, where the form is entirely below the fold. A browser spec pins it, and
+pins the two-refs-on-one-node arrangement it needs: passing the hero's ref as a second `ref` prop
+silently replaces the validation ref, and the only symptom is focus quietly not moving on a failed
+submit.
+
+**The form panel is the reference's offer card, not a bordered box.** Radius 0, a generous top
+shoulder, no border, no shadow, and it ends in a dissolve. Ten of twelve columns, deliberately not
+centred — the reference's own stat card sits right of centre with empty ground beside it.
+
+**Three things about that panel that only the render showed.**
+
+- **`.ansr-dissolve` must be a SIBLING of the panel, never a child.** As a child it inherited the
+  panel's own white underneath itself, so the masked hairlines were white on white while the
+  panel's background still filled the box and drew exactly the hard edge the dissolve exists to
+  remove. It rendered as 96px of blank card. The effect only exists where its fill meets a
+  different ground — and it needs length, since white on the mint ground is 1.27:1 by construction.
+- **`.ansr-bar-ramp` is a vertical field in the trailing ground, not a full-bleed band.** Run
+  across the band's width it drew a picket fence: the loudest thing on the screen after the
+  headline, reading as a divider rule the brand never draws, and continuing down either side of the
+  panel as though the panel had been dropped on it. It also needs a **wider pitch than the
+  reference's measured 20px** — those figures are for a 219-wide panel where the ramp is one
+  graphic, and tiled down a tall strip the eye reads the repeat instead of the ramp.
+- **On a phone the panel is full-bleed.** Inset, its own padding put its content 24px further in
+  than the hero's text, and left the fields the narrowest thing on either screen. The band also
+  drops its top padding there, because 64px of mint between a dark hero and a white panel is too
+  thin to read as a band and too thick to read as nothing. Two full-bleed blocks meeting is
+  correct: the ground change is the separation.
+
+**Form controls are filled with one bottom rule, radius 0** — `.gcc-field`. Not a style change:
+`--ansr-border-strong` is **1.78:1 on white**, so the bordered box it replaces never had a boundary
+meeting 1.4.11's 3:1 for a control. It looked fine because a 4px grey box reads as a field by
+convention. The fill is the band's own tint against the panel's white, so the field is cut out of
+the panel rather than drawn on it, and the rule is `--ansr-accent` at 7.72:1. 44px stays.
+
+**Selected state is a fill inversion, not a border tint.** The status tiles invert to the accent
+ground with white copy. No hue is available for "chosen" that is not already spoken for, and an
+inverted fill survives greyscale where a border tint does not. The radio's `accent-color` flips
+with it, or it is a teal dot on teal.
+
+**Errors clear when the field is answered.** Validation still only runs on submit — marking a field
+invalid before someone has finished answering it is noise — but an error surviving its own
+correction is worse: `aria-invalid` stays true, the screen reader keeps announcing it, and the
+orange rule keeps drawing the eye to the one row that no longer needs it.
+
+**Copy — three lines that shipped and were wrong**, each now asserted absent by a spec:
+
+- *"Four answers. Twenty seconds."* promised a length, above a form with six fields. A count that
+  disagrees with the thing under it is worse than no count. Removed rather than corrected: a
+  visitor deciding whether to spend ninety seconds is not weighing twenty against forty.
+- *"Nothing you enter is stored or sent to us"* was false in the half that matters. The answers
+  **are** sent, to a server action, because peer matching cannot happen in the browser without
+  shipping the dataset there. In front of an audience that reads privacy language for a living, a
+  claim disprovable from a network tab discredits every measured figure beside it. Now: "Your
+  answers build this one result. Nothing is kept."
+- *"(optional)"* beside the company name talked visitors out of the one input that personalises
+  every sentence of the result. Line of business keeps the marker, where it explains a control
+  disabled until an industry is chosen. The small inconsistency is the cheaper of the two.
+
+The headline states the visitor's situation rather than describing the tool, which is what 80px of
+type is for: "See who in your industry already runs a GCC in India" was the mechanism; "Your
+industry is already in India" is the finding, and it is true for every industry in the data.
+
+**Uppercase form labels were tried and reverted.** At 14px across five fields, tracked caps turn a
+public form into a data-entry table. The reference's own small label is sentence-case Light; weight
+carries a label here.
+
+**A public spec locates the ask by `h1#ask-title`, never by its wording** — the same rule
+`helpers.ts` states for the evidence bands. The headline's words are asserted once, on their own,
+as the subject.
 
 ## Screen 1 — what the refinement pass settled
 

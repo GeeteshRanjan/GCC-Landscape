@@ -45,7 +45,12 @@ test("is disabled until an industry is chosen, and says so", async ({ page }) =>
   // The enabling is announced through an aria-live region rather than left silent,
   // which is the whole reason the control is rendered disabled from the start
   // instead of appearing on selection and shifting the form under the visitor.
-  await expect(page.getByText(/to choose from\./)).toBeVisible();
+  //
+  // The subject is that the region SAYS something once the control is live, not the
+  // sentence it says, so the pattern stops at the count and does not anchor on the
+  // punctuation after it. Anchoring on a full stop is what broke this on a copy pass
+  // that only replaced the clause following it.
+  await expect(page.getByText(/\d+ to choose from/)).toBeVisible();
 });
 
 test("repopulates when the industry changes and drops a stale selection", async ({

@@ -37,6 +37,60 @@ import type { PeerView } from "@/data/screen1";
  *     from headcount bands, so the number is approximate and says so.
  */
 
+/**
+ * The ask — the first thing a visitor reads, and the only screen state where the
+ * tool has shown them nothing yet.
+ *
+ * So it gets one claim and one number, and stops. The previous version put the
+ * claim, the mechanism and the corpus size in a single sentence joined by a dash,
+ * then repeated the corpus size as bold text inside it, then followed it with
+ * "Four answers. Twenty seconds." — a promise about the form's length, above a
+ * form with six fields, two of them optional. That line is gone rather than
+ * corrected: a visitor deciding whether to spend ninety seconds is not weighing
+ * twenty against forty, and a number on the page that disagrees with the thing
+ * directly under it costs more than the reassurance was worth.
+ *
+ * `title` is the claim. It is true for every industry in the data — the thinnest
+ * has two companies — and it is a statement rather than an offer, which is what
+ * 80px of type is for. "See who in your industry already runs a GCC in India" was
+ * the previous headline and it described the tool; this describes their situation.
+ *
+ * `lead` carries one fact and one promise, one short sentence each. Nothing in it
+ * qualifies, hedges or sells: the number is either persuasive on its own or it is
+ * not, and this audience discounts a screen that reads as marketing.
+ */
+export const ASK = {
+  kicker: "India GCC landscape",
+  title: "Your industry is already in India",
+  lead: "1,834 global companies run a centre here. See the ones that compare to yours.",
+  /**
+   * The hero's one control. It moves the keyboard to the industry select rather
+   * than linking to it: the tool cannot own the URL bar, so a fragment link would
+   * push a history entry inside the iframe, and nothing in the public screens may
+   * read scroll position. Focusing a control scrolls it into view as a side effect
+   * of the browser doing its job, which is the only mechanism here that is allowed
+   * to.
+   *
+   * It names the field it lands on. "Get started" would have been the reference's
+   * own label and says nothing about what happens next.
+   */
+  jump: "Choose your industry",
+  panelTitle: "Tell us about your company",
+  submit: "Show me the landscape",
+  submitPending: "Finding comparable companies…",
+  /**
+   * Two short sentences, and the first one is why the second is credible.
+   *
+   * It used to read "Nothing you enter is stored or sent to us", which was half
+   * false and false in the half that matters: the answers ARE sent, to a server
+   * action that filters the dataset, because peer matching cannot happen in the
+   * browser without shipping the dataset to it. In front of an audience that reads
+   * privacy language for a living, a claim they can disprove with a network tab
+   * discredits everything measured beside it.
+   */
+  privacy: "Your answers build this one result. Nothing is kept.",
+} as const;
+
 /** The visitor's company name when given, else a neutral stand-in. */
 function subject(view: PeerView): string | null {
   const name = view.input.companyName?.trim();
