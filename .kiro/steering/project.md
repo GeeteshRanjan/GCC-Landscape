@@ -330,9 +330,16 @@ as companies are added. `bandProximity` is a three-step function: 1.0 same band,
 otherwise.
 
 **Business similarity outranks both revenue band and HQ country, and the reason is in the card.**
-`toCard` drops `revenueBand`, so a band mismatch is invisible to the visitor while a business
-mismatch is the first thing they see. HQ country is still a preference and never a filter, so it
-cannot change how many peers come back.
+A `PeerCard` carries only id, name, cities, headcount band, established year and the Fortune flag —
+`toCard` drops `revenueBand`, `hqCountry`, `industry` and `businessTypes`. So a band or market mismatch
+is invisible to the visitor while a business mismatch is the first thing they see. HQ country is still a
+preference and never a filter, so it cannot change how many peers come back.
+
+Two consequences worth knowing before writing anything against a card. **No copy may claim something a
+card cannot show** — a lead promising "companies from your own market first" was shipped and was false,
+because H&M and Adidas outrank GAP for a US apparel visitor and nothing on the card reveals it. And **a
+test that reads a dropped field gets `undefined`**, so a comparison over it silently passes; assert that
+the guard itself holds, or read the field from the dataset.
 
 **A similarity floor of 0.20 applies to `businessSimilarity` ALONE, never the combined score.** A
 perfect band match is worth 0.3; on the combined score it would drag a business-irrelevant company

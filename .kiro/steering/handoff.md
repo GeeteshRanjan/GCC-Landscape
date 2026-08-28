@@ -6,42 +6,35 @@ Volatile. Rewritten each session, never appended to. Cap 120 lines. Present tens
 
 ## Where we are
 
-**PR #1 is open and awaiting review**, reported mergeable with no conflicts.
-`github.com/GeeteshRanjan/GCC-Landscape/pull/1` — `feat/business-type-similarity` → `main`, 44 files.
-`main` is still at `4f9c138`; nothing is merged, and production is therefore still the pre-change build.
+**Shipped and verified live.** `main` is `f8c4c39`, production is built from it, and the peer view has
+been walked in a real browser on `gcc-landscape.vercel.app` — not just locally. No feature branches
+remain; the repo is `main` only.
 
-**Vercel builds a preview on every push and they all succeed** — but a preview URL cannot be opened: it
-returns Vercel's login page, not the tool. See `project.md`.
+The walk, for the record: a Nike visitor choosing Retail / "Apparel & footwear brand" / Above $20 Bn /
+USA gets **TJX · H&M · Adidas · GAP · Lululemon Athletica**, no console errors. That is the case the
+whole change existed for — it used to return Amazon, Walmart, Target, Lowe's and 7-Eleven.
 
-Two substantive commits, the rest documentation — `f5a9d58` the scored peer engine, `b5a1754` the floor
-move. No count given: every handoff rewrite lands on this branch, so a number is stale on arrival; use
-`git log origin/main..`.
+**The gate is green on `f8c4c39`:** 339 Vitest, 110 Playwright against a real production build, `tsc`,
+`brand_lint.py`, `npm run build`, `data:verify` with every invariant holding.
 
-**The gate is green:** 336 Vitest, 110 Playwright against a real production build, `tsc`,
-`brand_lint.py`, `npm run build`, `data:verify`, every invariant holding.
+**Peer matching is a continuous score** — `0.7 × businessSimilarity + 0.3 × bandProximity`, tag weights
+from rarity within the industry. `SIMILARITY_FLOOR` is **0.20**, chosen by sweep: a utilities and
+grid-operations visitor now gets NationalGrid, Nextracker, LM Wind Power and Aggreko, honestly one short,
+where 0.15 gave five oil majors. Costs 147 short sets of 1064 against 112. Reasoning sits beside the
+constant in `similarity.ts`; the rule itself is in `project.md`.
 
-**The floor is now 0.20.** Verified in the shipped engine, not just the sweep: a utilities and
-grid-operations visitor gets NationalGrid, Nextracker, LM Wind Power and Aggreko — four real
-power-and-grid peers, honestly one short — where 0.15 gave five oil majors. Aerospace gains Moog over
-Boeing. Cost is 112 → 147 short sets of 1064. Reasoning sits beside the constant in `similarity.ts`.
-
-**Company-name autocomplete was built and then removed** on ANSR's call; the reasoning is durable and
-lives in `project.md`. Nothing partial is left — plain text input, and the form's promise is back to
-"Nothing you enter is stored or sent to us." The remote branch is deleted; the commits survive only as
-the **local** ref `feat/company-name-autocomplete` (`b4324c4`), so they go when this clone does. That is
-the intended outcome.
+**Two things were cut, both recorded durably in `project.md`:** company-name autocomplete (suggestions
+could only come from our own 1834, so an unmapped visitor reads an empty dropdown as a statement about
+ANSR's coverage) and industry-as-a-weighted-tag in its proposed form.
 
 ## Next action
 
-1. **Review and merge PR #1.** It must land `data/dataset.json` and `data/verify-baseline.json`
-   together — the baseline carries the new coverage figures, and splitting them breaks `data:verify`
-   for whoever pulls next. Squashing is fine; splitting the data files is not.
-2. **Walk a real deployment — still never done, and now the known gap.** Two routes, differing in risk.
-   Either **disable preview protection** (or mint a bypass token) and walk the branch preview *before*
-   anything is live — safer, and it also lets Playwright's `public` project point at a deployment,
-   closing the "only ever a local build" gap permanently. Or **merge and walk production**, which is
-   public but means shipping first. Note `curl` cannot do it either way: the peer set arrives via a
-   server action, so it needs a browser.
+Nothing is half-finished; the next move is a choice rather than a continuation.
+
+1. **Point the browser suite at a deployment.** It only ever runs against a local build, which is how a
+   false copy line reached production this session. Blocked on preview protection — see `project.md`;
+   previews return Vercel's login page, so production is currently the only walkable deployment.
+2. **Decide on the two untracked analysis scripts** (below) — the last unversioned thing here.
 
 Ours, not urgent: **self-host Inter** (no web font loads), **the HR tab's short bars**.
 
@@ -63,7 +56,7 @@ Ours, not urgent: **self-host Inter** (no web font loads), **the HR tab's short 
 ## Open decisions, not yet made
 
 - **Whether to relax the industry boundary, and if so only as a fallback.** Prototyped in
-  `scripts/proto-industry-tag.ts` (uncommitted); **the obvious form does not work.** Industry as a
+  `scripts/proto-industry-tag.ts` (untracked); **the obvious form does not work.** Industry as a
   heavily-weighted tag produces **zero** cross-industry peers for six test visitors at any weight, since
   a same-industry same-business company scores near 1.0 while the best outsider caps far below — Nike
   never sees P&G while twenty apparel retailers exist. Weight it high enough to matter and
@@ -76,7 +69,9 @@ Ours, not urgent: **self-host Inter** (no web font loads), **the HR tab's short 
   shown. That second one needs a copy decision before any code.
 - **Whether the two analysis scripts are committed or deleted.** `sweep-floor.ts` backs the applied
   floor decision, `proto-industry-tag.ts` the open one above. Both untracked, both currently runnable,
-  neither a maintenance tool. If they are kept, they need to stay runnable — see the trap below.
+  neither a maintenance tool.
+- **Whether to disable Vercel preview protection** or mint a bypass token. Until one happens, no
+  deployment except production can be reviewed by a person or a test.
 - **Whether anything replaces the Screen 2 sample stamp.** Nothing does; `data:verify` counts the 35
   of 35 metrics stating no provenance.
 - **The white-on-orange token.** White on `--ansr-orange` is 3.22:1, a real AA failure, so both screens
@@ -90,16 +85,21 @@ Ours, not urgent: **self-host Inter** (no web font loads), **the HR tab's short 
 
 Invariants are in `project.md`, brand rules in `design-stack.md`. These bite only in the code.
 
+- **A guard that is always false makes a test pass while asserting nothing.** A regression test here read
+  `hqCountry` off a `PeerCard`, which drops it, so the comparison was `undefined` vs `undefined` and the
+  assertion never ran. Assert the guard itself, or read the field from the dataset.
+- **Visitor-facing copy hardcoded in a component drifts.** The peer lead sat inline in `peer-view.tsx`
+  and still described the band ladder long after matching went continuous, contradicting the basis line
+  three lines below it. Every sentence belongs in the screen's `copy.ts`.
 - **`matchPeersByBandLadder` is the equivalence oracle, not dead code.** It proves the scored engine
   returns byte-identical peers where nothing is tagged. Deleting it deletes that guarantee.
-- **A check that hardcodes a constant measures the constant, not the thing.** `sweep-floor.ts` asserted
-  it reproduced `matchPeers` "at 0.15"; raising the floor made it declare itself UNSOUND and refuse to
-  run. It reads `SIMILARITY_FLOOR` now.
+- **A check that hardcodes a constant measures the constant.** `sweep-floor.ts` asserted it reproduced
+  `matchPeers` "at 0.15"; raising the floor made it declare itself UNSOUND and refuse to run. It reads
+  `SIMILARITY_FLOOR` now.
 - **Pure IDF scores every tag zero when all tagged companies in an industry share one type.** That
   emptied Electrical & Electronics until `businessSimilarity` learned to fall back to unweighted
-  overlap. Do not remove that branch.
-- **`log(N/f)`, not `log(1 + N/f)`.** The smoothed form kept a universal tag at 0.69, which made all
-  of Retail eligible against a footwear brand.
+  overlap. Do not remove that branch. And use **`log(N/f)`, not `log(1 + N/f)`** — the smoothed form kept
+  a universal tag at 0.69, which made all of Retail eligible against a footwear brand.
 - **Peer-set assertions must be scoped to `#peers`.** Walmart legitimately appears on Nike's result —
   the largest-in-industry panel is supposed to name the biggest retailers.
 - **`tsc` covers `scripts/`, but `tsx` does not typecheck.** A script that runs fine still breaks the
