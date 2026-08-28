@@ -1,6 +1,6 @@
 {
   "describedAs": "1834 companies, from Consolidated_GCC_India_Database_2026_New.xlsx",
-  "recordedAt": "2026-08-27T19:05:33.322Z",
+  "recordedAt": "2026-08-28T04:26:23.500Z",
   "figures": {
     "companies": 1834,
     "industries": 24,
@@ -32,6 +32,13 @@
       "Mumbai 224"
     ],
     "multi-city companies": 626,
+    "business types defined": 158,
+    "distinct tags in use": 137,
+    "companies with a business type": 1768,
+    "companies with two business types": 50,
+    "industries fully tagged": 18,
+    "peer sets the floor shortens": 112,
+    "business types with no company": 6,
     "metrics defined": 35,
     "metrics with every figure entered": 35,
     "metrics part entered": 0,

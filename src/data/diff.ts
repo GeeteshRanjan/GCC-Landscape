@@ -1,4 +1,4 @@
-import type { Company, Dataset, Metric, Taxonomy } from "./schema";
+import type { BusinessType, Company, Dataset, Metric, Taxonomy } from "./schema";
 
 /**
  * Dataset diff — one computation, two renderers.
@@ -74,6 +74,27 @@ export interface MetricsDiff {
   changed: ChangedMetric[];
 }
 
+/**
+ * Business-type catalogue changes, separate again from companies and metrics.
+ *
+ * Separate for a sharper reason than the metrics case: a change here re-scores
+ * every peer set in the industry the type belongs to. Adding a tag to
+ * "Apparel & footwear brand" silently changes who Nike sees, with no company row
+ * touched — so a diff that reported only company changes would show "no changes"
+ * for an edit that reshapes the product.
+ */
+export interface BusinessTypeFieldChange {
+  field: keyof BusinessType;
+  before: unknown;
+  after: unknown;
+}
+
+export interface BusinessTypesDiff {
+  added: Array<Pick<BusinessType, "id" | "name">>;
+  removed: Array<Pick<BusinessType, "id" | "name">>;
+  changed: Array<{ id: string; name: string; changes: BusinessTypeFieldChange[] }>;
+}
+
 export interface DatasetDiff {
   /** No previous dataset — a first import. */
   firstImport: boolean;
@@ -81,6 +102,7 @@ export interface DatasetDiff {
   removed: Array<Pick<Company, "id" | "name">>;
   changed: ChangedCompany[];
   taxonomy: TaxonomyDiff[];
+  businessTypes: BusinessTypesDiff;
   metrics: MetricsDiff;
   /** Metadata that moves on every publish; called out so it is not mistaken for an edit. */
   generatedAtChanged: boolean;
@@ -92,6 +114,7 @@ export interface DatasetDiff {
     removed: number;
     changed: number;
     taxonomy: number;
+    businessTypes: number;
     metrics: number;
   };
 }
@@ -163,6 +186,62 @@ function diffMetrics(
   return { added, removed, changed };
 }
 
+/**
+ * Field-level diff of the business-type catalogue.
+ *
+ * `tags` is compared as a SET rather than as an array, because tag order carries
+ * no meaning — nothing reads it, and `similarity.ts` derives every weight from
+ * the data. Reporting a reorder as a change would train an admin to ignore this
+ * section, which is the opposite of what it is for. Compare that with
+ * `taxonomy.revenueBands`, where order IS the contract and a reorder is reported.
+ */
+function diffBusinessTypes(
+  next: readonly BusinessType[],
+  previous: readonly BusinessType[],
+): BusinessTypesDiff {
+  const before = new Map(previous.map((type) => [type.id, type]));
+  const after = new Map(next.map((type) => [type.id, type]));
+
+  const added: BusinessTypesDiff["added"] = [];
+  const changed: BusinessTypesDiff["changed"] = [];
+
+  for (const [id, type] of after) {
+    const old = before.get(id);
+    if (!old) {
+      added.push({ id, name: type.name });
+      continue;
+    }
+    const changes: BusinessTypeFieldChange[] = [];
+    if (old.name !== type.name) {
+      changes.push({ field: "name", before: old.name, after: type.name });
+    }
+    if (old.industry !== type.industry) {
+      changes.push({ field: "industry", before: old.industry, after: type.industry });
+    }
+    const oldTags = [...old.tags].sort();
+    const newTags = [...type.tags].sort();
+    if (oldTags.join("|") !== newTags.join("|")) {
+      changes.push({
+        field: "tags",
+        before: oldTags.join(", "),
+        after: newTags.join(", "),
+      });
+    }
+    if (changes.length > 0) changed.push({ id, name: type.name, changes });
+  }
+
+  const removed: BusinessTypesDiff["removed"] = [];
+  for (const [id, type] of before) {
+    if (!after.has(id)) removed.push({ id, name: type.name });
+  }
+
+  return { added, removed, changed };
+}
+
+function businessTypesCount(diff: BusinessTypesDiff): number {
+  return diff.added.length + diff.removed.length + diff.changed.length;
+}
+
 function metricsCount(diff: MetricsDiff): number {
   return diff.added.length + diff.removed.length + diff.changed.length;
 }
@@ -183,6 +262,11 @@ export function diffDatasets(
         removed: [],
         reordered: false,
       })),
+      businessTypes: {
+        added: next.businessTypes.map((b) => ({ id: b.id, name: b.name })),
+        removed: [],
+        changed: [],
+      },
       metrics: {
         added: next.metrics.map((m) => ({ id: m.id, title: m.title })),
         removed: [],
@@ -196,6 +280,7 @@ export function diffDatasets(
         removed: 0,
         changed: 0,
         taxonomy: TAXONOMY_KEYS.length,
+        businessTypes: next.businessTypes.length,
         metrics: next.metrics.length,
       },
     };
@@ -245,6 +330,7 @@ export function diffDatasets(
     }
   }
 
+  const businessTypes = diffBusinessTypes(next.businessTypes, previous.businessTypes);
   const metrics = diffMetrics(next.metrics, previous.metrics);
 
   const counts = {
@@ -252,6 +338,7 @@ export function diffDatasets(
     removed: removed.length,
     changed: changed.length,
     taxonomy: taxonomy.length,
+    businessTypes: businessTypesCount(businessTypes),
     metrics: metricsCount(metrics),
   };
 
@@ -261,6 +348,7 @@ export function diffDatasets(
     removed,
     changed,
     taxonomy,
+    businessTypes,
     metrics,
     generatedAtChanged: next.generatedAt !== previous.generatedAt,
     sourceChanged: next.source !== previous.source,
@@ -269,6 +357,7 @@ export function diffDatasets(
         counts.removed +
         counts.changed +
         counts.taxonomy +
+        counts.businessTypes +
         counts.metrics ===
       0,
     counts,
@@ -371,6 +460,7 @@ export function renderDiffText(diff: DatasetDiff): string {
     return [
       "Diff: no existing dataset — this is the first import.",
       `  + ${diff.counts.added} companies`,
+      `  + ${diff.counts.businessTypes} business types`,
       `  + ${diff.counts.metrics} metrics`,
     ].join("\n");
   }
@@ -411,6 +501,20 @@ export function renderDiffText(diff: DatasetDiff): string {
   }
 
   sample(
+    "business types added",
+    diff.businessTypes.added.map((b) => b.id),
+  );
+  sample(
+    "business types removed",
+    diff.businessTypes.removed.map((b) => b.id),
+  );
+  sample(
+    "business types changed",
+    diff.businessTypes.changed.map(
+      (b) => `${b.id} (${b.changes.map((c) => c.field).join(", ")})`,
+    ),
+  );
+  sample(
     "metrics added",
     diff.metrics.added.map((m) => m.id),
   );
@@ -425,7 +529,9 @@ export function renderDiffText(diff: DatasetDiff): string {
     ),
   );
 
-  if (diff.isEmpty) lines.push("  no company, taxonomy or metric changes");
+  if (diff.isEmpty) {
+    lines.push("  no company, taxonomy, business type or metric changes");
+  }
 
   return lines.join("\n");
 }

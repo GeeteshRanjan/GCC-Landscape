@@ -43,6 +43,8 @@ type Draft = {
   fteMax: string;
   fortuneGlobal500: boolean;
   forbesGlobal2000: boolean;
+  /** Business type ids. Scoped to the company's industry; see the control below. */
+  businessTypes: string[];
 };
 
 type Errors = Partial<Record<keyof Draft | "form", string>>;
@@ -58,6 +60,7 @@ const EMPTY: Draft = {
   fteMax: "",
   fortuneGlobal500: false,
   forbesGlobal2000: false,
+  businessTypes: [],
 };
 
 function toDraft(company: Company): Draft {
@@ -72,6 +75,7 @@ function toDraft(company: Company): Draft {
     fteMax: String(company.fte.max),
     fortuneGlobal500: company.fortuneGlobal500,
     forbesGlobal2000: company.forbesGlobal2000,
+    businessTypes: [...company.businessTypes],
   };
 }
 
@@ -103,6 +107,39 @@ export function CompanyEditor({
       city.toLowerCase().includes(needle),
     );
   }, [cityFilter, taxonomy.cities]);
+
+  /**
+   * Only business types belonging to the currently selected industry.
+   *
+   * The schema rejects a company carrying a type from another industry, so offering
+   * the full catalogue here would let an admin build a row the publish gate then
+   * refuses — with an error naming a constraint the form never mentioned. Filtering
+   * the options is how the rule gets explained: the wrong ones are simply not there.
+   */
+  const availableBusinessTypes = useMemo(
+    () => dataset.businessTypes.filter((type) => type.industry === form.industry),
+    [dataset.businessTypes, form.industry],
+  );
+
+  /**
+   * Changing industry drops any selection that no longer belongs.
+   *
+   * Same reason as the public form's dependent select, with a sharper edge here:
+   * left in place it is a referential-integrity failure at publish rather than a
+   * rejected request, and the admin would have to work out which of 1834 rows was
+   * at fault from a zod path.
+   */
+  function setIndustry(industry: string) {
+    setForm((current) => ({
+      ...current,
+      industry,
+      businessTypes: current.businessTypes.filter((id) =>
+        dataset.businessTypes.some(
+          (type) => type.id === id && type.industry === industry,
+        ),
+      ),
+    }));
+  }
 
   function set<K extends keyof Draft>(key: K, value: Draft[K]) {
     setForm((current) => ({ ...current, [key]: value }));
@@ -153,6 +190,7 @@ export function CompanyEditor({
       fte: { min, max },
       fortuneGlobal500: form.fortuneGlobal500,
       forbesGlobal2000: form.forbesGlobal2000,
+      businessTypes: form.businessTypes,
     };
 
     // The same schema the publish gate runs. Anything it catches that the
@@ -214,10 +252,59 @@ export function CompanyEditor({
             label="Industry"
             value={form.industry}
             options={taxonomy.industries}
-            onChange={(value) => set("industry", value)}
+            onChange={setIndustry}
             error={errors.industry}
             hint="The primary peer match key."
           />
+
+          {/*
+            Lines of business. Checkboxes rather than a multi-select listbox: there
+            are at most 28 in any one industry, every option needs its own label for
+            a screen reader, and a native multiple-select is close to unusable with a
+            keyboard.
+          */}
+          <fieldset className="flex flex-col gap-2">
+            <legend className="text-[length:var(--ansr-text-sm)] font-[var(--ansr-weight-medium)] text-[var(--ansr-text-primary)]">
+              Lines of business
+            </legend>
+            <p className="text-[length:var(--ansr-text-xs)] text-[var(--ansr-text-muted)]">
+              {form.industry
+                ? "Drives peer similarity. Most companies have one; pick two only for a genuinely dual business."
+                : "Choose an industry first."}
+            </p>
+            {form.industry && availableBusinessTypes.length === 0 ? (
+              <p className="text-[length:var(--ansr-text-xs)] text-[var(--ansr-text-muted)]">
+                No business types are defined for {form.industry} yet. This company
+                will match on industry and revenue band only.
+              </p>
+            ) : null}
+            <div className="flex flex-col gap-1">
+              {availableBusinessTypes.map((type) => {
+                const checked = form.businessTypes.includes(type.id);
+                return (
+                  <label
+                    key={type.id}
+                    className="flex min-h-[var(--ansr-space-8)] items-center gap-2 text-[length:var(--ansr-text-sm)] text-[var(--ansr-text-primary)]"
+                  >
+                    <input
+                      type="checkbox"
+                      checked={checked}
+                      onChange={() =>
+                        setForm((current) => ({
+                          ...current,
+                          businessTypes: checked
+                            ? current.businessTypes.filter((id) => id !== type.id)
+                            : [...current.businessTypes, type.id],
+                        }))
+                      }
+                      className="size-4 shrink-0 accent-[var(--ansr-accent)]"
+                    />
+                    <span>{type.name}</span>
+                  </label>
+                );
+              })}
+            </div>
+          </fieldset>
 
           <SelectField
             label="Revenue band"

@@ -17,16 +17,19 @@ expanding an India GCC. Arriving from ansr.com or outbound campaigns. Not analys
 
 Full transcription of the source brief: `docs/brief.md`. Read it before building either screen.
 
-**Inputs — five, and every one has a consumer.** Sub-industry and global headcount were both cut
-once nothing consumed them; hold the remaining set to the same standard.
+**Inputs — six, and every one has a consumer.** Global headcount was cut once nothing consumed it;
+hold the set to the same standard. The sixth, line of business, is the only OPTIONAL one: left
+unanswered the peer set is byte-identical to what the five produced, so it adds precision without
+adding a required field.
 
 | Input | Control | What uses it |
 | --- | --- | --- |
 | Company name | text | Personalises copy only |
-| Industry | select | Primary peer match key |
-| Revenue band | select, the seven bands in the data | Peer similarity axis |
+| Industry | select | Primary peer match key, and a hard boundary |
+| Revenue band | select, the seven bands in the data | Peer similarity axis, weighted below business |
 | HQ location | select | Sort preference on the peer set |
 | Existing GCC status | select | Branches the framing: evaluating vs expanding |
+| Line of business | select, **optional**, dependent on industry | Business similarity — the primary ordering signal |
 
 Never ask for a revenue figure. The data holds bands, so the input is a band.
 
@@ -294,20 +297,63 @@ kills the hyphen-vs-en-dash inconsistency in the source. Every supplied range is
 pair, so no ceilings need inventing. Display strings, location count and tier-2 presence are derived
 from range and city list, never stored — storing them is how two columns start disagreeing.
 
-**Peer matching ladder.** Sub-industry is not used at all: 620 values over 1834 companies made it
-unusable as a match key. Measured coverage in `docs/data-audit.md`.
+**Peer matching is a continuous score, not a ladder.** Every company in the visitor's industry is
+scored and ordered:
 
-1. Same industry, same revenue band. Covers 92%.
-2. Same industry, adjacent revenue band (±1 step). Takes it to 98%.
-3. Whatever exists, with the shortfall stated.
+```
+score = 0.7 × businessSimilarity + 0.3 × bandProximity     ordering: score, then HQ country,
+                                                            then GCC size, year, name
+```
 
-Same HQ country is a **sort preference, never a filter**: same-country peers fill the slots first
-because a visitor recognises companies from their own market, then remaining slots are filled from
-other countries. As a filter it would cost 33 points of coverage.
+`businessSimilarity` is the share of the visitor's **IDF-weighted** tag mass a company shares, where
+tags come from its business type(s). Weights are rarity within the industry and are **never
+hand-authored** — a tag every retailer carries scores zero there and the weighting re-derives itself
+as companies are added. `bandProximity` is a three-step function: 1.0 same band, 0.66 adjacent, 0
+otherwise.
 
-**The ladder never leaves the industry.** Measured consequences, both of which the copy has to carry
-rather than the data hide: Education has six companies, so it fills all five slots from its own
-industry and no further; Electrical & Electronics has two, so it stays three short and says so.
+**Business similarity outranks both revenue band and HQ country, and the reason is in the card.**
+`toCard` drops `revenueBand`, so a band mismatch is invisible to the visitor while a business
+mismatch is the first thing they see. HQ country is still a preference and never a filter, so it
+cannot change how many peers come back.
+
+**A similarity floor of 0.15 applies to `businessSimilarity` ALONE, never the combined score.** A
+perfect band match is worth 0.3; on the combined score it would drag a business-irrelevant company
+over the line, which is the bug the whole mechanism exists to prevent. The floor can shorten a set —
+that is invariant 3, not a defect — and `data:verify` counts how often, so the trade is measured
+rather than guessed.
+
+**The old three-rung band ladder survives as `matchPeersByBandLadder`, as the test oracle.** With no
+line of business selected the scored engine returns its output company-for-company; that equivalence
+is asserted both in `similarity.test.ts` and as a `data:verify` invariant, and is what makes the
+whole change provably additive. Do not delete it without deleting those.
+
+**Sub-industry is still never a match key.** 620 values over 1834 companies is not a taxonomy. It is
+read on import, collapsed through `scripts/business-type-map.ts` into one of 158 business types, and
+discarded. The 35.8% coverage figure that killed it measured it as a FILTER; as a continuous
+similarity signal it costs no coverage at all. See `docs/business-types.md`.
+
+**Tags are code, business types are data.** `BUSINESS_TAGS` (137, in `business-tags.ts`) is the
+scoring substrate: a tag nobody else carries matches nothing, and deleting one silently re-scores
+every peer set, so changing the vocabulary is a code change — the same reasoning as `METRIC_LENSES`.
+Business types are admin-editable, because ANSR must be able to add "Quick commerce" without a
+developer. **Every tag must be carried by at least two business types**, asserted by `data:verify`:
+a one-type tag can only be shared in a type-against-itself comparison and is therefore dead, and
+that rule is what stops the vocabulary drifting back towards 620 values of one member each.
+
+**Matching never leaves the industry.** Measured consequences the copy has to carry rather than the
+data hide: Education has six companies, so it fills all five slots from its own industry and no
+further; Electrical & Electronics has two, so it stays three short and says so. Relaxing the
+boundary — industry as a heavily-weighted tag rather than a filter, so a footwear brand could see a
+global personal-care brand — is cheap under this architecture and is a separate decision.
+
+**A company's business types must belong to its own industry**, enforced by the schema. So an
+industry rename cascades into `businessTypes[].industry` as well as into companies, and deleting an
+industry drops the types scoped to it. Miss either and the publish fails referential integrity from
+an edit the UI reported as successful.
+
+**An untagged company is a safe state, not a gap.** It matches at industry level exactly as before
+business types existed, which is what let the tagging roll out one industry at a time. 66 companies
+are deliberately untagged and listed as such.
 
 **`taxonomy.revenueBands` is ordered ascending, and that order is the contract** — step 2 above is
 index arithmetic on the array. Nothing sorts it, anywhere. The taxonomy editor appends a new band at
@@ -331,11 +377,14 @@ admin unable to tell which copy they had opened, or that there were three.
 
 **`data:verify` checks two different things and the distinction is load-bearing.**
 
-*Invariants* are properties of the code that must hold for any dataset, seed or heavily edited: the
-peer ladder never leaves the industry, a thin industry degrades rather than pads, peers are ordered by
-size within a rung, HQ country never changes how many peers come back, the largest-in-industry panel is
-never empty, known revenue bands stay in ascending order, and a metric shown on several tabs carries one
-set of figures. A failure here is a bug, and `--accept` deliberately cannot silence it.
+*Invariants* are properties of the code that must hold for any dataset, seed or heavily edited: peer
+matching never leaves the industry, a thin industry degrades rather than pads, HQ country never changes
+how many peers come back, the largest-in-industry panel is never empty, known revenue bands stay in
+ascending order, a metric shown on several tabs carries one set of figures, every tag is carried by at
+least two business types, a company never carries a business type from another industry, no peer is
+ever shown below the similarity floor, the floor never empties a set the industry could fill, and
+**selecting no line of business reproduces the old band ladder exactly**. A failure here is a bug, and
+`--accept` deliberately cannot silence it.
 
 *Profile figures* are the measurements in `docs/data-audit.md` — counts, index membership, aggregate
 professionals, city density, coverage, and the metric catalogue's completeness. They pin a snapshot,
@@ -368,7 +417,7 @@ session, so this records **what lives where and why**, never a file listing.
 | Path | Responsibility |
 | --- | --- |
 | `src/app/` | Next.js App Router. `page.tsx` is the tool's only public route and serves BOTH screens; it is `force-dynamic`, because a prerender would bake the taxonomy into the build and defeat the read cache the data layer was designed around. `actions.ts` is the public surface's single server action — deliberately one seam, so there is one place to check that the dataset does not cross. Screen 2 needs no action: its payload does not depend on the visitor, so `page.tsx` builds it per request and passes it down. `globals.css` is the Tailwind theme, aliased onto the brand tokens — it restates no values and clears Tailwind's default palette so off-brand colour is unreachable through a utility class, and it carries the public screens' one motion sequence. |
-| `src/data/` | The whole data layer, and the only place that knows the dataset shape. `schema.ts` is the zod contract; `normalize.ts` holds the cleaning primitives, shared by the seed importer and the future admin upload so one file format never gets two parsers; `derive.ts` computes everything not stored; `peers.ts` is the matching ladder and the Screen 1 counts, pure functions over a loaded dataset; `diff.ts` is the dataset diff — one computation with two renderers, a console one for the importer and structured output for the admin preview, so the two can never disagree; `metrics.ts` holds the Screen 2 catalogue's behaviour, and `publicMetric` there is the single place a gated value is omitted; `metric-catalogue.ts` is the seed transcribed from the brief and populated, and the place a metric shown on several tabs is authored once and spread onto each with a different id; `store.ts` + `store/{fs,github}-store.ts` are the `DataStore` implementations; `publish-store.ts` selects the write target and refuses to guess; `dataset.ts` is the cached server-side read, invalidated by an mtime-and-size check rather than by anyone remembering to clear it, and is `server-only`, which is what makes "never ship the dataset to the browser" a build error rather than a habit. `screen1.ts` is Screen 1's view model — the pure function that turns a dataset plus five inputs into the couple of kilobytes the Peer View renders, and the place that decides whether a result is degenerate so the copy can say something true about it; `geo.ts` holds the city coordinates the density map plots, hardcoded here because they are geographic fact rather than admin-editable data. `screen2.ts` is Screen 2's view model: it imports the gate rather than `dataset.metrics`, so there is no path around it, and it resolves every metric to pre-formatted figures and bar fractions with no nullable value left in the type — which is where the "an incomplete open metric is dropped, never half-filled" rule becomes something the compiler carries. |
+| `src/data/` | The whole data layer, and the only place that knows the dataset shape. `schema.ts` is the zod contract; `normalize.ts` holds the cleaning primitives, shared by the seed importer and the future admin upload so one file format never gets two parsers; `derive.ts` computes everything not stored; `peers.ts` is the scored matching engine and the Screen 1 counts, pure functions over a loaded dataset, and it keeps `matchPeersByBandLadder` as the equivalence oracle; `similarity.ts` is the IDF weighting, the business-similarity ratio, the band step function and the floor — the single place a peer's rank is decided, and the place to change one number (`SIMILARITY_FLOOR`) if ANSR wants longer sets at lower quality; `business-tags.ts` is the 137-tag vocabulary, code-level for the same reason `METRIC_LENSES` is; `business-type-catalogue.ts` is the 158-type seed, standing to `dataset.businessTypes` exactly as `metric-catalogue.ts` stands to `dataset.metrics`; `diff.ts` is the dataset diff — one computation with two renderers, a console one for the importer and structured output for the admin preview, so the two can never disagree; `metrics.ts` holds the Screen 2 catalogue's behaviour, and `publicMetric` there is the single place a gated value is omitted; `metric-catalogue.ts` is the seed transcribed from the brief and populated, and the place a metric shown on several tabs is authored once and spread onto each with a different id; `store.ts` + `store/{fs,github}-store.ts` are the `DataStore` implementations; `publish-store.ts` selects the write target and refuses to guess; `dataset.ts` is the cached server-side read, invalidated by an mtime-and-size check rather than by anyone remembering to clear it, and is `server-only`, which is what makes "never ship the dataset to the browser" a build error rather than a habit. `screen1.ts` is Screen 1's view model — the pure function that turns a dataset plus five inputs into the couple of kilobytes the Peer View renders, and the place that decides whether a result is degenerate so the copy can say something true about it; `geo.ts` holds the city coordinates the density map plots, hardcoded here because they are geographic fact rather than admin-editable data. `screen2.ts` is Screen 2's view model: it imports the gate rather than `dataset.metrics`, so there is no path around it, and it resolves every metric to pre-formatted figures and bar fractions with no nullable value left in the type — which is where the "an incomplete open metric is dropped, never half-filled" rule becomes something the compiler carries. |
 | `src/app/admin/` | The admin surface. Four tabs: Companies, Taxonomy, Metrics, Publish. `login/` sits outside the `(authed)` route group and is the one path without a session; the group's layout is the guard for everything else and hosts the draft provider, so a draft survives moving between tabs. A route group rather than middleware: middleware would be a second runtime to keep Node-only for no gain. |
 | `src/app/api/admin/` | Login, logout, diff preview, publish. Each **re-checks the session itself** — deliberate duplication, because a layout cannot guard a route handler and a route that forgot would be silently public. |
 | `src/lib/admin/` | Auth and the publish pipeline. `password.ts` is scrypt hashing; `session.ts` is the signed cookie and is `server-only`; `rate-limit.ts` is the two-budget login limiter; `totp.ts` is the optional second factor, RFC 6238 on `node:crypto` with no dependency; `guard.ts` holds the two refusal shapes (redirect for pages, bare 401 for APIs); `publish.ts` is the validate → read → diff pipeline shared by preview and commit; `constants.ts` exists solely because `server-only` throws under `tsx`, so anything a script imports cannot carry the marker. |
@@ -383,8 +432,8 @@ session, so this records **what lives where and why**, never a file listing.
 | `.tastemaker/` | `style-lock.md` — both public screens' visual decisions and the reasoning behind them, so a third surface reuses rather than re-derives. It restates no token values; `design-stack.md` and `tokens.css` outrank it. |
 | `tests/unit/` | Vitest, node environment, no jsdom. Pure and server-side logic: hashing, session signing, TOTP, the rate limiter, the diff, the schema, the cleaning primitives, the metric catalogue and its gate, the GitHub store against a stubbed `fetch`, and the publish pipeline against a temp file. `vitest.config.ts` resolves the `react-server` condition, which is how these import a `server-only` module at all. |
 | `tests/browser/` | Playwright against a real `next build && next start`, on its own copy of the dataset. Covers what a unit test structurally cannot: the draft lifecycle, autosave, restore after reload, the stale-baseline conflict, and focus behaviour. Serial, one worker — the server holds the rate limiter and the dataset cache in memory, so parallelism would make test order part of the result. Numbered specs run in reading order; `6-lockout.spec.ts` exhausts the limiter and must stay last. The `public` project covers both public screens and runs first, before the publish spec rewrites the fixture. Each project's `testMatch` is a narrow pattern, so a spec numbered outside all of them lands in no project and silently never runs — `helpers.ts` also owns `DRAFT_STORAGE_KEY`, so a provider bump is one edit rather than eight. |
-| `scripts/` | Maintenance tools, run by hand, never at request time. Python: `brand_lint.py` enforces tokens, `brand_asset.py` adapts SVGs, `inspect_xlsx.py` profiles data drops. TypeScript via `tsx`: `import-seed.ts` is the xlsx → JSON pipeline, `verify-data.ts` reproduces every figure in `docs/data-audit.md` from the published dataset and exits non-zero if one moves, `admin-hash.ts` mints the two admin env values from a TTY prompt so the password never lands in shell history. |
-| `docs/` | Deep reference, read on demand. Not steering. `brief.md` is the transcription of the source mind map — read it, not the image. `data-audit.md` is the profile of the source database. |
+| `scripts/` | Maintenance tools, run by hand, never at request time. Python: `brand_lint.py` enforces tokens, `brand_asset.py` adapts SVGs, `inspect_xlsx.py` profiles data drops. TypeScript via `tsx`: `import-seed.ts` is the xlsx → JSON pipeline, `verify-data.ts` reproduces every figure in `docs/data-audit.md` from the published dataset and exits non-zero if one moves, `admin-hash.ts` mints the two admin env values from a TTY prompt so the password never lands in shell history. `business-type-map.ts` is the classification table — 601 sub-industry mappings plus 568 per-company decisions, keyed by `industry||name` because company names are not unique even case-insensitively — and it is the reviewable artifact behind `docs/business-types.md`. `check-business-tags.ts` and `check-company-types.ts` are the authoring checks for that table, run by hand while editing it; `data:verify` carries the same properties as invariants once published. |
+| `docs/` | Deep reference, read on demand. Not steering. `brief.md` is the transcription of the source mind map — read it, not the image. `data-audit.md` is the profile of the source database. `business-types.md` is the peer-matching vocabulary: why tags rather than sub-industry, how the score works, and the 158 types by industry — the document to hand ANSR when they want to check the business judgement. |
 | `.kiro/steering/` | Always-in-context rules. Four files, kept small on purpose. Tracked, along with `hooks/`, `settings/` and `skill-sources.json`. **`.kiro/skills/` is deliberately untracked** — 300 files of vendored third-party packs with one LICENSE between them, and git history is forever. `skill-sources.json` pins each pack's repo and commit, so re-cloning restores them. |
 
 ## Document protocol

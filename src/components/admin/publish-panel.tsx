@@ -355,6 +355,54 @@ function DiffView({ diff }: { diff: DatasetDiff }) {
         </section>
       ) : null}
 
+      {/*
+        Business types get their own section for a sharper reason than the metrics
+        one. A tag change here re-scores every peer set in that type's industry — a
+        visitor from an apparel brand sees five different companies — while every
+        company row stays byte-identical. Folded into the company counts it would be
+        invisible; omitted entirely, an admin would publish a reshaping of the product
+        believing they had published nothing.
+      */}
+      {diff.counts.businessTypes > 0 ? (
+        <DiffSection title={`Business types (${diff.counts.businessTypes})`}>
+          <p className="border-b border-border-subtle px-5 py-3 text-sm text-text-muted">
+            Changing a type&apos;s tags changes which companies appear as peers across
+            its whole industry, with no company row edited.
+          </p>
+          <ul className="divide-y divide-border-subtle">
+            {diff.businessTypes.changed.map((type) => (
+              <li key={type.id} className="px-5 py-3 text-sm">
+                <p className="font-medium text-text">{type.name}</p>
+                <p className="text-xs text-text-muted">{type.id}</p>
+                <ul className="mt-1.5 flex flex-col gap-1">
+                  {type.changes.map((change) => (
+                    <li key={change.field} className="text-sm text-text-muted">
+                      <span className="text-text">{change.field}</span>:{" "}
+                      {String(change.before) || "—"} → {String(change.after) || "—"}
+                    </li>
+                  ))}
+                </ul>
+              </li>
+            ))}
+            {diff.businessTypes.added.map((type) => (
+              <li key={type.id} className="px-5 py-2.5 text-sm text-text">
+                Added: {type.name}
+                <span className="text-text-muted"> ({type.id})</span>
+              </li>
+            ))}
+            {diff.businessTypes.removed.map((type) => (
+              <li key={type.id} className="px-5 py-2.5 text-sm text-text">
+                Removed: {type.name}
+                <span className="text-text-muted">
+                  {" "}
+                  ({type.id}) — its companies fall back to industry-level matching
+                </span>
+              </li>
+            ))}
+          </ul>
+        </DiffSection>
+      ) : null}
+
       {diff.counts.metrics > 0 ? (
         <DiffSection title={`Function metrics (${diff.counts.metrics})`}>
           <ul className="divide-y divide-border-subtle">

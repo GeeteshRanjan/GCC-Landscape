@@ -10,6 +10,7 @@ import {
 } from "@/data/diff";
 import {
   DATASET_VERSION,
+  type BusinessType,
   type Company,
   type Dataset,
   type Metric,
@@ -37,6 +38,7 @@ function company(overrides: Partial<Company> = {}): Company {
     fte: { min: 100, max: 500 },
     fortuneGlobal500: false,
     forbesGlobal2000: false,
+    businessTypes: [],
     ...overrides,
   };
 }
@@ -53,6 +55,7 @@ function dataset(overrides: Partial<Dataset> = {}): Dataset {
       hqCountries: ["USA", "Japan"],
     },
     companies: [company()],
+    businessTypes: [],
     metrics: [],
     ...overrides,
   };
@@ -68,6 +71,7 @@ describe("diffDatasets — no change", () => {
       removed: 0,
       changed: 0,
       taxonomy: 0,
+      businessTypes: 0,
       metrics: 0,
     });
   });
@@ -266,7 +270,7 @@ describe("renderDiffText", () => {
 
   it("says so plainly when there is nothing to report", () => {
     expect(renderDiffText(diffDatasets(dataset(), dataset()))).toContain(
-      "no company, taxonomy or metric changes",
+      "no company, taxonomy, business type or metric changes",
     );
   });
 
@@ -331,6 +335,7 @@ describe("diffDatasets — function metrics", () => {
       removed: 0,
       changed: 0,
       taxonomy: 0,
+      businessTypes: 0,
       metrics: 1,
     });
     expect(diff.isEmpty).toBe(false);
@@ -462,5 +467,74 @@ describe("formatMetricFieldValue", () => {
     for (const field of Object.keys(METRIC_FIELD_LABELS) as Array<keyof Metric>) {
       expect(METRIC_FIELD_LABELS[field]).toBeTruthy();
     }
+  });
+});
+
+describe("diffDatasets — business types", () => {
+  const apparel: BusinessType = {
+    id: "ret-apparel",
+    name: "Apparel & footwear brand",
+    industry: "Retail",
+    tags: ["brand-owner", "apparel", "footwear"],
+  };
+
+  it("reports a tag edit even though no company row moved", () => {
+    // The reason this section exists. Adding a tag to a business type re-scores
+    // every peer set in that industry — Nike sees a different five companies —
+    // while every company row is byte-identical. Reporting "no changes" here
+    // would let an admin publish a reshaping of the product believing they had
+    // published nothing.
+    const diff = diffDatasets(
+      dataset({
+        businessTypes: [{ ...apparel, tags: [...apparel.tags, "luxury"] as BusinessType["tags"] }],
+      }),
+      dataset({ businessTypes: [apparel] }),
+    );
+
+    expect(diff.isEmpty).toBe(false);
+    expect(diff.counts.changed).toBe(0);
+    expect(diff.counts.businessTypes).toBe(1);
+    expect(diff.businessTypes.changed[0]?.changes[0]?.field).toBe("tags");
+  });
+
+  it("does not report a tag reorder, because nothing reads tag order", () => {
+    // The opposite of `taxonomy.revenueBands`, where order IS the contract and a
+    // reorder is a real change. Here every weight is derived from the data, so
+    // flagging a reorder would train an admin to ignore this section.
+    const diff = diffDatasets(
+      dataset({
+        businessTypes: [
+          { ...apparel, tags: ["footwear", "brand-owner", "apparel"] as BusinessType["tags"] },
+        ],
+      }),
+      dataset({ businessTypes: [apparel] }),
+    );
+    expect(diff.isEmpty).toBe(true);
+  });
+
+  it("reports an added and a removed type", () => {
+    const grocery: BusinessType = {
+      id: "ret-grocery",
+      name: "Grocery",
+      industry: "Retail",
+      tags: ["retail-operator", "packaged-food"],
+    };
+    const diff = diffDatasets(
+      dataset({ businessTypes: [grocery] }),
+      dataset({ businessTypes: [apparel] }),
+    );
+    expect(diff.businessTypes.added.map((b) => b.id)).toEqual(["ret-grocery"]);
+    expect(diff.businessTypes.removed.map((b) => b.id)).toEqual(["ret-apparel"]);
+  });
+
+  it("names the change in the console renderer", () => {
+    const text = renderDiffText(
+      diffDatasets(
+        dataset({ businessTypes: [{ ...apparel, name: "Apparel brand" }] }),
+        dataset({ businessTypes: [apparel] }),
+      ),
+    );
+    expect(text).toContain("business types changed");
+    expect(text).toContain("ret-apparel");
   });
 });

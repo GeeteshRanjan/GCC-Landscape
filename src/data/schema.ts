@@ -1,5 +1,7 @@
 import { z } from "zod";
 
+import { BUSINESS_TAGS } from "./business-tags";
+
 /**
  * The published dataset shape. This is the contract for every consumer: the
  * seed importer writes it, the DataStore validates it on read, and admin will
@@ -17,6 +19,10 @@ import { z } from "zod";
  */
 
 const nonEmpty = z.string().trim().min(1);
+
+const slug = z
+  .string()
+  .regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/, "id must be a lowercase slug");
 
 export const fteRangeSchema = z
   .object({
@@ -45,6 +51,43 @@ export const companySchema = z.object({
   fte: fteRangeSchema,
   fortuneGlobal500: z.boolean(),
   forbesGlobal2000: z.boolean(),
+  /**
+   * What this company actually does, by reference to `dataset.businessTypes`.
+   *
+   * Defaulted to `[]` rather than required, which is the whole reason this could
+   * be added without touching `DATASET_VERSION` or re-importing: a company row
+   * written before the field existed still parses, and an untagged company falls
+   * through to industry-level peer matching — byte-identically to how the product
+   * behaved before any of this existed. That is what makes the tagging safe to
+   * roll out one industry at a time.
+   *
+   * An ARRAY because a handful of companies genuinely are two businesses; the
+   * dataset is overwhelmingly length 0 or 1. Where there are two, similarity uses
+   * the union of their tags, so a conglomerate is a credible peer for both sides
+   * of itself rather than a diluted match for neither.
+   */
+  businessTypes: z.array(nonEmpty).default([]),
+});
+
+/**
+ * A business type: what a visitor picks, and the tag set a company inherits.
+ *
+ * Admin-editable, unlike the tag vocabulary it draws from — ANSR must be able to
+ * add "Quick commerce" without a developer, but must not be able to invent a tag,
+ * because a tag nobody else carries matches nothing and deleting one silently
+ * re-scores every peer set in the product. See `business-tags.ts`.
+ */
+export const businessTypeSchema = z.object({
+  id: slug,
+  /** The public dropdown label. Renaming is free; changing `id` is not. */
+  name: nonEmpty.max(80),
+  /** Must be a value in `taxonomy.industries`. Checked below. */
+  industry: nonEmpty,
+  /**
+   * At least two, because similarity needs something to share. A one-tag type
+   * would either match everything in its industry or nothing.
+   */
+  tags: z.array(z.enum(BUSINESS_TAGS)).min(2).max(16),
 });
 
 export const taxonomySchema = z.object({
@@ -111,10 +154,6 @@ export const METRIC_FORMATS = [
 export type MetricFunction = (typeof METRIC_FUNCTIONS)[number];
 export type MetricLens = (typeof METRIC_LENSES)[number];
 export type MetricFormat = (typeof METRIC_FORMATS)[number];
-
-const slug = z
-  .string()
-  .regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/, "id must be a lowercase slug");
 
 /** Currency, in any of the forms someone would reach for. */
 const CURRENCY_PATTERN =
@@ -406,6 +445,19 @@ export const datasetSchema = z
     taxonomy: taxonomySchema,
     companies: z.array(companySchema).min(1),
     /**
+     * The business-type catalogue. Defaulted for the same reason `metrics` is:
+     * a dataset written before the key existed still reads, so this is a
+     * backwards-compatible addition rather than a version bump the fs store
+     * would refuse.
+     *
+     * Not part of `taxonomy`, deliberately. Taxonomy is four flat string lists
+     * and the whole rename-cascade, usage-count and diff machinery assumes that
+     * shape; a record-shaped fifth key would have needed a special case in every
+     * one of them. `metrics` set the precedent for an editable collection that
+     * lives beside taxonomy instead of inside it.
+     */
+    businessTypes: z.array(businessTypeSchema).max(400).default([]),
+    /**
      * The Screen 2 catalogue. Defaulted rather than required, so a dataset
      * written before this key existed still reads and `DATASET_VERSION` does not
      * have to move — the fs store refuses a version it does not recognise, and
@@ -464,6 +516,76 @@ export const datasetSchema = z
       }
     }
 
+    /* ----------------------------------------------------------------------
+       Business types.
+
+       Two checks, and the second is the one that matters. A business type is
+       scoped to an industry, and a company may only carry a type from its OWN
+       industry — otherwise a Retail company could be tagged "Retail banking"
+       and would be scored against a pool it can never be a member of, which is
+       exactly the kind of silent nonsense the peer set cannot survive.
+       ---------------------------------------------------------------------- */
+    const businessTypeIds = new Set<string>();
+    const industrySet = new Set(dataset.taxonomy.industries);
+    const industryOfType = new Map<string, string>();
+
+    for (const [index, type] of dataset.businessTypes.entries()) {
+      if (businessTypeIds.has(type.id)) {
+        ctx.addIssue({
+          code: "custom",
+          path: ["businessTypes", index, "id"],
+          message: `duplicate business type id: ${type.id}`,
+        });
+      }
+      businessTypeIds.add(type.id);
+      industryOfType.set(type.id, type.industry);
+
+      if (!industrySet.has(type.industry)) {
+        ctx.addIssue({
+          code: "custom",
+          path: ["businessTypes", index, "industry"],
+          message: `industry "${type.industry}" is not in taxonomy.industries`,
+        });
+      }
+
+      if (new Set(type.tags).size !== type.tags.length) {
+        ctx.addIssue({
+          code: "custom",
+          path: ["businessTypes", index, "tags"],
+          message: `business type "${type.id}" repeats a tag`,
+        });
+      }
+    }
+
+    for (const [index, company] of dataset.companies.entries()) {
+      if (new Set(company.businessTypes).size !== company.businessTypes.length) {
+        ctx.addIssue({
+          code: "custom",
+          path: ["companies", index, "businessTypes"],
+          message: `${company.name} repeats a business type`,
+        });
+      }
+      for (const [typeIndex, id] of company.businessTypes.entries()) {
+        const path = ["companies", index, "businessTypes", typeIndex];
+        if (!businessTypeIds.has(id)) {
+          ctx.addIssue({
+            code: "custom",
+            path,
+            message: `business type "${id}" is not in businessTypes`,
+          });
+          continue;
+        }
+        const owner = industryOfType.get(id);
+        if (owner !== undefined && owner !== company.industry) {
+          ctx.addIssue({
+            code: "custom",
+            path,
+            message: `business type "${id}" belongs to ${owner}, but ${company.name} is in ${company.industry}`,
+          });
+        }
+      }
+    }
+
     const metricIds = new Set<string>();
     for (const [index, metric] of dataset.metrics.entries()) {
       if (metricIds.has(metric.id)) {
@@ -490,6 +612,7 @@ export const datasetSchema = z
 
 export type FteRange = z.infer<typeof fteRangeSchema>;
 export type Company = z.infer<typeof companySchema>;
+export type BusinessType = z.infer<typeof businessTypeSchema>;
 export type Taxonomy = z.infer<typeof taxonomySchema>;
 export type Dataset = z.infer<typeof datasetSchema>;
 

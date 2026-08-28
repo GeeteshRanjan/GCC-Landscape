@@ -5,6 +5,7 @@ import { useCallback, useRef, useState } from "react";
 import { fetchPeerView } from "@/app/actions";
 import type { PeerView, PeerViewInput } from "@/data/screen1";
 import type { FunctionView } from "@/data/screen2";
+import type { BusinessTypeOption } from "@/components/screen1/input-panel";
 import { PeerViewAnswer, PeerViewAsk } from "@/components/screen1/peer-view";
 import { useFrameHeight } from "@/components/screen1/use-frame-height";
 import { FunctionViewScreen } from "@/components/screen2/function-view";
@@ -41,6 +42,7 @@ export interface GccLandscapeToolProps {
   industries: readonly string[];
   revenueBands: readonly string[];
   hqCountries: readonly string[];
+  businessTypesByIndustry: Readonly<Record<string, readonly BusinessTypeOption[]>>;
   /** Screen 2's payload, already through the gate. Visitor-independent. */
   functionView: FunctionView;
   /** Where both screens' closing CTAs send the visitor. There is no form. */
@@ -56,6 +58,7 @@ export function GccLandscapeTool({
   industries,
   revenueBands,
   hqCountries,
+  businessTypesByIndustry,
   functionView,
   ctaHref,
 }: GccLandscapeToolProps) {
@@ -134,6 +137,7 @@ export function GccLandscapeTool({
           industries={industries}
           revenueBands={revenueBands}
           hqCountries={hqCountries}
+          businessTypesByIndustry={businessTypesByIndustry}
           initial={lastInput ?? undefined}
           pending={pending}
           submitError={error}
