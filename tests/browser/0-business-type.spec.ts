@@ -113,6 +113,40 @@ test("choosing it narrows the peer set to the same line of business", async ({
   await expect(peerCards.filter({ hasText: "Lowe's" })).toHaveCount(0);
 });
 
+/**
+ * The peer block must not contradict itself.
+ *
+ * This is the check that was missing. The section's lead was a hardcoded "Same
+ * industry, closest revenue band, and companies from your own market first" while
+ * the method line three lines below it said revenue band is a preference and a
+ * closer business beats a closer size. Both sentences rendered on the same card
+ * for months. 336 unit tests and 110 browser tests passed throughout, because
+ * nothing asserted the lead — it was found by hand on production.
+ *
+ * It is also demonstrably false rather than merely stale: this exact peer set puts
+ * H&M (Sweden) and Adidas (Germany) above GAP (USA) for a US visitor, so
+ * own-market-first is not what happened.
+ */
+test("the peer block's lead agrees with its method line", async ({ page }) => {
+  await page.goto("/");
+  await chooseIndustry(page, "Retail");
+  await submit(page, { businessType: "Apparel & footwear brand" });
+
+  const peers = page.locator("#peers");
+  await expect(peers).toBeVisible();
+  const block = (await peers.innerText()).replace(/\s+/g, " ");
+
+  // The method line's claim.
+  expect(block).toMatch(/Revenue band is a preference, not a filter/);
+
+  // The two claims the old lead made, which contradict it.
+  expect(block).not.toMatch(/closest revenue band/i);
+  expect(block).not.toMatch(/own market first/i);
+
+  // And the lead leads on what actually decided the set.
+  expect(block).toMatch(/same line of business/i);
+});
+
 test("the tag vocabulary never reaches the browser", async ({ page }) => {
   await page.goto("/");
   await chooseIndustry(page, "Retail");

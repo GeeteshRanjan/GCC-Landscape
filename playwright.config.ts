@@ -35,6 +35,43 @@ function fixtureEnv(): Record<string, string> {
 
 const PORT = 3210;
 
+/**
+ * Point the suite at an already-deployed URL instead of building one locally.
+ *
+ * ── Why this exists ─────────────────────────────────────────────────────────
+ *
+ * Every check in this repo ran against a local build, and that gap shipped a
+ * bug: the peer section's lead claimed matching was led by revenue band and
+ * showed own-market companies first, which stopped being true when matching went
+ * continuous. 336 unit tests and 110 browser tests all passed, because none of
+ * them looked at a deployment. It was found by hand, on production.
+ *
+ * ── Why only the public specs ───────────────────────────────────────────────
+ *
+ * This is a hard safety boundary, not a convenience. The admin specs sign in,
+ * edit a draft and PUBLISH — against a real deployment that means attempting a
+ * genuine commit to the client's dataset. So in deployed mode the admin,
+ * signin, unauthenticated and lockout projects are NOT DEFINED AT ALL, and the
+ * file's existing mechanism does the rest: a spec that matches no project's
+ * `testMatch` silently never runs. There is no flag that can turn them back on
+ * and no ordering mistake that can reach them.
+ *
+ * The lockout spec is a second reason. It deliberately exhausts the login rate
+ * limiter; run against production it would lock the real admin out.
+ *
+ * ── What it cannot cover ────────────────────────────────────────────────────
+ *
+ * Read-only assertions about the public screens. That is the whole point — it
+ * checks the artefact a visitor gets, which is the thing no other check sees.
+ */
+const DEPLOYED = process.env.GCC_TEST_BASE_URL?.trim();
+
+if (DEPLOYED && !/^https?:\/\//.test(DEPLOYED)) {
+  throw new Error(
+    `GCC_TEST_BASE_URL must be an absolute http(s) URL, got "${DEPLOYED}".`,
+  );
+}
+
 export default defineConfig({
   testDir: "./tests/browser",
   // Numbered so the reading order is the running order: sign in, then edit a
@@ -48,16 +85,31 @@ export default defineConfig({
   forbidOnly: Boolean(process.env.CI),
   retries: 0,
   reporter: process.env.CI ? "list" : [["list"], ["html", { open: "never" }]],
-  timeout: 30_000,
-  expect: { timeout: 10_000 },
+  // Deployed runs cross the network and can cold-start a serverless function, so
+  // the budgets are looser there. Retries stay at 0 in both modes: a flake against
+  // a deployment is information, and a retry would hide it.
+  timeout: DEPLOYED ? 60_000 : 30_000,
+  expect: { timeout: DEPLOYED ? 20_000 : 10_000 },
 
   use: {
-    baseURL: `http://127.0.0.1:${PORT}`,
+    baseURL: DEPLOYED ?? `http://127.0.0.1:${PORT}`,
     trace: "retain-on-failure",
     screenshot: "only-on-failure",
   },
 
-  projects: [
+  projects: DEPLOYED
+    ? [
+        /**
+         * The only project in deployed mode. Everything that writes, signs in or
+         * exhausts the rate limiter is deliberately absent — see the note above.
+         */
+        {
+          name: "deployed-public",
+          testMatch: /0-.*\.spec\.ts/,
+          use: { ...devices["Desktop Chrome"] },
+        },
+      ]
+    : [
     /**
      * Ordering here is a correctness requirement, not tidiness. The server's rate
      * limiter is in-process, so the spec that deliberately exhausts it locks out
@@ -96,13 +148,17 @@ export default defineConfig({
     },
   ],
 
-  webServer: {
-    command: `npm run build && npx next start -p ${PORT}`,
-    url: `http://127.0.0.1:${PORT}/admin/login`,
-    reuseExistingServer: false,
-    timeout: 180_000,
-    stdout: "pipe",
-    stderr: "pipe",
-    env: fixtureEnv(),
-  },
+  // No local server in deployed mode, and `fixtureEnv()` is not called — it throws
+  // when the fixture is missing, and a deployed run has no reason to have one.
+  webServer: DEPLOYED
+    ? undefined
+    : {
+        command: `npm run build && npx next start -p ${PORT}`,
+        url: `http://127.0.0.1:${PORT}/admin/login`,
+        reuseExistingServer: false,
+        timeout: 180_000,
+        stdout: "pipe",
+        stderr: "pipe",
+        env: fixtureEnv(),
+      },
 });

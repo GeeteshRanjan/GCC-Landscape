@@ -40,7 +40,7 @@ async function ask(
 }
 
 test.describe("the ask", () => {
-  test("offers exactly the five inputs, and asks for no revenue figure", async ({
+  test("offers exactly the six inputs, and asks for no revenue figure", async ({
     page,
   }) => {
     await page.goto("/");
@@ -54,11 +54,21 @@ test.describe("the ask", () => {
 
     await expect(page.getByLabel(/^Company name/)).toBeVisible();
     await expect(page.getByLabel("Industry")).toBeVisible();
+    // The sixth input. This test was named "the five inputs" and never asserted
+    // it, so nothing here would have noticed the field disappearing. A count in a
+    // test name has to match the list beneath it or the name is decoration.
+    await expect(page.getByLabel(/^Line of business/)).toBeVisible();
     await expect(page.getByLabel("Annual revenue")).toBeVisible();
     await expect(page.getByLabel("Headquarters")).toBeVisible();
     await expect(
       page.getByRole("group", { name: "Where are you with India today?" }),
     ).toBeVisible();
+
+    // Five named controls plus the radio group, and no seventh: a field added
+    // without a consumer should fail here rather than ship silently.
+    expect(
+      await page.locator("form select, form input[type='text']").count(),
+    ).toBe(5);
 
     // Revenue is a band, never a figure — the data holds bands, so the input is
     // one. A number input here would be the wrong question.
