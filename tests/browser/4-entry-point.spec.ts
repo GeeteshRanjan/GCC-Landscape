@@ -37,7 +37,7 @@ test("edits the hero copy and keeps it across a reload", async ({ page }) => {
   await expect(page.getByRole("heading", { name: "Entry point", level: 1 })).toBeVisible();
 
   const title = page.getByLabel("Title");
-  await expect(title).toHaveValue("India GCC Intelligence");
+  await expect(title).toHaveValue("ANSR GCC Intelligence");
 
   await title.fill("India GCC Benchmarks");
   await waitForDraftSaved(page);
@@ -125,6 +125,6 @@ test("shows the entry point in the publish diff, with both sides of the copy", a
    * first thing all of them read. An edit here that the diff did not report would
    * be a headline changed on the live site with nothing in the review saying so.
    */
-  await expect(page.getByText("India GCC Intelligence")).toBeVisible();
+  await expect(page.getByText("ANSR GCC Intelligence")).toBeVisible();
   await expect(page.getByText("India GCC Benchmarks")).toBeVisible();
 });

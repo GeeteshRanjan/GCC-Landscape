@@ -2,19 +2,21 @@
 
 
 
-import { ClosingCta } from "@/components/public/closing-cta";
-import { Section, type Ground } from "@/components/public/primitives";
+import { BarChart3, Globe, Landmark, Users } from "lucide-react";
+
+import { Panel } from "@/components/public/primitives";
 import {
-  HeaderKicker,
-  HeaderLead,
-  InputSummary,
-  QuietButton,
+  ContextPanels,
+  HeaderFinding,
+  ProductIdentity,
   ScreenHeader,
-  ScreenTitle,
+  ViewPanel,
+  ViewTabs,
+  type ContextFact,
   type HeaderMotif,
 } from "@/components/public/screen-header";
 import type { HeroCopy, ImpactStat } from "@/data/schema";
-import { GCC_STATUS_LABELS, type PeerView, type PeerViewInput } from "@/data/screen1";
+import { companyName, type PeerView, type PeerViewInput } from "@/data/screen1";
 import { cn } from "@/lib/utils";
 import { CityMap } from "./city-map";
 import type { BusinessTypeOption, TieredOptions } from "./input-panel";
@@ -25,7 +27,23 @@ import {
   NationalScaleView,
   PeerBlockView,
 } from "./evidence";
-import { ADVANCE, ASK, framing, industryHeading, peerLead } from "./copy";
+import {
+  ASK,
+  framing,
+  FUNCTIONS_LEAD,
+  FUNCTIONS_TITLE,
+  INDUSTRY_TITLE,
+  industrySentence,
+  LARGEST_LEAD,
+  largestTitle,
+  mapHeading,
+  mapTitle,
+  PEERS_TITLE,
+  peerLead,
+  SCALE,
+  signals,
+} from "./copy";
+import { Snapshot } from "./snapshot";
 import { AskHero } from "./ask-hero";
 import { CustomerLogos } from "./customer-logos";
 import { ImpactBand } from "./impact-band";
@@ -161,14 +179,45 @@ export function PeerViewAsk({
         // to read as air under the card rather than as an empty band: the strip
         // has its own padding too, so these two add up and the pair was set
         // together.
-        className="relative flow-root bg-surface-tint pb-10 md:pb-14"
+        // **The bottom padding was cut by a third, and the logo strip's own top
+        // padding with it.** The two add up, and at 56 + 40 = 96px the tint band
+        // below the card read as an empty band rather than as air under it — the
+        // card had visibly finished and nothing had started. The pair is set
+        // together and has to stay that way; see `CustomerLogos`.
+        // **`z-10` on the BAND, and it is not decoration — without it the logo strip
+        // paints over the open dropdown.** The panel already carries `z-20`, and that
+        // z-index cannot escape this band: the card carries `.gcc-enter`, whose
+        // keyframe leaves a computed `transform` on it, and an element with a
+        // transform is a STACKING CONTEXT. So the panel's 20 is scoped inside the
+        // card, and the card competes in the root context at an effective 0 — where
+        // the marquee track, which also has a transform and comes later in the DOM,
+        // wins. The symptom is a dropdown whose lower half has ten company logos
+        // drawn through its text, only for the two dropdowns long enough to overhang
+        // the card. Raising the band lifts everything in it, including the panel, and
+        // leaves the card-over-hero overlap unaffected because the hero is earlier.
+        className="relative z-10 flow-root bg-surface-tint pb-6 md:pb-8"
       >
-        {/* Twelve columns' worth of container, but the card is centred and
-            narrower than the full measure rather than taking ten of twelve off to
-            one side. That was right when a motif occupied the trailing ground; with
-            a centred hero above it, an off-centre card breaks the one thing the
-            brief asks for — that every band shares a visual centre. */}
-        <div className="mx-auto max-w-content px-4 md:px-12">
+        {/* **This pair — `max-w-content px-6 md:px-12` then `mx-auto max-w-card` —
+            is duplicated verbatim in `ask-hero.tsx`, and the duplication is the
+            point.** It is what gives the hero's copy and this card the same leading
+            edge at every viewport width. They were three different left edges within
+            130px of each other; nothing looked broken and nothing agreed, which is
+            the register that reads as unfinished.
+
+            It cannot be a tuned inset on the hero instead. The card is centred and
+            capped, so the offset between the container's gutter and the card's edge
+            is a different number at every width — which is exactly why the previous
+            `ms-[5%]` could not converge. Deriving both edges from one box is the only
+            version that holds.
+
+            `px-4` was raised to `px-6` here for the same reason: the hero has always
+            used `px-6` at phone width, and the 8px difference was the whole
+            misalignment at 390.
+
+            So `--ansr-container-card` is now a COMPOSITION token, not just this
+            card's width — widening it moves the headline, and moves the dot map's
+            leading mask fade with it. Three files, one decision. */}
+        <div className="mx-auto max-w-content px-6 md:px-12">
           <div
             className={cn(
               // The pull, and it is the negative counterpart of the hero's own
@@ -195,15 +244,61 @@ export function PeerViewAsk({
               // composed, and a rounded card lifted onto a gradient does not need
               // it.
               "px-5 py-8 sm:px-8 md:px-10 md:py-12 lg:px-12",
+              // **The ask animates in, which it did not before, and the omission was
+              // visible once the rest of the page was polished.** Every band on the
+              // ANSWER state and all of Screen 2 arrive on `.gcc-enter`; the entry
+              // point — the first thing anyone sees — was the one surface that
+              // snapped into existence. Index 2 puts it a step behind the headline
+              // and the lead, so the page assembles top-down in three ~120ms steps
+              // and is settled inside 500ms.
+              //
+              // Nothing here is scroll-driven, which is the constraint that rules out
+              // the obvious version: the tool is iframed and does not own the scroll
+              // container, so an observer against our own viewport fires for content
+              // the visitor cannot see. This is tied to mount instead, which for the
+              // ask is the same moment.
+              "gcc-enter",
             )}
+            style={{ "--gcc-enter-index": 2 } as React.CSSProperties}
           >
-            <div className="flex flex-col gap-8 md:gap-10">
+            <div className="flex flex-col gap-7 md:gap-9">
+              {/* Heading and lead as one block, tighter than the gap to the form
+                  below them: they are two halves of one statement, and the form is
+                  the next thing. */}
+              <div className="flex flex-col gap-3">
               <h2
                 id="ask-heading"
-                className="text-2xl leading-tight font-bold tracking-display text-balance text-text md:text-3xl lg:text-4xl"
+                // **Teal and Medium, where this was black and Bold.** Two problems,
+                // one fix. The weight made the form's heading the heaviest type on
+                // the page — heavier than an 80px hero headline set in Medium — so
+                // the eye landed on the card's title rather than on the claim above
+                // it. And the card had no brand colour anywhere at rest: white fill,
+                // black type, neutral hairlines, with teal appearing only on focus.
+                // It read as a form from a different site sitting on ANSR's hero.
+                //
+                // `--ansr-accent` (reached as `text-accent-teal`, since Tailwind's own
+                // `accent` is the shadcn contract variable and is orange here) is the
+                // sanctioned heading teal on a light ground
+                // and measures 9.81:1 on white, so this costs nothing in legibility
+                // and buys the one thing the card was missing: a colour it shares
+                // with the band it overlaps.
+                //
+                // `tracking-display` stays, unlike the two headings that carry a
+                // drawn wordmark — there is no mark on this line to match.
+                className="text-2xl leading-tight font-medium tracking-display text-balance text-accent-teal md:text-3xl lg:text-4xl"
               >
                 {ASK.panelTitle}
               </h2>
+              {/* Light 300, which is the brand's own paragraph weight and the whole
+                  reason this screen is on the display face. Black rather than muted:
+                  it is a sentence the visitor has to read to know what the form does,
+                  not a caption, and `--ansr-text-muted` on white is where a line
+                  starts being skipped. Capped at the reading measure so it does not
+                  run the full 896px of the card. */}
+              <p className="max-w-measure text-base leading-normal font-light text-pretty text-text md:text-lg">
+                {ASK.panelLead}
+              </p>
+              </div>
               <InputPanel
                 industries={industries}
                 revenueBands={revenueBands}
@@ -227,241 +322,383 @@ export function PeerViewAsk({
 }
 
 /**
- * The bands, in the order they build the argument: who is comparable, how many
- * more there are, who the biggest are, what they run, where they run it, and how
- * large the whole base is. Widening from five named companies to a national
- * figure, so the least specific evidence lands last.
+ * The answer: a compact teal context area, then one white content surface holding
+ * six cards.
  *
- * Then two closes, in that order, and the order is the point: the tool offers the
- * visitor more of itself before it asks them for anything. The function view is a
- * teal-filled control on a tinted band; the conversation is the one orange fill on
- * the one inverse band. Two different registers, distinguished by form and by
- * ground rather than by two buttons of equal weight side by side.
+ * **This replaced seven full-bleed bands, and the change is structural.** The
+ * previous shape was a landing page: a 200px display hero stating the finding, then
+ * seven sections each with its own ground, 80–112px of vertical air and a 48px
+ * heading. It read well scrolled slowly and badly in the ninety seconds this
+ * audience gives it — the first figure was below the fold, no two pieces of evidence
+ * could be compared side by side, and the last two bands were navigation and a CTA
+ * rather than evidence.
  *
- * Tint alternates at every boundary — one separation mechanism, applied
- * consistently.
+ * What it is now, in order:
+ *
+ *   1. The teal context area — the product name, and the visitor's four answers as
+ *      controls. No headline, no lead, no decorative map. See `ScreenHeader`.
+ *   2. The tab strip at its foot, whose selected cell is the same white surface as
+ *      the content below it, so the two are one layer.
+ *   3. SNAPSHOT — four industry-level figures, the index to everything under it.
+ *   4. The comparison table, full width.
+ *   5. Two analytical rows, each a third and two thirds: the industry context beside
+ *      the largest centres, then the function list beside the locations map.
+ *   6. The terminating dark evidence strip, which is where the page ends.
+ *
+ * **The page ends at the strip.** There is no closing CTA card, no "Talk to ANSR"
+ * panel, no footer and no methodology links. What the screen owes the reader is
+ * either inside the strip's own source line or in the provenance on the card that
+ * needed it. `ctaHref` is therefore no longer threaded into this screen at all —
+ * Screen 2 still carries the conversation.
+ *
+ * **Two thirds, not halves, on both analytical rows.** The industry context is one
+ * figure and three stepped tracks; the largest centres are a four-column table. Half
+ * each left the table cramped enough to scroll at 1440 while the card beside it was
+ * two thirds empty. Same asymmetry on the row below, for the same reason: a ranked
+ * list of eight functions is narrow and a map with a ranked list beside it is not.
  */
 export function PeerViewAnswer({
-  headingRef,
+  panelRef,
   view,
-  ctaHref,
   onChangeDetails,
   onOpenFunctions,
 }: {
-  headingRef: React.RefObject<HTMLHeadingElement | null>;
+  /**
+   * The tab panel, which is where focus goes on a phase change.
+   *
+   * Not a heading ref any more. The `h1` is the product name and is identical on
+   * both result screens, so focusing it would announce nothing about the change —
+   * whereas a panel named by its own tab announces "Peer landscape, tab panel",
+   * which is the phase change said out loud. See `tool.tsx`.
+   */
+  panelRef: React.RefObject<HTMLDivElement | null>;
   view: PeerView;
-  ctaHref: string;
   onChangeDetails: () => void;
   onOpenFunctions: () => void;
 }) {
   const copy = framing(view);
   const peerCount = view.peers.peers.length;
+  const name = companyName(view.input);
 
   /**
-   * Declared rather than inferred, because the bands no longer share one shape:
-   * `lead` and `layout` are present on some and not others, and an inferred union
-   * has neither key on every member — so reading `band.layout` in the render below
-   * would not compile.
-   */
-  type Band = {
-    id: string;
-    kicker: string;
-    title: string;
-    lead?: string;
-    ground: Ground;
-    weight: "connective" | "standard" | "pivotal";
-    layout?: "stack" | "split";
-    body: React.ReactNode;
-  };
-
-  /**
-   * The bands, in the order they build the argument.
+   * The four answers, in the order the form asks them.
    *
-   * Every title states the finding rather than naming the section. "The wider
-   * industry" and "The upper end" made the reader work out what they were being
-   * shown; a heading that says it is the same number of words and does the work
-   * for them. The kickers stay as the connective tissue — they are the numbering,
-   * not the label.
+   * The company panel is omitted rather than stubbed when the field was left blank,
+   * since it is optional on the form — and `ContextPanels` divides three cells evenly
+   * as well as four.
+   *
+   * **The industry is not repeated as a descriptor under the company name.** The
+   * reference composition shows it in both places; it is the same string twice inside
+   * 40px of each other, and the industry has a panel of its own two cells over.
+   *
+   * **There is no "India today" panel, and there must not be.** `gccStatus` is a
+   * constant the form supplies rather than something the visitor answered, so showing
+   * it here would be the tool reading its own assumption back as their input.
+   *
+   * **They carry a label and a value and nothing else now.** Each fact used to carry
+   * an `action` and an optional `actionLabel`, because each panel was its own button
+   * with its own accessible name. All four went to the same place, so there is one
+   * button beside the row instead and the per-fact wording went with it — see
+   * `ContextPanels`. "Your company" shortened to "Company" in the same change: a pill
+   * is sized to its own content, and the possessive was two thirds of the width of
+   * the value it labelled.
    */
-  const bands: Band[] = [
-    {
-      id: "peers",
-      kicker: "Comparable companies",
-      title:
-        peerCount === 1
-          ? "One company like yours is already here"
-          : `${peerCount} companies like yours are already here`,
-      lead: peerLead(view),
-      ground: "tint" as const,
-      weight: "pivotal" as const,
-      body: <PeerBlockView view={view} />,
-    },
-    {
-      id: "industry",
-      kicker: "Your industry",
-      title: industryHeading(view),
-      // A figure band. One number is the whole argument here, so it gets the
-      // inverse ground and the display size — the most emphatic thing this palette
-      // can do without touching orange, which is committed to the CTA.
-      ground: "inverse" as const,
-      weight: "pivotal" as const,
-      layout: "split" as const,
-      body: <IndustryCountView view={view} />,
-    },
-    {
-      id: "largest",
-      kicker: "The upper end",
-      title: `How large ${view.industry.industry} centres get here`,
-      // Stack, not split: five ranked bars with figures at their trailing end need
-      // the whole measure, and a 7-column well would crush them.
-      ground: "surface" as const,
-      weight: "standard" as const,
-      body: <LargestBlockView view={view} />,
-    },
-    {
-      id: "functions",
-      kicker: "What they run",
-      title: "The work India centres typically carry",
-      ground: "tint" as const,
-      weight: "standard" as const,
-      layout: "split" as const,
-      body: <CommonFunctionsView view={view} />,
-    },
-    {
-      id: "map",
-      kicker: "Where they went",
-      title: `${view.industry.industry} clusters in a handful of cities`,
-      lead: "GCCs per city, filtered to your industry.",
-      ground: "surface" as const,
-      weight: "standard" as const,
-      body: <CityMap map={view.map} />,
-    },
-    {
-      id: "scale",
-      kicker: "The whole base",
-      title: "How much of the global index is already here",
-      lead: "Across all of India, not just your industry.",
-      // The second figure band, and the last piece of evidence before the ask.
-      ground: "inverse" as const,
-      weight: "pivotal" as const,
-      body: <NationalScaleView view={view} />,
-    },
-    {
-      id: "advance",
-      kicker: ADVANCE.kicker,
-      title: ADVANCE.title,
-      lead: ADVANCE.lead,
-      ground: "tint" as const,
-      weight: "connective" as const,
-      // Deliberately `stack`, and the empty trailing width is not a defect worth
-      // fixing. `split` was tried and rendered worse: the column is `items-start`,
-      // so a single pill top-aligned with the kicker, which put the action ahead of
-      // the sentence that motivates it in reading order and detached it from its
-      // own heading. A left-aligned connective band with air beside it is the
-      // normal shape here; a floating trailing button is not.
-      body: <AdvanceToFunctions onOpenFunctions={onOpenFunctions} />,
-    },
+  const facts: ContextFact[] = [
+    ...(name ? [{ label: "Company", value: name }] : []),
+    { label: "Industry", value: view.industry.industry },
+    { label: "Headquarters", value: view.input.hqCountry },
+    { label: "Revenue band", value: view.input.revenueBand },
   ];
 
   return (
-    <>
-      <ScreenHeader motif={PEER_MOTIF}>
-        <div className="flex flex-col gap-8">
-          <div className="flex max-w-measure flex-col gap-5">
-            <HeaderKicker>India GCC landscape</HeaderKicker>
-            <ScreenTitle headingRef={headingRef}>{copy.title}</ScreenTitle>
-            <HeaderLead>{copy.lead}</HeaderLead>
-          </div>
-
-          {/* A polite live region, because the answer replaced the form without a
-              navigation. Not assertive: the visitor asked for this. */}
-          <p role="status" className="sr-only">
-            {peerCount === 0
-              ? `No comparable companies found in ${view.industry.industry}.`
-              : `Showing ${peerCount} comparable ${peerCount === 1 ? "company" : "companies"} in ${view.industry.industry}.`}
-          </p>
-
-          <div className="flex flex-wrap items-center gap-x-6 gap-y-3">
-            {/* Three facts, not four. "India today" was here and is gone with the
-                question that produced it: `gccStatus` is now a constant supplied by
-                the form rather than an answer the visitor gave — see
-                `ASSUMED_GCC_STATUS` in `input-panel.tsx` — so echoing it back would
-                be the tool telling the visitor what they said about something it
-                never asked. The value still frames the whole answer; it is just no
-                longer presented as theirs.
-
-                Every remaining fact is an answer they actually typed, which is the
-                property this summary needs to keep: it exists so a visitor can see
-                what the result was built from before deciding to change it. */}
-            <InputSummary
-              facts={[
-                { term: "Industry", value: view.industry.industry },
-                { term: "Revenue", value: view.input.revenueBand },
-                { term: "Headquarters", value: view.input.hqCountry },
-              ]}
-            />
-            <QuietButton onClick={onChangeDetails}>
-              Change these details
-            </QuietButton>
-          </div>
+    /**
+     * The whole screen is on the display face, which is what makes it read as the
+     * same product as the entry point. It brings Light 300 body copy with it — the
+     * brand's single biggest typographic tell, and the reason this is worth a class
+     * rather than being left to `body`. Admin keeps Inter deliberately.
+     */
+    <div className="font-display">
+      <ScreenHeader
+        motif={PEER_MOTIF}
+        tabs={
+          <ViewTabs
+            current="peers"
+            onSwitch={(next) => {
+              if (next === "functions") onOpenFunctions();
+            }}
+            icons={{
+              peers: <Users className="size-5" />,
+              functions: <BarChart3 className="size-5" />,
+            }}
+          />
+        }
+      >
+        <div className="flex flex-col gap-3 md:gap-4">
+          <ProductIdentity id="product-identity" />
+          {/* **The finding, back on the band and not as a heading.** The pass that
+              cut the display hero left this band holding a lockup and a row of
+              answers — chrome and no content — so a visitor who had just submitted a
+              form was told which product they were in and what they had typed, and
+              nothing about the result. `copy.title` is the same sentence the old 72px
+              hero carried, at a third of the size. The `h1` stays the product; see
+              `HeaderFinding` for why this is deliberately not a second heading. */}
+          <HeaderFinding>{copy.title}</HeaderFinding>
         </div>
+        <ContextPanels facts={facts} onEdit={onChangeDetails} />
       </ScreenHeader>
 
-      {bands.map((band, index) => (
-        <div
-          key={band.id}
-          className="gcc-enter"
-          // The stagger is data, not a hand-written delay per section. The header
-          // is index 0, so the first band starts one step behind it.
-          style={{ "--gcc-enter-index": index + 1 } as React.CSSProperties}
-        >
-          <Section
-            id={band.id}
-            kicker={band.kicker}
-            title={band.title}
-            lead={band.lead}
-            ground={band.ground}
-            weight={band.weight}
-            layout={band.layout}
-          >
-            {band.body}
-          </Section>
-        </div>
-      ))}
+      <ViewPanel view="peers" panelRef={panelRef}>
+        {/* A polite live region, because the answer replaced the form without a
+            navigation. Not assertive: the visitor asked for this. `framing().title` is
+            also now on the band above as `HeaderFinding`, so this is a second reading
+            of a visible sentence rather than the only copy of it — which is the right
+            way round. */}
+        <p role="status" className="sr-only">
+          {peerCount === 0
+            ? `No comparable companies found in ${view.industry.industry}.`
+            : `${copy.title}. Showing ${peerCount} comparable ${peerCount === 1 ? "company" : "companies"} in ${view.industry.industry}.`}
+        </p>
 
-      <ClosingCta href={ctaHref} copy={copy} headingId="peer-cta-heading" />
-    </>
+        {/* ---- Zone 1: the industry at a glance, on the pale teal -------------
+            Continuous with the band above it, so the strip reads as the last thing
+            the header says rather than the first thing the content does. That is
+            also what makes it survive being four figures with no section around
+            them. */}
+        <Zone ground="tint">
+          <Enter index={1}>
+            <Snapshot signals={signals(view)} />
+          </Enter>
+        </Zone>
+
+        {/* ---- Zone 2: the comparison set, on white ---------------------------
+            The primary evidence, and the only section that gets a whole zone to
+            itself. The accent header strip is spent here rather than shared out —
+            one card on the surface announces itself in colour, and it is this one. */}
+        <Zone ground="surface">
+          <Enter index={2}>
+            <Panel
+              id="peers"
+              title={PEERS_TITLE}
+              lead={peerLead(view)}
+              tone="accent"
+            >
+              <PeerBlockView view={view} />
+            </Panel>
+          </Enter>
+        </Zone>
+
+        {/* ---- Zone 3: the industry around them, on the near-white mint -------
+            Two sections that are both about the industry rather than about the five
+            companies, so they share a ground and a row.
+
+            `items-start` on the row. A grid child stretches to its row by default, so
+            the containment card was padded out to the height of the list beside it and
+            rendered with a band of empty white under its own content — the same
+            artefact Screen 2's metric grid has `items-start` for. */}
+        <Zone ground="pale">
+          <Enter index={3} className="grid items-start gap-4 lg:grid-cols-5 lg:gap-5">
+            {/* Three fifths and two fifths, and the split is decided by the two
+                cards' own shapes rather than by which matters more. The containment
+                chart is a wide chart — three labelled layers on one axis — and the
+                function list is eight short lines that tile two to a row. Eight tiles
+                in two columns is four rows, which comes out within about 20px of this
+                card's height, so the row has no visible shortfall on either side.
+
+                Eight in THREE columns was tried and is worse for a reason that has
+                nothing to do with width: 8 does not divide by 3, so the last row loses
+                a cell — and an empty cell in a grid of evidence reads as a tile that
+                failed to load. Two and four are the only column counts 8 tiles may
+                take, and four is too narrow for "Business operations and shared
+                services". */}
+            <Panel
+              id="industry"
+              title={INDUSTRY_TITLE}
+              lead={industrySentence(view)}
+              className="lg:col-span-3"
+              motif={<PanelArc />}
+            >
+              <IndustryCountView view={view} />
+            </Panel>
+            <Panel
+              id="functions"
+              title={FUNCTIONS_TITLE}
+              lead={FUNCTIONS_LEAD}
+              className="lg:col-span-2"
+            >
+              <CommonFunctionsView view={view} />
+            </Panel>
+          </Enter>
+        </Zone>
+
+        {/* ---- Zone 4: the upper end, on white -------------------------------
+            A ranking, and it gets the tinted card so it is visibly a different kind
+            of block from the white comparison cards two zones up. */}
+        <Zone ground="surface">
+          <Enter index={4}>
+            {/* **The ordering, as the section's lead rather than as a footnote.** It
+                was "Ranges reflect reported employee bands, so nothing here is ranked
+                by revenue." at 12px under the block — the one sentence that stops a
+                reader taking "largest" for largest by revenue, in the place least
+                likely to be read. We hold bands, never revenue, so it cannot simply be
+                dropped. */}
+            <Panel
+              id="largest"
+              title={largestTitle(view)}
+              lead={LARGEST_LEAD}
+              tone="tint"
+              motif={<PanelArc placement="top" />}
+            >
+              <LargestBlockView view={view} />
+            </Panel>
+          </Enter>
+        </Zone>
+
+        {/* ---- Zone 5: where, on the pale teal -------------------------------- */}
+        <Zone ground="tint">
+          <Enter index={5}>
+            {/* The section's heading is fixed, so the DERIVED finding is its lead.
+                `mapHeading` is exact where a fixed heading cannot be — "63% of the
+                Retail footprint in India is in Bengaluru" when one city dominates, and
+                the plain version when none does. */}
+            <Panel id="map" title={mapTitle(view)} lead={mapHeading(view)}>
+              <CityMap map={view.map} />
+            </Panel>
+          </Enter>
+        </Zone>
+
+        {/* ---- Zone 6: national scale, and the page ends here ----------------
+            The inverse card on white rather than an inverse zone: a dark block with
+            its own corners, floating on white, is a harder stop than a dark band that
+            runs to the frame's edge — and a hard stop is what the last thing on the
+            page wants. Nothing below it. */}
+        <Zone ground="surface" className="pb-10 md:pb-14">
+          <Enter index={6}>
+            <Panel
+              id="scale"
+              title={SCALE.title}
+              tone="inverse"
+              bodyClassName="py-6 md:py-8"
+            >
+              <NationalScaleView
+                view={view}
+                icons={{
+                  fortune: <Globe className="size-5" />,
+                  forbes: <Landmark className="size-5" />,
+                  people: <Users className="size-5" />,
+                }}
+              />
+            </Panel>
+          </Enter>
+        </Zone>
+      </ViewPanel>
+    </div>
   );
 }
 
 /**
- * The way on to Screen 2.
+ * One full-bleed ground, holding one or two sections.
  *
- * Teal fill rather than orange: orange is restricted to the one outward call to
- * action per screen, and a screen with two orange buttons has no primary action at
- * all. White on `--ansr-accent` measures 8.55:1, which is already in the verified
- * pairing list — no new pairing was introduced to make this work.
+ * **The zones are what stopped the surface reading as one flat page**, and they are
+ * deliberately not the seven bands they replaced. A band was one section with its own
+ * 48px heading and 80–112px of air, which is what put the first figure below the
+ * fold. A zone is a colour change at a boundary and nothing else: the sections inside
+ * it keep card density and card headings, and two of them can still sit on one row.
+ *
+ * Four values in six zones — mint, white, near-white mint, white, mint, white — so
+ * every boundary is visible and no two adjacent zones are the same. The near-white
+ * (`surface-pale`) is what lets two mint zones appear on one page without reading as
+ * stripes: it is a different step of the same hue, so the sequence has a rhythm
+ * rather than an alternation.
+ *
+ * `overflow-hidden` via `.gcc-zone`, because a zone is where a full-bleed ornament
+ * would be cropped. None is placed yet — the ornaments on this surface are inside
+ * cards — and the class is there so adding one cannot silently widen the document,
+ * which the iframe does not own the scroll of.
  */
-function AdvanceToFunctions({
-  onOpenFunctions,
+function Zone({
+  ground,
+  className,
+  children,
 }: {
-  onOpenFunctions: () => void;
+  ground: "surface" | "tint" | "pale";
+  className?: string;
+  children: React.ReactNode;
 }) {
+  const GROUND = {
+    surface: "bg-surface",
+    tint: "bg-surface-tint",
+    pale: "bg-surface-pale",
+  } as const;
   return (
-    <div>
-      <button
-        type="button"
-        onClick={onOpenFunctions}
+    <div className={cn("gcc-zone", GROUND[ground])}>
+      <div
         className={cn(
-          // Pill and teal. Same shape as the orange close, so both read as
-          // actions; different fill, so only one reads as THE action.
-          "inline-flex min-h-12 items-center rounded-full bg-surface-accent px-7",
-          "text-base font-semibold text-text-on-accent",
-          "transition-colors duration-fast ease-standard hover:bg-surface-inverse",
+          // Tighter than the band system's rhythm, on purpose. This is an embedded
+          // tool inside a page with its own rhythm, and the complaint this pass is
+          // answering was that everything was too far apart.
+          "mx-auto max-w-content px-6 py-8 md:px-12 md:py-10",
+          className,
         )}
       >
-        {ADVANCE.label}
-      </button>
+        {children}
+      </div>
+    </div>
+  );
+}
+
+/**
+ * The brand's arc dome, cropped into a card's corner.
+ *
+ * Already adapted — recoloured and trimmed by `scripts/brand_asset.py` into
+ * `public/brand/header-horizon.svg` — so nothing here places brand art unmodified.
+ * The two placements and the posture live in `.gcc-panel-arc` and
+ * `.gcc-panel-arc-top`; the `aria-hidden` is applied by `Panel`, which is the one
+ * place a decorative graphic cannot be got wrong by a caller.
+ */
+function PanelArc({ placement = "bottom" }: { placement?: "bottom" | "top" }) {
+  return (
+    <div
+      className={cn(
+        "ansr-motif hidden md:block",
+        placement === "top" ? "gcc-panel-arc-top" : "gcc-panel-arc",
+      )}
+    >
+      {/* eslint-disable-next-line @next/next/no-img-element -- decorative, fixed
+          intrinsic ratio, and not worth an optimiser round trip. */}
+      <img
+        src="/brand/header-horizon.svg"
+        alt=""
+        width={1080}
+        height={540}
+        className="block h-auto w-full"
+      />
+    </div>
+  );
+}
+
+/**
+ * One step of the entrance stagger.
+ *
+ * The delay is data — `--gcc-enter-index` multiplied by one duration step in
+ * globals.css — rather than a hand-written delay per row, so adding a row cannot
+ * leave two of them arriving together. It opts out under
+ * `prefers-reduced-motion`, which is handled in the stylesheet rather than here.
+ */
+function Enter({
+  index,
+  className,
+  children,
+}: {
+  index: number;
+  className?: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div
+      className={cn("gcc-enter", className)}
+      style={{ "--gcc-enter-index": index } as React.CSSProperties}
+    >
+      {children}
     </div>
   );
 }

@@ -240,7 +240,7 @@ Consumer electronics & devices (19) · Computing hardware & servers (5) · Enter
 ### Logistics & Transportation — 28/31 tagged, 5 types
 Freight forwarding & third-party logistics (12) · Shipping & maritime transport (10) · Express & parcel delivery (3) · Rail & surface transport (2) · Ports & terminal operations (1)
 
-### CPG — 24/24 tagged, 5 types
+### Consumer Packaged Goods — 24/24 tagged, 5 types
 Diversified consumer goods (14) · Beverages & brewing (6) · Packaged food (2) · Personal care & beauty (2) · Household & home care products (0)
 
 ### Aerospace & Defense — 18/18 tagged, 4 types

@@ -27,6 +27,36 @@ export const SEED_REVENUE_BAND_ORDER = [
 ] as const;
 
 /** Collapses whitespace and trims. Source cells carry stray double spaces. */
+/**
+ * Industry names the spreadsheet supplies as an abbreviation, mapped to the form
+ * a visitor should read.
+ *
+ * **Applied once, where the sheet is read**, so exactly one spelling exists
+ * downstream: the company's `industry`, `taxonomy.industries`, the business-type
+ * map's `industry||subIndustry` keys and the public dropdown all see the canonical
+ * name. Renaming the published dataset alone would have been the obvious move and
+ * is the broken one — the map is keyed on the industry string, so the next import
+ * would look up "Consumer Packaged Goods||CPG - Ice Cream" against a table written
+ * as "CPG||…", find nothing, and silently untag all 24 companies. Untagged is a
+ * safe state, which is exactly why nobody would notice.
+ *
+ * Only expansions belong here. This is not a place to merge two industries or fix
+ * a typo in one: both change which companies are compared with which, and both
+ * belong in the taxonomy editor, where the rename cascades and the diff records it.
+ */
+const INDUSTRY_ALIASES: Readonly<Record<string, string>> = {
+  CPG: "Consumer Packaged Goods",
+};
+
+/**
+ * The one spelling of an industry name. Idempotent, so it is safe to call on a
+ * value that has already been through it.
+ */
+export function canonicalIndustry(value: unknown): string {
+  const cleaned = cleanText(value);
+  return INDUSTRY_ALIASES[cleaned] ?? cleaned;
+}
+
 export function cleanText(value: unknown): string {
   return String(value ?? "")
     .replace(/\s+/g, " ")

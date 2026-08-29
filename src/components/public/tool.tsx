@@ -88,8 +88,18 @@ export function GccLandscapeTool({
   const [lastInput, setLastInput] = useState<PeerViewInput | null>(null);
 
   const askHeadingRef = useRef<HTMLHeadingElement>(null);
-  const peersHeadingRef = useRef<HTMLHeadingElement>(null);
-  const functionsHeadingRef = useRef<HTMLHeadingElement>(null);
+  /**
+   * The result screens' focus targets are their TAB PANELS, not their headings.
+   *
+   * The `h1` on both result screens is now the product lockup — "ANSR. GCC
+   * Intelligence" — which is identical on the two of them, so focusing it on a
+   * peers-to-functions change would announce nothing about the change. A
+   * `role="tabpanel"` named by its own tab announces "Peer landscape, tab panel",
+   * which is the phase change said out loud, and it still puts the keyboard at the
+   * top of the new screen. The ask keeps its heading, because its `h1` is its own.
+   */
+  const peersPanelRef = useRef<HTMLDivElement>(null);
+  const functionsPanelRef = useRef<HTMLDivElement>(null);
 
   /**
    * Move focus to the new phase's `h1`, after React has committed it.
@@ -136,13 +146,13 @@ export function GccLandscapeTool({
     previousPhase.current = phase.kind;
     if (!changed) return;
 
-    const ref =
+    const target =
       phase.kind === "ask"
-        ? askHeadingRef
+        ? askHeadingRef.current
         : phase.kind === "peers"
-          ? peersHeadingRef
-          : functionsHeadingRef;
-    ref.current?.focus();
+          ? peersPanelRef.current
+          : functionsPanelRef.current;
+    target?.focus();
   }, [phase.kind]);
 
   const submit = useCallback(
@@ -208,9 +218,8 @@ export function GccLandscapeTool({
           // Remounted per answer, so the entry stagger replays for a new result
           // rather than only on the first one.
           key={JSON.stringify(phase.view.input)}
-          headingRef={peersHeadingRef}
+          panelRef={peersPanelRef}
           view={phase.view}
-          ctaHref={ctaHref}
           onChangeDetails={backToAsk}
           onOpenFunctions={openFunctions}
         />
@@ -222,7 +231,8 @@ export function GccLandscapeTool({
           input={phase.view.input}
           ctaHref={ctaHref}
           onBack={backToPeers}
-          headingRef={functionsHeadingRef}
+          onEditProfile={backToAsk}
+          panelRef={functionsPanelRef}
         />
       ) : null}
     </main>

@@ -265,7 +265,7 @@ export function CompanyEditor({
           */}
           <fieldset className="flex flex-col gap-2">
             <legend className="text-[length:var(--ansr-text-sm)] font-[var(--ansr-weight-medium)] text-[var(--ansr-text-primary)]">
-              Lines of business
+              Sub-industries
             </legend>
             <p className="text-[length:var(--ansr-text-xs)] text-[var(--ansr-text-muted)]">
               {form.industry

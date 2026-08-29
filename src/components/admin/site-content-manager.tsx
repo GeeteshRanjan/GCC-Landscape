@@ -187,7 +187,7 @@ function HeroEditor({
       <div className="flex flex-col gap-5 px-5 py-5">
         <TextField
           label="Title"
-          hint={`Sets bold at up to 80px, centred. Keep it to about ${MAX.title} characters — past that it takes a third line on a desktop screen and pushes the form below the fold.`}
+          hint={`Sets bold at up to 80px, centred. Keep it to about ${MAX.title} characters — past that it takes a third line on a desktop screen and pushes the form below the fold. "ANSR" is set in the brand orange automatically; keep it as the first word, because the orange is only legible against the top of the hero gradient.`}
           value={hero.title}
           error={lengthError(hero.title, MAX.title)}
           onChange={(value) => onChange({ title: value })}

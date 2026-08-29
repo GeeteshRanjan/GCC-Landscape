@@ -12,7 +12,7 @@
       "BFSI",
       "Chemicals & Materials",
       "Consumer Electronics",
-      "CPG",
+      "Consumer Packaged Goods",
       "Education",
       "Electrical & Electronics",
       "Energy & Utilities",
@@ -186,7 +186,7 @@
       "id": "ab-inbev",
       "name": "AB InBev",
       "hqCountry": "Belgium",
-      "industry": "CPG",
+      "industry": "Consumer Packaged Goods",
       "revenueBand": "Above $20 Bn",
       "establishedYear": 2014,
       "cities": [
@@ -5151,7 +5151,7 @@
       "id": "british-american-tobacco-p-l-c-bat",
       "name": "British American Tobacco P.L.C. (BAT)",
       "hqCountry": "UK",
-      "industry": "CPG",
+      "industry": "Consumer Packaged Goods",
       "revenueBand": "Above $20 Bn",
       "establishedYear": 2026,
       "cities": [
@@ -5747,7 +5747,7 @@
       "id": "carlsberg",
       "name": "Carlsberg",
       "hqCountry": "Denmark",
-      "industry": "CPG",
+      "industry": "Consumer Packaged Goods",
       "revenueBand": "$10 Bn – $20 Bn",
       "establishedYear": 2025,
       "cities": [
@@ -7027,7 +7027,7 @@
       "id": "coca-cola",
       "name": "Coca-Cola",
       "hqCountry": "USA",
-      "industry": "CPG",
+      "industry": "Consumer Packaged Goods",
       "revenueBand": "$5 Bn – $10 Bn",
       "establishedYear": 2016,
       "cities": [
@@ -7189,7 +7189,7 @@
       "id": "colgate-palmolive",
       "name": "Colgate-Palmolive",
       "hqCountry": "USA",
-      "industry": "CPG",
+      "industry": "Consumer Packaged Goods",
       "revenueBand": "Above $20 Bn",
       "establishedYear": 2013,
       "cities": [
@@ -9131,7 +9131,7 @@
       "id": "diageo",
       "name": "Diageo",
       "hqCountry": "UK",
-      "industry": "CPG",
+      "industry": "Consumer Packaged Goods",
       "revenueBand": "Above $20 Bn",
       "establishedYear": 2016,
       "cities": [
@@ -14333,7 +14333,7 @@
       "id": "heineken",
       "name": "Heineken",
       "hqCountry": "Netherlands",
-      "industry": "CPG",
+      "industry": "Consumer Packaged Goods",
       "revenueBand": "Above $20 Bn",
       "establishedYear": 2025,
       "cities": [
@@ -14353,7 +14353,7 @@
       "id": "henkel",
       "name": "Henkel",
       "hqCountry": "Germany",
-      "industry": "CPG",
+      "industry": "Consumer Packaged Goods",
       "revenueBand": "Above $20 Bn",
       "establishedYear": 2022,
       "cities": [
@@ -14373,7 +14373,7 @@
       "id": "herbalife-nutrition",
       "name": "Herbalife Nutrition",
       "hqCountry": "USA",
-      "industry": "CPG",
+      "industry": "Consumer Packaged Goods",
       "revenueBand": "$1 Bn – $5 Bn",
       "establishedYear": 2017,
       "cities": [
@@ -17036,7 +17036,7 @@
       "id": "kimberly-clark",
       "name": "Kimberly-Clark",
       "hqCountry": "USA",
-      "industry": "CPG",
+      "industry": "Consumer Packaged Goods",
       "revenueBand": "$10 Bn – $20 Bn",
       "establishedYear": 2018,
       "cities": [
@@ -17359,7 +17359,7 @@
       "id": "kraft-heinz",
       "name": "Kraft Heinz",
       "hqCountry": "USA",
-      "industry": "CPG",
+      "industry": "Consumer Packaged Goods",
       "revenueBand": "Above $20 Bn",
       "establishedYear": 2023,
       "cities": [
@@ -18120,7 +18120,7 @@
       "id": "l-oreal",
       "name": "L'Oréal",
       "hqCountry": "France",
-      "industry": "CPG",
+      "industry": "Consumer Packaged Goods",
       "revenueBand": "Above $20 Bn",
       "establishedYear": 2025,
       "cities": [
@@ -20117,7 +20117,7 @@
       "id": "mondelez-international",
       "name": "Mondelez International",
       "hqCountry": "USA",
-      "industry": "CPG",
+      "industry": "Consumer Packaged Goods",
       "revenueBand": "Above $20 Bn",
       "establishedYear": 2018,
       "cities": [
@@ -20905,7 +20905,7 @@
       "id": "nestle",
       "name": "Nestlé",
       "hqCountry": "Switzerland",
-      "industry": "CPG",
+      "industry": "Consumer Packaged Goods",
       "revenueBand": "Above $20 Bn",
       "establishedYear": 2012,
       "cities": [
@@ -22441,7 +22441,7 @@
       "id": "p-and-g",
       "name": "P&G",
       "hqCountry": "USA",
-      "industry": "CPG",
+      "industry": "Consumer Packaged Goods",
       "revenueBand": "Above $20 Bn",
       "establishedYear": 2008,
       "cities": [
@@ -22923,7 +22923,7 @@
       "id": "pepsico",
       "name": "PepsiCo",
       "hqCountry": "USA",
-      "industry": "CPG",
+      "industry": "Consumer Packaged Goods",
       "revenueBand": "Above $20 Bn",
       "establishedYear": 2019,
       "cities": [
@@ -22983,7 +22983,7 @@
       "id": "pernod-ricard",
       "name": "Pernod Ricard",
       "hqCountry": "France",
-      "industry": "CPG",
+      "industry": "Consumer Packaged Goods",
       "revenueBand": "$10 Bn – $20 Bn",
       "establishedYear": 2018,
       "cities": [
@@ -23045,7 +23045,7 @@
       "id": "philip-morris-international",
       "name": "Philip Morris International",
       "hqCountry": "USA",
-      "industry": "CPG",
+      "industry": "Consumer Packaged Goods",
       "revenueBand": "Above $20 Bn",
       "establishedYear": 2021,
       "cities": [
@@ -24472,7 +24472,7 @@
       "id": "reckitt-benckiser",
       "name": "Reckitt Benckiser",
       "hqCountry": "UK",
-      "industry": "CPG",
+      "industry": "Consumer Packaged Goods",
       "revenueBand": "$10 Bn – $20 Bn",
       "establishedYear": 2012,
       "cities": [
@@ -29761,7 +29761,7 @@
       "id": "the-magnum-ice-cream-company",
       "name": "The Magnum Ice Cream Company",
       "hqCountry": "Netherlands",
-      "industry": "CPG",
+      "industry": "Consumer Packaged Goods",
       "revenueBand": "$5 Bn – $10 Bn",
       "establishedYear": 2025,
       "cities": [
@@ -30971,7 +30971,7 @@
       "id": "twinings",
       "name": "Twinings",
       "hqCountry": "UK",
-      "industry": "CPG",
+      "industry": "Consumer Packaged Goods",
       "revenueBand": "$500 Mn – $1 Bn",
       "establishedYear": 2021,
       "cities": [
@@ -31236,7 +31236,7 @@
       "id": "unilever",
       "name": "Unilever",
       "hqCountry": "UK",
-      "industry": "CPG",
+      "industry": "Consumer Packaged Goods",
       "revenueBand": "Above $20 Bn",
       "establishedYear": 2006,
       "cities": [
@@ -34691,7 +34691,7 @@
       "id": "anora",
       "name": "Anora",
       "hqCountry": "Finland",
-      "industry": "CPG",
+      "industry": "Consumer Packaged Goods",
       "revenueBand": "$100 Mn – $500 Mn",
       "establishedYear": 2021,
       "cities": [
@@ -36901,7 +36901,7 @@
       "id": "unicharm",
       "name": "Unicharm",
       "hqCountry": "Japan",
-      "industry": "CPG",
+      "industry": "Consumer Packaged Goods",
       "revenueBand": "$5 Bn – $10 Bn",
       "establishedYear": 2008,
       "cities": [
@@ -39560,7 +39560,7 @@
     {
       "id": "cpg-food",
       "name": "Packaged food",
-      "industry": "CPG",
+      "industry": "Consumer Packaged Goods",
       "tags": [
         "process-manufacturing",
         "packaged-food",
@@ -39574,7 +39574,7 @@
     {
       "id": "cpg-beverages",
       "name": "Beverages & brewing",
-      "industry": "CPG",
+      "industry": "Consumer Packaged Goods",
       "tags": [
         "process-manufacturing",
         "beverages",
@@ -39587,7 +39587,7 @@
     {
       "id": "cpg-personal-care",
       "name": "Personal care & beauty",
-      "industry": "CPG",
+      "industry": "Consumer Packaged Goods",
       "tags": [
         "process-manufacturing",
         "personal-care",
@@ -39601,7 +39601,7 @@
     {
       "id": "cpg-home-care",
       "name": "Household & home care products",
-      "industry": "CPG",
+      "industry": "Consumer Packaged Goods",
       "tags": [
         "process-manufacturing",
         "household-products",
@@ -39613,7 +39613,7 @@
     {
       "id": "cpg-diversified",
       "name": "Diversified consumer goods",
-      "industry": "CPG",
+      "industry": "Consumer Packaged Goods",
       "tags": [
         "process-manufacturing",
         "brand-owner",

@@ -1,3 +1,5 @@
+import { Fragment } from "react";
+
 import { cn } from "@/lib/utils";
 
 /**
@@ -415,6 +417,248 @@ export function NestedBar({
         </div>
       </div>
       {axisNote ? <AxisNote>{axisNote}</AxisNote> : null}
+    </div>
+  );
+}
+
+/* ==========================================================================
+   NestedSteps — three populations, each inside the last
+
+   `NestedBar` above draws a part inside its total, which is two levels. This is
+   the same claim at three: the industry, the slice of it that is comparable to the
+   visitor, and the companies actually named on the page.
+
+   **It is deliberately NOT a divided bar, and the distinction is the claim rather
+   than the style.** `ProportionSplit` and `StackedShare` say "these parts ARE the
+   whole" — the segments sum to the total and sit beside one another. These three
+   figures do not sum to anything: 5 is inside 314 which is inside 656. Drawn as
+   one divided bar the reader would add them, and drawn as a row of independent
+   bars they would lose the containment that is the entire point. Stepped tracks on
+   one shared axis say "each of these is inside the one above it", which is what is
+   true.
+
+   **Colour marks the lead, not a quantity.** Length is the quantity here and every
+   figure is in text beside its own track, so the depth step on the innermost row is
+   free to mean "the ones named above" instead. That is the same convention
+   `ProportionSplit` uses for its `lead` segment, and it is why this chart does not
+   walk the ordinal ramp: a ramp would put the smallest, most relevant population in
+   the palest step, where it would be a sliver nobody could see.
+
+   **Both fills are LIGHT steps, and that is a contrast constraint rather than a
+   preference.** The figures sit on the tracks — which is what keeps three rows to
+   the height of three rows — so every fill has to take black ink at AA wherever a
+   label happens to overhang it. `teal-200` measures 12.73:1 against black and
+   `teal-300` 9.06:1; `teal-500` is 4.09:1 and fails, and `--ansr-accent` is 2.14:1.
+   So the accent teal is unavailable here despite being the obvious choice for the
+   lead, and `teal-400` is unavailable for the separate reason the palette already
+   bans it in a chart on a light ground. Do not "strengthen" either fill without
+   re-measuring the ink on it.
+   ========================================================================== */
+
+export interface NestedStep {
+  label: string;
+  /** Already formatted. The track is a second reading of this. */
+  figure: string;
+  /** 0 to 1 against the outermost population. */
+  share: number;
+  /** The companies named on the page. At most one step, and it is the last. */
+  lead?: boolean;
+}
+
+export function NestedSteps({
+  steps,
+  axisNote,
+}: {
+  steps: readonly NestedStep[];
+  axisNote?: string;
+}) {
+  return (
+    <div className="flex flex-col gap-3">
+      <dl className="flex flex-col gap-1.5">
+        {steps.map((step) => (
+          <div key={step.label} className="relative">
+            {/* The full extent of the outermost population, drawn on every row, so
+                the three tracks share one visible axis rather than each being its
+                own private chart. Without it a 0.8% innermost step reads as a mark
+                floating at the leading edge of nothing. */}
+            <div aria-hidden="true" className="h-9 w-full bg-surface-sunken" />
+            <div
+              aria-hidden="true"
+              className={cn(
+                "absolute inset-y-0 start-0",
+                step.lead ? "bg-teal-300" : "bg-teal-200",
+              )}
+              // A floor, so the named handful is a visible step rather than an
+              // apparently empty row.
+              style={{ width: `${Math.max(step.share * 100, 2)}%` }}
+            />
+            {/* Ink is black on every row, whatever it overhangs — see the block
+                comment. The lead is marked by weight on its LABEL as well as by the
+                depth step, so the distinction survives greyscale. */}
+            <div className="absolute inset-0 flex items-center gap-2 px-3">
+              <dd className="text-base font-bold text-text tabular-nums">
+                {step.figure}
+              </dd>
+              <dt
+                className={cn(
+                  "min-w-0 truncate text-sm text-text",
+                  step.lead ? "font-semibold" : "",
+                )}
+              >
+                {step.label}
+              </dt>
+            </div>
+          </div>
+        ))}
+      </dl>
+      {axisNote ? <AxisNote>{axisNote}</AxisNote> : null}
+    </div>
+  );
+}
+
+/* ==========================================================================
+   Containment — three populations as one overlapping z-stack
+
+   The shape ANSR asked for, and it replaces `NestedSteps` on the peer landscape.
+   Three bars sharing a leading edge, drawn on top of one another rather than under
+   one another: widest and lightest at the back, narrowest and darkest in front.
+
+   **Why it beats the stepped version at saying the same thing.** Stepped tracks put
+   a gap between each row, and a gap is the one thing the eye reliably reads as
+   separation — so three populations that are inside one another were drawn as three
+   rows that are beside one another, and the containment had to be carried by the
+   labels. Overlapping bars have no gap to misread: the smaller ones are visibly ON
+   the larger, which is the claim.
+
+   It is still not a divided bar, for the reason `NestedSteps` was not: these figures
+   do not sum to anything. 314 is inside 656 which is inside 1,834.
+
+   Two rules the component enforces rather than trusts:
+
+     - **Each layer's figure is in text, on or beside its own bar.** Every mark in
+       this project carries its figure, and here the label is also what stops three
+       nested rectangles being a decoration.
+     - **A bar too short to hold its label puts the label OUTSIDE it.** A thin
+       industry takes this branch every time — two companies against a national base
+       of 1,834 is a 0.1% bar — and the alternative is a figure clipped to nothing.
+       Outside, the label lands on the layer behind, which is a light step and takes
+       black ink at AA.
+   ========================================================================== */
+
+export interface ContainmentLayer {
+  label: string;
+  /** Already formatted. The bar is a second reading of this. */
+  figure: string;
+  /** 0 to 1 against the outermost layer. */
+  share: number;
+}
+
+/**
+ * The depth ramp, picked by how many layers there are rather than by position.
+ *
+ * Two layers take the ends of the ramp and three take all of it, so a two-layer
+ * chart — which is what an industry with no sub-industry selected produces — is not
+ * drawn as two adjacent steps a reader cannot separate. `teal-100` against
+ * `teal-200` is a 1.2:1 difference; against `teal-300` it is worth looking at.
+ *
+ * Every fill is a LIGHT step because every one of them may end up under a label; see
+ * the CSS block for the measurements and for why the accent teal is unavailable
+ * here.
+ */
+const CONTAINMENT_RAMP: Record<number, readonly string[]> = {
+  1: ["bg-teal-100"],
+  2: ["bg-teal-100", "bg-teal-300"],
+  3: ["bg-teal-100", "bg-teal-200", "bg-teal-300"],
+};
+
+export function Containment({
+  layers,
+}: {
+  layers: readonly ContainmentLayer[];
+}) {
+  const count = layers.length;
+  const ramp = CONTAINMENT_RAMP[count] ?? CONTAINMENT_RAMP[3]!;
+  /**
+   * **The bars step DOWN from a shared top edge and all end on the same bottom
+   * edge, which is what makes the labels possible.**
+   *
+   * Concentric was the first attempt: every bar centred on one block axis, each
+   * label at its own bar's trailing end. It reads correctly at 1440 and collides at
+   * 390 — the outermost bar's right-aligned label and a 10%-wide inner bar's
+   * outside label end up in the same 40px of the same line, because both are
+   * vertically centred on the same axis. There is no width at which that is
+   * reliably safe, since the gap between them is a function of the ratio between two
+   * real figures.
+   *
+   * Stepping the top edge gives every layer an exposed horizontal band of its own,
+   * so a label sits inside its own layer's band and can never meet another. The
+   * bars still share a leading edge, still overlap along the z axis, and still run
+   * widest-and-lightest at the back — the layer beneath is visible above each one,
+   * which is what says "inside".
+   *
+   * The band is `1/n` of the stack, so two layers split it in half and three in
+   * thirds. Derived rather than tabulated: a table would have to be extended the
+   * first time a fourth population existed.
+   */
+  const band = 100 / count;
+
+  return (
+    <div className="gcc-containment">
+      {layers.map((layer, index) => {
+        // A floor, so a genuinely tiny population is a visible sliver rather than an
+        // apparently missing layer. A thin industry against the national base is
+        // 0.1%, and that case is the reason the floor exists.
+        const width = Math.max(layer.share * 100, 1.5);
+        return (
+          /* A real fragment rather than a `display: contents` wrapper. Both flatten
+             the box tree, but `contents` leaves the wrapper in the DOM — which puts
+             each bar first among ITS OWN siblings, so the `:first-of-type` rule that
+             suppresses the outermost layer's shadow would have matched every one of
+             them. A fragment emits no node, so the bars really are consecutive
+             siblings. */
+          <Fragment key={layer.label}>
+            <div
+              aria-hidden="true"
+              className={cn(
+                "gcc-containment__bar",
+                ramp[Math.min(index, ramp.length - 1)],
+              )}
+              style={
+                {
+                  insetBlockStart: `${index * band}%`,
+                  blockSize: `${100 - index * band}%`,
+                  inlineSize: `${width}%`,
+                  "--gcc-layer-index": index,
+                } as React.CSSProperties
+              }
+            />
+            {/* The figure and its label, in their own layer above every bar, inside
+                their own layer's exposed band and aligned to the shared leading edge.
+                A label on a narrow layer overflows onto the lighter fills behind it,
+                which is safe: every fill this chart uses takes black ink at AA, and
+                no other label is in this band. */}
+            <div
+              className="gcc-containment__label"
+              style={
+                {
+                  insetBlockStart: `${index * band}%`,
+                  blockSize: `${band}%`,
+                  "--gcc-layer-index": index,
+                } as React.CSSProperties
+              }
+            >
+              <span className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
+                <span className="text-lg leading-none font-bold text-text tabular-nums md:text-2xl">
+                  {layer.figure}
+                </span>
+                <span className="text-xs font-medium text-text md:text-sm">
+                  {layer.label}
+                </span>
+              </span>
+            </div>
+          </Fragment>
+        );
+      })}
     </div>
   );
 }
@@ -902,12 +1146,25 @@ export function FractionBar({
   value,
   ofLabel,
   share,
+  shareLabel,
   label,
   ground = "surface",
 }: {
   value: string;
   ofLabel: string;
   share: number;
+  /**
+   * The bar's own figure, in text.
+   *
+   * **This was missing, and its absence was a quiet breach of this file's governing
+   * rule**: every mark carries its figure in text beside it. The fraction's
+   * numerator and denominator were both on the page and the PROPORTION — the thing
+   * the bar draws — was nowhere, so the one mark here was the only one in the
+   * project a reader could not read. It also turned out to be the most useful
+   * number in the band: "181 of the Fortune Global 500" is a count, "36% of the
+   * list" is the claim.
+   */
+  shareLabel?: string;
   label: string;
   /**
    * The one mark in this file that renders on the inverse ground, because Screen
@@ -940,10 +1197,13 @@ export function FractionBar({
           {ofLabel}
         </span>
       </p>
+      {/* Full width, not `max-w-xs`. Capped, the track stopped short of its own
+          column and read as a bar that had failed to finish rather than as an axis
+          the fill is a fraction of. */}
       <div
         aria-hidden="true"
         className={cn(
-          "h-2 w-full max-w-xs",
+          "h-2 w-full",
           // On the inverse ground the empty part of the track has to be lighter
           // than the band and darker than the fill, or the bar reads as full.
           inverse ? "bg-surface-inverse-soft" : "bg-surface-sunken",
@@ -954,14 +1214,35 @@ export function FractionBar({
           style={{ width: `${Math.max(share * 100, 1.5)}%` }}
         />
       </div>
-      <p
+      {/* A rule over the label, which is `Stat`'s shape. The two components stand
+          side by side in Screen 1's scale band, and without it the one figure with
+          no denominator to draw looked like a different kind of object rather than
+          the same object without a bar. */}
+      <div
         className={cn(
-          "text-base font-medium",
-          inverse ? "text-text-inverse" : "text-text",
+          "border-t pt-3",
+          inverse ? "border-border-inverse" : "border-border-strong",
         )}
       >
-        {label}
-      </p>
+        <p
+          className={cn(
+            "text-base font-medium",
+            inverse ? "text-text-inverse" : "text-text",
+          )}
+        >
+          {label}
+        </p>
+        {shareLabel ? (
+          <p
+            className={cn(
+              "mt-1 text-xs tabular-nums",
+              inverse ? "text-text-inverse-muted" : "text-text-muted",
+            )}
+          >
+            {shareLabel}
+          </p>
+        ) : null}
+      </div>
     </div>
   );
 }

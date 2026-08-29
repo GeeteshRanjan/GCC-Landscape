@@ -3,7 +3,7 @@ import { expect, test } from "@playwright/test";
 import { waitForDraftSaved } from "./helpers";
 
 /**
- * The admin business-types tab, and the company table's line-of-business column.
+ * The admin business-types tab, and the company table's sub-industry column.
  *
  * Numbered `3-` so it lands in the `admin` project (`[2345]-`) and runs before
  * `5-publish.spec.ts` mutates the fixture dataset. A spec numbered outside every
@@ -27,7 +27,7 @@ test("lists the catalogue and filters it by industry", async ({ page }) => {
   ).toBeVisible();
 });
 
-test("the company table shows the line of business, and finds it by name", async ({
+test("the company table shows the sub-industry, and finds it by name", async ({
   page,
 }) => {
   await page.goto("/admin");

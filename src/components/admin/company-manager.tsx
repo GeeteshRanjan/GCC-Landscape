@@ -170,7 +170,7 @@ export function CompanyManager() {
               <TableRow>
                 <TableHead scope="col">Company</TableHead>
                 <TableHead scope="col">Industry</TableHead>
-                <TableHead scope="col">Line of business</TableHead>
+                <TableHead scope="col">Sub-industry</TableHead>
                 <TableHead scope="col">Revenue band</TableHead>
                 <TableHead scope="col">Cities</TableHead>
                 <TableHead scope="col">FTE</TableHead>

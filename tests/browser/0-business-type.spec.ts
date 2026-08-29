@@ -1,74 +1,279 @@
 import { expect, test } from "@playwright/test";
 
+import { choose, chooseSubIndustry } from "./helpers";
+
 /**
- * The line-of-business input, against a real production build.
+ * The sub-industry input, against a real production build.
  *
  * Numbered `0-` so it lands in the `public` project and runs before
  * `5-publish.spec.ts` rewrites the fixture dataset — the counts asserted here are
  * the seeded ones. A spec numbered outside every project's `testMatch` silently
  * never runs; see playwright.config.ts.
  *
- * What only a browser can cover, and therefore what is here: the select repopulating
- * when industry changes, a stale selection being cleared rather than submitted, the
- * enabling being ANNOUNCED rather than silent, and the peer set actually changing.
- * The scoring itself is unit-tested in tests/unit/similarity.
+ * **It is no longer a field of its own.** Sub-industries are a second level inside
+ * the industry dropdown, so choosing one answers both questions in a single act.
+ * What that changed for this spec: there is no disabled state to assert and no live
+ * region announcing that a control became usable, because there is no control to
+ * enable — the level is simply not there until the industry it belongs to is opened.
+ *
+ * **And that second level is a CASCADE now, not an indent.** Pressing an industry
+ * commits it and opens a pane beside the list rather than expanding rows inside it,
+ * so two things this spec asserts moved: there is no expander zone to press, and the
+ * child rows are not inside the `tree` element — the pane is `aria-owns`-ed by its
+ * parent row instead, because a cascade puts the child list in a different box.
+ * `aria-expanded` on the parent row is still the state, and is still where the
+ * relationship is asserted.
+ *
+ * What only a browser can cover, and therefore what is still here: the nesting being
+ * real (an industry's own sub-industries and nobody else's), a sub-industry setting
+ * its parent industry with it, switching industry dropping a selection made under the
+ * old one, and the peer set actually changing. The scoring itself is unit-tested in
+ * tests/unit/similarity.
  */
 
-const CONTROL = /^Line of business/;
+const INDUSTRY = "Industry";
 
 async function chooseIndustry(page: import("@playwright/test").Page, industry: string) {
-  await page.getByLabel("Industry").selectOption(industry);
+  await choose(page, INDUSTRY, industry);
 }
 
 async function submit(
   page: import("@playwright/test").Page,
-  options: { businessType?: string } = {},
+  options: { industry?: string; businessType?: string } = {},
 ) {
-  await page.getByLabel("Annual revenue").selectOption("Above $20 Bn");
-  await page.getByLabel("Headquarters").selectOption("USA");
-  if (options.businessType) {
-    await page.getByLabel(CONTROL).selectOption({ label: options.businessType });
+  if (options.businessType && options.industry) {
+    await chooseSubIndustry(page, options.industry, options.businessType);
   }
+  await choose(page, "Annual revenue", "Above $20 Bn");
+  await choose(page, "Headquarters", "USA");
   await page.getByRole("button", { name: "See my results" }).click();
 }
 
-test("is disabled until an industry is chosen, and says so", async ({ page }) => {
-  await page.goto("/");
-
-  const control = page.getByLabel(CONTROL);
-  await expect(control).toBeDisabled();
-  await expect(page.getByText("Available once you choose an industry.")).toBeVisible();
-
-  await chooseIndustry(page, "Retail");
-  await expect(control).toBeEnabled();
-  // The enabling is announced through an aria-live region rather than left silent,
-  // which is the whole reason the control is rendered disabled from the start
-  // instead of appearing on selection and shifting the form under the visitor.
-  //
-  // The subject is that the region SAYS something once the control is live, not the
-  // sentence it says, so the pattern stops at the count and does not anchor on the
-  // punctuation after it. Anchoring on a full stop is what broke this on a copy pass
-  // that only replaced the clause following it.
-  await expect(page.getByText(/\d+ to choose from/)).toBeVisible();
-});
-
-test("repopulates when the industry changes and drops a stale selection", async ({
+test("cascades each industry's own sub-industries, and nobody else's", async ({
   page,
 }) => {
   await page.goto("/");
 
-  await chooseIndustry(page, "Retail");
-  const control = page.getByLabel(CONTROL);
-  await control.selectOption({ label: "Apparel & footwear brand" });
-  await expect(control).not.toHaveValue("");
+  await page.getByLabel(INDUSTRY).click();
+  const tree = page.getByRole("tree");
+  await expect(tree).toBeVisible();
 
-  // Retail's options cannot exist under another industry, so the selection has to
-  // clear. Left in place the server rejects it — correctly, since ignoring it would
+  // Closed at rest, so the panel opens as a list of industries rather than as 182
+  // rows. `aria-expanded` is the state, and it is on the row rather than on a button
+  // inside it — interactive descendants of a `treeitem` are invalid ARIA.
+  const retail = tree.getByRole("treeitem", { name: "Retail", exact: true }).first();
+  await expect(retail).toHaveAttribute("aria-expanded", "false");
+  await expect(
+    page.getByRole("treeitem", { name: "Apparel & footwear brand", exact: true }),
+  ).toHaveCount(0);
+
+  await retail.click();
+  await expect(retail).toHaveAttribute("aria-expanded", "true");
+  // The pane is a separate box, so the row that opened it is the only place the
+  // relationship lives. Losing this attribute would leave a screen-reader user with
+  // a pane that belongs to nothing.
+  await expect(retail).toHaveAttribute("aria-owns", /\S/);
+  // Its leading row is the way out that keeps the broad answer. Without it, choosing
+  // "all of Retail" would have no target at all — the press that opened the pane
+  // does not close the panel.
+  await expect(page.getByRole("treeitem", { name: "All of Retail" })).toBeVisible();
+
+  // Retail's own sub-industry, at the second level, and NOT inside the tree element:
+  // `aria-owns` carries the containment because the cascade cannot. A BFSI
+  // sub-industry cannot be here — the nesting is per industry, and a company may
+  // only carry a business type scoped to its own.
+  const sub = page
+    .getByRole("treeitem", { name: "Apparel & footwear brand", exact: true })
+    .first();
+  await expect(sub).toBeVisible();
+  await expect(sub).toHaveAttribute("aria-level", "2");
+  await expect(
+    page.getByRole("treeitem", { name: "Retail & commercial banking", exact: true }),
+  ).toHaveCount(0);
+});
+
+/**
+ * The pane does not grow the list it came out of.
+ *
+ * This is the reason the second level stopped being an indent. Expanding nine rows
+ * inside a popup that already overhangs the form card ran it a third of the way into
+ * the customer-logo strip below, and changed the panel's height under the pointer
+ * mid-interaction. A fixed height whatever is open is the property that fixed it, and
+ * it is the sort of thing that quietly regresses the next time somebody reaches for
+ * the simpler nesting.
+ */
+test("opening a cascade does not change the panel's height", async ({ page }) => {
+  await page.goto("/");
+  await page.getByLabel(INDUSTRY).click();
+
+  const tree = page.getByRole("tree");
+  // `clientHeight`, not a bounding box. The panel arrives on a 180ms entrance that
+  // scales it from 0.98, so a box measured on open is 250.88 rather than 256 and the
+  // comparison fails on the animation rather than on the layout. Layout size is what
+  // this test is about.
+  const height = () => tree.evaluate((node) => node.clientHeight);
+
+  const before = await height();
+  await tree.getByRole("treeitem", { name: "Retail", exact: true }).first().click();
+  await expect(page.getByRole("treeitem", { name: "All of Retail" })).toBeVisible();
+
+  expect(await height()).toBe(before);
+});
+
+/**
+ * The pane's two shapes, and the one way this geometry can break the page.
+ *
+ * It opens on the TRAILING side, so it extends past the form card toward the window
+ * edge — and the room there is `layoutWidth / 2 − 400` above 1280, which is not enough
+ * below 1320px. Above that threshold the widths are hardcoded from a measured table
+ * (see `.gcc-select-pane`), because clamping them at runtime would mean reading the
+ * viewport and the iframe forbids that. So the failure mode is a pane that overruns the
+ * window and gives the framed document a horizontal scrollbar — which the parent page
+ * cannot fix, since it sizes the frame's height and not its width.
+ *
+ * Below the threshold the pane covers the parent list as a drill-in. Both shapes are
+ * asserted here because nothing else in the suite runs the form at more than one width.
+ */
+test.describe("the cascade fits the width it is given", () => {
+  const widths = [390, 1024, 1280, 1366, 1440, 1536, 1920] as const;
+
+  for (const width of widths) {
+    test(`adds no horizontal scrolling at ${width}px`, async ({ page }) => {
+      await page.setViewportSize({ width, height: 900 });
+      await page.goto("/");
+      await page.getByLabel(INDUSTRY).click();
+      await page
+        .getByRole("treeitem", { name: "Retail", exact: true })
+        .first()
+        .click();
+      await expect(page.getByRole("treeitem", { name: "All of Retail" })).toBeVisible();
+
+      const { scrollWidth, clientWidth } = await page.evaluate(() => ({
+        scrollWidth: document.documentElement.scrollWidth,
+        clientWidth: document.documentElement.clientWidth,
+      }));
+      expect(scrollWidth).toBeLessThanOrEqual(clientWidth);
+    });
+  }
+
+  test("drills in below the threshold, and sits beside the panel above it", async ({
+    page,
+  }) => {
+    /**
+     * Both the panel and the pane arrive on an entrance — the panel scales from 0.98
+     * and the pane slides 4px — so a box measured on open is a few pixels off in a
+     * direction that depends on the frame. Waiting for the finite animations settles
+     * it; the marquee is excluded because an infinite one never finishes and would
+     * hang here.
+     */
+    const settle = () =>
+      page.evaluate(() =>
+        Promise.all(
+          document
+            .getAnimations()
+            .filter(
+              (animation) =>
+                animation.effect?.getComputedTiming().iterations !== Infinity,
+            )
+            .map((animation) => animation.finished),
+        ).then(() => undefined),
+      );
+
+    const edges = async () => {
+      await settle();
+      const pane = await page
+        .getByRole("group", { name: "Retail" })
+        .evaluate((node) => node.closest("div[class*=pane]")!.getBoundingClientRect().x);
+      const panel = await page
+        .getByRole("tree")
+        .evaluate((node) => node.getBoundingClientRect());
+      return { pane, listStart: panel.x, listEnd: panel.right };
+    };
+
+    const open = async (width: number) => {
+      await page.setViewportSize({ width, height: 900 });
+      await page.goto("/");
+      await page.getByLabel(INDUSTRY).click();
+      await page.getByRole("treeitem", { name: "Retail", exact: true }).first().click();
+      await expect(page.getByRole("treeitem", { name: "All of Retail" })).toBeVisible();
+    };
+
+    // Narrow: the pane covers the list it came out of, so it starts where that list
+    // starts. It covers the filter row too, which is what a drill-in is. Asserted at a
+    // phone width AND just under the threshold, because 1366 taking the drill-in is a
+    // deliberate choice rather than a width nobody thought about.
+    for (const width of [390, 1366]) {
+      await open(width);
+      const narrow = await edges();
+      expect(narrow.pane, `${width}px should drill in`).toBe(narrow.listStart);
+    }
+
+    // Wide: it clears the list's trailing edge entirely, which is the whole claim of
+    // opening on the trailing side. Both steps, since each has its own width.
+    for (const width of [1440, 1536]) {
+      await open(width);
+      const wide = await edges();
+      expect(wide.pane, `${width}px should sit beside the panel`).toBeGreaterThanOrEqual(
+        wide.listEnd,
+      );
+    }
+  });
+
+  test("the drill-in offers a way back that a screen reader can reach", async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 390, height: 900 });
+    await page.goto("/");
+    await page.getByLabel(INDUSTRY).click();
+    await page.getByRole("treeitem", { name: "Retail", exact: true }).first().click();
+
+    // A real button, not a decorated div. On a touch screen reader it is the only exit
+    // from the drill-in — ArrowLeft is not available there.
+    const back = page.getByRole("button", { name: /^Close Retail sub-industries$/ });
+    await expect(back).toBeVisible();
+    await back.click();
+    await expect(page.getByRole("treeitem", { name: "All of Retail" })).toHaveCount(0);
+    // And the industry it committed on the way in is still the answer. Located by ROLE
+    // rather than by label: the open tree is `aria-label`led "Choose your industry",
+    // which `getByLabel("Industry")` also matches, so a label lookup is ambiguous for
+    // as long as the panel is open.
+    await expect(page.getByRole("combobox", { name: INDUSTRY })).toHaveText("Retail");
+  });
+});
+
+test("choosing a sub-industry answers the industry with it", async ({ page }) => {
+  await page.goto("/");
+
+  await chooseSubIndustry(page, "Retail", "Apparel & footwear brand");
+
+  /*
+    A custom combobox carries its answer as the trigger's LABEL, not a `value`
+    property — a button has none, so `toHaveValue` would silently compare against
+    undefined and pass whatever the control did.
+
+    Both halves are shown, and that is the assertion rather than a formatting
+    detail: the field is labelled "Industry", so a trigger reading only "Apparel &
+    footwear brand" would leave the industry answered and invisible.
+  */
+  const control = page.getByLabel(INDUSTRY);
+  await expect(control).toContainText("Retail");
+  await expect(control).toContainText("Apparel & footwear brand");
+});
+
+test("switching industry drops a sub-industry chosen under the old one", async ({
+  page,
+}) => {
+  await page.goto("/");
+
+  await chooseSubIndustry(page, "Retail", "Apparel & footwear brand");
+  const control = page.getByLabel(INDUSTRY);
+  await expect(control).toContainText("Apparel & footwear brand");
+
+  // Retail's sub-industries cannot exist under another industry, so the selection has
+  // to go. Left in place the server rejects it — correctly, since ignoring it would
   // return an industry-wide peer set while the visitor believes they narrowed it.
   await chooseIndustry(page, "BFSI");
-  await expect(control).toHaveValue("");
-  await expect(control.getByRole("option", { name: "Apparel & footwear brand" })).toHaveCount(0);
-  await expect(control.getByRole("option", { name: "Retail & commercial banking" })).toHaveCount(1);
+  await expect(control).toHaveText("BFSI");
 });
 
 test("skipping it returns the same peers as before the field existed", async ({
@@ -80,24 +285,28 @@ test("skipping it returns the same peers as before the field existed", async ({
 
   await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
   // The industry-level split, not the business-type one: two segments rather than
-  // three, because there is no line of business to draw a middle band from.
+  // three, because there is no sub-industry to draw a middle band from.
   const industry = page.locator("#industry");
   await expect(
-    industry.getByText(/Retail companies already run a centre in India/),
+    industry.getByText(/Retail companies run a centre in India/),
   ).toBeVisible();
-  await expect(industry.getByText("Named above")).toBeVisible();
-  await expect(industry.getByText("Elsewhere in your industry")).toBeVisible();
-  await expect(
-    industry.getByText("More in a comparable line of business"),
-  ).toHaveCount(0);
+  /**
+   * **The containment chart's three layers, and with no sub-industry the innermost one
+   * is the comparison set rather than a cohort.** The chart substitutes it deliberately
+   * — two layers is the shape it looks worst in and says least — so what distinguishes
+   * this branch from the one below is WHICH third layer is drawn, not how many there
+   * are.
+   */
+  await expect(industry.getByText("GCCs across India")).toBeVisible();
+  await expect(industry.getByText("shown above")).toBeVisible();
+  await expect(industry.getByText("in your sub-industry")).toHaveCount(0);
 });
 
-test("choosing it narrows the peer set to the same line of business", async ({
+test("choosing it narrows the peer set to the same sub-industry", async ({
   page,
 }) => {
   await page.goto("/");
-  await chooseIndustry(page, "Retail");
-  await submit(page, { businessType: "Apparel & footwear brand" });
+  await submit(page, { industry: "Retail", businessType: "Apparel & footwear brand" });
 
   await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
 
@@ -105,12 +314,30 @@ test("choosing it narrows the peer set to the same line of business", async ({
   // the population they were drawn from, then the rest of the industry. That middle
   // segment is what turns a thin peer set into evidence.
   const industry = page.locator("#industry");
+  /**
+   * The third nested step appears: the named peers, the cohort they were drawn from,
+   * then the industry. That middle step is what turns a thin peer set into evidence.
+   *
+   * Two matches, not one, and both are wanted — the step's own label and the
+   * provenance sentence under the chart saying which of the two numbers the five came
+   * out of. `.first()` names the chart's, since that is the subject here.
+   */
+  await expect(industry.getByText("in your sub-industry")).toBeVisible();
+  // And the comparison-set layer gives way to it: three layers, not four.
+  await expect(industry.getByText("shown above")).toHaveCount(0);
+  /**
+   * **The provenance sentence under the chart is gone**, at ANSR's request — "The 5
+   * companies shown above were selected from the 73 in a comparable sub-industry, not
+   * from the industry as a whole." The chart's own three labelled layers are what say
+   * it now, which is why the substitution above matters: the relationship is only
+   * visible if the third layer is drawn.
+   */
   await expect(
-    industry.getByText("More in a comparable line of business"),
-  ).toBeVisible();
+    industry.getByText(/selected from the \d+ in a comparable sub-industry/),
+  ).toHaveCount(0);
   // And the method line names what the peers share rather than a revenue band the
   // peer cards do not even display.
-  await expect(page.getByText(/Matched on line of business/)).toBeVisible();
+  await expect(page.getByText(/Matched on your sub-industry/)).toBeVisible();
 
   /*
     The original complaint, asserted directly: a home-improvement chain is not a
@@ -122,40 +349,51 @@ test("choosing it narrows the peer set to the same line of business", async ({
     anchor and is deliberately industry-wide, so a page-wide assertion would fail
     on intended behaviour and then get "fixed" by weakening the wrong thing.
   */
-  // Direct children only: each peer card contains its own city list, so a
-  // descendant `listitem` query counts ten for five cards.
-  const peerCards = page.locator("ul").first().locator("> li");
-  await expect(peerCards).toHaveCount(5);
-  await expect(peerCards.filter({ hasText: "Lowe's" })).toHaveCount(0);
+  /*
+    The peer block is a LIST of five cards now, not a table — so the count is on
+    `listitem` and each company name is an `h3`. A level-4 heading here would mean the
+    lead card came back; a `rowheader` would mean the table did.
+  */
+  const peers = page.locator("#peers");
+  await expect(peers.getByRole("heading", { level: 4 })).toHaveCount(0);
+  await expect(peers.getByRole("rowheader")).toHaveCount(0);
+  await expect(peers.getByRole("listitem")).toHaveCount(5);
+  await expect(peers.getByRole("heading", { level: 3, name: /Lowe's/ })).toHaveCount(0);
 });
 
 /**
- * The peer block must not contradict itself.
+ * The peer block's lead must describe the set under it.
  *
- * This is the check that was missing. The section's lead was a hardcoded "Same
- * industry, closest revenue band, and companies from your own market first" while
- * the method line three lines below it said revenue band is a preference and a
- * closer business beats a closer size. Both sentences rendered on the same card
- * for months. 336 unit tests and 110 browser tests passed throughout, because
- * nothing asserted the lead — it was found by hand on production.
+ * This is the check that was missing. The lead was a hardcoded "Same industry,
+ * closest revenue band, and companies from your own market first" while the method
+ * line three lines below it said revenue band is a preference and a closer business
+ * beats a closer size. Both sentences rendered on the same card for months, and
+ * nothing asserted either — it was found by hand on production.
  *
- * It is also demonstrably false rather than merely stale: this exact peer set puts
- * H&M (Sweden) and Adidas (Germany) above GAP (USA) for a US visitor, so
+ * **The method line is gone now**, removed at ANSR's request along with the
+ * headquarters column it partly existed to explain, so the lead is the only statement
+ * of method on the block. That makes this test more load-bearing rather than less:
+ * there is no second sentence to catch a wrong one.
+ *
+ * The old lead is also demonstrably false rather than merely stale: this exact peer
+ * set puts H&M (Sweden) and Adidas (Germany) above GAP (USA) for a US visitor, so
  * own-market-first is not what happened.
  */
-test("the peer block's lead agrees with its method line", async ({ page }) => {
+test("the peer block's lead describes the set under it", async ({ page }) => {
   await page.goto("/");
-  await chooseIndustry(page, "Retail");
-  await submit(page, { businessType: "Apparel & footwear brand" });
+  await submit(page, { industry: "Retail", businessType: "Apparel & footwear brand" });
 
   const peers = page.locator("#peers");
   await expect(peers).toBeVisible();
   const block = (await peers.innerText()).replace(/\s+/g, " ");
 
-  // The method line's claim.
-  expect(block).toMatch(/Revenue band is a preference rather than a filter/);
+  // What the lead now has to say on its own: the sub-industry it matched on.
+  expect(block).toMatch(/Matched on your sub-industry/i);
+  // And the footnote it used to agree with really is gone rather than moved.
+  expect(block).not.toMatch(/preferences rather than filters/i);
+  expect(block).not.toMatch(/They all share/i);
 
-  // The two claims the old lead made, which contradict it.
+  // The two claims the old lead made, which the set contradicts.
   expect(block).not.toMatch(/closest revenue band/i);
   expect(block).not.toMatch(/own market first/i);
 
@@ -168,8 +406,7 @@ test("the peer block's lead agrees with its method line", async ({ page }) => {
 
 test("the tag vocabulary never reaches the browser", async ({ page }) => {
   await page.goto("/");
-  await chooseIndustry(page, "Retail");
-  await submit(page, { businessType: "Apparel & footwear brand" });
+  await submit(page, { industry: "Retail", businessType: "Apparel & footwear brand" });
 
   await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
 

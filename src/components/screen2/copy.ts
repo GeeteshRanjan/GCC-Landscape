@@ -34,8 +34,14 @@ import type { GccStatus, PeerViewInput } from "@/data/screen1";
  *     framing across would read every figure as a statement about their peers.
  */
 
-/** The way back to Screen 1. A real control in the flow, not a pinned edge. */
-export const BACK_LABEL = "Back to your peer view";
+/**
+ * The way back to Screen 1 used to be one label here, "Back to your peer view".
+ *
+ * It is now half of `ViewTabs`, the connected tab strip both screens render at the
+ * head of the page, which names both views rather than only the exit — so the labels
+ * live beside that component, where neither screen owns the other's name. See
+ * `screen-header.tsx`.
+ */
 
 /* ==========================================================================
    The header

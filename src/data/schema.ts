@@ -523,10 +523,10 @@ export const siteContentSchema = z.object({
  */
 export const DEFAULT_SITE_CONTENT: SiteContent = {
   hero: {
-    title: "India GCC Intelligence",
+    title: "ANSR GCC Intelligence",
     lead:
-      "Evaluate your GCC opportunity with evidence and benchmarks from 1,800+ " +
-      "global companies operating centres in India.",
+      "A tool to evaluate your GCC opportunity using competitor data and " +
+      "benchmarks from 1,800+ global companies operating centres in India.",
   },
   impactStats: [
     { id: "professionals-hired", value: "225K+", label: "Professionals hired" },

@@ -75,7 +75,7 @@ describe("diffDatasets — site content", () => {
   const content = (
     overrides: Partial<Dataset["siteContent"]> = {},
   ): Dataset["siteContent"] => ({
-    hero: { title: "India GCC Intelligence", lead: "Evaluate your opportunity." },
+    hero: { title: "ANSR GCC Intelligence", lead: "Evaluate your opportunity." },
     impactStats: [
       { id: "hired", value: "225K+", label: "Professionals hired" },
       { id: "centers", value: "210+", label: "Centres established" },

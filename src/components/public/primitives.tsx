@@ -47,6 +47,18 @@ export function formatCount(value: number): string {
 }
 
 /**
+ * A 0-to-1 share as a whole percentage.
+ *
+ * Whole, not one decimal: these are counts over fixed list sizes, so the exact
+ * value is available and "36.2%" invites a precision question about a number whose
+ * usefulness is entirely in its order of magnitude. Rounded once, here, so a
+ * figure and the bar beside it cannot disagree.
+ */
+export function formatShare(share: number): string {
+  return `${Math.round(share * 100)}%`;
+}
+
+/**
  * Professionals, in the units a CIO reads at a glance.
  *
  * The value is already rounded to the nearest ten thousand by
@@ -215,6 +227,203 @@ export function Section({
         )}
       </div>
     </section>
+  );
+}
+
+/**
+ * The flavour a `Panel` is drawn in.
+ *
+ * **Four tones exist because one tone across eight cards is what made the result
+ * surface read as monotonous.** Every card was a white rectangle with a hairline
+ * border and a 16px heading, stacked down one white page — cognitively flat, with
+ * nothing telling the eye that the comparison set and the national scale proof are
+ * different kinds of claim. The tones are not decoration: each one marks a class of
+ * evidence, and they are applied once per class rather than alternated.
+ *
+ *   - `plain` — a white card on whatever ground it sits on. The default, and the
+ *     one used where the CONTENT is the colour: the comparison cards, the map.
+ *   - `tint` — a pale mint fill with a teal heading rule. For a card that has to
+ *     hold its own against a white neighbour without becoming a figure band.
+ *   - `accent` — a teal gradient heading strip over a white body. For the two
+ *     analytical cards that carry a chart, so the chart reads as the subject and
+ *     the card still announces itself.
+ *   - `inverse` — deep teal throughout. Reserved for the terminating scale strip,
+ *     as before.
+ */
+export type PanelTone = "plain" | "tint" | "accent" | "inverse";
+
+/**
+ * A bordered card section — the unit the result surface is built from.
+ *
+ * **This is not a variant of `Section` and it replaces it on the peer view.** A
+ * `Section` is a full-bleed BAND: its own ground, 80–112px of vertical air, a 48px
+ * heading. Seven of them stacked was a landing page, and the peer view is not one —
+ * it is the answer to a form, read by someone who wants to see six things at once
+ * and compare two of them side by side. That wants a grid of cards on one ground,
+ * at enterprise-dashboard density, which is a different component rather than the
+ * same one with smaller padding.
+ *
+ * Three things it fixes that the band system could not:
+ *
+ *   - **Two cards can sit beside each other.** A band owns the full width by
+ *     definition, so the industry context and the largest centres had to be two
+ *     scroll positions rather than one comparison.
+ *   - **The heading stops competing.** A 48px heading over a chart makes the
+ *     heading the loudest thing in the band; here the heading is 16px and the
+ *     figures are the largest thing on the card, which is the correct order for
+ *     evidence.
+ *   - **It is a real landmark.** Same contract as `Section`: `id` names the
+ *     section for `aria-labelledby`, so every card is reachable by role and
+ *     locatable in a test by id rather than by its wording.
+ *
+ * **There is no step number on the heading any more.** The reference composition
+ * numbered its six cards 1 through 6 and this drew them as accent discs. Numbering
+ * asserts that the cards are a SEQUENCE to be worked through in order, which they
+ * are not — they are six independent readings of one result, and a visitor who
+ * cares only about locations is not skipping steps 1 to 4. It also spent the one
+ * accent fill on the surface six times over, on the least informative element of
+ * each card. Removed at ANSR's request, and the `ordinal` prop went with it rather
+ * than being left unused for someone to pass again.
+ *
+ * `lead` is the one line under the heading, for a card whose finding is a sentence
+ * rather than a figure. It sits inside the header block so a card's claim and its
+ * name are one unit, and so no card has to open its body with a paragraph that
+ * looks like content.
+ */
+export function Panel({
+  id,
+  title,
+  lead,
+  tone = "plain",
+  motif,
+  bodyClassName,
+  className,
+  children,
+}: {
+  id: string;
+  title: string;
+  /** The card's finding, in one line. Rendered in the header, not the body. */
+  lead?: string;
+  tone?: PanelTone;
+  /**
+   * A muted brand graphic behind the header. Supplied by the caller so this file
+   * draws no art and knows no file paths; `aria-hidden` is applied here, because a
+   * decorative graphic is never the caller's decision to get wrong.
+   */
+  motif?: React.ReactNode;
+  /** Where a card is a grid child, its own column span. */
+  className?: string;
+  bodyClassName?: string;
+  children: React.ReactNode;
+}) {
+  const headingId = `${id}-heading`;
+  const inverse = tone === "inverse";
+  const accent = tone === "accent";
+
+  return (
+    <section
+      id={id}
+      aria-labelledby={headingId}
+      className={cn(
+        // **Radius `lg` and a soft shadow, where this was radius `md` and a border
+        // alone.** The rule that the public screens carry no shadow was written when
+        // every card sat on one white page, and it is what made eight cards read as
+        // eight outlined rectangles. These cards now sit on alternating grounds, and a
+        // card that has to read as lifted off a pale mint band needs elevation from
+        // somewhere — a hairline against a tint is nearly invisible. `lg` is the same
+        // step the entry point's form card takes, which is the composition this
+        // surface is being brought into line with.
+        "gcc-panel relative flex min-w-0 flex-col overflow-hidden rounded-lg border",
+        inverse
+          ? "border-border-inverse bg-surface-inverse"
+          : tone === "tint"
+            ? "border-border-tint bg-surface-pale shadow-xs"
+            : "border-border-strong/60 bg-surface shadow-sm",
+        className,
+      )}
+    >
+      {motif ? (
+        <div aria-hidden="true" className="pointer-events-none absolute inset-0">
+          {motif}
+        </div>
+      ) : null}
+      {/* The header. `accent` draws it as the teal gradient strip, which is the one
+          place a card announces itself in colour rather than in weight; the others
+          keep a hairline under a plain fill. Either way the heading wraps inside its
+          own column rather than pushing the row taller than its neighbour's. */}
+      <div
+        className={cn(
+          "relative flex flex-col gap-1.5 px-5 py-4 md:px-6 md:py-4.5",
+          accent
+            ? "gcc-ground-gradient"
+            : inverse
+              ? "border-b border-border-inverse"
+              : tone === "tint"
+                ? "border-b border-border-tint"
+                : "border-b border-border",
+        )}
+      >
+        <h2
+          id={headingId}
+          className={cn(
+            // 16/18px, not 48. On this surface the figures are the subject and the
+            // heading is the label.
+            "min-w-0 text-base font-semibold tracking-heading text-pretty md:text-lg",
+            inverse || accent ? "text-text-inverse" : "text-text",
+          )}
+        >
+          {title}
+        </h2>
+        {lead ? (
+          <p
+            className={cn(
+              "max-w-measure text-sm",
+              inverse || accent ? "text-text-inverse-muted" : "text-text-muted",
+            )}
+          >
+            {lead}
+          </p>
+        ) : null}
+      </div>
+      <div className={cn("relative px-5 py-5 md:px-6 md:py-6", bodyClassName)}>
+        {children}
+      </div>
+    </section>
+  );
+}
+
+/**
+ * A quiet trailing control on a `Panel`'s heading row, or under its body.
+ *
+ * Text plus a chevron, never a filled button: there is one filled control per
+ * screen and it is not a disclosure. The chevron is `aria-hidden` because the
+ * label already says what pressing it does.
+ */
+export function PanelAction({
+  children,
+  onClick,
+  expanded,
+  controls,
+}: {
+  children: React.ReactNode;
+  onClick: () => void;
+  /** Set when this toggles a region, so the state is announced rather than shown. */
+  expanded?: boolean;
+  controls?: string;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-expanded={expanded}
+      aria-controls={controls}
+      className="inline-flex min-h-9 items-center gap-1.5 text-sm font-semibold text-accent-teal transition-colors duration-fast ease-standard hover:text-text"
+    >
+      {children}
+      <span aria-hidden="true" className="text-base leading-none">
+        {expanded === true ? "\u2013" : "\u2192"}
+      </span>
+    </button>
   );
 }
 

@@ -3,6 +3,7 @@ import { fteDisplay, fteMidpoint, TIER1_CITIES } from "./derive";
 import { MAP_HEIGHT, MAP_WIDTH, projectCity, type Point } from "./geo";
 import {
   cityDensity,
+  companiesInIndustry,
   largestInIndustry,
   matchPeers,
   nationalScale,
@@ -61,7 +62,7 @@ export interface PeerViewInput {
   hqCountry: string;
   gccStatus: GccStatus;
   /**
-   * The visitor's line of business, from `dataset.businessTypes`.
+   * The visitor's sub-industry, from `dataset.businessTypes`.
    *
    * The one OPTIONAL input with a data consumer, and the sixth overall. It earns
    * its place because industry alone cannot tell a footwear brand from a
@@ -135,6 +136,34 @@ export interface TieredOptions {
 const COMMON_INDUSTRIES = 6;
 
 /**
+ * Industries pinned into the leading tier regardless of how many companies they
+ * have.
+ *
+ * **This is a business input, not a derivation, and it is the one place in the
+ * dropdown ordering that is.** Everything else here is computed from company
+ * counts precisely so nobody has to maintain a list of "important" values. These
+ * two are different: ANSR expects enquiries from retail and consumer goods out of
+ * proportion to how much of the researched dataset they occupy — Retail is eighth
+ * by count and Consumer Packaged Goods sixteenth, so neither would surface on
+ * frequency alone. Anticipated demand and dataset composition are genuinely
+ * different things, and only ANSR knows the first.
+ *
+ * Kept deliberately short. Every addition here is a claim that the data is wrong
+ * about what visitors will pick, and the more of them there are the less the
+ * "most common" label means. If this grows past four or five, the honest move is to
+ * relabel the group rather than keep pinning.
+ *
+ * Pinned entries still sort by company count inside the tier, so the row reads
+ * largest-first and Consumer Packaged Goods does not appear above Software &
+ * Internet. A value here that is not in the taxonomy is ignored rather than
+ * invented, so an industry rename cannot put a dead option in the dropdown.
+ */
+const PINNED_INDUSTRIES: readonly string[] = [
+  "Retail",
+  "Consumer Packaged Goods",
+];
+
+/**
  * The same, for HQ country: twelve.
  *
  * **The tier is capped rather than being "every country in the data", which is what
@@ -170,9 +199,23 @@ export function industryOptions(dataset: Dataset): TieredOptions {
     const byCount = (counts.get(b) ?? 0) - (counts.get(a) ?? 0);
     return byCount !== 0 ? byCount : a.localeCompare(b, "en");
   });
-  const common = byFrequency.slice(0, COMMON_INDUSTRIES);
+
+  /**
+   * The top slice by count, plus the pinned ones, then re-sorted by count so the
+   * tier still reads largest-first.
+   *
+   * A `Set` rather than a concat: a pinned industry that is ALSO in the top slice
+   * must not appear twice, and it will be the moment one of them grows — which is
+   * the kind of thing that shows up as a duplicated option in a dropdown long
+   * after the person who pinned it has forgotten.
+   */
+  const inTier = new Set([
+    ...byFrequency.slice(0, COMMON_INDUSTRIES),
+    ...PINNED_INDUSTRIES.filter((industry) => byFrequency.includes(industry)),
+  ]);
+  const common = byFrequency.filter((industry) => inTier.has(industry));
   const others = byFrequency
-    .slice(COMMON_INDUSTRIES)
+    .filter((industry) => !inTier.has(industry))
     .sort((a, b) => a.localeCompare(b, "en"));
   return { common, others };
 }
@@ -237,7 +280,7 @@ export function peerViewInputSchema(taxonomy: Taxonomy, businessTypeIds?: readon
    * HQ is validated against the taxonomy UNION the world list, unlike every other
    * field, which is validated against the taxonomy alone.
    *
-   * The asymmetry is the point: industry, revenue band and line of business are
+   * The asymmetry is the point: industry, revenue band and sub-industry are
    * keys the matching reads, so a value outside the data is meaningless and must be
    * rejected. HQ is only a sort preference, so a country with no companies is a
    * perfectly coherent answer that contributes no ordering signal. Rejecting it
@@ -268,7 +311,7 @@ export function peerViewInputSchema(taxonomy: Taxonomy, businessTypeIds?: readon
         ctx.addIssue({
           code: "custom",
           path: ["businessTypeId"],
-          message: "unknown line of business",
+          message: "unknown sub-industry",
         });
       }
     });
@@ -282,11 +325,15 @@ export function peerViewInputSchema(taxonomy: Taxonomy, businessTypeIds?: readon
    permits a hardcoded set: "Could be hardcoded as mostly all the functions are
    more or less the same."
 
-   So this is a general pattern, presented as one — `COMMON_FUNCTIONS_BASIS` is
-   exported alongside the list so the component cannot render the list without
-   the sentence that says where it came from. Inventing per-company functions and
-   presenting them as this visitor's peers' functions is the failure mode being
-   avoided; a CIO who spots one fabricated detail discounts the whole screen.
+   So this is a general pattern and the SECTION HEADING says so — "Functions most
+   GCCs run from India", which is a claim about GCCs in general and cannot be read as
+   one about the five companies above it. `COMMON_FUNCTIONS_BASIS` used to travel on
+   the view model to guarantee the component could not render the list without the
+   sentence that says where it came from; both that sentence and the one beside it
+   were removed at ANSR's request, so the guarantee moved into the heading and the
+   field is gone. Inventing per-company functions and presenting them as this
+   visitor's peers' functions is still the failure mode being avoided; a CIO who
+   spots one fabricated detail discounts the whole screen.
 
    Ordered most to least common, and deliberately at the level a CIO recognises
    rather than at org-chart granularity. Headcount is not shown, per the brief.
@@ -303,9 +350,6 @@ export const COMMON_FUNCTIONS = [
   "Legal, risk and compliance",
 ] as const;
 
-export const COMMON_FUNCTIONS_BASIS =
-  "The general pattern across India GCCs, most to least common. Not a per-company breakdown of the companies above.";
-
 /* ==========================================================================
    Blocks
    ========================================================================== */
@@ -319,6 +363,24 @@ export const COMMON_FUNCTIONS_BASIS =
 export interface PeerCard {
   id: string;
   name: string;
+  /*
+   * **Headquarters country is gone again, and the field went with the column.**
+   * It was shown for one pass, at ANSR's request, on the argument that a CIO
+   * reading a comparison set asks where each company is headquartered. ANSR then
+   * asked for it back off the comparison block, and the field is dropped rather
+   * than left in place — a card that carries a value nothing renders is how the
+   * next reader concludes the omission was an oversight and puts the column back.
+   *
+   * Nothing about matching moved either time. HQ is a SORT PREFERENCE on the peer
+   * set and never a filter, so its presence or absence on the card cannot change
+   * which companies come back or how many. It is still read from the dataset in
+   * `peers.ts`, and `input.hqCountry` is still one of the answers echoed on the
+   * result band.
+   *
+   * A test that reads `card.hqCountry` now gets `undefined`, so a comparison over
+   * it passes silently. Assert the guard, or read the field from the dataset —
+   * `tests/unit/screen1.test.ts` already does the latter.
+   */
   cities: string[];
   /** Always a band. The exact-headcount column is dropped; see derive.ts. */
   headcount: string;
@@ -369,6 +431,19 @@ export interface PeerBlock {
   /** Characteristics every shown peer shares, most discriminating first. */
   sharedTags: string[];
   limit: number;
+  /**
+   * The largest centre in the set, or null when the set is empty.
+   *
+   * Two consumers, and neither could compute it honestly for itself. The bars are
+   * scaled against this company, so it is what "full width" means and an axis note
+   * has to be able to name it. And the signal strip reports the largest peer centre,
+   * which is a different question from the closest one — peers are ordered by
+   * similarity, so the first card is routinely not the biggest.
+   *
+   * It is the same `PeerCard` object as the one in `peers`, not a copy: two fields
+   * holding one company is how two fields holding one number start disagreeing.
+   */
+  largest: PeerCard | null;
   /** Non-zero means the copy must say so, in one line, and never pad. */
   shortfall: number;
   /**
@@ -394,7 +469,7 @@ export interface IndustryBlock {
   /** `others === 0`: the peers shown are the whole industry. */
   exhaustive: boolean;
   /**
-   * The visitor's own line of business, and how many other companies run one.
+   * The visitor's own sub-industry, and how many other companies run one.
    *
    * Null when no business type was selected, in which case this block renders as
    * it always did. When present it makes the block strictly stronger: "29 other
@@ -402,7 +477,7 @@ export interface IndustryBlock {
    * evidence than a single industry number, and this is the block that has to
    * carry a thin peer set.
    *
-   * `count` is companies in a COMPARABLE line of business — the same population
+   * `count` is companies in a COMPARABLE sub-industry — the same population
    * the peers were drawn from — and not companies carrying the visitor's exact
    * business type.
    *
@@ -414,6 +489,34 @@ export interface IndustryBlock {
    * kept for `data:verify`, where a precise figure is what is wanted.
    */
   businessType: { name: string; count: number; exactTypeCount: number } | null;
+  /**
+   * The mean India headcount across every company in this industry with a centre
+   * here, or null when the industry holds none.
+   *
+   * **It is a mean of FTE BAND MIDPOINTS, and that is the whole reason this field
+   * needs a comment.** The dataset holds ranges, never exact headcounts, so there
+   * is no arithmetic available that produces a true average — and this project's
+   * standing rule is that a ratio derived from band midpoints is honest as a bar's
+   * LENGTH and not as a published figure.
+   *
+   * This is published anyway, and it is the same class of claim the scale band
+   * already makes: `professionals` is a sum of the same midpoints, rendered on the
+   * page, with a provenance line naming the method. A mean is that sum over a
+   * count. So the two things that make it defensible are carried here rather than
+   * left to a component:
+   *
+   *   - **It is rounded**, hard, by `roundHeadcount`. An unrounded mean lands on
+   *     something like 2,317, which invites a CIO to ask where the 17 came from;
+   *     the honest answer is the banding.
+   *   - **It is INDUSTRY-level, not peer-set-level.** An average over five
+   *     similarity-ranked companies is a statistic about our matching rather than
+   *     about India, and the snapshot cell that shows it says "across GCCs in
+   *     {industry}" for that reason.
+   *
+   * Anything reading this must render the provenance beside it. There is no branch
+   * of the code where the figure is allowed to appear bare.
+   */
+  averageHeadcount: number | null;
   /**
    * The industry, divided into the named peers and what surrounds them.
    *
@@ -451,7 +554,7 @@ export interface IndustrySegment {
  * `closeMatches` is the population above the similarity floor, NOT companies
  * carrying the visitor's exact business type. That has to be the case or the bar
  * disagrees with the cards above it: the peers were drawn from the close matches,
- * so a segment labelled "in your line of business" that counted something narrower
+ * so a segment labelled "in your sub-industry" that counted something narrower
  * could come out smaller than the number of peers sitting on top of it.
  */
 export function industrySplit(
@@ -479,7 +582,12 @@ export function industrySplit(
     const rest = Math.max(Math.min(closeMatches, total) - named, 0);
     if (rest > 0) {
       segments.push({
-        label: "More in a comparable line of business",
+        // Shortened from "More in a comparable sub-industry", which wrapped to two
+      // lines under a figure in every one of the three columns it can appear in.
+      // "Comparable" is the load-bearing word — this counts the population the peers
+      // were drawn from, not companies carrying the visitor's exact business type —
+      // so it is the word that stayed.
+      label: "In a comparable sub-industry",
         count: rest,
         share: share(rest),
         lead: false,
@@ -587,6 +695,20 @@ export interface ScaleBlock {
   professionals: number;
   /** Rounded. Professionals inside Fortune Global 500 companies only. */
   fortuneGlobal500Professionals: number;
+  /**
+   * When the published dataset was generated, as the ISO string the schema holds.
+   *
+   * The terminating evidence strip has to say when its figures were counted, and
+   * this is the only date in the dataset that is a MACHINE fact — it is stamped by
+   * the publish pipeline rather than typed, so it cannot be stale in the way an
+   * admin-entered "as of" can. Formatted for display in `copy.ts`; passed through
+   * raw here so the view model states a time rather than a rendering of one.
+   *
+   * `dataset.source` is deliberately NOT carried across. It is documented as free
+   * text for the admin's benefit and currently holds the seed spreadsheet's
+   * filename, which is not a source a visitor should be shown.
+   */
+  asOf: string;
 }
 
 export interface PeerView {
@@ -596,7 +718,6 @@ export interface PeerView {
   industry: IndustryBlock;
   largest: LargestBlock;
   functions: readonly string[];
-  functionsBasis: string;
   map: MapBlock;
   scale: ScaleBlock;
 }
@@ -608,8 +729,41 @@ export interface PeerView {
  * "1,059,175" invites a CIO to ask where the 175 came from, and the honest answer
  * is nowhere.
  */
+/**
+ * The visitor's company name when they gave one, else null.
+ *
+ * Here rather than in either screen's `copy.ts` because it is a question about the
+ * input rather than a sentence: "did they actually type one", with the whitespace-only
+ * case answered the same way every time. Three callers now — both screens' context
+ * rows and Screen 2's framing — and it used to be three separate inline trims, which
+ * is how a blank-but-not-empty name ends up personalising one screen and not the
+ * other.
+ */
+export function companyName(input: PeerViewInput): string | null {
+  const name = input.companyName?.trim();
+  return name && name.length > 0 ? name : null;
+}
+
 export function roundProfessionals(total: number): number {
   return Math.round(total / 10_000) * 10_000;
+}
+
+/**
+ * A mean headcount, rounded to the precision the banding actually supports.
+ *
+ * Ten thousand is right for a national total of a million and absurd for an
+ * industry mean of a few hundred, so the step scales with the figure: the nearest
+ * hundred above a thousand, the nearest ten below it. Both are coarser than the
+ * narrowest FTE band in the data, which is the property that matters — a rounding
+ * step finer than the bands would be claiming precision the bands cannot carry.
+ *
+ * Never rounds to zero for a non-zero mean: an industry whose only centre is under
+ * ten people has a real average and "0" would read as missing data.
+ */
+export function roundHeadcount(mean: number): number {
+  if (mean <= 0) return 0;
+  if (mean >= 1_000) return Math.round(mean / 100) * 100;
+  return Math.max(Math.round(mean / 10) * 10, 10);
 }
 
 export function buildPeerView(
@@ -634,6 +788,22 @@ export function buildPeerView(
   );
   const peers = match.peers.map((company) => toCard(company, peerPeak));
   const peerIds = new Set(peers.map((peer) => peer.id));
+  /**
+   * Found by `sizeShare`, not by re-reading the companies, and that is deliberate:
+   * `sizeShare` is midpoint over peak, so the largest member is the one at 1 by
+   * definition. Deriving it from the same field the bars are drawn from means the
+   * axis note cannot name a company other than the one the full-width bar belongs to.
+   *
+   * `reduce` rather than a `find(share === 1)`: floating-point division of a midpoint
+   * by itself is exact here, but a lookup that depends on that is a lookup that
+   * returns null the first time it stops being true.
+   */
+  const largestPeer =
+    peers.length > 0
+      ? peers.reduce((most, peer) =>
+          peer.sizeShare > most.sizeShare ? peer : most,
+        )
+      : null;
 
   const selectedType = input.businessTypeId
     ? dataset.businessTypes.find((type) => type.id === input.businessTypeId)
@@ -654,6 +824,27 @@ export function buildPeerView(
   const bands = dataset.taxonomy.revenueBands;
   const highestBand = bands.at(-1) ?? null;
 
+  /**
+   * The industry's own companies, for the snapshot's mean headcount.
+   *
+   * Counted over the WHOLE industry rather than over `match.peers`, and the
+   * visitor's own company is not excluded here the way it is from `industryTotal`
+   * — an average is a property of the population, and removing one member of it
+   * because that member is the reader would make the figure depend on who is
+   * looking. `industryTotal` excludes them because it is a count of OTHERS, which
+   * is a different question.
+   */
+  const industryCompanies = companiesInIndustry(dataset, input.industry);
+  const averageHeadcount =
+    industryCompanies.length > 0
+      ? roundHeadcount(
+          industryCompanies.reduce(
+            (total, company) => total + fteMidpoint(company.fte),
+            0,
+          ) / industryCompanies.length,
+        )
+      : null;
+
   const density = cityDensity(dataset, input.industry);
   const cities: MapCity[] = density.map((entry) => ({
     city: entry.city,
@@ -672,6 +863,7 @@ export function buildPeerView(
       businessMatched: match.basis.businessMatched,
       sharedTags: match.basis.sharedTags,
       limit: match.limit,
+      largest: largestPeer,
       shortfall: match.shortfall,
       floorShortened: match.floorShortened,
     },
@@ -687,6 +879,7 @@ export function buildPeerView(
             exactTypeCount: match.sameBusinessType,
           }
         : null,
+      averageHeadcount,
       split: industrySplit(
         match.industryTotal,
         peers.length,
@@ -706,7 +899,6 @@ export function buildPeerView(
       shortfall: largest.shortfall,
     },
     functions: COMMON_FUNCTIONS,
-    functionsBasis: COMMON_FUNCTIONS_BASIS,
     map: {
       industry: input.industry,
       cities,
@@ -733,6 +925,7 @@ export function buildPeerView(
       fortuneGlobal500Professionals: roundProfessionals(
         scale.fortuneGlobal500Professionals,
       ),
+      asOf: dataset.generatedAt,
     },
   };
 }

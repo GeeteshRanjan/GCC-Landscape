@@ -41,8 +41,8 @@ The system is complete. Eight families, all defined:
 | Spacing | `--ansr-space-{0..32}`, plus `40/48/56` | 4px base unit. The 40–56 steps are **band scale**, past where component rhythm stops |
 | Radius | `--ansr-radius-{none,sm,md,lg,xl,pill}` | Minimal — brand geometry is hard-edged |
 | Elevation | `--ansr-shadow-{xs..lg}`, `--ansr-z-*` | Teal-tinted, shallow |
-| Motion | `--ansr-duration-*`, `--ansr-ease-*` | 120/180/240/320ms, all under 400ms — plus `-marquee` (48s), which is AMBIENT motion and a different quantity |
-| Layout | `--ansr-container*`, `--ansr-gutter*` | 1280px content max. `-hero` (704px) caps a centred display block, `-card` (896px) the entry-point form |
+| Motion | `--ansr-duration-*`, `--ansr-ease-*` | 120/180/240/320ms, all under 400ms — plus two AMBIENT periods, which are a different quantity and not steps on that scale: `-marquee` (48s) for the logo strip and `-pulse` (3.2s) for the density map's hub halo |
+| Layout | `--ansr-container*`, `--ansr-gutter*` | 1280px content max. `-hero` (704px) caps a display block, `-card` (896px) the entry-point form, `-lead` (800px) the hero's supporting line — wider than `-hero` on purpose, and tied to the hero's outdent |
 
 Hard rules:
 - Orange is a highlight, restricted to CTAs and hover states. Not a surface, not body text.
@@ -75,6 +75,11 @@ Hard rules:
   one sanctioned exception, the entry point's form card and its controls at `lg` (8px)**, which the
   client asked for. Nothing there sits against a motif, and a 4px field inside an 8px card reads as
   a mismatch rather than as restraint. Do not spread it to the evidence bands.
+- **A control's boundary needs 3:1, and only `--ansr-grey-500` clears it among the light
+  neutrals.** `--ansr-border-strong` (grey-300) is 1.78:1 on white and `--ansr-border-tint` is
+  1.65:1 — both look like a form field and neither is a boundary under WCAG 1.4.11. grey-500 is
+  3.28:1 on white and is what the public form's fields use. It only clears the floor against
+  WHITE: on a `grey-50` fill it drops to 2.98:1, so a tinted field would need a darker edge.
 - **Status is carried by form, not colour.** Re-measured against the new palette rather than
   carried over, because a bright accent could have overturned it: it did not. This palette
   supports exactly two semantic colour signals — `--ansr-feedback-neutral` (teal) and

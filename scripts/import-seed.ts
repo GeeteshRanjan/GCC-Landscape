@@ -39,6 +39,7 @@ import {
   parseYear,
   parseYesNo,
   uniqueSlug,
+  canonicalIndustry,
 } from "../src/data/normalize";
 import {
   DATASET_VERSION,
@@ -147,7 +148,13 @@ async function readRows(
       [ColumnKey, string]
     >) {
       const index = columnIndex.get(header);
-      const value = cleanText(index ? row.getCell(index).text : "");
+      const raw = index ? row.getCell(index).text : "";
+      // The industry is canonicalised HERE and nowhere else, so one spelling
+      // reaches the company record, the taxonomy and the business-type map's keys
+      // alike. See `canonicalIndustry` for why renaming further downstream
+      // silently untags companies instead.
+      const value =
+        key === "industry" ? canonicalIndustry(raw) : cleanText(raw);
       record[key] = value;
       if (value) hasContent = true;
     }

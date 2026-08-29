@@ -495,6 +495,17 @@
      past about 60s the strip looks broken rather than restrained. */
   --ansr-duration-marquee: 48s;
 
+  /* The second ambient period, and it is a different quantity again: one breath of
+     the halo behind a city dot on the Screen 1 density map.
+     Bounded from both sides for reasons that are not symmetric. Under about 2s a
+     repeating expansion reads as a notification pulse — something is wrong, or
+     something wants a click — which is the opposite of what an evidence graphic
+     should say. Past about 4s the three staggered halos never overlap and the
+     field looks like it is loading one city at a time.
+     3.2s is also what makes the stagger work: three hubs offset by a third of it
+     each are ~1.07s apart, close enough to read as one rhythm. */
+  --ansr-duration-pulse: 3.2s;
+
   --ansr-ease-standard: cubic-bezier(0.2, 0, 0, 1);    /* default          */
   --ansr-ease-entrance: cubic-bezier(0, 0, 0.2, 1);    /* decelerate in    */
   --ansr-ease-exit:     cubic-bezier(0.4, 0, 1, 1);    /* accelerate out   */
@@ -520,6 +531,22 @@
      well inside `--ansr-container`, because at the full 1280 the two field rows
      stretch to a width no label on them is long enough to justify. */
   --ansr-container-card: 56rem;
+  /* 800px. The cap on the entry point hero's SUPPORTING LINE only, wider than the
+     display block above it.
+
+     It exists because the two elements want different widths for different reasons.
+     `--ansr-container-hero` is the cap that makes an 80px headline wrap to two lines
+     rather than running out as a strapline — a constraint on a display block. The
+     lead under it is a single 137-character sentence, and at 44rem it breaks to three
+     lines with a two-word orphan; at 50rem it is two. Sharing one cap made the
+     paragraph inherit a limit set for the headline.
+
+     Read with the `-ms-*` outdent in `ask-hero.tsx`: the copy shifts LEFT by the same
+     6rem this adds on the right, so the block's trailing edge is unchanged and the dot
+     map's leading mask fade — which is measured against where the copy ends — did not
+     have to move. Widening this without shifting left by the same step puts text over
+     the map's visible field. */
+  --ansr-container-lead: 50rem;
   --ansr-gutter:         var(--ansr-space-6);
   --ansr-gutter-lg:      var(--ansr-space-12);
 }

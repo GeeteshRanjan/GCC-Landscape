@@ -20,6 +20,12 @@ next-env.d.ts
 # import scratch output — the published dataset lives in data/, tracked
 data/*.report.json
 
+# Authoring-time downloads. `scripts/build_dot_map.py` caches a 13 MB Natural
+# Earth geojson here and commits only the two path strings it derives. The source
+# is public domain and re-downloadable, so committing it would be 13 MB of
+# permanent history buying nothing.
+.cache/
+
 # test fixtures and reports
 tests/browser/.tmp/
 playwright-report/
@@ -40,3 +46,13 @@ test-results/
 # assets/brand/ (source) or public/brand/ (adapted output), never here — a 7 MB
 # Figma export committed by a careless `git add .` is in the history forever.
 /*.svg
+# Working reference material, held locally on purpose. Same reasoning as the
+# root-SVG rule above: these are inputs we read while building, not part of the
+# product, and one careless `git add .` puts them in the history forever.
+#
+# `Customer Logos/` is the raw client hand-off; the marks the app actually serves
+# are the adapted copies in public/logos/, which ARE tracked. Anything matching
+# the critique pattern is an external review, transcribed into the style lock's
+# critique section where its conclusions belong.
+Customer Logos/
+Critic and Suggestions.md

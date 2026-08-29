@@ -1,6 +1,6 @@
 import { expect, test, type Page } from "@playwright/test";
 
-import { band } from "./helpers";
+import { band, choose } from "./helpers";
 
 /**
  * Screen 2, the public Function View, against a real production build.
@@ -28,12 +28,18 @@ const LENS_LABELS = [
 
 async function openFunctionView(page: Page): Promise<void> {
   await page.goto("/");
-  await page.getByLabel("Industry").selectOption("BFSI");
-  await page.getByLabel("Annual revenue").selectOption("Above $20 Bn");
-  await page.getByLabel("Headquarters").selectOption("USA");
+  await choose(page, "Industry", "BFSI");
+  await choose(page, "Annual revenue", "Above $20 Bn");
+  await choose(page, "Headquarters", "USA");
   await page.getByRole("button", { name: "See my results" }).click();
   await expect(band(page, "peers")).toBeVisible();
-  await page.getByRole("button", { name: "See the function view" }).click();
+  /**
+   * **The way across is the view tab, not a band at the foot of the page.** The
+   * "Explore the function view" button in the second-to-last band is gone: the two
+   * views are a connected tab strip at the head of both screens now, so the band was
+   * repeating an offer the visitor had already been given and could already see.
+   */
+  await page.getByRole("tab", { name: /Function Opportunity/ }).click();
 }
 
 function tabs(page: Page) {
@@ -46,13 +52,30 @@ test.describe("getting there and back", () => {
   }) => {
     await openFunctionView(page);
 
-    const heading = page.getByRole("heading", {
-      level: 1,
-      name: /What an India GCC would give you/,
-    });
-    await expect(heading).toBeVisible();
-    // Nothing announces a phase change, because no navigation happened.
-    await expect(heading).toBeFocused();
+    /**
+     * **The `h1` is the product on both result screens, so this screen's finding is
+     * its first `h2`.** The teal display hero it used to headline is gone — the teal
+     * area is a compact context strip now — and a heading identical on the two views
+     * could not be the thing that announces a change between them anyway.
+     */
+    await expect(
+      page.getByRole("heading", { level: 1, name: "ANSR. GCC Intelligence" }),
+    ).toBeVisible();
+    await expect(
+      page.getByRole("heading", {
+        level: 2,
+        name: /What an India GCC would give you/,
+      }),
+    ).toBeVisible();
+    /**
+     * Focus lands on the TAB PANEL instead. Nothing announces a phase change because
+     * no navigation happened, and a panel named by its own tab announces "Function
+     * opportunity, tab panel" — the change said out loud, where re-reading a shared
+     * product heading would have said nothing.
+     */
+    await expect(
+      page.getByRole("tabpanel", { name: /Function Opportunity/ }),
+    ).toBeFocused();
 
     // The URL is the parent page's, so it does not move. There is nothing to
     // deep-link into and this is what that looks like.
@@ -61,14 +84,41 @@ test.describe("getting there and back", () => {
     // The peer view is gone rather than scrolled past.
     await expect(band(page, "peers")).toHaveCount(0);
 
-    await page.getByRole("button", { name: "Back to your peer view" }).click();
-    const peerHeading = page.getByRole("heading", {
-      level: 1,
-      name: /would not be first/,
-    });
-    await expect(peerHeading).toBeVisible();
-    await expect(peerHeading).toBeFocused();
-    // The answer is the one already computed, not a re-fetch.
+    /**
+     * **The way back is the other tab**, and the treatment reverses — which is the
+     * property that makes one shared component worth having rather than two hand-built
+     * strips that have to be kept in agreement. The selected cell is the white surface
+     * continuous with this screen's content; the other returns to the band's own teal.
+     * Asserted as geometry and fill rather than by class name.
+     */
+    const tablist = page.getByRole("tablist", { name: "Result view" });
+    const peersTab = tablist.getByRole("tab", { name: /Peer Landscape/ });
+    const functionsTab = tablist.getByRole("tab", { name: /Function Opportunity/ });
+    await expect(functionsTab).toHaveAttribute("aria-selected", "true");
+    await expect(peersTab).toHaveAttribute("aria-selected", "false");
+    const panelId = await functionsTab.getAttribute("aria-controls");
+    expect(panelId).toBeTruthy();
+    const tabBox = (await functionsTab.boundingBox())!;
+    const panelBox = (await page.locator(`#${panelId}`).boundingBox())!;
+    expect(Math.abs(tabBox.y + tabBox.height - panelBox.y)).toBeLessThanOrEqual(1);
+    const [selectedFill, panelFill, unselectedFill] = await Promise.all([
+      functionsTab.evaluate((el) => getComputedStyle(el).backgroundColor),
+      page
+        .locator(`#${panelId}`)
+        .evaluate((el) => getComputedStyle(el).backgroundColor),
+      peersTab.evaluate((el) => getComputedStyle(el).backgroundColor),
+    ]);
+    expect(selectedFill).toBe(panelFill);
+    expect(unselectedFill).not.toBe(selectedFill);
+    await peersTab.click();
+    // Focus follows to the peer view's own panel, and the answer is the one already
+    // computed rather than a re-fetch.
+    await expect(
+      page.getByRole("tabpanel", { name: /Peer Landscape/ }),
+    ).toBeFocused();
+    await expect(page.getByRole("status")).toContainText(
+      /relevant peers? operates? a GCC in India/,
+    );
     await expect(band(page, "peers")).toBeVisible();
   });
 
@@ -77,11 +127,11 @@ test.describe("getting there and back", () => {
   }) => {
     await page.goto("/");
     await page.getByLabel(/^Company name/).fill("Northwind Financial");
-    await page.getByLabel("Industry").selectOption("BFSI");
-    await page.getByLabel("Annual revenue").selectOption("Above $20 Bn");
-    await page.getByLabel("Headquarters").selectOption("Germany");
+    await choose(page, "Industry", "BFSI");
+    await choose(page, "Annual revenue", "Above $20 Bn");
+    await choose(page, "Headquarters", "Germany");
     await page.getByRole("button", { name: "See my results" }).click();
-    await page.getByRole("button", { name: "See the function view" }).click();
+    await page.getByRole("tab", { name: /Function Opportunity/ }).click();
 
     /**
      * The framing is no longer varied from the browser: the India-presence question
@@ -93,8 +143,39 @@ test.describe("getting there and back", () => {
      * What is still worth checking here, and what this test is really for, is that
      * the ANSWERS cross the phase boundary — the visitor is not asked twice.
      */
-    await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
+    await expect(
+      page.getByRole("heading", { level: 2, name: /What an India GCC would give/ }),
+    ).toBeVisible();
     await expect(page.getByText("Germany")).toBeVisible();
+    /**
+     * The company name crosses too, which it did not before: this summary carried
+     * "India today" — the label of the question ANSR had removed — while the peer view
+     * had correctly dropped it, so a visitor was shown a constant read back as their
+     * own answer on the very next screen. Four facts, all of them theirs.
+     */
+    /**
+     * The same four editable panels Screen 1 shows, from the same answers, in the same
+     * order — one component in one place on both screens, so they cannot come to mean
+     * two different things. New here: they are controls, and pressing one reaches the
+     * form. This screen previously had no route to it at all.
+     */
+    const profile = page.getByRole("group", { name: /Your profile/ });
+    /**
+     * **One control beside four quiet pills, on this screen too.** The four chevroned
+     * panels all went to the same place, so they were four affordances for one
+     * destination — see Screen 1's profile test. It is the same component in the same
+     * position on both screens, deliberately, so the two cannot mean different things.
+     */
+    await expect(profile.getByRole("button")).toHaveCount(1);
+    await expect(profile.getByText("Company")).toBeVisible();
+    await expect(profile.getByText("Northwind Financial")).toBeVisible();
+    await expect(page.getByText("India today")).toHaveCount(0);
+    await profile
+      .getByRole("button", { name: "Change my answers" })
+      .click();
+    await expect(page.locator("h1#ask-title")).toBeVisible();
+    await page.getByRole("button", { name: "See my results" }).click();
+    await page.getByRole("tab", { name: /Function Opportunity/ }).click();
     await expect(
       page.getByRole("link", { name: /India GCC/ }),
     ).toBeVisible();
@@ -335,7 +416,7 @@ test.describe("the gate", () => {
     for (const name of ["Technology", "Operations", "HR", "Finance"]) {
       await page.getByRole("tab", { name, exact: true }).click();
       const text =
-        (await page.getByRole("region", { name: "The four functions, measured" }).innerText()) ??
+        (await band(page, "function-metrics").innerText()) ??
         "";
       // Scoped to the metrics band on purpose: the header echoes the visitor's
       // own revenue band, which is where the only "$" on the screen lives.

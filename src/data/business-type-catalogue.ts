@@ -986,37 +986,37 @@ const CONSUMER_ELECTRONICS: BusinessTypeSeed[] = [
 ];
 
 /* ==========================================================================
-   CPG — 24 companies
+   Consumer Packaged Goods — 24 companies
    ========================================================================== */
 const CPG: BusinessTypeSeed[] = [
   {
     id: "cpg-food",
     name: "Packaged food",
-    industry: "CPG",
+    industry: "Consumer Packaged Goods",
     tags: ["process-manufacturing", "packaged-food", "food-processing", "brand-owner", "perishable-goods", "supply-chain-heavy", "b2c"],
   },
   {
     id: "cpg-beverages",
     name: "Beverages & brewing",
-    industry: "CPG",
+    industry: "Consumer Packaged Goods",
     tags: ["process-manufacturing", "beverages", "brand-owner", "capital-intensive", "supply-chain-heavy", "b2c"],
   },
   {
     id: "cpg-personal-care",
     name: "Personal care & beauty",
-    industry: "CPG",
+    industry: "Consumer Packaged Goods",
     tags: ["process-manufacturing", "personal-care", "luxury", "brand-owner", "dtc", "supply-chain-heavy", "b2c"],
   },
   {
     id: "cpg-home-care",
     name: "Household & home care products",
-    industry: "CPG",
+    industry: "Consumer Packaged Goods",
     tags: ["process-manufacturing", "household-products", "brand-owner", "supply-chain-heavy", "b2c"],
   },
   {
     id: "cpg-diversified",
     name: "Diversified consumer goods",
-    industry: "CPG",
+    industry: "Consumer Packaged Goods",
     tags: ["process-manufacturing", "brand-owner", "household-products", "personal-care", "packaged-food", "beverages", "supply-chain-heavy", "b2c"],
   },
 ];

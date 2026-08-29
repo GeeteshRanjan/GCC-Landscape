@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { Tabs as TabsPrimitive } from "radix-ui";
 
-import { GCC_STATUS_LABELS, type PeerViewInput } from "@/data/screen1";
+import { companyName, type PeerViewInput } from "@/data/screen1";
 import {
   metricWidth,
   type FunctionAreaView,
@@ -11,22 +11,23 @@ import {
   type MetricWidth,
   type ShownMetric,
 } from "@/data/screen2";
+import { BarChart3, Users } from "lucide-react";
+
 import { ClosingCta } from "@/components/public/closing-cta";
 import { Provenance } from "@/components/public/primitives";
 import {
-  HeaderKicker,
-  HeaderLead,
-  InputSummary,
-  QuietButton,
+  ContextPanels,
+  ProductIdentity,
   ScreenHeader,
-  ScreenTitle,
+  ViewPanel,
+  ViewTabs,
+  type ContextFact,
   type HeaderMotif,
 } from "@/components/public/screen-header";
 import { cn } from "@/lib/utils";
 import {
   AREA_LEAD,
   AREA_PROVENANCE,
-  BACK_LABEL,
   functionFraming,
   heldHeading,
   HELD_BODY,
@@ -95,7 +96,17 @@ export interface FunctionViewScreenProps {
   input: PeerViewInput;
   ctaHref: string;
   onBack: () => void;
-  headingRef: React.RefObject<HTMLHeadingElement | null>;
+  /**
+   * Back to the form, with the answers intact.
+   *
+   * New on this screen. The context panels are controls now, and a control that
+   * looks like it changes an answer has to actually change it — previously this
+   * screen had no route to the form at all, so a visitor who noticed a wrong revenue
+   * band here had to go back to the peer view first to find one.
+   */
+  onEditProfile: () => void;
+  /** The tab panel, which is where focus goes on a phase change. See `tool.tsx`. */
+  panelRef: React.RefObject<HTMLDivElement | null>;
 }
 
 export function FunctionViewScreen({
@@ -103,47 +114,107 @@ export function FunctionViewScreen({
   input,
   ctaHref,
   onBack,
-  headingRef,
+  onEditProfile,
+  panelRef,
 }: FunctionViewScreenProps) {
   const copy = functionFraming(input);
+  const name = companyName(input);
   const first = view.areas[0]?.functionArea ?? "tech";
   const [active, setActive] = useState<string>(first);
 
+  /**
+   * The same four panels Screen 1 shows, from the same answers, in the same order.
+   *
+   * **Both screens carry the same facts, and Screen 2 was wrong about this for
+   * months.** Its summary used to include "India today" — the label of a question
+   * ANSR had removed — so a visitor crossing from the peer view, where it was
+   * correctly dropped, was shown a constant read back as their own answer on the very
+   * next screen. It is not here for the same reason it is not there.
+   *
+   * **They are quiet pills again, with one control beside them.** For one pass each
+   * answer was its own chevroned button; all four went to the same place, so there
+   * were four affordances for one destination and the chevron implied an in-place
+   * editor that does not exist. The way back is unchanged and is still real — this
+   * screen had none at all before that pass — it is now a single labelled button. See
+   * `ContextPanels`.
+   */
+  const facts: ContextFact[] = [
+    ...(name ? [{ label: "Company", value: name }] : []),
+    { label: "Industry", value: input.industry },
+    { label: "Headquarters", value: input.hqCountry },
+    { label: "Revenue band", value: input.revenueBand },
+  ];
+
   return (
     <>
-      <ScreenHeader motif={FUNCTION_MOTIF}>
-        <div className="flex flex-col gap-6">
-          <div className="flex max-w-measure flex-col gap-5">
-            <HeaderKicker>India GCC landscape</HeaderKicker>
-            <ScreenTitle headingRef={headingRef}>{copy.title}</ScreenTitle>
-            <HeaderLead>{copy.lead}</HeaderLead>
-          </div>
-
-          <div className="flex flex-wrap items-center gap-x-6 gap-y-3">
-            <InputSummary
-              facts={[
-                { term: "Industry", value: input.industry },
-                { term: "Revenue", value: input.revenueBand },
-                { term: "Headquarters", value: input.hqCountry },
-                { term: "India today", value: GCC_STATUS_LABELS[input.gccStatus] },
-              ]}
-            />
-            <QuietButton onClick={onBack}>{BACK_LABEL}</QuietButton>
-          </div>
-        </div>
+      <ScreenHeader
+        motif={FUNCTION_MOTIF}
+        tabs={
+          /* The same component Screen 1 renders, with `current` flipped — which is
+             what makes the treatment reverse rather than being two hand-built
+             strips that have to be kept in agreement. Function Opportunity is the
+             white cell here and connects to this screen's content surface; Peer
+             Landscape returns to the band's own teal. */
+          <ViewTabs
+            current="functions"
+            onSwitch={(next) => {
+              if (next === "peers") onBack();
+            }}
+            icons={{
+              peers: <Users className="size-5" />,
+              functions: <BarChart3 className="size-5" />,
+            }}
+          />
+        }
+      >
+        {/* **No `HeaderFinding` here, unlike Screen 1, and the asymmetry is the
+            correct one.** Screen 1's band gained the finding because its content
+            surface opens on a figure strip with no sentence in it — the band was
+            otherwise a lockup and a row of answers, which is chrome and no content.
+            This screen already opens on its finding as a real `h2`, two elements
+            below; putting the same sentence on the band would be saying it twice
+            inside one scroll, and the version in the band would be the one that is
+            not a heading. */}
+        <ProductIdentity id="product-identity" />
+        {/* Straight to the form, not via the peer view. Same behaviour as Screen 1's
+            row, which is the point: it is the same component in the same place on both
+            screens, so the two cannot mean different things. */}
+        <ContextPanels facts={facts} onEdit={onEditProfile} />
       </ScreenHeader>
 
+      <ViewPanel view="functions" panelRef={panelRef}>
       <section
+        // Named `function-metrics` rather than `functions`, because Screen 1 has a
+        // `#functions` card and two ids that differ only by which phase is mounted are
+        // two ids a spec will eventually confuse. Located by id in the suite, never by
+        // its heading — the heading is this screen's finding and is a copywriter's to
+        // change.
+        id="function-metrics"
         aria-labelledby="functions-heading"
-        className="bg-surface-tint py-16 md:py-24"
+        // White, not the pale teal it was. The selected tab above it is a white
+        // surface that has to read as continuous with this one — see `ViewTabs` — and
+        // a white tab meeting a teal band is two layers rather than one. The metric
+        // cards took a hairline border in the same change, since they used to borrow
+        // their edge from the tint. Nothing else about this screen moved.
+        className="bg-surface pt-10 pb-16 md:pt-12 md:pb-24"
       >
         <div className="mx-auto flex max-w-content flex-col gap-10 px-6 md:px-12">
-          <h2
-            id="functions-heading"
-            className="text-3xl leading-tight font-bold tracking-display text-text md:text-4xl lg:text-5xl"
-          >
-            The four functions, measured
-          </h2>
+          <div className="flex max-w-measure flex-col gap-4">
+            {/* **This screen's finding, which used to be the display `h1` in a teal
+                hero.** The `h1` is the product name now and is shared with Screen 1,
+                so the sentence that says what THIS view is moved down to the head of
+                its own content — where it is still the first thing read, and where it
+                is no longer competing with a hero for the same 200px. */}
+            <h2
+              id="functions-heading"
+              className="text-2xl leading-tight font-bold tracking-display text-text md:text-3xl lg:text-4xl"
+            >
+              {copy.title}
+            </h2>
+            <p className="text-base text-pretty text-text-muted md:text-lg">
+              {copy.lead}
+            </p>
+          </div>
 
           <TabsPrimitive.Root
             value={active}
@@ -195,7 +266,12 @@ export function FunctionViewScreen({
         </div>
       </section>
 
+      {/* Screen 1's close was removed at ANSR's request — its page now ends at the
+          evidence strip. This one stays: the conversation still has to be offered
+          somewhere, and this is the deeper of the two views, reached by a visitor
+          who has already read the peer landscape. */}
       <ClosingCta href={ctaHref} copy={copy} headingId="function-cta-heading" />
+      </ViewPanel>
     </>
   );
 }

@@ -123,13 +123,84 @@ export function ImpactBand({ stats }: { stats: readonly ImpactStat[] }) {
           // centred and a leading-aligned heading over a centred row reads as two
           // unrelated blocks. Same size step as `Section` sets, so it does not
           // become a second h1 by weight.
-          className="text-center text-3xl leading-tight font-bold tracking-display text-balance text-text-inverse md:text-4xl lg:text-5xl"
+          //
+          // **Medium 500 and `tracking-body`, matching the lockup below it.** Same
+          // measurement as the hero's `h1`: the wordmark's stem is 0.137 of its cap
+          // height, which is Hanken Grotesk's Medium, and its sidebearings are
+          // normal rather than the -0.02em `tracking-display` sets. A Bold heading
+          // over the drawn mark read as two different fonts stacked, which is
+          // exactly what it was.
+          // **The type scale steps DOWN at the small end and the leading is nearly
+          // double, and both exist to hold the lockup on this line.**
+          //
+          // The heading is one line with a graphic in it, so the constraint is not
+          // how big the words want to be — it is whether "Impact delivered by" plus a
+          // 2.78:1 lockup fits the content width. At the previous 30px base the pair
+          // measured ~407px against 342px available at 390, so it wrapped and put the
+          // mark alone on a second line. 20px base keeps it on one line down to a
+          // 320px viewport, and the steps above it have room to spare.
+          //
+          // `leading-[1.8]`, not `leading-tight`: the lockup is 1.728em tall and
+          // centred on the wordmark's cap band, so it overhangs the cap line by
+          // ~0.5em and the baseline by ~0.5em. On one line the band's own padding
+          // absorbs that and the leading is invisible. The leading is insurance for
+          // the widths where the pair does wrap anyway — without it the burst's rays
+          // reach into the line above, which is the failure mode that made the
+          // previous pass stack the mark instead of inlining it.
+          className="text-center text-xl leading-[1.8] font-medium tracking-body text-balance text-text-inverse sm:text-2xl md:text-4xl lg:text-5xl"
         >
           {IMPACT.titleLead}{" "}
-          {/* The one orange thing on this band. `text-action` rather than
-              `text-accent-inverse`, which is the mint the figures use — the brand
-              name and the numbers should not read as the same kind of emphasis. */}
-          <span className="text-action">{IMPACT.titleBrand}</span>
+          {/* The brand name, drawn rather than typed, and set INLINE where the word
+              used to be — so the sentence still reads as one sentence and the mark is
+              its last word rather than a signature under it.
+              
+              **Three measurements make it sit on the line, all read off the file's own
+              geometry, and none of them is the font size.** The lockup is 253x91 with
+              the wordmark's cap band from y 26.40 to 64.31:
+              
+                - **Height `1.728em`.** The letters are 37.91 of 91, so 0.4166 of the
+                  box. Dividing the display face's 0.72em cap height by that puts the
+                  lockup's letters at exactly the cap height of the words either side
+                  of them — which is the whole trick, and it is the same one
+                  `ansr-wordmark.tsx` uses one band up. Matching the FONT SIZE instead
+                  would set the mark about 2.4x too large.
+                - **`vertical-align: -0.507em`.** An inline-block sits its own BOTTOM
+                  edge on the baseline, and this lockup has 26.69 of 91 below the
+                  letters' baseline — the burst's lower rays. Unshifted, the whole mark
+                  floats half its own height above the line. 0.2933 x 1.728em pulls it
+                  back down so the drawn baseline and the typed baseline are the same
+                  line. In `em`, so it tracks every step of the scale above.
+                - **`w-auto` with both intrinsic attributes present**, so the ratio is
+                  known before the file lands. An SVG carrying only a `viewBox`
+                  resolves to 300x150 and can collapse outright when one axis is auto.
+              
+              **The on-dark variant, not `ansr-logo.svg` itself.** That file's wordmark
+              is `currentColor`, which is right when it is inlined as markup and useless
+              through an `<img>`, where there is no colour to inherit and the letters
+              would render black on the deepest ground in the palette.
+              `ansr-logo-on-dark.svg` is the same lockup with the wordmark resolved to
+              white, which is what the manifest keeps it for. Logos are the one brand
+              asset used literally.
+              
+              The band's one orange is the burst rather than a coloured word — the rule
+              holding rather than being spent twice, and it no longer has to be measured
+              as text because it is not text. */}
+          <span className="sr-only">{IMPACT.titleBrand}</span>
+          {/* eslint-disable-next-line @next/next/no-img-element -- a logo with a
+              fixed intrinsic ratio, served as-is; nothing for an optimiser to do. */}
+          <img
+            src="/brand/ansr-logo-on-dark.svg"
+            alt=""
+            aria-hidden="true"
+            width={253}
+            height={91}
+            // `ms-[0.1em]` on top of the word space. The burst has no left
+            // sidebearing — its outermost ray starts at x=0 in the viewBox — so a
+            // plain word space puts a ray about 10px from the "y" at 48px, which
+            // reads as crowding rather than as spacing. In `em` so it holds at every
+            // step of the scale.
+            className="ms-[0.1em] inline-block h-[1.728em] w-auto align-[-0.507em]"
+          />
         </h2>
 
         {/* A `dl`, because these genuinely are term-and-definition pairs and the

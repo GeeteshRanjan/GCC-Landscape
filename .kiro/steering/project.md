@@ -18,19 +18,73 @@ expanding an India GCC. Arriving from ansr.com or outbound campaigns. Not analys
 Full transcription of the source brief: `docs/brief.md`. Read it before building either screen.
 
 **Inputs — the CONTRACT has six and the FORM asks five, deliberately.** Global headcount was cut
-once nothing consumed it; hold the set to the same standard. Line of business is the only optional
+once nothing consumed it; hold the set to the same standard. Sub-industry is the only optional
 one asked: left unanswered the peer set is byte-identical to what the others produced, so it adds
 precision without adding a required field.
+
+**"Sub-industry" is the term everywhere a visitor or an admin can read it**, at ANSR's request. It
+replaced "line of business" in copy, labels and test names; the DATA is untouched — the field is
+still `businessTypeId`, the collection is still `dataset.businessTypes`, and `business-tags.ts`,
+`business-type-catalogue.ts` and `docs/business-types.md` keep their names because they are about
+the vocabulary rather than about what a visitor is asked.
+
+**Six fields, five asked, FOUR controls — sub-industry is a level inside the industry dropdown,
+not a field of its own.** ANSR asked for it: one act instead of two, and one fewer cell to fill.
+The field on `PeerViewInput` is unchanged and still optional, so nothing about matching moved.
+Three consequences that hold together: the industry popup is a `tree` rather than a `listbox` (a
+listbox whose options contain options is neither), there is no disabled-until-answered control and
+therefore no live region announcing that one became usable, and **no field LABEL on the form is
+marked "(optional)"** — the marker only ever belonged to the control that needed its disabled state
+explained, and on a label it talks visitors out of answering. The one "(optional)" that exists is
+inside the industry popup, on the affordance line describing the second level, which is a different
+thing: not a label, and about a level nothing else on the form announces. Restoring a separate
+field is a UI change, not a data migration.
+
+**That level is a CASCADE, not an indent, and the panel's height is the reason.** Pressing an
+industry commits it and opens a second pane BESIDE the list; expanding rows inside the list grew a
+popup that already overhangs the form card a third of the way into the customer-logo strip, and
+changed its height under the pointer. **The pane opens TRAILING-side — parent left, child right —
+at ANSR's request, and that costs width**: the room beside the field is `layoutWidth / 2 − 400`
+above 1280, nothing may clamp the pane to it at runtime (reading the viewport is what the iframe
+forbids), so the widths come from a measured table and below 1440 the pane covers the parent list
+as a drill-in instead. Five things hold together: the panel is exactly as tall open as closed, the
+pane never gives the framed document a horizontal scrollbar (both pinned by specs, at seven
+widths), the pane is `aria-owns`-ed by its parent row rather than nested in it, every row therefore
+carries an explicit `aria-label` (an owned subtree lands in the row's computed name otherwise), and
+the pane's leading `All of {industry}` row is the exit that keeps the broad answer — because the
+press that opened the pane deliberately does not close the panel. Re-opening the control does not
+re-open the visitor's branch, since below 1440 that would hide the filter behind a pane nobody
+asked for. The measured table, the rejected geometry and the rejected 1320 threshold are in
+`.tastemaker/style-lock.md`.
 
 **Existing GCC status is the sixth, and ANSR asked for the question to be removed.** The FIELD was
 kept: `gccStatus` still reaches the server, still branches `framing()`, and is supplied by the form
 as the `evaluating` constant — see `ASSUMED_GCC_STATUS`. `evaluating` because its copy is the one
-branch true regardless of who is reading ("You would not be first") rather than a claim about the
-visitor. Two consequences that must hold together: the answer's fact summary no longer echoes
-"India today", because showing a constant there would be the tool telling a visitor what they said
+branch true regardless of who is reading (the peer count in their own industry) rather than a claim
+about the visitor. Two consequences that must hold together: **neither screen's fact summary echoes
+"India today"**, because showing a constant there would be the tool telling a visitor what they said
 about something it never asked; and the branching stays covered in `tests/unit/screen1.test.ts`,
 which is where the input can actually be varied. Restoring the question is a UI change, not a data
 migration.
+
+**Both result screens show the same four answers, from one component, as quiet pills with ONE
+control beside them.** Three shapes have been tried and the reasoning for the current one is worth
+keeping. They began as a run of `dt`/`dd` pairs beside one "Change these details" button, which made
+a visitor notice a wrong revenue band in a caption and then find an unrelated control. They became
+four full-width chevroned buttons, one per answer — and that was worse in a way only the render
+showed: all four went to the same place, so there were four affordances for one destination, the
+chevron promised an in-place editor that does not exist, and the group read as four dropdowns the
+visitor was expected to operate, directly under the product name. They are now pill-shaped read-only
+tags with no hover state, and the way back is one button labelled **"Change my answers"**. The route
+itself is unchanged and still reaches the form with the answers intact; Screen 2 still has it, having
+had none before the second shape.
+
+Company name (when given), industry, headquarters and revenue band — every one an answer they typed.
+**"India today" is not among them and must not be**, and Screen 2 was wrong about this for months:
+the peer view dropped it correctly and the function view kept it, so a visitor crossing between them
+in one state change was shown a constant read back as their own answer on the very next screen. `companyName` in `src/data/screen1.ts` is the single definition of "did they type one",
+because three inline trims is how a blank-but-not-empty name personalises one screen and not the
+other.
 
 | Input | Control | What uses it |
 | --- | --- | --- |
@@ -39,9 +93,19 @@ migration.
 | Revenue band | select, the seven bands in the data | Peer similarity axis, weighted below business |
 | HQ location | select, **every country** | Sort preference on the peer set |
 | Existing GCC status | **not asked** | Branches the framing. Constant; see above |
-| Line of business | select, **optional**, dependent on industry | Business similarity — the primary ordering signal |
+| Sub-industry | **cascades out of industry**, optional | Business similarity — the primary ordering signal |
 
 Never ask for a revenue figure. The data holds bands, so the input is a band.
+
+**An industry abbreviation is expanded ONCE, where the spreadsheet is read.** `CPG` reaches the
+dataset as "Consumer Packaged Goods" via `canonicalIndustry` in `normalize.ts`, called inside
+`readRows`. Renaming the published dataset alone is the obvious move and is the broken one:
+`business-type-map.ts` is keyed `industry||subIndustry`, so the next import would look up
+"Consumer Packaged Goods||CPG - Ice Cream" against a table written as "CPG||…", find nothing, and
+silently untag all 24 companies. Untagged is a safe state, which is exactly why nobody would
+notice. Only expansions belong in that alias table — merging two industries or fixing a typo
+changes who is compared with whom and belongs in the taxonomy editor, where the rename cascades
+and the diff records it.
 
 **Two country lists, doing two jobs, and the split is load-bearing.** `taxonomy.hqCountries` is
 DERIVED FROM THE COMPANIES by `buildTaxonomy` — so it is the list we have evidence about, it is
@@ -54,11 +118,33 @@ and the existing skew toward represented countries is preserved rather than dilu
 therefore the one input validated against the taxonomy UNION the world list; every other field is
 validated against the taxonomy alone, because the others are keys the matching reads.
 
-**Dropdown order is derived from company counts, never hand-authored.** Industry leads with the six
-largest and HQ with the twelve largest (91.4% of companies), then alphabetical, rendered as two
-`optgroup`s. A hardcoded list of "important" values is a second thing to maintain and is wrong the
-first time nobody remembers to. **`revenueBands` is never tiered or sorted** — its order is the
-matching contract.
+**Dropdown order is derived from company counts, with one deliberate exception.** Industry leads
+with the largest by count and HQ with the twelve largest (91.4% of companies), then alphabetical, as
+two groups. A hardcoded list of "important" values is a second thing to maintain and is wrong the
+first time nobody remembers to.
+
+The exception is `PINNED_INDUSTRIES` — Retail and Consumer Packaged Goods sit in the leading tier
+regardless of count, because ANSR expects enquiries from them out of proportion to how much of the
+researched dataset they occupy (Retail is eighth by count, Consumer Packaged Goods sixteenth).
+**Anticipated demand and dataset composition are different things, and only ANSR knows the first.**
+Pinned entries still sort by count inside the tier. Keep the list short: every addition is a claim
+the data is wrong about what visitors will pick.
+
+**`revenueBands` is never tiered or sorted** — its order is the matching contract.
+
+**The three dropdowns are a custom listbox, not `<select>`, and the industry one is a tree.** A
+native select's open menu is drawn by the OS and cannot be styled, which left the form ending in a
+macOS Aqua popup. It is deliberately NOT built on Radix Select: that portals its content with
+`position: fixed`, and inside a frame sized to its own content a fixed element anchors to the wrong
+viewport. The panel is absolutely positioned inside the field, always opens downward (flipping would
+require reading the viewport), and carries a filter above 12 options. **The popup's role is read
+from the data** — an option carrying children makes it a tree — so the two cannot disagree and an
+industry with no sub-industries mapped simply has nothing to open. The regression is on touch,
+where the native wheel picker was better; the filter is the compensation. Admin keeps native
+selects — only the entry point changed, and its specs drive both shapes through `choose()` and
+`chooseSubIndustry()` in `tests/browser/helpers.ts`. **`choose()` handles the industry control's
+stay-open behaviour by then taking the `All of {value}` row**, so a spec never has to know which
+shape it is driving.
 
 **Two screens.**
 
@@ -70,18 +156,70 @@ which is what keeps them clear of the no-invented-figures rule; the logo strip m
 those companies used this tool. Composition detail and the measurements behind it are in
 `.tastemaker/style-lock.md`.
 
-*Screen 1 — Peer View.* Four blocks:
-1. Up to five comparable companies already running India GCCs — cities, India headcount as a band,
-   year established.
-2. **The industry count**: how many other companies in their industry run an India GCC. This turns
-   the thin-peer case from a weakness into evidence — five named peers plus "and 184 others in
-   BFSI" reads stronger than five peers alone.
+*Screen 1 — Peer Landscape.* **A compact teal context area, then SIX ZONES of alternating ground,
+each holding one or two bordered cards.** Not seven full-bleed bands: that shape was a landing page —
+a 200px display hero stating the finding, then seven sections each with its own ground, 80–112px of
+air and a 48px heading — and it read badly in the ninety seconds this audience gives it. The first
+figure was below the fold, no two pieces of evidence could be compared side by side, and the last two
+bands were navigation and a CTA rather than evidence.
+
+**Nor is it the one flat white surface that replaced those bands.** Eight cards, every one a white
+rectangle with a hairline border and a 16px heading, stacked down one white page: correct, dense, and
+cognitively flat — nothing told the eye that the comparison set and the national scale proof are
+different kinds of claim. A zone is a colour change at a boundary and nothing else, so the sections
+inside it keep card density and two of them can still share a row. The grounds run mint, white,
+near-white mint, white, mint, white, so no boundary is invisible and no two adjacent zones match.
+Cards carry one of four **tones** — plain, tint, accent, inverse — applied once per class of evidence
+rather than alternated. Reasoning and the rejected alternatives are in the style lock.
+
+The teal area carries three things: `ANSR. GCC Intelligence` as the `h1`, **the finding as a
+non-heading display line**, and the visitor's four answers as pills with one "Change my answers"
+button. The finding came back because the band was otherwise a lockup and a row of answers — chrome
+and no content, so a visitor who had just submitted a form was told which product they were in and
+what they had typed and nothing about the result. It is deliberately not a second heading: the `h1`
+is the product and is shared by both result screens. Screen 2 does NOT carry it, because its content
+surface already opens on the same claim as a real `h2`. At the band's foot sit the two view tabs,
+whose selected cell is the same white surface as the content below it.
+
+Then SNAPSHOT — four figures before any card begins, so the result is legible without scrolling.
+**Every one is a property of the INDUSTRY**: its company count, the mean centre size, the spread of
+cities, the leading one. The previous strip led with the peer count and the largest peer centre,
+which are properties of a five-company set our own matching chose — a statistic about the tool rather
+than about the ground being sized. The snapshot introduces no figure a card does not evidence, it
+holds four cells whatever the result, and a cell the data cannot supply says "Data unavailable"
+rather than showing a dash, a zero or an estimate.
+1. Up to five comparable companies already running India GCCs — cities, year established, India
+   headcount as a band. **A packed grid of floating cards, and there is no lead card and no table.**
+   Both shapes were tried and both failed for a stated reason. A full-width lead card carrying the
+   closest match at display size left that company the one in the set that could not be compared
+   with anything. A five-row table fixed that and was a spreadsheet dropped into a brand page: four
+   of its five columns held a chip list, a year and a band rather than anything a reader ranks down
+   a column, no cell could carry a figure at a size worth reading, and on a phone the column a
+   reader came for was behind a horizontal scroll. Cards give each company its employee band at
+   24px, and rows are PACKED — five become three then two, four become two and two — so no row is
+   left part-empty. **The relevance order is carried by a rank badge on each card**, which is what a
+   table's row position did for free; the "Closest comparison" chip is gone at ANSR's request.
+   **Headquarters is not shown and the field is dropped with the column** (see below).
+2. **The industry count, as three OVERLAPPING bars on one z-stack** — the national base, the
+   industry inside it, and inside that either the visitor's sub-industry or the comparison set
+   itself. Requested by ANSR in that exact shape, and it beats the stepped tracks it replaced for
+   one reason: stepped tracks put a gap between rows, and a gap is the one thing the eye reliably
+   reads as separation, which is the opposite of "inside". It is still not a divided bar — 5 is
+   inside 189 which is inside 1,834, and those figures sum to nothing. **Always three layers**: two
+   is the shape it looks and says least in, so the comparison set substitutes for an unanswered
+   sub-industry. The bars step down from a shared top edge to give each label an exposed band of its
+   own; concentric bars collided at phone width, which is a function of the ratio between two real
+   figures and therefore has no safe viewport. This is what turns the thin-peer case from a weakness
+   into evidence.
 3. **The largest companies in their industry with an India GCC**, as an aspirational anchor. We hold
    revenue *bands*, not revenue, so nothing can be ranked by revenue. The rule is: take the highest
    band that has members in that industry and fill from there downward, ordered by GCC size. Three
    industries have nobody in the top band, so the panel must degrade rather than assume one exists.
 4. The Fortune Global 500 count and summed professionals, as scale proof — across all of India, not
-   just the peer set.
+   just the peer set. **The strip's source-and-method block is gone at ANSR's request** and nothing
+   replaced it, which is the one removal in that pass with no compensating line: the professionals
+   figure is a sum of headcount BANDS and the page no longer says so, and there is no as-at date.
+   `scale.asOf` is still on the view model, so restoring the date is one line.
 
 *Screen 2 — Function View.* Tech, Operations, HR, Finance. Internally the metrics are organised by
 four lenses — supply, speed, place, cost — but **the lens names are an internal filing system, not
@@ -119,7 +257,9 @@ than the data does. Refused on a rating, since an ordinal has no "or more", and 
 where it would qualify a figure that is not there.
 
 **India heatmap.** Built from the city lists in the company data — density of GCCs per city, filtered
-to the visitor's industry. Not a separate dataset.
+to the visitor's industry. Not a separate dataset. Dots on India's own outline (invariant 8), with dot
+area and fill depth both tracking the count. **The one ambient animation on it is a halo BEHIND the
+leading hubs, never the dot** — a dot's radius is the figure, so animating it animates the claim.
 
 **Every mark on a chart carries its figure in text beside it, and nothing is behind a hover.**
 `src/components/public/charts.tsx` is the vocabulary both screens draw with, and this rule is why
@@ -177,25 +317,52 @@ figure beside a nine-part breakdown rendered as a card four fifths full of nothi
 width, so narrow cards fill a row before wide ones begin.
 
 **Every card grid on the public screens then packs its rows so none is left part-empty**, because an
-empty cell in a grid of evidence reads as a card that failed to load. Three grids do it, each on a
-grid whose column count divides by both two and three: Screen 2's metric panel (`packWidths`), the
-peer cards (`peerSpans`) and the ask form (`FieldProps.span`). The packing may only ever **widen** a
-card, never narrow or reorder one — a narrower card misrepresents the metric's own shape, and the
-order carries meaning. Two cases stay part-empty on purpose: a lone scalar, since one figure across
-twelve columns is the artefact the weighting exists to prevent, and a single peer, since a thin
-industry is supposed to look thin. Reasoning and the rejected alternatives are in the style lock.
+empty cell in a grid of evidence reads as a card that failed to load. **Three grids do it now**, each
+on a grid whose column count divides by both two and three: Screen 2's metric panel (`packWidths`),
+the ask form (`FieldProps.span`) and Screen 1's comparison cards (`rowPlan` / `layoutFor`). The
+packing may only ever **widen** a card, never narrow or reorder one — a narrower card misrepresents
+what it draws, and the order carries meaning. One case stays part-empty on purpose: a lone scalar on
+Screen 2, since one figure across twelve columns is the artefact the weighting exists to prevent.
+Reasoning and the rejected alternatives are in the style lock.
+
+**Widening a comparison card changes its INTERIOR, not just its box.** Five peers pack as three
+thirds then two halves, and a half-width card holding a third-width card's interior is 40% empty —
+which is the same artefact the packing exists to prevent, one level down. A wide card lays its figure
+and its footer in two columns instead, and that split is gated on `lg`, which is the breakpoint the
+span itself is gated on: below it the grid is two equal columns, no card is wide, and a two-column
+interior squeezed a five-digit range onto two lines.
+
+**The function-tile grid is the case where the column count is decided by the ITEM COUNT.** Eight
+functions may take two columns or four and never three, because 8 does not divide by 3 and the last
+row would lose a cell. Four is too narrow for "Business operations and shared services", so it is
+two — which is also what brings the card within about 20px of the containment chart beside it.
+
+**Screen 1's analytical row is three fifths and two fifths, not halves.** The containment chart is a
+wide chart; the function list is eight short lines that tile two to a row. The row is `items-start`,
+or the shorter card is padded out to its neighbour's height and renders with a band of empty white
+under its own content. **The largest-centres block is a full-width vertical stack rather than a
+column in that row**: it is a RANKING, and a ranked stack with a display numeral and one shared bar
+axis is what a ranking looks like — two grids of company cards under two headings is what makes a
+page read as padded.
 
 **A ratio derived from headcount band midpoints is honest as a bar's length and never as a published
 figure.** `PeerCard.sizeShare` is the single definition of it, always against the largest member of
-the set that card came back in — the two Screen 1 blocks that use it are scaled separately, because
-sharing one peak would flatten every peer bar whenever the industry happened to contain an Amazon.
-The visible figure stays the band.
+the set that card came back in — the two Screen 1 blocks that compute it are scaled separately,
+because sharing one peak would flatten every peer bar whenever the industry happened to contain an
+Amazon. The visible figure stays the band.
+
+**Only the largest-centres block draws those bars now.** The comparison cards dropped theirs at
+ANSR's request, along with the axis note that named the company at full width — each card carries its
+band as a 24px figure instead, which is the reading the bar was a second copy of. The largest block
+keeps both, because "largest" IS a magnitude and a stack of five bands with no marks is a list rather
+than a ranking. Its bar column is fixed-width on desktop so five bars share one axis; sized to its
+own figure, each row would draw its own axis and the set would look comparable without being so.
 
 **Cut from the brief, deliberately:** the editable peer set, and "India GCC as a % of global tech
 workforce". Do not reintroduce either.
 
 **Built, then cut: company-name autocomplete.** Typing a name offered matching companies and prefilled
-industry, revenue band and line of business. It worked, it shipped nothing to the browser it should not
+industry, revenue band and sub-industry. It worked, it shipped nothing to the browser it should not
 have, and it was still wrong: the suggestions could only ever come from our own 1834, so a visitor at a
 large company we have not mapped types their name, sees an empty dropdown, and reads it as "this tool
 does not know who we are" — in front of the exact audience the tool exists to impress. **The absence of
@@ -248,15 +415,41 @@ Violating any of these breaks the product, not just the build.
 7. **The public surface never hints that an admin exists.** No login link, no admin nav, no
    "sign in". Admin is reached by typing the URL and is behind real auth — an unguessable path is
    not access control.
-8. **The India map asserts no boundary.** It plots real city coordinates on an unbordered field and
-   says so in a visible caption. India's borders are contested, so a hand-authored or approximated
-   outline states a border position the tool has no business stating — under ANSR's brand, in front
-   of the client's own prospects. Positions come from `CITY_COORDINATES` in `src/data/geo.ts`;
-   coordinates are geographic fact and live in code rather than in the dataset, so the taxonomy
-   editor cannot produce a city plotted somewhere invented. A **verified, licensed** outline may be
-   added behind `projectCity` if one is ever sourced. Drawing one by hand is not an option, and
-   neither is fitting the frame to whichever cities an industry happens to occupy — a fixed frame is
-   what makes a thin industry look thin.
+8. **Every India outline in this project comes from Natural Earth's India point-of-view admin-0
+   set, and nothing is ever traced, approximated or hand-authored.** India's borders are contested,
+   so a guessed outline states a border position the tool has no business stating — under ANSR's
+   brand, in front of the client's own prospects. A dotted or filled silhouette IS a boundary
+   claim, so there is no neutral rendering available; what is available is a claim whose point of
+   view is stated rather than implied, and that is India's own, drawn under India's brand. It is
+   the most defensible position, not a neutral one, and it is on the list for ANSR's sign-off.
+
+   **Two surfaces draw it, from one file, and the shared source is load-bearing.** The ask hero's
+   dotted world map (`scripts/build_dot_map.py` → `src/data/dot-world-map.ts`) and the Screen 1
+   density map's filled outline (`scripts/build_india_outline.py` → `src/data/india-outline.ts`).
+   Mixing a default-view layer with an India-view one would paint the disputed strip one colour
+   while the neighbour's own polygon still claimed it, and drawing two different Indias on two
+   screens of one page is the hardest thing here to defend. Both generators cache the same 13 MB
+   public-domain geojson under `.cache/` and commit only derived path strings.
+
+   **What the density map still may not do.** Positions come from `CITY_COORDINATES` in
+   `src/data/geo.ts` — geographic fact, in code rather than in the dataset, so the taxonomy editor
+   cannot produce a city plotted somewhere invented. The frame is fixed and may never be fitted to
+   whichever cities an industry happens to occupy: a fixed frame is what makes a thin industry look
+   thin. **The frame must also contain the whole of India**, which is not a composition preference
+   — it ran to 90°E and 32°N for months, which holds every GCC city and cuts off the northeast and
+   Ladakh. Harmless while nothing was drawn, a boundary claim by omission the moment something is.
+   `MAP_FRAME` in `geo.ts` and `INDIA_OUTLINE_FRAME` in the generated file are the same numbers
+   written twice and a unit test asserts they agree; a frame that moves on one side only puts every
+   dot in the wrong place on a correctly drawn country.
+
+   **The visible caption is GONE, at ANSR's request, and this is the one open conflict in this
+   file.** It read "Boundaries as India states them, from Natural Earth's India point-of-view
+   dataset." Everything above still holds — the outline is still generated from that dataset, both
+   surfaces still share one source, nothing is traced — so the claim drawn has not changed. What
+   changed is that the page no longer STATES whose claim it is, which is the specific thing the
+   second paragraph above argues for: a claim whose point of view is stated rather than implied. A
+   browser spec now asserts the line is absent, so restoring it is a decision rather than an
+   accident, and it is the first item on the blocked list in `handoff.md`.
 
 ## Stack
 
@@ -454,17 +647,32 @@ hand-authored** — a tag every retailer carries scores zero there and the weigh
 as companies are added. `bandProximity` is a three-step function: 1.0 same band, 0.66 adjacent, 0
 otherwise.
 
-**Business similarity outranks both revenue band and HQ country, and the reason is in the card.**
-A `PeerCard` carries only id, name, cities, headcount band, established year and the Fortune flag —
-`toCard` drops `revenueBand`, `hqCountry`, `industry` and `businessTypes`. So a band or market mismatch
-is invisible to the visitor while a business mismatch is the first thing they see. HQ country is still a
-preference and never a filter, so it cannot change how many peers come back.
+**Business similarity outranks both revenue band and HQ country, and the comparison block shows
+NEITHER.** A `PeerCard` carries id, name, cities, headcount band, established year and the Fortune
+flag; `toCard` drops `revenueBand`, `industry`, `businessTypes`, `forbesGlobal2000` — and `hqCountry`.
 
-Two consequences worth knowing before writing anything against a card. **No copy may claim something a
-card cannot show** — a lead promising "companies from your own market first" was shipped and was false,
-because H&M and Adidas outrank GAP for a US apparel visitor and nothing on the card reveals it. And **a
-test that reads a dropped field gets `undefined`**, so a comparison over it silently passes; assert that
-the guard itself holds, or read the field from the dataset.
+HQ has been off, on, and off again, and the rule that survived all three is **remove the column and
+the field together, or the next reader will assume the omission was an oversight.** It was dropped for
+years on the argument that a market mismatch should stay invisible while a business mismatch is the
+first thing a visitor sees. It was shown for one pass at ANSR's request, because a CIO reading a
+comparison set asks where each company is headquartered. ANSR then asked for it back off, and the
+field went with the column.
+
+**Nothing about matching moved on any of the three occasions, and nothing needed to**: HQ is a SORT
+PREFERENCE and never a filter, so its presence on a card cannot explain why a company is absent or
+change how many come back. `input.hqCountry` is still one of the four answers echoed on the result
+band, and `peers.ts` still reads the dataset's own field.
+
+**What the removal did cost is the explanation.** The method line under the block — "revenue band and
+headquarters are preferences rather than filters, so a closer business outranks a closer size or a
+nearer market" — went with the column, so a visitor can no longer see why this exact set puts H&M
+(Sweden) and Adidas (Germany) above GAP (USA) for a US apparel visitor. `peerLead` is now the only
+statement of method on the block: it names the sub-industry matched on and puts business before size.
+
+**No copy may claim something a card cannot show.** A lead promising "companies from your own market
+first" shipped and was false for the reason above. And **a test that reads a dropped field gets
+`undefined`**, so a comparison over it silently passes; assert that the guard itself holds, or read
+the field from the dataset.
 
 **A similarity floor of 0.20 applies to `businessSimilarity` ALONE, never the combined score.** A
 perfect band match is worth 0.3; on the combined score it would drag a business-irrelevant company
@@ -480,7 +688,7 @@ the one it lost. The reasoning and the rejected values are in `similarity.ts` be
 `docs/business-types.md` carries the version for ANSR.
 
 **The old three-rung band ladder survives as `matchPeersByBandLadder`, as the test oracle.** With no
-line of business selected the scored engine returns its output company-for-company; that equivalence
+sub-industry selected the scored engine returns its output company-for-company; that equivalence
 is asserted both in `similarity.test.ts` and as a `data:verify` invariant, and is what makes the
 whole change provably additive. Do not delete it without deleting those.
 
@@ -540,7 +748,7 @@ how many peers come back, the largest-in-industry panel is never empty, known re
 ascending order, a metric shown on several tabs carries one set of figures, every tag is carried by at
 least two business types, a company never carries a business type from another industry, no peer is
 ever shown below the similarity floor, the floor never empties a set the industry could fill, and
-**selecting no line of business reproduces the old band ladder exactly**. A failure here is a bug, and
+**selecting no sub-industry reproduces the old band ladder exactly**. A failure here is a bug, and
 `--accept` deliberately cannot silence it.
 
 *Profile figures* are the measurements in `docs/data-audit.md` — counts, index membership, aggregate
@@ -557,9 +765,11 @@ stopped being a check.
 
 **Known gaps** — tracked in `handoff.md`:
 - No per-company function list, and there will not be one. `COMMON_FUNCTIONS` in
-  `src/data/screen1.ts` is the hardcoded set the brief permits, rendered with a visible line saying
-  it is the general India GCC pattern rather than a breakdown of the companies shown. ANSR has still
-  to sign off the wording and the order.
+  `src/data/screen1.ts` is the hardcoded set the brief permits. **The two lines that said so are
+  gone at ANSR's request**, and the SECTION HEADING carries the job instead: "Functions most GCCs run
+  from India" is a claim about GCCs in general and cannot be read as one about the companies above it.
+  `COMMON_FUNCTIONS_BASIS` and `PeerView.functionsBasis` were deleted with them rather than left as
+  data nothing renders. ANSR has still to sign off the wording and the order.
 - Screen 2 metric values: all 35 populated, from figures ANSR supplied and revised rather than from a
   citable source, and three filled from judgement. **The "Sample, not for publication" stamp has been
   removed at ANSR's request**, so nothing on the page now flags a figure as not-yet-final; `asOf` is
@@ -574,23 +784,23 @@ session, so this records **what lives where and why**, never a file listing.
 | Path | Responsibility |
 | --- | --- |
 | `src/app/` | Next.js App Router. `layout.tsx` self-hosts the display face through `next/font` and exposes it as `--gcc-font-display-loaded`, which `tokens.css` reads — the family name `next/font` generates is hashed, so naming the face literally in the token would silently fall through to the sans stack and lose **Light 300**, which is the brand's single biggest typographic tell. A surface opts in with `font-display`; `body` stays on `--ansr-font-sans` so admin keeps Inter. `page.tsx` is the tool's only public route and serves BOTH screens; it is `force-dynamic`, because a prerender would bake the taxonomy into the build and defeat the read cache the data layer was designed around. `actions.ts` is the public surface's single server action — deliberately one seam, so there is one place to check that the dataset does not cross. Screen 2 needs no action: its payload does not depend on the visitor, so `page.tsx` builds it per request and passes it down. `globals.css` is the Tailwind theme, aliased onto the brand tokens — it restates no values and clears Tailwind's default palette so off-brand colour is unreachable through a utility class, and it carries the public screens' one motion sequence and the three band grounds. **`--ansr-gradient-teal` and `--ansr-gradient-orange` are `background` SHORTHAND values, not images** — each is a gradient layer composited over a solid ground colour, because that is how the brand board builds them. A colour is not a valid `<image>`, so aliasing them into Tailwind's `--background-image-*` namespace emits a `background-image` whose last layer is a colour, which is invalid and paints **nothing, silently, while still generating a utility class that looks correct**. That alias existed from the first commit and was only discovered when something finally used it. Both are consumed through `.gcc-ground-gradient`, which uses the `background` shorthand they are written for; only `--ansr-gradient-conic` is a real image and stays aliased. Do not "tidy" the two back into the theme block. |
-| `src/data/` | The whole data layer, and the only place that knows the dataset shape. `schema.ts` is the zod contract; `normalize.ts` holds the cleaning primitives, shared by the seed importer and the future admin upload so one file format never gets two parsers; `derive.ts` computes everything not stored; `peers.ts` is the scored matching engine and the Screen 1 counts, pure functions over a loaded dataset, and it keeps `matchPeersByBandLadder` as the equivalence oracle; `similarity.ts` is the IDF weighting, the business-similarity ratio, the band step function and the floor — the single place a peer's rank is decided, and the place to change one number (`SIMILARITY_FLOOR`) if ANSR wants longer sets at lower quality; `business-tags.ts` is the 137-tag vocabulary, code-level for the same reason `METRIC_LENSES` is; `business-type-catalogue.ts` is the 158-type seed, standing to `dataset.businessTypes` exactly as `metric-catalogue.ts` stands to `dataset.metrics`; `diff.ts` is the dataset diff — one computation with two renderers, a console one for the importer and structured output for the admin preview, so the two can never disagree; `metrics.ts` holds the Screen 2 catalogue's behaviour, and `publicMetric` there is the single place a gated value is omitted; `metric-catalogue.ts` is the seed transcribed from the brief and populated, and the place a metric shown on several tabs is authored once and spread onto each with a different id; `store.ts` + `store/{fs,github}-store.ts` are the `DataStore` implementations; `publish-store.ts` selects the write target and refuses to guess; `dataset.ts` is the cached server-side read, invalidated by an mtime-and-size check rather than by anyone remembering to clear it, and is `server-only`, which is what makes "never ship the dataset to the browser" a build error rather than a habit. `screen1.ts` is Screen 1's view model — the pure function that turns a dataset plus five inputs into the couple of kilobytes the Peer View renders, and the place that decides whether a result is degenerate so the copy can say something true about it; `geo.ts` holds the city coordinates the density map plots, hardcoded here because they are geographic fact rather than admin-editable data; `countries.ts` is the HQ input vocabulary — every country, code-level because `taxonomy.hqCountries` is company-derived and a re-import would delete anything added to it. `screen2.ts` is Screen 2's view model: it imports the gate rather than `dataset.metrics`, so there is no path around it, and it resolves every metric to pre-formatted figures and bar fractions with no nullable value left in the type — which is where the "an incomplete open metric is dropped, never half-filled" rule becomes something the compiler carries. |
+| `src/data/` | The whole data layer, and the only place that knows the dataset shape. `schema.ts` is the zod contract; `normalize.ts` holds the cleaning primitives, shared by the seed importer and the future admin upload so one file format never gets two parsers; `derive.ts` computes everything not stored; `peers.ts` is the scored matching engine and the Screen 1 counts, pure functions over a loaded dataset, and it keeps `matchPeersByBandLadder` as the equivalence oracle; `similarity.ts` is the IDF weighting, the business-similarity ratio, the band step function and the floor — the single place a peer's rank is decided, and the place to change one number (`SIMILARITY_FLOOR`) if ANSR wants longer sets at lower quality; `business-tags.ts` is the 137-tag vocabulary, code-level for the same reason `METRIC_LENSES` is; `business-type-catalogue.ts` is the 158-type seed, standing to `dataset.businessTypes` exactly as `metric-catalogue.ts` stands to `dataset.metrics`; `diff.ts` is the dataset diff — one computation with two renderers, a console one for the importer and structured output for the admin preview, so the two can never disagree; `metrics.ts` holds the Screen 2 catalogue's behaviour, and `publicMetric` there is the single place a gated value is omitted; `metric-catalogue.ts` is the seed transcribed from the brief and populated, and the place a metric shown on several tabs is authored once and spread onto each with a different id; `store.ts` + `store/{fs,github}-store.ts` are the `DataStore` implementations; `publish-store.ts` selects the write target and refuses to guess; `dataset.ts` is the cached server-side read, invalidated by an mtime-and-size check rather than by anyone remembering to clear it, and is `server-only`, which is what makes "never ship the dataset to the browser" a build error rather than a habit. `screen1.ts` is Screen 1's view model — the pure function that turns a dataset plus five inputs into the couple of kilobytes the Peer Landscape renders, and the place that decides whether a result is degenerate so the copy can say something true about it. Two fields there carry their own justification and may not be read without it: `industry.averageHeadcount` is a mean of FTE BAND MIDPOINTS, rounded by `roundHeadcount` to a step coarser than the narrowest band, industry-level rather than peer-set-level, and never renderable without the method line beside it; and `scale.asOf` is the dataset's own `generatedAt`, which is the only date here that is a machine fact rather than something an admin typed — `dataset.source` is deliberately NOT carried across, since it is documented as free text for the admin's benefit and currently holds the seed spreadsheet's filename; `geo.ts` holds the city coordinates the density map plots, hardcoded here because they are geographic fact rather than admin-editable data, and exports `MAP_FRAME` / `MAP_STANDARD_PARALLEL` because a generated file is projected from them; `india-outline.ts` is GENERATED by `scripts/build_india_outline.py` and is the density map's India, one filled path plus a dot per island too small to stroke — invariant 8 governs it; `select-field.tsx`'s options come from here too; `dot-world-map.ts` is GENERATED and never hand-edited — the ask hero's dotted world map as two SVG paths, written by `scripts/build_dot_map.py`, and it lives here rather than beside the component because it is data the component draws, not markup; `countries.ts` is the HQ input vocabulary — every country, code-level because `taxonomy.hqCountries` is company-derived and a re-import would delete anything added to it. `screen2.ts` is Screen 2's view model: it imports the gate rather than `dataset.metrics`, so there is no path around it, and it resolves every metric to pre-formatted figures and bar fractions with no nullable value left in the type — which is where the "an incomplete open metric is dropped, never half-filled" rule becomes something the compiler carries. |
 | `src/app/admin/` | The admin surface. Six tabs: Companies, Taxonomy, Business types, Metrics, Entry point, Publish. `login/` sits outside the `(authed)` route group and is the one path without a session; the group's layout is the guard for everything else and hosts the draft provider, so a draft survives moving between tabs. A route group rather than middleware: middleware would be a second runtime to keep Node-only for no gain. |
 | `src/app/api/admin/` | Login, logout, diff preview, publish. Each **re-checks the session itself** — deliberate duplication, because a layout cannot guard a route handler and a route that forgot would be silently public. |
 | `src/lib/admin/` | Auth and the publish pipeline. `password.ts` is scrypt hashing; `session.ts` is the signed cookie and is `server-only`; `rate-limit.ts` is the two-budget login limiter; `totp.ts` is the optional second factor, RFC 6238 on `node:crypto` with no dependency; `guard.ts` holds the two refusal shapes (redirect for pages, bare 401 for APIs); `publish.ts` is the validate → read → diff pipeline shared by preview and commit; `constants.ts` exists solely because `server-only` throws under `tsx`, so anything a script imports cannot carry the marker. |
 | `src/components/admin/` | Client-side admin UI. `site-content-manager.tsx` is the Entry point tab and is the one editor with NO local form state and no Save button — nothing in it has a cross-field rule that must land as one edit, so each control writes straight to the draft and there is no second copy of the truth to get out of step. `draft-provider.tsx` is the browser draft, autosaved locally and pinned to the baseline it started from; its `STORAGE_KEY` is versioned and **is bumped whenever the editable shape changes**, because restoring a draft missing a key produces a schema error the admin cannot fix from the UI. The rest is the app-shell chrome, the company table and editor, the taxonomy editor, the metric catalogue and editor, and the publish view. |
-| `src/components/public/` | What both screens use. `tool.tsx` owns the whole phase machine — ask, Peer View, Function View — as component state rather than routes, because the tool cannot own the URL bar, and moves focus to the new `h1` on every transition since nothing else announces a change that was not a navigation. **That focus move is an effect keyed on the phase, never a call beside `setPhase`.** It was written as `setPhase(...)` followed by a `requestAnimationFrame` that focused a ref, which assumes React commits before the next frame; when it does not, the ref is null, the focus call silently does nothing, and the only announcement a screen reader gets for a phase change is dropped. It passed every local test and failed against the deployed build. An effect runs after commit, so the heading is mounted by definition — and it must skip its first run, or an arriving visitor has the keyboard moved and the frame scrolled before they have done anything. `primitives.tsx` is the section, stat, chip, fact-list and provenance shapes plus the number formatters, and it owns the **three-ground band system** every public section is built from — a band's ground is a property passed to `Section`, chosen by what the band does, never alternated blindly; `screen-header.tsx` is the motif-bearing hero band and the display title, with the placement passed in because where a motif can sit depends on where that screen's text is; `closing-cta.tsx` is the close, and what marks it is the **one orange pill per screen** rather than being the only dark band — the inverse ground is used deliberately on the hero and on each figure band too. It is still the one place a brand texture sits. `charts.tsx` is the chart vocabulary both screens draw with — see below. This folder exists because Screen 2 wanted most of `screen1/primitives.tsx`: importing across screen folders would have made `screen1` the owner of shapes both screens depend on. |
-| `src/components/screen1/` | The public Peer View. `peer-view.tsx` is the ask and answer states; `customer-logos.tsx` is the marquee strip and `impact-band.tsx` the dark figures band, both entry-point-only; `ask-hero.tsx` is the ask's own hero band, separate from the shared `ScreenHeader` because it is the one band that uses the brand's real display ground and that ground **admits white ink only** — every muted token measures under 3:1 on it, so a shared header would have had to give up either the ground or AA on the two screens that do need a muted lead; `input-panel.tsx` is the six inputs, with its own field primitives rather than admin's because a public form and a dense internal tool want different densities; `evidence.tsx` and `city-map.tsx` are the blocks. **`copy.ts` holds every visitor-facing sentence**, including the band that offers Screen 2 — the words before a visitor decides to go on are this screen's problem. `use-frame-height.ts` negotiates height with the hosting page. |
+| `src/components/public/` | What both screens use. `tool.tsx` owns the whole phase machine — ask, Peer View, Function View — as component state rather than routes, because the tool cannot own the URL bar, and moves focus to the new phase's landmark on every transition since nothing else announces a change that was not a navigation. **On the two RESULT screens that landmark is the tab panel, not the `h1`** — the `h1` is now the shared product lockup and is identical on both, so focusing it would announce nothing about the change, whereas a panel named by its own tab announces "Peer landscape, tab panel". The ask keeps its heading, because its `h1` is its own. **That focus move is an effect keyed on the phase, never a call beside `setPhase`.** It was written as `setPhase(...)` followed by a `requestAnimationFrame` that focused a ref, which assumes React commits before the next frame; when it does not, the ref is null, the focus call silently does nothing, and the only announcement a screen reader gets for a phase change is dropped. It passed every local test and failed against the deployed build. An effect runs after commit, so the heading is mounted by definition — and it must skip its first run, or an arriving visitor has the keyboard moved and the frame scrolled before they have done anything. `primitives.tsx` holds the stat, chip, fact-list and provenance shapes plus the number formatters; `Panel` is the bordered card the result surface is built from — NOT a variant of `Section`, which is a full-bleed band with its own ground and a 48px heading, and which Screen 1 no longer uses; the **three-ground band system** and `Section` stay for a surface that wants a band. `screen-header.tsx` is the motif-bearing teal CONTEXT area both result screens open with, plus `ProductIdentity` (the shared `h1`), `HeaderFinding` (the finding as a non-heading display line, Screen 1 only), `ContextPanels` (the four answers as pills plus one "Change my answers" button) and `ViewTabs`. It carries a second generated ornament, `.gcc-header-lattice`, on the leading edge opposite the motif — a 1px-on-24px dot field whose areal coverage is about 0.5%, so it is a texture the eye reads and a contrast measurement cannot. **The band has no bottom padding**, because the selected tab has to be physically continuous with the content surface beneath it; if a gap appears, something has added padding. The tabs are real ARIA tabs with a roving tabindex and **manual activation** — arrow keys move focus, Enter or Space activates — because activating swaps the entire screen and arrowing across with automatic activation would tear the page down under a visitor who was only looking. `aria-controls` is set on the selected tab alone, since the other view's panel is genuinely not mounted. **Deliberately not sticky**: the tool never owns a scroll container inside the frame. The two view labels live here rather than in either screen's `copy.ts`, because they are the one pair of strings belonging to neither screen alone and the failure mode is the switch disagreeing with itself about where the visitor is. `closing-cta.tsx` is Screen 2's close only — **Screen 1's page ends at its evidence strip, at ANSR's request** — and what marks it is the one orange pill per screen. It is still the one place a brand texture sits. `charts.tsx` is the chart vocabulary both screens draw with — see below — and `Containment` there is Screen 1's three overlapping bars, whose layers step down from a shared top edge so each label gets an exposed band of its own. `PanelTone` on `Panel` is the four card flavours; `Zone` in `peer-view.tsx` is the alternating full-bleed grounds. This folder exists because Screen 2 wanted most of `screen1/primitives.tsx`: importing across screen folders would have made `screen1` the owner of shapes both screens depend on. |
+| `src/components/screen1/` | The public Peer View. `peer-view.tsx` is the ask and answer states; `customer-logos.tsx` is the marquee strip and `impact-band.tsx` the dark figures band, both entry-point-only; `ask-hero.tsx` is the ask's own hero band, separate from the shared `ScreenHeader` because it is the one band that uses the brand's real display ground and that ground **admits white ink only** — every muted token measures under 3:1 on it, so a shared header would have had to give up either the ground or AA on the two screens that do need a muted lead; `ansr-wordmark.tsx` is the drawn lockup that stands where the headline's "ANSR" used to be typed — one of TWO literal uses of a brand asset on a public screen, the other being the full lockup stacked in `impact-band.tsx`'s heading, and logos are the only exception the adapt-never-paste rule grants. **Both headings that carry a drawn mark are Medium 500 / `tracking-body`, measured off the mark rather than chosen**: the lockup's stem is 0.137 of its cap height, which is the display face's Medium, and its sidebearings are normal rather than `tracking-display`'s -0.02em — a Bold heading beside it is two fonts on one line. Every other display heading keeps Bold + `tracking-display`. It is sized off cap height and inherits the ink, with the word carried beside it in `sr-only` text so the heading's accessible name is unchanged; `dotted-world-map.tsx` is that band's ornament and is layout only — two `<path>` elements over generated geometry, with every ink, opacity, radius and edge fade in `.gcc-hero-map`; `input-panel.tsx` is the four controls over six fields, with its own field primitives rather than admin's because a public form and a dense internal tool want different densities — and its grid is TWO EQUAL COLUMNS, two rows of two with the submit spanning both, because a 3/3 row over a 2/2/2 row shares no interior boundary and drew six unaligned edges from five fields; `select-field.tsx` is the widget all four use, and the one place an option carrying children turns the popup into a tree and cascades a second pane out of it — the pane is a child of the panel so its placement resolves against it, and `.gcc-select-*` in globals.css carries its two shapes, the measured room table behind them, the row chrome and the elevation. **`--ansr-container-card` is a COMPOSITION token, not just the form card's width**: the hero copy and the card derive their leading edge from the same box (`max-w-content px-6 md:px-12`, then `mx-auto max-w-card`), duplicated verbatim in `ask-hero.tsx` and `peer-view.tsx`, because the card is centred and capped so no tuned inset can align them at every width. Widening it moves the headline, and moves the dot map's leading mask fade with it, since that fade is measured against where the copy ends. **The hero then outdents by the card's WHOLE margin from `xl`, landing on the container gutter, and its lead takes `--ansr-container-lead` — 6rem left and 6rem right, one decision.** That pairing is what keeps the copy's trailing edge fixed, which is why the map's fade did not move; widening the lead without shifting left by the same step puts text on the map's visible field, and the two are gated on `xl` together for that reason. `evidence.tsx` and `city-map.tsx` are the cards. `evidence.tsx` owns the packed comparison-card grid and its row plan, the containment chart's layer construction, the ranked largest-centres stack, the function tiles and the terminating evidence strip. **Both ranked TABLES are gone**, and with them the focusable horizontal scroller they needed: cards and tiles reflow, so there is nothing to scroll sideways and no column past the fold. That closes the trade the scroller existed to manage — the comparison a table bought at the cost of a phone reader scrolling for the one figure they came for — because each card now carries that figure at 24px in the first screenful. **No company logo, initial, monogram or reserved empty box appears anywhere**: the dataset holds no marks, so each of those is either a fabricated identity or a visible gap. Every card starts with the name, and the name row is where a mark would go if any were ever licensed. `snapshot.tsx` is the four industry-level figures at the head of the content surface, as four floating tiles on the mint zone — it was one bordered container divided by 1px grid-gap rules, which was right on a white page and wrong once the strip sat on a tint: a single bordered box on a tint reads as a table, and its internal rules were drawn in the same value as the ground behind it. **It holds nothing new** — every figure on it is evidenced by a card further down — and it renders four cells whatever the result, stating "Data unavailable" rather than dropping a column or inventing a figure. **`copy.ts` holds every visitor-facing sentence**, including the card headings and their leads, the exact cohort counts, the snapshot's cells and the one surviving axis note, since which lines exist is a statement about what may honestly be claimed. `use-frame-height.ts` negotiates height with the hosting page. |
 | `src/components/screen2/` | The public Function View. `function-view.tsx` is the screen and the four function tabs, built on the Radix Tabs primitive rather than the registry wrapper — 44px triggers, no `transition-all`, no shadow. `metric-card.tsx` is layout only: it selects no chart and does no arithmetic, because both are decided in `screen2.ts` where a test can pin them. It owns the shape-only placeholder for a withheld metric — static, hatched and uniform, so it reads as sealed rather than as loading. There are deliberately no group headings inside a tab, because four public subheadings would have been the internal lenses re-lettered. `copy.ts` holds every visitor-facing sentence, as on Screen 1. |
 | `src/components/ui/` | shadcn/ui components, unmodified from the registry. On-brand because `globals.css` maps the registry's contract variables onto brand tokens. |
 | `data/` | `dataset.json` — the published dataset, tracked in git. Pretty-printed on purpose: a reviewable diff is the reason there is no database. `verify-baseline.json` holds the profile figures `data:verify` compares against; also tracked, and updated only by `data:verify -- --accept`. |
-| `public/logos/` | Customer marks for the entry-point strip, derived from `Customer Logos/` at the repo root. Six are real vectors; four arrived as a single base64 raster inside an SVG `<pattern>` at full source resolution (~520 KB for four) and are re-encoded to PNG at 2x display height. **Check a new logo's bytes, not its extension** — an `.svg` that is really a raster is invisible until someone looks. Walmart's export also had a `viewBox` nine tenths too small, so only "Wal" rendered. |
+| `public/logos/` | Customer marks for the entry-point strip, derived from `Customer Logos/` at the repo root — **which is held locally and gitignored**, like the root SVGs, because the raw client hand-off is working reference material and these adapted copies are what the app serves. Six are real vectors; four arrived as a single base64 raster inside an SVG `<pattern>` at full source resolution (~520 KB for four) and are re-encoded to PNG at 2x display height. **Check a new logo's bytes, not its extension** — an `.svg` that is really a raster is invisible until someone looks. Walmart's export also had a `viewBox` nine tenths too small, so only "Wal" rendered. |
 | `assets/brand/` | Brand source of truth. `tokens.css` is authoritative. Motifs adapted, never pasted. **SVGs at the repo ROOT are gitignored** (`/*.svg`, root-anchored, so this folder and `public/brand/` are unaffected) — design exports land there by accident and one 7 MB Figma file committed by a careless `git add .` is in the history forever. If a root SVG seems to be ignored, it is. |
 | `public/brand/` | Motifs already adapted for a specific placement, served as static files. Derived output, not source — each one is reproducible from `assets/brand/` with a `scripts/brand_asset.py` command recorded next to where it is used. |
 | `.tastemaker/` | `style-lock.md` — both public screens' visual decisions and the reasoning behind them, so a third surface reuses rather than re-derives. It restates no token values; `design-stack.md` and `tokens.css` outrank it. |
 | `tests/unit/` | Vitest, node environment, no jsdom. Pure and server-side logic: hashing, session signing, TOTP, the rate limiter, the diff, the schema, the cleaning primitives, the metric catalogue and its gate, the GitHub store against a stubbed `fetch`, and the publish pipeline against a temp file. `vitest.config.ts` resolves the `react-server` condition, which is how these import a `server-only` module at all. |
-| `tests/browser/` | Playwright against a real `next build && next start`, on its own copy of the dataset. Covers what a unit test structurally cannot: the draft lifecycle, autosave, restore after reload, the stale-baseline conflict, and focus behaviour. Serial, one worker — the server holds the rate limiter and the dataset cache in memory, so parallelism would make test order part of the result. Numbered specs run in reading order; `6-lockout.spec.ts` exhausts the limiter and must stay last. The `public` project covers both public screens and runs first, before the publish spec rewrites the fixture. Each project's `testMatch` is a narrow pattern, so a spec numbered outside all of them lands in no project and silently never runs — `helpers.ts` also owns `DRAFT_STORAGE_KEY`, so a provider bump is one edit rather than eight, and `band()` / `expectBand()`, which locate a public evidence band by its stable section id. **A public spec must never locate a band by its heading text.** Twenty of them did, and a copy pass that changed nothing they were testing broke all twenty — a suite that fails for a reason unrelated to its subject is one people learn to re-run rather than read. The id is the contract; `expectBand` still asserts the landmark, since a `<section>` with no accessible name is not a `region`. |
-| `scripts/` | Maintenance tools, run by hand, never at request time. Python: `brand_lint.py` enforces tokens, `brand_asset.py` adapts SVGs, `inspect_xlsx.py` profiles data drops. Two things about that pair that cost time once each: **`brand_lint.py` rejects a raw hex inside a COMMENT as well as in code**, including an otherwise-helpful `brand_asset.py` reproduce command, so a derived asset's recipe is recorded by naming its source and target tokens rather than by quoting their values; and **`brand_asset.py recolor --map` takes one comma-separated string, not a repeated flag** — repeating it silently applies only the last pair, and the sole signal is an "unmapped colors left as-is" line on stderr. TypeScript via `tsx`: `import-seed.ts` is the xlsx → JSON pipeline, `verify-data.ts` reproduces every figure in `docs/data-audit.md` from the published dataset and exits non-zero if one moves, `admin-hash.ts` mints the two admin env values from a TTY prompt so the password never lands in shell history. `sweep-floor.ts` and `proto-industry-tag.ts` are peer-matching analysis rather than maintenance: the first sweeps `SIMILARITY_FLOOR` and self-checks against `matchPeers` at the shipped value before reporting anything, the second prototypes industry-as-a-weighted-tag over a global pool without touching `src/`. Both are committed because they are the evidence behind a shipped decision and a live open one — rerun them rather than re-deriving the numbers, and note the first is worthless if its self-check does not say SOUND. `business-type-map.ts` is the classification table — 601 sub-industry mappings plus 568 per-company decisions, keyed by `industry||name` because company names are not unique even case-insensitively — and it is the reviewable artifact behind `docs/business-types.md`. `check-business-tags.ts` and `check-company-types.ts` are the authoring checks for that table, run by hand while editing it; `data:verify` carries the same properties as invariants once published. |
+| `tests/browser/` | Playwright against a real `next build && next start`, on its own copy of the dataset. Covers what a unit test structurally cannot: the draft lifecycle, autosave, restore after reload, the stale-baseline conflict, and focus behaviour. Serial, one worker — the server holds the rate limiter and the dataset cache in memory, so parallelism would make test order part of the result. Numbered specs run in reading order; `6-lockout.spec.ts` exhausts the limiter and must stay last. The `public` project covers both public screens and runs first, before the publish spec rewrites the fixture. Each project's `testMatch` is a narrow pattern, so a spec numbered outside all of them lands in no project and silently never runs — `helpers.ts` also owns `DRAFT_STORAGE_KEY`, so a provider bump is one edit rather than eight, and `band()` / `expectBand()`, which locate a public evidence band by its stable section id. **A public spec must never locate a band by its heading text.** Twenty of them did, and a copy pass that changed nothing they were testing broke all twenty — a suite that fails for a reason unrelated to its subject is one people learn to re-run rather than read. The id is the contract; `expectBand` still asserts the landmark, since a `<section>` with no accessible name is not a `region` — and it accepts **either** `aria-labelledby` or `aria-label`, because a band may legitimately have no visible heading. What must not pass is a band with neither. The ids on the peer landscape are `snapshot`, `peers`, `industry`, `largest`, `functions`, `map` and `scale`; Screen 2's metrics section is `function-metrics`, named apart from Screen 1's `functions` card because two ids differing only by which phase is mounted are two ids a spec will eventually confuse. |
+| `scripts/` | Maintenance tools, run by hand, never at request time. Python: `brand_lint.py` enforces tokens, `brand_asset.py` adapts SVGs, `inspect_xlsx.py` profiles data drops, `build_dot_map.py` cuts the ask hero's dotted world map out of a Natural Earth geojson and writes `src/data/dot-world-map.ts`, and `build_india_outline.py` cuts the density map's India outline out of **the same file** and writes `src/data/india-outline.ts` — both cache that 13 MB source under `.cache/` (gitignored, public domain, re-downloadable) and commit only derived path strings, because the alternative is either a megabyte of geometry in a visitor's browser or a few CPU-seconds on every cold start of a `force-dynamic` page. One source for both, per invariant 8. Two things about that pair that cost time once each: **`brand_lint.py` rejects a raw hex inside a COMMENT as well as in code**, including an otherwise-helpful `brand_asset.py` reproduce command, so a derived asset's recipe is recorded by naming its source and target tokens rather than by quoting their values; and **`brand_asset.py recolor --map` takes one comma-separated string, not a repeated flag** — repeating it silently applies only the last pair, and the sole signal is an "unmapped colors left as-is" line on stderr. TypeScript via `tsx`: `import-seed.ts` is the xlsx → JSON pipeline, `verify-data.ts` reproduces every figure in `docs/data-audit.md` from the published dataset and exits non-zero if one moves, `admin-hash.ts` mints the two admin env values from a TTY prompt so the password never lands in shell history. `sweep-floor.ts` and `proto-industry-tag.ts` are peer-matching analysis rather than maintenance: the first sweeps `SIMILARITY_FLOOR` and self-checks against `matchPeers` at the shipped value before reporting anything, the second prototypes industry-as-a-weighted-tag over a global pool without touching `src/`. Both are committed because they are the evidence behind a shipped decision and a live open one — rerun them rather than re-deriving the numbers, and note the first is worthless if its self-check does not say SOUND. `business-type-map.ts` is the classification table — 601 sub-industry mappings plus 568 per-company decisions, keyed by `industry||name` because company names are not unique even case-insensitively — and it is the reviewable artifact behind `docs/business-types.md`. `check-business-tags.ts` and `check-company-types.ts` are the authoring checks for that table, run by hand while editing it; `data:verify` carries the same properties as invariants once published. |
 | `docs/` | Deep reference, read on demand. Not steering. `brief.md` is the transcription of the source mind map — read it, not the image. `data-audit.md` is the profile of the source database. `business-types.md` is the peer-matching vocabulary: why tags rather than sub-industry, how the score works, and the 158 types by industry — the document to hand ANSR when they want to check the business judgement. `ansrx-visual-language.md` is `Group 149.svg` measured to the point where the 7.1 MB export never has to be opened again — typeface, weights, type scale, grid, band system, every hex against its token, the motifs as parameters, component anatomy, and the four brand questions the reference raises that only ANSR can answer. |
 | `.kiro/steering/` | Always-in-context rules. Four files, kept small on purpose. Tracked, along with `hooks/`, `settings/` and `skill-sources.json`. **`.kiro/skills/` is deliberately untracked** — 300 files of vendored third-party packs with one LICENSE between them, and git history is forever. `skill-sources.json` pins each pack's repo and commit, so re-cloning restores them. |
 
@@ -606,9 +816,20 @@ downstream, and a scanner that cries wolf over test data is one people learn to 
 
 - **`project.md` (this file)** — durable. Edited by replacement, never by appending. If a line is
   no longer true, it is deleted, not annotated with a correction.
-- **`handoff.md`** — volatile, current state only, hard cap of 120 lines. **Rewritten** at the end
-  of each working session, not appended to. Yesterday's state is not context, it is noise. The
-  `handoff-refresh` Stop hook enforces this.
+- **`handoff.md`** — volatile, current state only. **Rewritten in ONE pass** at the end of each
+  working session, never appended to and never sanded line by line. Yesterday's state is not
+  context, it is noise. The `handoff-refresh` Stop hook enforces the rewrite.
+
+  **It carries STATE AND POINTERS, never reasoning**, and that content rule is what keeps it small
+  — the line count is a symptom. Where we are, what is next, what is blocked, what would bite, and
+  where the explanation lives. The explanation itself belongs in this file if it is durable or in
+  the style lock if it is visual, both of which have room. A handoff line that says *why* is
+  duplicating something that already has a home, and duplicated reasoning is what made every
+  previous version overrun.
+
+  **Target ~90 lines, ceiling 140.** Deliberately a range: a hard number invites trimming sentences
+  toward it, and one session of that cost several times what the whole file costs to carry. Over the
+  ceiling, delete a whole section or move it to its proper home — never shave wording.
 - **`docs/*.md`** — reference detail. Not auto-loaded. One topic per file, named for the topic.
 - **Superseded content is deleted.** Not struck through, not moved to an "Archive" heading. Git
   holds the history; these files hold the present.

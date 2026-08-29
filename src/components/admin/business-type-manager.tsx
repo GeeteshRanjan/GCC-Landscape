@@ -69,7 +69,7 @@ export function BusinessTypeManager() {
           Business types
         </h1>
         <p className="mt-1 max-w-measure text-sm text-text-muted">
-          What a visitor picks as their line of business, and what drives peer
+          What a visitor picks as their sub-industry, and what drives peer
           similarity. Tags are the signal; their weighting is automatic. Editing a
           type&apos;s tags changes which companies appear as peers across its whole
           industry, so the publish diff reports it as a real change.

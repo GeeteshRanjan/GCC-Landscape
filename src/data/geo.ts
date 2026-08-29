@@ -12,14 +12,21 @@
  *      without a dot, which is visible and fixable, rather than being plotted
  *      somewhere invented.
  *
- *   2. **No India outline is drawn.** The obvious way to build the brief's
- *      "India map" is an outline path with dots on top, and hand-authoring that
- *      path is exactly the wrong risk to take: India's borders are politically
- *      contested, an approximate trace states a border claim the tool has no
- *      business making, and it would carry ANSR's brand while doing it. So the
- *      map plots real positions on an unbordered field. The dots' relative
- *      geography is accurate and no boundary is asserted. Adding a verified,
- *      licensed outline later is a drop-in behind `projectCity`.
+ *   2. **The outline is generated from a licensed source, never hand-authored.**
+ *      Invariant 8 has always forbidden a traced or approximated India — a guess
+ *      at a contested boundary, drawn under ANSR's brand — and has always allowed
+ *      "a verified, licensed outline ... if one is ever sourced". One is:
+ *      `scripts/build_india_outline.py` cuts it out of Natural Earth's India
+ *      point-of-view admin-0 set, the same public-domain file the ask hero's
+ *      dotted silhouette comes from, and writes `src/data/india-outline.ts`. Same
+ *      dataset as the hero on purpose: two different Indias on two screens of one
+ *      page is the failure that would be hardest to defend.
+ *
+ *      **That is why the frame below is what it is.** It used to run to 90°E and
+ *      32°N, which contains every GCC city and therefore looked correct — and cuts
+ *      off the northeast and Ladakh. Fine while nothing was drawn; a boundary claim
+ *      by omission the moment something is. The frame now contains India's whole
+ *      extent (68.1–97.4°E, 6.8–37.1°N) with margin.
  *
  * Values are the conventional city-centre coordinates, to two decimals — about a
  * kilometre, which is far finer than a dot on a 440-unit-wide field can express.
@@ -76,11 +83,35 @@ export const CITY_COORDINATES: Readonly<Record<string, LatLon>> = {
  * fitting the box to whichever cities a given industry happens to occupy would
  * make one industry's two cities fill the frame and imply national spread. A
  * fixed frame means a thin industry looks thin, which is the honest reading.
+ *
+ * **It must stay byte-identical to `INDIA_OUTLINE_FRAME`**, which is generated
+ * beside the outline path from the same numbers. They cannot import from each
+ * other — one side is a Python script — so `tests/unit/screen1.test.ts` asserts
+ * they agree. A frame that moves here and not there puts every city dot in the
+ * wrong place on a correctly drawn country, which reads as a data error.
+ *
+ * The southern margin is deliberately generous: India's own extent reaches 6.75°N
+ * at Great Nicobar, and the island marks have to sit inside the box rather than on
+ * its edge.
  */
-const FRAME = { minLat: 7.5, maxLat: 32, minLon: 67, maxLon: 90 } as const;
+export const MAP_FRAME = {
+  minLat: 5,
+  maxLat: 38.5,
+  minLon: 66,
+  maxLon: 99,
+} as const;
 
-/** Where the longitude scale is true. Roughly mid-frame. */
-const STANDARD_PARALLEL = 20;
+/**
+ * Where the longitude scale is true. Mid-frame.
+ *
+ * Exported for the same reason `MAP_FRAME` is: it is half of the projection the
+ * generated outline was drawn with, so it is part of this module's contract rather
+ * than an internal.
+ */
+export const MAP_STANDARD_PARALLEL = 21.75;
+
+const FRAME = MAP_FRAME;
+const STANDARD_PARALLEL = MAP_STANDARD_PARALLEL;
 
 const toRadians = (degrees: number) => (degrees * Math.PI) / 180;
 

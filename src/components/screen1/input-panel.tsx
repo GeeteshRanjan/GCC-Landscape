@@ -1,21 +1,39 @@
 "use client";
 
-import { ChevronDown } from "lucide-react";
-import { useId, useRef, useState } from "react";
+import { useId, useMemo, useRef, useState } from "react";
 
 import { type GccStatus, type PeerViewInput } from "@/data/screen1";
 import { cn } from "@/lib/utils";
+import { SelectField } from "./select-field";
 import { ASK } from "./copy";
 
 /**
- * The ask: five inputs, three of them required.
+ * The ask: four controls over six fields, three of them required.
  *
- * Every input has a consumer. Company name and line of business are the two
- * optional ones — the name personalises copy, and line of business narrows the
- * peer set to companies in the same business. There is deliberately no sixth
- * field, no revenue *figure* (the data holds bands, so the input is a band) and no
- * email: this tool informs and earns a conversation, and there is no lead capture
- * anywhere in the codebase.
+ * Every input has a consumer. Company name is the one optional answer asked for on
+ * its own — it personalises copy. There is deliberately no revenue *figure* (the
+ * data holds bands, so the input is a band) and no email: this tool informs and
+ * earns a conversation, and there is no lead capture anywhere in the codebase.
+ *
+ * **Sub-industry is no longer a control of its own — it lives INSIDE the industry
+ * dropdown**, as a second pane that cascades out of the industry the visitor picks.
+ * It is the same field on `PeerViewInput` and the same optional answer; what changed
+ * is that choosing it is one act rather than two. Three things paid for the merge:
+ *
+ *   - Five controls plus a submit is six cells over two columns, which fits, and
+ *     five fields whose second column carries a status line under one of them does
+ *     not — the row grew and left an ~80px hole above the button. Four controls plus
+ *     a full-width submit is two clean rows and a terminal action.
+ *   - It was the only control on the form that was disabled until another was
+ *     answered, which needed a live region to announce that it had become usable.
+ *     A nested level needs neither: it is not there until the industry it belongs to
+ *     is open.
+ *   - Fewer clicks for the same answer. Open, expand, choose — against open,
+ *     choose, open, choose.
+ *
+ * The disabled-then-enabled shape is gone with it, and so is the status line that
+ * existed to announce the enabling. The affordance moves inside the panel, where the
+ * thing it describes actually is; see `SelectField`'s `hint`.
  *
  * **The India-presence question was removed at ANSR's request, and its FIELD was
  * not.** `gccStatus` still exists on `PeerViewInput`, still drives `framing()`, and
@@ -34,9 +52,9 @@ import { ASK } from "./copy";
  * for — why we ask for a band rather than a figure, what the HQ answer sorts. A
  * label per field each trailing an explanation is several times the reading for a
  * form that takes twenty seconds, and "Industry" does not need a sentence under
- * it. The one exception is the line-of-business status line, which is a live
- * region announcing that the control became available rather than a description of
- * it. What the matching actually did with the answers is said on the result, where
+ * it. The one line that survives is inside the industry PANEL, because the nested
+ * level is the only thing on this form a visitor cannot see the shape of before
+ * opening it. What the matching actually did with the answers is said on the result, where
  * it is evidence for the peer set rather than an instruction; see `matchBasis` in
  * `copy.ts`. The storage promise that used to sit beside the submit button is gone
  * too — see `ASK` in `copy.ts` — so the live region is now the only help text on
@@ -57,47 +75,74 @@ interface FieldProps {
   /**
    * Marks a field the visitor may skip.
    *
-   * **Only line of business carries it, and company name deliberately does not**,
-   * even though the server accepts an empty name. The two are optional in
-   * different senses and the marker is only honest about one of them: line of
-   * business sits beside a control that is disabled until an industry is chosen, so
-   * the marker is what explains why it can be left alone. Company name is what
-   * personalises every sentence in the result — it is the input that makes the
-   * answer read as being about them — and labelling it optional invited a visitor
-   * to skip the one field that costs them nothing and changes the most.
+   * **Nothing carries it now, and the prop is kept rather than deleted.** It
+   * existed for sub-industry, which was a control disabled until an industry was
+   * chosen — the marker was what explained why it could be left alone. That control
+   * is gone: sub-industry is a cascading second pane inside the industry dropdown,
+   * where the pane's own leading row says what happens if it is left alone.
    *
-   * The mild inconsistency is the price, and it is the cheaper of the two: a
-   * visitor who leaves the name blank still gets a correct result, and one who
-   * skipped it because the label said they could gets a flatter one for no reason.
+   * Company name deliberately never carried it, though the server accepts an empty
+   * name: it is what personalises every sentence in the result, and labelling it
+   * optional talked visitors out of the one field that costs nothing and changes
+   * the most.
+   *
+   * So the form has no "(optional)" on it at all, which is the honest state — every
+   * control that is drawn is one we want answered.
    */
   optional?: boolean;
-  /**
-   * How much of the six-column field row this control takes.
-   *
-   * Five controls do not tile a two-column grid, and the leftover cell landed
-   * beside Headquarters — a hole in the middle of the one thing on the entry point
-   * a visitor has to DO. Six columns divide by both two and three, so the two text
-   * inputs take three each and the three selects take two each, and both rows fill.
-   *
-   * The rule may only ever WIDEN a control, never narrow or reorder one. DOM order
-   * is the tab order and the spec's order.
-   */
-  span?: string;
   children: (ids: { controlId: string; describedBy?: string }) => React.ReactNode;
 }
 
-function Field({ label, error, optional, span, children }: FieldProps) {
+/**
+ * One labelled control.
+ *
+ * **There is no `span` any more, and dropping it is what fixed the form's worst
+ * visual problem.** The grid was six columns with two three-column text inputs on
+ * the first row and three two-column selects on the second, chosen because six
+ * divides by both two and three so neither row left an empty cell. It works
+ * arithmetically and fails optically: two and three share no INTERIOR column
+ * boundary, so the split in row one lands in the middle of a field in row two and
+ * nothing below the outer edges lines up. Five fields, six different vertical edges.
+ * That raggedness is most of what read as dated.
+ *
+ * The grid is two equal columns now — two full rows of two, then the submit across
+ * both — so every control is the same width and every edge agrees. DOM order is
+ * unchanged, which matters twice: it is the tab order, and it is the order the
+ * browser specs read in.
+ *
+ * **The submit spans the grid rather than sitting in a fifth cell, and that is a
+ * consequence of the industry merge.** With five controls the submit filled the
+ * sixth cell, which was the only arrangement that left no hole; with four it would
+ * leave one beside it. A full-width terminal action leaves none and is the plainer
+ * shape: two rows of fields, then the one thing to do.
+ *
+ * `group` is here for the label, which tints to the accent while anything inside the
+ * field is focused. Decoration only — the focus ring and the field's own edge carry
+ * the state, so nothing is signalled by colour alone.
+ */
+function Field({ label, error, optional, children }: FieldProps) {
   const controlId = useId();
   const errorId = `${controlId}-error`;
   const describedBy = error ? errorId : undefined;
 
   return (
-    <div className={cn("flex min-w-0 flex-col gap-2", span)}>
+    <div className="group flex min-w-0 flex-col gap-2">
       {/* Sentence case, not caps. Tracked uppercase labels were tried and are the
           wrong idiom here: at 14px across five fields they turned a public form into
           a data-entry table, and the reference's own small label is sentence-case
-          Light. Weight carries the label instead. */}
-      <label htmlFor={controlId} className="text-sm font-semibold text-text">
+          Light. Weight carries the label instead.
+
+          **Medium, not Semibold.** At 14px Semibold over a Light 300 value read
+          shouty — the label was working harder than the answer it introduced. Medium
+          against Light is still a two-step interval, which is all the hierarchy a
+          label needs. */}
+      <label
+        htmlFor={controlId}
+        className={cn(
+          "text-sm font-medium text-text",
+          "transition-colors duration-fast ease-standard group-focus-within:text-accent-teal",
+        )}
+      >
         {label}
         {optional ? (
           <span className="font-light text-text-muted"> (optional)</span>
@@ -128,49 +173,27 @@ const CONTROL_CLASS = cn(
   // 48px, up from 44. The floor for a touch target is 44 and that is what the
   // previous pass used; a public form on a rounded card reads tight at the floor,
   // and 48 is what the controls in the card now share with the submit button.
+  //
+  // **The `md:px-3` clipping workaround is gone, and the two-column grid is why.**
+  // It existed because the three selects were two-of-six columns at `md` — 179px,
+  // which left 119px for a placeholder needing 125, so "Choose a country" silently
+  // rendered as "Choose a coun…". At two equal columns the narrowest select is 284px
+  // at that breakpoint, so the padding no longer has to be clawed back at one
+  // width. A uniform inset is also the point: the old version had one inset at `md`
+  // and another either side of it, which is three shapes for one control.
   "gcc-field h-12 w-full min-w-0 px-4 text-base font-light text-text",
   "outline-none",
 );
 
 /**
- * A select carries the same shape plus room for the chevron `SelectShell` draws.
- * Without the trailing padding a long option — "Democratic Republic of the Congo",
- * "Architecture, Engineering, & Construction" — runs under the icon.
+ * A plain string list as options, where the value and the label are the same thing.
  *
- * 36px, which is the icon's 16 plus its 12 inset plus a hair. It was 44 and that was
- * too much: a native select clips its text silently, and at tablet width the extra
- * eight pixels truncated "Choose a country" to "Choose a countr" inside a
- * two-of-six column. The same failure the revenue placeholder was shortened for.
+ * Industry, revenue band and country are all their own identifiers — the taxonomy
+ * stores the display string and the matching compares it. Only sub-industry has a
+ * separate id, and it builds its options inline.
  */
-const SELECT_CLASS = cn(CONTROL_CLASS, "appearance-none pe-9");
-
-/**
- * A native `<select>` with the platform chevron replaced.
- *
- * **Still a native select, and that is not negotiable here.** The HQ list is now
- * 201 countries in two `optgroup`s; a custom listbox would have to rebuild
- * keyboard type-ahead, the platform's own long-list scrolling, and — on a phone —
- * the native wheel picker, and would rebuild all three worse. So only the
- * *appearance* is taken over: `appearance-none` drops the OS chevron and this draws
- * one in the brand's own ink, at a size that matches the 48px control instead of
- * the 1990s inset triangle that made the form read as old.
- *
- * The icon is `pointer-events-none` and `aria-hidden`, so it is decoration over a
- * control that still behaves exactly as the platform's. Clicking where the chevron
- * appears opens the select, because the click lands on the select underneath.
- */
-function SelectShell({ children }: { children: React.ReactNode }) {
-  return (
-    <div className="relative">
-      {children}
-      <ChevronDown
-        aria-hidden="true"
-        // `end-4` not `right-4`, so it mirrors under a right-to-left locale along
-        // with the padding on the control.
-        className="pointer-events-none absolute end-3 top-1/2 size-4 -translate-y-1/2 text-accent-teal"
-      />
-    </div>
-  );
+function asOptions(values: readonly string[]) {
+  return values.map((value) => ({ value, label: value }));
 }
 
 export interface BusinessTypeOption {
@@ -199,7 +222,7 @@ export interface InputPanelProps {
   revenueBands: readonly string[];
   hqCountries: TieredOptions;
   /**
-   * Industry -> the lines of business on offer within it.
+   * Industry -> the sub-industries on offer within it.
    *
    * Passed whole rather than fetched on change, because the payload is a few
    * kilobytes of labels and a round trip per industry selection would put a
@@ -255,19 +278,50 @@ export function InputPanel({
   const [businessTypeId, setBusinessTypeId] = useState(initial?.businessTypeId ?? "");
   const [errors, setErrors] = useState<Errors>({});
 
-  const businessTypeStatusId = useId();
-
-  const businessTypeOptions = businessTypesByIndustry[industry] ?? [];
+  /**
+   * The industry dropdown's own options: every industry, carrying the sub-industries
+   * mapped to it as its cascade.
+   *
+   * Built here rather than in `screen1.ts` because the TIERS are the view model's
+   * decision and the NESTING is this control's — the same two groups the flat
+   * version rendered, each option carrying its own children.
+   */
+  const industryGroups = useMemo(() => {
+    const nest = (name: string) => ({
+      value: name,
+      label: name,
+      children: (businessTypesByIndustry[name] ?? []).map((option) => ({
+        value: option.id,
+        label: option.name,
+      })),
+    });
+    return [
+      { label: "Most common", options: industries.common.map(nest) },
+      { label: "All industries", options: industries.others.map(nest) },
+    ];
+  }, [industries, businessTypesByIndustry]);
 
   /**
-   * Changing industry replaces the list, so a selection made under the old one is
-   * cleared rather than carried over.
+   * One control, two answers.
    *
-   * Left in place it would be an id that does not exist in the new industry, which
-   * the server rejects — and rejects correctly, since silently ignoring it would
-   * return an industry-wide peer set while the visitor believes they narrowed it.
-   * Better to clear it here than to fail at submit.
+   * A nested option hands its parent back, so a sub-industry sets the industry it
+   * belongs to at the same time — which is the whole reason the two fields could
+   * become one. A top-level choice clears any sub-industry: it is the visitor
+   * saying "all of this industry", and it is also the only correct thing to do when
+   * the industry changed, since an id from the old one does not exist in the new one
+   * and the server rejects it rather than silently widening the set.
    */
+  function handleIndustryChange(value: string, parent?: string) {
+    if (parent) {
+      setIndustry(parent);
+      setBusinessTypeId(value);
+    } else {
+      setIndustry(value);
+      setBusinessTypeId("");
+    }
+    clearError("industry");
+  }
+
   /**
    * Clears one field's error the moment it is answered.
    *
@@ -285,16 +339,6 @@ export function InputPanel({
       const next = { ...current };
       delete next[field];
       return next;
-    });
-  }
-
-  function handleIndustryChange(next: string) {
-    setIndustry(next);
-    clearError("industry");
-    setBusinessTypeId((current) => {
-      if (!current) return current;
-      const allowed = businessTypesByIndustry[next] ?? [];
-      return allowed.some((option) => option.id === current) ? current : "";
     });
   }
 
@@ -349,14 +393,21 @@ export function InputPanel({
   }
 
   return (
-    <form noValidate onSubmit={handleSubmit} className="flex flex-col gap-8">
-      {/* Six columns, so five controls fill two rows exactly. See `FieldProps.span`. */}
-      <div className="grid gap-6 md:grid-cols-6">
+    <form noValidate onSubmit={handleSubmit} className="flex flex-col gap-6">
+      {/* **Two equal columns, three rows, with the submit in the sixth cell.** The
+          reasoning is on `Field` — the short version is that the previous six-column
+          grid put a 3/3 row above a 2/2/2 row, which share no interior boundary, so
+          five fields drew six unaligned vertical edges.
+
+          `items-start` so a field carrying a status line below it does not stretch its
+          neighbour; `gap-x-6 gap-y-6` so the vertical rhythm between rows matches the
+          gap between columns and the grid reads as a grid. */}
+      <div className="grid items-start gap-6 md:grid-cols-2">
         {/* Not marked optional, though the server accepts it empty. See
             `FieldProps.optional` — this is the input that personalises every
             sentence in the result, and the marker was talking a visitor out of the
             one field that costs nothing and changes the most. */}
-        <Field label="Company name" span="md:col-span-3">
+        <Field label="Company name">
           {({ controlId, describedBy }) => (
             <input
               id={controlId}
@@ -376,217 +427,118 @@ export function InputPanel({
           )}
         </Field>
 
-        <Field
-          label="Industry"
-          error={errors.industry}
-          span="md:col-span-3"
-        >
-          {({ controlId, describedBy }) => (
-            <SelectShell>
-              <select
-                id={controlId}
-                // One ref, for validation focus. This used to feed two — the hero
-                // carried a pill that put the keyboard here, so the same node had to
-                // be reachable for both jobs through a single callback, because a
-                // second `ref` prop would have silently replaced the first. The pill
-                // went with the hero rework, so the arrangement is gone too rather
-                // than left behind as a prop nothing passes.
-                ref={(node) => {
-                  controls.current.industry = node;
-                }}
-                value={industry}
-                aria-invalid={errors.industry ? true : undefined}
-                aria-describedby={describedBy}
-                onChange={(event) => handleIndustryChange(event.target.value)}
-                className={SELECT_CLASS}
-              >
-                <option value="">Choose your industry</option>
-                {/* Two groups, for the same reason the country list has them: the
-                    six industries that cover most of the data lead, and the rest is
-                    alphabetical so a mid-frequency industry is findable. See
-                    `industryOptions`. */}
-                <optgroup label="Most common">
-                  {industries.common.map((option) => (
-                    <option key={option} value={option}>
-                      {option}
-                    </option>
-                  ))}
-                </optgroup>
-                <optgroup label="All industries">
-                  {industries.others.map((option) => (
-                    <option key={option} value={option}>
-                      {option}
-                    </option>
-                  ))}
-                </optgroup>
-              </select>
-            </SelectShell>
-          )}
-        </Field>
-
         {/*
-          Line of business — the one optional select, and the only field on this
-          form that is disabled until another is answered.
+          Industry, and sub-industry cascading out of it.
 
-          Rendered unconditionally rather than appearing on industry selection: a
-          control that materialises mid-form moves everything below it and is
-          announced to a screen reader as a change of document rather than a change
-          of state. Disabled-then-enabled keeps the form's shape fixed, and the
-          status line below is an aria-live region so the enabling IS announced.
+          The two groups are there for the same reason the country list has them:
+          the industries that cover most of the data lead, plus the two ANSR expects
+          out of proportion to the dataset, and the rest is alphabetical so a
+          mid-frequency industry is findable. See `industryOptions`.
+
+          The label stays "Industry" rather than becoming "Industry and line of
+          business": the field's primary answer is the industry, and a label naming
+          both would promise a second required choice. The hint inside the panel is
+          where the nested level is offered, which is where it can be seen.
         */}
-        <Field label="Line of business" optional span="md:col-span-2">
+        <Field label="Industry" error={errors.industry}>
           {({ controlId, describedBy }) => (
-            <>
-              <SelectShell>
-              <select
-                  id={controlId}
-                  value={businessTypeId}
-                  disabled={businessTypeOptions.length === 0}
-                  aria-describedby={`${describedBy ?? ""} ${businessTypeStatusId}`.trim()}
-                  onChange={(event) => setBusinessTypeId(event.target.value)}
-                  className={cn(
-                    SELECT_CLASS,
-                    businessTypeOptions.length === 0 && "opacity-60",
-                  )}
-                >
-                  {/* One string in both states, rather than swapping in "Choose an
-                      industry first" while disabled. Two reasons: that string clipped
-                      at tablet width, and it duplicated the status line below, which
-                      is an aria-live region and is therefore the thing that actually
-                      ANNOUNCES the change. This is also just true — no line of
-                      business selected means all of the industry. */}
-                  <option value="">All of my industry</option>
-                  {businessTypeOptions.map((option) => (
-                    <option key={option.id} value={option.id}>
-                      {option.name}
-                    </option>
-                  ))}
-                </select>
-            </SelectShell>
-              <p
-                id={businessTypeStatusId}
-                aria-live="polite"
-                className="text-xs leading-normal font-light text-text-muted"
-              >
-                {/* One clause once it is available. The longer version named the
-                    count, the effect and the mechanism, wrapped to two lines, and
-                    pushed the row below it down as it appeared — which is a layout
-                    shift caused by explaining something the visitor can see. */}
-                {businessTypeOptions.length === 0
-                  ? "Available once you choose an industry."
-                  : `${businessTypeOptions.length} to choose from, for a closer comparison.`}
-              </p>
-            </>
+            <SelectField
+              id={controlId}
+              value={businessTypeId || industry}
+              triggerRef={(node) => {
+                controls.current.industry = node;
+              }}
+              placeholder="Choose your industry"
+              /* The one piece of help text on the form, and it is inside the panel
+                 rather than under the label — see `InputPanel`'s note on why no
+                 field carries a description. It has to name the SECOND pane, which
+                 is the only thing here a visitor cannot see the shape of before
+                 opening the control. */
+              hint="Pick an industry to see its sub-industries (optional)"
+              childLabel="sub-industries"
+              invalid={Boolean(errors.industry)}
+              describedBy={describedBy}
+              onChange={handleIndustryChange}
+              groups={industryGroups}
+            />
           )}
         </Field>
 
         <Field
           label="Annual revenue"
           error={errors.revenueBand}
-          span="md:col-span-2"
         >
           {({ controlId, describedBy }) => (
-            <SelectShell>
-              <select
-                id={controlId}
-                ref={(node) => {
-                  controls.current.revenueBand = node;
-                }}
-                value={revenueBand}
-                aria-invalid={errors.revenueBand ? true : undefined}
-                aria-describedby={describedBy}
-                onChange={(event) => {
-                  setRevenueBand(event.target.value);
-                  clearError("revenueBand");
-                }}
-                className={SELECT_CLASS}
-              >
-                {/* "Choose a revenue band" truncated inside a two-of-six column at
-                    tablet width, which is where a native select clips silently. The
-                    label above already says Annual revenue, so the word "revenue"
-                    was doing nothing here twice. */}
-                <option value="">Choose a band</option>
-                {revenueBands.map((option) => (
-                  <option key={option} value={option}>
-                    {option}
-                  </option>
-                ))}
-              </select>
-            </SelectShell>
+            <SelectField
+              id={controlId}
+              value={revenueBand}
+              triggerRef={(node) => {
+                controls.current.revenueBand = node;
+              }}
+              placeholder="Choose a band"
+              invalid={Boolean(errors.revenueBand)}
+              describedBy={describedBy}
+              onChange={(next) => {
+                setRevenueBand(next);
+                clearError("revenueBand");
+              }}
+              /* One group, in the taxonomy's own stored order. Never tiered and
+                 never sorted: that order is the peer-matching contract, because the
+                 "adjacent band" step is index arithmetic on the array. */
+              groups={[{ label: "Revenue bands", options: asOptions(revenueBands) }]}
+            />
           )}
         </Field>
 
         <Field
           label="Headquarters"
           error={errors.hqCountry}
-          span="md:col-span-2"
         >
           {({ controlId, describedBy }) => (
-            <SelectShell>
-              <select
-                id={controlId}
-                ref={(node) => {
-                  controls.current.hqCountry = node;
-                }}
-                value={hqCountry}
-                aria-invalid={errors.hqCountry ? true : undefined}
-                aria-describedby={describedBy}
-                onChange={(event) => {
-                  setHqCountry(event.target.value);
-                  clearError("hqCountry");
-                }}
-                className={SELECT_CLASS}
-              >
-                <option value="">Choose a country</option>
-                {/* Two `optgroup`s rather than one flat list of 201, and the split
-                    is what makes the list usable at that length.
-
-                    The leading group is the countries our data actually has
-                    companies in, most-represented first — so the fifteen or so
-                    answers this audience is overwhelmingly likely to give are the
-                    first fifteen, and USA is first because 1,176 of the companies
-                    are American, not because someone decided it should be.
-
-                    The second group is every other country, alphabetical. It is
-                    there for one reason: a CIO who cannot find their own country
-                    has been told the tool is not for them. That is the same failure
-                    that removed company-name autocomplete, and it costs nothing to
-                    avoid here, because HQ is a sort preference rather than a
-                    matching key — see `hqCountryOptions`.
-
-                    Native `optgroup`, not two lists with a styled divider: the
-                    grouping is then announced by a screen reader and honoured by
-                    the platform's own picker on a phone. */}
-                <optgroup label="Most common">
-                  {hqCountries.common.map((option) => (
-                    <option key={option} value={option}>
-                      {option}
-                    </option>
-                  ))}
-                </optgroup>
-                <optgroup label="All countries">
-                  {hqCountries.others.map((option) => (
-                    <option key={option} value={option}>
-                      {option}
-                    </option>
-                  ))}
-                </optgroup>
-              </select>
-            </SelectShell>
+            <SelectField
+              id={controlId}
+              value={hqCountry}
+              triggerRef={(node) => {
+                controls.current.hqCountry = node;
+              }}
+              placeholder="Choose a country"
+              invalid={Boolean(errors.hqCountry)}
+              describedBy={describedBy}
+              onChange={(next) => {
+                setHqCountry(next);
+                clearError("hqCountry");
+              }}
+              /* The twelve countries the data has most companies in lead; every
+                 other country in the world follows, alphabetically. Past twelve the
+                 counts are in single figures and frequency stops being informative.
+                 Long enough that the panel gives itself a filter. */
+              groups={[
+                { label: "Most common", options: asOptions(hqCountries.common) },
+                { label: "All countries", options: asOptions(hqCountries.others) },
+              ]}
+            />
           )}
         </Field>
-      </div>
 
-      <div className="flex flex-col gap-3">
-        {/* Not role="alert": this appears in response to the visitor's own submit,
-            which they are already attending to, and an assertive interruption for
-            a routine failure is exactly what that role should not be used for. */}
-        {submitError ? (
-          <p role="status" className="ansr-field-error text-sm">
-            {submitError}
-          </p>
-        ) : null}
-        <div className="flex flex-wrap items-center gap-x-6 gap-y-3">
+        {/* **The submit spans both columns as its own row.** With five controls it
+            sat in the grid's sixth cell, which was the only arrangement that left no
+            empty one; with four controls that inverts — a button in a fifth cell
+            leaves a hole beside it, and an empty cell in the middle of the one thing
+            on the entry point a visitor has to DO is the artefact this layout keeps
+            being rearranged to close.
+
+            Two rows of fields and then a terminal action is also the plainer reading
+            order: nothing sits beside the button competing for the same glance, and
+            the action's own edges are the card's rather than a column's. */}
+        <div className="flex min-w-0 flex-col gap-3 md:col-span-2">
+          {/* Not role="alert": this appears in response to the visitor's own submit,
+              which they are already attending to, and an assertive interruption for
+              a routine failure is exactly what that role should not be used for. */}
+          {submitError ? (
+            <p role="status" className="ansr-field-error text-sm">
+              {submitError}
+            </p>
+          ) : null}
           <button
             type="submit"
             // Enabled until the request actually starts. Disabling on an invalid
@@ -605,15 +557,24 @@ export function InputPanel({
               // shape so both read as actions, different fill so only one reads as
               // THE action.
               "inline-flex min-h-12 items-center justify-center rounded-full px-7 text-base font-semibold",
-              // Full width on a phone, intrinsic from `sm` up. On a single-column
-              // form every control above it is full width, so a 160px button under
-              // a stack of 358px fields reads as a smaller, lesser control — and it
-              // is the one thing on the screen the visitor has to hit with a thumb.
-              // From `sm` the fields sit two and three to a row, and a full-width
-              // button would then be wider than anything above it.
-              "w-full sm:w-auto",
-              "bg-action text-text transition-colors duration-fast ease-standard",
-              "hover:bg-action-hover disabled:opacity-60",
+              // **Full width at every size, because the row is the width.**
+              // It used to be intrinsic from `sm` up, to avoid a 160px button
+              // reading as a lesser control under a stack of full-width fields.
+              // Inside the grid that reasoning inverts: an intrinsic-width button
+              // reintroduces the same ragged edge the grid was rebuilt to remove,
+              // and filling its row is what makes it read as the form's conclusion
+              // rather than as an afterthought parked in a corner.
+              "w-full",
+              "bg-action text-text",
+              // **Press feedback, and it is the cheapest polish on the page.** A
+              // button that does not move under a press reads as a picture of a
+              // button. 0.98 is small enough that nobody will name it and large
+              // enough to register; `transform` and `background-color` are named
+              // explicitly rather than `all`, so the transition cannot pick up a
+              // property it was never measured for.
+              "transition-[background-color,transform] duration-fast ease-standard",
+              "active:scale-[0.98]",
+              "hover:bg-action-hover disabled:opacity-60 disabled:active:scale-100",
             )}
           >
             {pending ? ASK.submitPending : ASK.submit}

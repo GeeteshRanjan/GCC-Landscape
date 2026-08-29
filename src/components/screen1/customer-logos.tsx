@@ -143,7 +143,11 @@ export function CustomerLogos() {
       // No visible heading, so the name comes from here. Without it a `<section>`
       // is not a landmark and is unreachable by role.
       aria-label={CUSTOMERS.label}
-      className="bg-surface-pale py-8 md:py-10"
+      // **Read together with the tint band's bottom padding in `peer-view.tsx`** —
+      // the two are adjacent and add up, and at 40 + 56 = 96px the gap between the
+      // form card and this strip read as a hole rather than as separation. Both came
+      // down; neither number means anything on its own.
+      className="bg-surface-pale py-7 md:py-8"
     >
       <div className="gcc-marquee">
         <div className="gcc-marquee-track">

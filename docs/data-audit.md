@@ -118,7 +118,7 @@ the panel takes the highest band that has members in the industry and fills down
 | Logistics & Transportation | 31 | 8 | 15 |
 | Architecture, Engineering, & Construction | 29 | 3 | 7 |
 | Consumer Electronics | 29 | 12 | 15 |
-| CPG | 24 | 14 | 18 |
+| Consumer Packaged Goods | 24 | 14 | 18 |
 | Aerospace & Defense | 18 | 9 | 11 |
 | Travel & Hospitality | 15 | 1 | 5 |
 | Agribusiness & Food Processing | 11 | 5 | 8 |

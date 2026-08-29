@@ -67,13 +67,22 @@ function Card({
         // `self-start` is the other half of the stretch fix: a grid item stretches
         // to its row by default, so even correct widths would leave a short card
         // padded out to a tall neighbour. Height follows content instead.
-        "flex flex-col gap-5 self-start bg-surface p-6 md:p-7",
-        // An OPEN card is borderless: the tint band the grid sits on supplies the
-        // edge, the same way it does for Screen 1's peer cards. A SEALED one keeps
-        // its border and keeps it strong — that firmer edge is the whole signal
-        // that it is closed rather than empty, and it has to survive losing the
-        // outline every card used to share.
-        sealed ? "border border-border-strong" : "",
+        "flex flex-col gap-5 self-start rounded-md bg-surface p-6 md:p-7",
+        /**
+         * **Every card is bordered now, and the reason is the tab strip.** An open
+         * card used to be borderless and take its edge from the pale-teal band the
+         * grid sat on — which worked, and stopped working when the selected view tab
+         * became a white surface that has to be continuous with the content beneath
+         * it. A white tab meeting a teal band is not one layer, so this screen's
+         * ground went white, and a white card on a white ground has no edge to
+         * borrow.
+         *
+         * A SEALED card keeps the STRONGER edge, which is what it always was: that
+         * firmer outline is the whole signal that the slot is closed rather than
+         * empty, and it now has to be a step above its neighbours rather than the
+         * only border on the screen.
+         */
+        sealed ? "border-2 border-border-strong" : "border border-border",
         WIDTH_CLASS[width],
       )}
     >

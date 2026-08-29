@@ -2,26 +2,43 @@ import { readFileSync } from "node:fs";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
 
-import { CITY_COORDINATES, MAP_HEIGHT, MAP_WIDTH, projectCity } from "@/data/geo";
+import {
+  CITY_COORDINATES,
+  MAP_FRAME,
+  MAP_HEIGHT,
+  MAP_STANDARD_PARALLEL,
+  MAP_WIDTH,
+  projectCity,
+} from "@/data/geo";
+import { INDIA_OUTLINE_FRAME, INDIA_OUTLINE_PATH } from "@/data/india-outline";
 import {
   buildPeerView,
+  companyName,
   COMMON_FUNCTIONS,
   GCC_STATUSES,
   peerViewInputSchema,
   roundProfessionals,
   type PeerViewInput,
 } from "@/data/screen1";
-import { formatCount, formatProfessionals } from "@/components/public/primitives";
+import {
+  formatCount,
+  formatProfessionals,
+  formatShare,
+} from "@/components/public/primitives";
 import { parseDataset, type Dataset } from "@/data/schema";
 import {
   framing,
-  industryHeading,
   industryLine,
+  FUNCTIONS_LEAD,
+  FUNCTIONS_TITLE,
+  largestAxisNote,
+  largestCountLine,
   largestLine,
-  matchBasis,
-  matchBasisFor,
+  mapHeading,
+  peerCountLine,
   peerLead,
   shortfallLine,
+  signals,
 } from "@/components/screen1/copy";
 
 /**
@@ -110,6 +127,12 @@ describe("buildPeerView", () => {
       "establishedYear",
       "fortuneGlobal500",
       "headcount",
+      // **`hqCountry` is NOT here, and its absence is the assertion.** It was shown
+      // as the comparison table's Headquarters column for one pass and ANSR asked for
+      // it back off; the field went with the column, because a card carrying a value
+      // nothing renders is how the next reader concludes the omission was an
+      // oversight. Also still absent: `revenueBand`, `industry`, `businessTypes` and
+      // `forbesGlobal2000`.
       "id",
       "name",
       // A ratio, never a published figure: the visible headcount stays the band,
@@ -187,12 +210,23 @@ describe("buildPeerView", () => {
     expect(view.map.peak).toBe(view.map.cities[0]!.companies);
   });
 
-  it("carries the common-function basis alongside the list", () => {
+  it("carries the common functions, and says nothing per-company about them", () => {
     const view = buildPeerView(dataset, input());
-    // The list is a general pattern, not per-company data. Shipping it without
-    // the sentence that says so is the failure this guards.
     expect(view.functions).toEqual(COMMON_FUNCTIONS);
-    expect(view.functionsBasis).toMatch(/not a per-company breakdown/i);
+    /**
+     * **`functionsBasis` is gone from the view model**, with the two caveat paragraphs
+     * it fed. They said the list is the general India pattern rather than a breakdown
+     * of the companies above, and that no share is stated for any function — both true,
+     * both removed at ANSR's request. What carries the job now is the section's own
+     * heading, "Functions most GCCs run from India", which is a claim about GCCs in
+     * general and cannot be read as one about the five companies above it.
+     *
+     * So what is left to assert here is the property, not the sentence: the list is a
+     * fixed general pattern with no per-company figure anywhere near it.
+     */
+    expect("functionsBasis" in view).toBe(false);
+    expect(FUNCTIONS_TITLE).toMatch(/GCCs/);
+    expect(FUNCTIONS_LEAD).not.toMatch(/%/);
   });
 });
 
@@ -214,14 +248,19 @@ describe("degenerate industries", () => {
     expect(view.industry.exhaustive).toBe(true);
   });
 
-  it("never claims the industry is bigger than five names when it is not", () => {
-    // The heading sits directly above the count. One contradicting the other costs
-    // more credibility than the line was ever going to buy.
+  it("never claims the industry is bigger than the table when it is not", () => {
+    /**
+     * The derived heading this used to check is gone — the card headings are fixed now
+     * — so what is left is the property it was protecting: wherever the industry is
+     * NOT exhausted, there really are more companies in it than the table shows, and
+     * the exhaustive case is handled by `industryLine` rather than by a heading.
+     */
     for (const industry of dataset.taxonomy.industries) {
       const view = buildPeerView(dataset, input({ industry }));
-      const heading = industryHeading(view);
       if (view.industry.exhaustive) {
-        expect(heading, industry).not.toMatch(/bigger than/);
+        expect(industryLine(view), industry).toMatch(
+          /all of them in our data|the only one in our data/,
+        );
       } else {
         expect(view.industry.total, industry).toBeGreaterThan(
           view.peers.peers.length,
@@ -256,7 +295,14 @@ describe("degenerate industries", () => {
     ).toBe(true);
     expect(view.largest.entries.every((entry) => entry.alsoPeer)).toBe(true);
     expect(view.largest.repeatsPeers).toBe(true);
-    expect(largestLine(view)).toMatch(/the same ones shown above/);
+    expect(largestLine(view)).toMatch(/already named above/);
+    // **The line that renders here may not contain a possessive on the industry
+    // name**, and this is the branch every thin industry takes — so the one sentence
+    // guaranteed to reach the visitors most likely to see it was the one producing
+    // "Electrical & Electronics's". No apostrophe rule makes 24 admin-editable names
+    // come out right, so the copy is phrased to avoid one.
+    expect(largestLine(view)).not.toContain("Electronics's");
+    expect(largestLine(view)).not.toMatch(/s's\b/);
   });
 
   it("flags an industry with nobody in the top revenue band", () => {
@@ -321,10 +367,28 @@ describe("copy", () => {
     expect(line).not.toMatch(/\bwe would rather\b/i);
   });
 
-  it("personalises on the company name and degrades without it", () => {
+  /**
+   * **The company name is no longer in the headline, and this test moved with it.**
+   * It used to assert the h1 contained "Acme". The h1 now states the finding — how
+   * many relevant peers were found — and the name is persistent context beside the
+   * three answers that produced it, which is where a visitor can still see it for the
+   * whole page rather than for one sentence.
+   *
+   * So what has to hold is the derivation, not the interpolation: a name that is
+   * whitespace, or absent, must resolve to null rather than reaching a context row as
+   * an empty fact, and the headline must be a real sentence in both cases.
+   */
+  it("resolves the company name the same way however it was left, and keeps it out of the headline", () => {
+    expect(companyName(input({ companyName: "Acme" }))).toBe("Acme");
+    expect(companyName(input({ companyName: "  Acme  " }))).toBe("Acme");
+    expect(companyName(input({ companyName: "   " }))).toBeNull();
+    expect(companyName(input({ companyName: "" }))).toBeNull();
+    expect(companyName(input())).toBeNull();
+
     const named = framing(buildPeerView(dataset, input({ companyName: "Acme" })));
     const anon = framing(buildPeerView(dataset, input()));
-    expect(named.title).toContain("Acme");
+    expect(named.title).not.toContain("Acme");
+    expect(named.title).toBe(anon.title);
     expect(anon.title).not.toContain("undefined");
     expect(anon.title.length).toBeGreaterThan(0);
   });
@@ -344,12 +408,6 @@ describe("copy", () => {
     expect(labels.size).toBe(GCC_STATUSES.length);
   });
 
-  it("names the revenue band only when the band actually constrained the match", () => {
-    expect(matchBasis("same-band", "Above $20 Bn")).toContain("Above $20 Bn");
-    expect(matchBasis("adjacent-band", "Above $20 Bn")).toContain("either side");
-    expect(matchBasis("industry", "Above $20 Bn")).not.toContain("Above $20 Bn");
-  });
-
   it("produces no copy containing an unresolved placeholder", () => {
     for (const industry of dataset.taxonomy.industries) {
       const view = buildPeerView(dataset, input({ industry }));
@@ -359,11 +417,121 @@ describe("copy", () => {
         industryLine(view),
         largestLine(view),
         shortfallLine(view) ?? "",
-        matchBasis(view.peers.basis, view.input.revenueBand),
+        mapHeading(view),
+        peerLead(view),
+        largestCountLine(view),
+        peerCountLine(view),
       ];
       for (const line of lines) {
         expect(line, industry).not.toMatch(/undefined|null|NaN|\$\{/);
       }
+    }
+  });
+
+  /**
+   * **The derived count moved from the industry heading to the headline, and this
+   * test moved with it — the property it protects has not changed.**
+   *
+   * The rule is that no heading may claim a count the page did not show. It was
+   * written when the industry heading read "The five above were a selection, not the
+   * supply" for every non-exhaustive industry, including the ones that can only
+   * supply two or three peers, so a reader looking at three cards was told they had
+   * seen five. The industry heading no longer states a count at all — the divided bar
+   * beside it supplies every figure — and the h1 is now where the count lives, so the
+   * h1 is where the check belongs. Deleting the test rather than moving it would have
+   * retired the guard at the exact moment the count changed places.
+   */
+  it("counts the peers it claims to have shown, in every industry", () => {
+    const counts = [0, 1, 2, 3, 4, 5];
+    for (const industry of dataset.taxonomy.industries) {
+      const view = buildPeerView(dataset, input({ industry }));
+      const title = framing(view).title;
+      const shown = view.peers.peers.length;
+
+      if (shown === 0) {
+        // An absence is not a count. "0 relevant peers operate a GCC in India" is a
+        // headline built out of nothing, so the zero branch names the industry
+        // instead and the band below says the honest version at reading size.
+        expect(title, industry).toContain(industry);
+        expect(title, industry).not.toMatch(/\d/);
+        continue;
+      }
+      if (shown === 1) {
+        expect(title, industry).toContain("One relevant peer");
+        expect(title, industry).not.toContain("peers");
+        continue;
+      }
+      expect(title, `${industry} shows ${shown}`).toContain(
+        `${shown} relevant peers`,
+      );
+      // And never a count it did not show, which was the whole bug.
+      for (const other of counts) {
+        if (other === shown) continue;
+        expect(title, `${industry} shows ${shown}`).not.toContain(
+          `${other} relevant`,
+        );
+      }
+    }
+  });
+
+  /**
+   * The industry heading's two branches, now that neither carries a figure.
+   *
+   * The exhaustive branch has to keep naming the industry: "your peers sit within a
+   * much larger industry base" is a plain falsehood where the peer set already IS the
+   * whole industry, and a heading contradicting the number beneath it costs more than
+   * the line buys.
+   */
+  it("still degrades the industry line when the peer set is the whole industry", () => {
+    /**
+     * The derived heading that used to carry this is gone with the fixed card
+     * headings, so the assertion moved to the sentence that survived it. Both branches
+     * are covered: an exhausted industry says its peers are all of it, and a deeper one
+     * says how many OTHERS there are.
+     */
+    let exhaustive = 0;
+    for (const industry of dataset.taxonomy.industries) {
+      const view = buildPeerView(dataset, input({ industry }));
+      const line = industryLine(view);
+      if (view.industry.exhaustive) {
+        exhaustive += 1;
+        expect(line, industry).toMatch(
+          /all of them in our data|the only one in our data/,
+        );
+        expect(line, industry).not.toMatch(/^other /);
+      } else {
+        expect(line, industry).toMatch(/^other /);
+      }
+    }
+    // The branch exists because real industries reach it. If none did, the degenerate
+    // handling would be untested rather than unnecessary.
+    expect(exhaustive).toBeGreaterThan(0);
+  });
+
+  /**
+   * The map heading is derived, so its two branches are worth pinning: a
+   * concentration claim needs both a dominant city AND enough presences for a
+   * percentage to mean anything. Electrical & Electronics is the case that forced the
+   * second condition — two presences, one each in two cities, which produced a
+   * perfectly true "Kolkata holds 50%".
+   */
+  it("only claims concentration when there is enough of a footprint to claim it", () => {
+    for (const industry of dataset.taxonomy.industries) {
+      const view = buildPeerView(dataset, input({ industry }));
+      const heading = mapHeading(view);
+      const total = view.map.cities.reduce((sum, city) => sum + city.companies, 0);
+      if (total < 5) {
+        expect(heading, industry).not.toMatch(/%/);
+        continue;
+      }
+      if (!heading.includes("%")) continue;
+      // A percentage claim must name the leading city and be at or above the
+      // threshold, both read off the same figures the ranked list draws.
+      const leader = view.map.cities[0]!;
+      expect(heading, industry).toContain(leader.city);
+      const claimed = Number(heading.match(/(\d+)%/)![1]);
+      expect(claimed, industry).toBe(Math.round((leader.companies / total) * 100));
+      expect(claimed, industry).toBeGreaterThanOrEqual(40);
     }
   });
 });
@@ -410,6 +578,273 @@ describe("geography", () => {
     expect(MAP_WIDTH / MAP_HEIGHT).toBeGreaterThan(0.8);
     expect(MAP_WIDTH / MAP_HEIGHT).toBeLessThan(0.95);
   });
+
+  /**
+   * The one test that has to exist for the outline to be safe to draw.
+   *
+   * `src/data/india-outline.ts` is generated by a Python script that cannot import
+   * `geo.ts`, so the frame is written down twice. If it moves on one side only,
+   * every city dot lands in the wrong place on a correctly drawn country — and
+   * nothing throws, nothing logs, and the render looks like a data problem rather
+   * than a projection problem. Regenerate with
+   * `python3 scripts/build_india_outline.py` when this fails.
+   */
+  it("projects the outline in the same frame as the cities", () => {
+    expect({
+      ...INDIA_OUTLINE_FRAME,
+      standardParallel: undefined,
+      width: undefined,
+      height: undefined,
+    }).toEqual({
+      ...MAP_FRAME,
+      standardParallel: undefined,
+      width: undefined,
+      height: undefined,
+    });
+    expect(INDIA_OUTLINE_FRAME.standardParallel).toBe(MAP_STANDARD_PARALLEL);
+    expect(INDIA_OUTLINE_FRAME.width).toBe(MAP_WIDTH);
+    expect(INDIA_OUTLINE_FRAME.height).toBe(MAP_HEIGHT);
+  });
+
+  it("draws the whole outline inside the field", () => {
+    // A frame that clipped the northeast or Ladakh was the state this replaced, and
+    // it looked entirely correct. Every coordinate in the generated path has to be
+    // inside the box, with no margin taken on trust.
+    const numbers = INDIA_OUTLINE_PATH.match(/-?\d+(\.\d+)?/g) ?? [];
+    expect(numbers.length).toBeGreaterThan(100);
+    for (let i = 0; i < numbers.length; i += 2) {
+      const x = Number(numbers[i]);
+      const y = Number(numbers[i + 1]);
+      expect(x).toBeGreaterThanOrEqual(0);
+      expect(x).toBeLessThanOrEqual(MAP_WIDTH);
+      expect(y).toBeGreaterThanOrEqual(0);
+      expect(y).toBeLessThanOrEqual(MAP_HEIGHT);
+    }
+  });
+});
+
+/**
+ * SNAPSHOT: the four figures at the head of the content surface.
+ *
+ * Two properties matter and they pull against each other. The cell count is FIXED at
+ * four, because a stated four-up snapshot that silently renders three reads as a card
+ * which failed to load. And a cell the data cannot fill must never be filled anyway —
+ * a fabricated figure in the first thing a CIO reads is the cheapest available way to
+ * lose the free layer's believability, which is invariant 2. So the resolution is a
+ * null value rendered as a stated "Data unavailable", and what these assert is that
+ * neither half of that slips.
+ */
+describe("the snapshot", () => {
+  it("renders four industry-level cells for every industry, and fabricates none of them", () => {
+    for (const industry of dataset.taxonomy.industries) {
+      const view = buildPeerView(dataset, input({ industry }));
+      const cells = signals(view);
+
+      // Exactly four. Never a variable count.
+      expect(cells.length, industry).toBe(4);
+
+      for (const cell of cells) {
+        for (const text of [cell.label, cell.note]) {
+          expect(text, `${industry} / ${cell.label}`).not.toMatch(
+            /undefined|null|NaN|\$\{/,
+          );
+          expect(text.trim().length, `${industry} / ${cell.label}`).toBeGreaterThan(0);
+        }
+        // A missing figure is null, which the component states. It is never a dash,
+        // an "n/a" or a zero standing in for something that does not exist.
+        if (cell.value !== null) {
+          expect(cell.value, `${industry} / ${cell.label}`).not.toMatch(
+            /undefined|null|NaN|\$\{/,
+          );
+          expect(cell.value.trim().length, industry).toBeGreaterThan(0);
+          expect(cell.value, industry).not.toMatch(/^(—|-|n\/a|N\/A|0)$/);
+        }
+        // The plural is "GCCs". "GCC's" is a possessive and ANSR asked for it never
+        // to appear; the snapshot is where it would have, since two labels mention
+        // the plural.
+        expect(`${cell.label} ${cell.note}`, industry).not.toMatch(/GCC's/);
+      }
+
+      // Labels are unique, or the snapshot is drawing the same cell twice — and the
+      // component keys on the label.
+      expect(new Set(cells.map((cell) => cell.label)).size, industry).toBe(
+        cells.length,
+      );
+
+      // Every figure is a property of the INDUSTRY, not of the five-company set our
+      // own matching chose, so the two count labels name the industry.
+      expect(cells[0]!.label, industry).toBe(`${industry} companies in India`);
+      expect(cells[1]!.label, industry).toBe(`Typical centre size in ${industry}`);
+      expect(cells[2]!.label, industry).toBe("Indian cities in play");
+      expect(cells[3]!.label, industry).toBe("Where the industry concentrates");
+    }
+  });
+
+  it("states the mean headcount as an average, rounded, and never as a total", () => {
+    for (const industry of dataset.taxonomy.industries) {
+      const view = buildPeerView(dataset, input({ industry }));
+      const average = view.industry.averageHeadcount;
+
+      // Every industry in the taxonomy is derived FROM the companies, so it always
+      // has at least one — there is no industry for which this is null.
+      expect(average, industry).not.toBeNull();
+      expect(average!, industry).toBeGreaterThan(0);
+
+      // Rounded to a step coarser than the narrowest employee band, so the figure
+      // claims no precision the banding can carry.
+      const step = average! >= 1_000 ? 100 : 10;
+      expect(average! % step, industry).toBe(0);
+
+      /**
+       * **The method line is gone from the cell**, at ANSR's request — it read "Mean of
+       * reported employee bands, rounded". The figure is still a rounded mean of band
+       * midpoints, so what carried the honesty on the page now carries it in the word
+       * choice alone: "Typical", never "Average" or "Total", because a rounded mean of
+       * bands is a central tendency rather than an arithmetic result, and a reader who
+       * takes "typical centre size" for a measured figure has been misled far less than
+       * one who takes it for a total.
+       *
+       * The rounding assertions above are what remains of the guard, and they are the
+       * half a test can actually hold.
+       */
+      const cell = signals(view)[1]!;
+      expect(cell.label, industry).toMatch(/^Typical centre size/);
+      expect(cell.label, industry).not.toMatch(/^(Average|Total)/);
+      expect(cell.note, industry).not.toMatch(/mean of/i);
+    }
+  });
+
+  it("reports a leading location only where a city is actually mapped", () => {
+    for (const industry of dataset.taxonomy.industries) {
+      const view = buildPeerView(dataset, input({ industry }));
+      const cells = signals(view);
+      const hasCity = view.map.cities.length > 0;
+
+      expect(cells[2]!.value === null, industry).toBe(!hasCity);
+      expect(cells[3]!.value === null, industry).toBe(!hasCity);
+      if (hasCity) {
+        expect(cells[3]!.value, industry).toBe(view.map.cities[0]!.city);
+        expect(cells[2]!.value, industry).toBe(
+          new Intl.NumberFormat("en-US").format(view.map.cities.length),
+        );
+      }
+    }
+  });
+
+  it("reports the largest peer centre, not the closest one", () => {
+    /**
+     * `peers.largest` is no longer on the snapshot — it is a property of our own
+     * five-company set rather than of India — but it still drives the peer table's
+     * axis note, which names the company the full-width bar belongs to. So the
+     * property still has to hold: peers are ordered by business similarity and then
+     * by size, so the closest comparison is frequently not the biggest, and an axis
+     * note naming the first card would be wrong in a way nobody would catch by
+     * looking.
+     */
+    let differed = 0;
+    for (const industry of dataset.taxonomy.industries) {
+      const view = buildPeerView(dataset, input({ industry }));
+      const largest = view.peers.largest;
+      if (!largest) continue;
+
+      // It really is the largest by the ratio the bars are drawn from.
+      for (const peer of view.peers.peers) {
+        expect(peer.sizeShare, `${industry} / ${peer.name}`).toBeLessThanOrEqual(
+          largest.sizeShare,
+        );
+      }
+      // And it is the same object as the one in the set, not a second copy.
+      expect(view.peers.peers, industry).toContain(largest);
+
+      if (largest.id !== view.peers.peers[0]!.id) differed += 1;
+    }
+    expect(differed).toBeGreaterThan(0);
+  });
+});
+
+/**
+ * The axis notes, which every bar on this screen was missing.
+ *
+ * A bar whose maximum is unstated looks precise and communicates nothing: a reader
+ * cannot tell whether full width is the largest company in the set, the largest in
+ * India, or the top of a revenue band. Both notes name the company the track belongs
+ * to, because the ratio behind the length is derived from band midpoints and may not
+ * be published as a figure.
+ */
+describe("axis notes", () => {
+  it("name the company full width belongs to, and say nothing when there is nothing to compare", () => {
+    for (const industry of dataset.taxonomy.industries) {
+      const view = buildPeerView(dataset, input({ industry }));
+
+      const largestNote = largestAxisNote(view);
+      if (view.largest.entries.length < 2) {
+        expect(largestNote, industry).toBeNull();
+      } else {
+        const first = view.largest.entries[0]!.company;
+        expect(largestNote, industry).toContain(first.name);
+        expect(largestNote, industry).toContain(first.headcount);
+      }
+    }
+  });
+
+  it("never publishes the ratio itself as a figure", () => {
+    // `sizeShare` is a ratio of band midpoints. It is honest as a bar's length and
+    // would not be honest as a number, so no note may state it as a percentage.
+    for (const industry of dataset.taxonomy.industries) {
+      const view = buildPeerView(dataset, input({ industry }));
+      const note = largestAxisNote(view);
+      if (note) expect(note, industry).not.toMatch(/%/);
+    }
+  });
+});
+
+/**
+ * Two words the copy pass removed, and the reason each is worth a test rather than a
+ * note in a document.
+ *
+ * **"already"** appeared in a heading, two leads and three body sentences, all doing
+ * the same job: leaning on the reader to feel late. The tense already carries it — a
+ * company that runs a centre in India runs one now — so the word added pressure rather
+ * than information, and a page that applies pressure six times is a page this audience
+ * discounts. Two uses survive deliberately and are allowed by name below, both inside
+ * a clause about what the tool has ALREADY SHOWN the reader rather than about the
+ * market: the largest panel collapsing onto the peer cards, and a chip marking a
+ * company that appeared in both blocks.
+ *
+ * **"actually"** contributed nothing to a sentence nobody had contradicted.
+ */
+describe("the words the copy pass removed", () => {
+  const lines = (view: ReturnType<typeof buildPeerView>) => [
+    framing(view).title,
+    framing(view).lead,
+    framing(view).ctaHeading,
+    framing(view).ctaBody,
+    framing(view).ctaLabel,
+    industryLine(view),
+    mapHeading(view),
+    peerLead(view),
+    shortfallLine(view) ?? "",
+    largestAxisNote(view) ?? "",
+    ...signals(view).flatMap((cell) => [cell.label, cell.note]),
+  ];
+
+  it("says neither 'already' nor 'actually' anywhere a visitor reads", () => {
+    for (const industry of dataset.taxonomy.industries) {
+      const view = buildPeerView(dataset, input({ industry }));
+      for (const line of lines(view)) {
+        expect(line, industry).not.toMatch(/\balready\b/i);
+        expect(line, industry).not.toMatch(/\bactually\b/i);
+      }
+    }
+  });
+
+  it("keeps the one 'already' that is about the page rather than the market", () => {
+    // The collapsed largest panel. "The ones already named above" refers to cards the
+    // reader has just scrolled past, which is the word doing real work.
+    const view = buildPeerView(dataset, input({ industry: "Electrical & Electronics" }));
+    expect(view.largest.repeatsPeers).toBe(true);
+    expect(largestLine(view)).toMatch(/already named above/);
+  });
 });
 
 describe("roundProfessionals", () => {
@@ -446,18 +881,33 @@ describe("the shared formatters", () => {
     expect(formatProfessionals(2_610_000)).toBe("2.61 million");
     expect(formatProfessionals(720_000)).toBe("720,000");
   });
+
+  /**
+   * `formatShare` exists so the figure beside a `FractionBar` and the bar itself
+   * cannot disagree — the share is rounded once, in one place. Whole percentages
+   * deliberately: these are counts over fixed list sizes, so "36.2%" invites a
+   * precision question about a number whose value is its order of magnitude.
+   */
+  it("renders a share as a whole percentage", () => {
+    expect(formatShare(181 / 500)).toBe("36%");
+    expect(formatShare(483 / 2000)).toBe("24%");
+    expect(formatShare(0)).toBe("0%");
+    expect(formatShare(1)).toBe("100%");
+  });
 });
 
 /**
- * The peer section's lead line.
+ * The peer section's lead line — now the ONLY place the matching method is stated.
  *
  * Caught by walking the live deployment, not by any check in here: the lead was a
  * hardcoded "closest revenue band, and companies from your own market first" that
- * contradicted `matchBasisFor` three lines below it, and was observably false on
- * the flagship example. These tests pin the two claims to each other so the pair
- * cannot drift apart again.
+ * contradicted the footnote three lines below it, and was observably false on the
+ * flagship example. The footnote is gone — removed at ANSR's request, along with the
+ * shared-tag sentence and the headquarters clause — so these tests no longer pin two
+ * sentences to each other. They pin this one to the peer set it describes, which is
+ * the assertion that actually mattered.
  */
-describe("the peer lead and the match basis agree", () => {
+describe("the peer lead describes the peer set it sits above", () => {
   const apparel = input({
     industry: "Retail",
     revenueBand: TOP_BAND,
@@ -471,7 +921,6 @@ describe("the peer lead and the match basis agree", () => {
     expect(view.peers.businessMatched).toBe(true);
 
     const lead = peerLead(view);
-    const basis = matchBasisFor(view);
 
     // The old sentence, and the two claims inside it that were false.
     expect(lead).not.toBe(
@@ -486,7 +935,9 @@ describe("the peer lead and the match basis agree", () => {
     // sentence describing it.
     expect(lead).toMatch(/business/i);
     expect(lead.search(/business/i)).toBeLessThan(lead.search(/size/i));
-    expect(basis).toMatch(/preference rather than a filter/);
+    // And it names the sub-industry it matched on, which is the one answer on the form
+    // a visitor could reasonably wonder whether the tool used.
+    expect(lead).toContain(view.industry.businessType!.name.toLowerCase());
   });
 
   it("still says band-led when no line of business was given, because then it is", () => {
