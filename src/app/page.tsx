@@ -1,5 +1,9 @@
 import { getDataset } from "@/data/dataset";
-import { businessTypesForIndustry } from "@/data/screen1";
+import {
+  businessTypesForIndustry,
+  hqCountryOptions,
+  industryOptions,
+} from "@/data/screen1";
 import { buildFunctionView } from "@/data/screen2";
 import { GccLandscapeTool } from "@/components/public/tool";
 
@@ -68,11 +72,13 @@ export default async function Page() {
 
   return (
     <GccLandscapeTool
-      industries={dataset.taxonomy.industries}
+      industries={industryOptions(dataset)}
       revenueBands={dataset.taxonomy.revenueBands}
-      hqCountries={dataset.taxonomy.hqCountries}
+      hqCountries={hqCountryOptions(dataset)}
       businessTypesByIndustry={businessTypesByIndustry}
       functionView={buildFunctionView(dataset)}
+      heroCopy={dataset.siteContent.hero}
+      impactStats={dataset.siteContent.impactStats}
       ctaHref={CTA_HREF}
     />
   );

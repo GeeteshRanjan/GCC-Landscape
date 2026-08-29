@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import { seedMetricCatalogue } from "@/data/metric-catalogue";
 import { publicMetricsFor } from "@/data/metrics";
-import type { Dataset, Metric } from "@/data/schema";
+import { DEFAULT_SITE_CONTENT, type Dataset, type Metric } from "@/data/schema";
 import {
   anchorColumnFor,
   breakdownDisplay,
@@ -58,6 +58,7 @@ function datasetWith(metrics: Metric[]): Dataset {
     ],
     businessTypes: [],
     metrics,
+    siteContent: DEFAULT_SITE_CONTENT,
   };
 }
 

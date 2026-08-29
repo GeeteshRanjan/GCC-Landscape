@@ -1,4 +1,4 @@
-# Style lock — GCC Landscape
+ # Style lock — GCC Landscape
 
 Established: 2026-08-27, with Screen 1 (the Peer View).
 Source: **the existing ANSR brand system**, not a generated palette.
@@ -584,3 +584,7 @@ cost the previous version something:
   padding a peer set is an invariant enforced in `matchPeers` and asserted in `data:verify` —
   it does not also need to be a promise on the page. A browser spec now asserts the line is
   absent.
+- **The ask is a card with a visible heading**, not five controls loose on the tinted band
+  under an `sr-only` h2. It is the one thing on the entry point a visitor has to *do*. The
+  card's own treatment is the section above, which supersedes the "bordered panel, radius 0"
+  this bullet used to describe.

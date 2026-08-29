@@ -73,7 +73,14 @@ OFF_BRAND = {
     # be pasted from a Figma inspector and least likely to be noticed by eye.
     "#00B8A9": "drifted bright teal - use --ansr-teal-bright (#00BAA8)",
     "#00B3A5": "drifted bright teal - use --ansr-teal-bright (#00BAA8)",
-    "#072228": "drifted dark ground - use --ansr-teal-deep (#08252F)",
+    # #072228 was here as a drifted dark ground. It is now a REAL token
+    # (--ansr-teal-950 / --ansr-surface-deep), specified directly by the client
+    # for the entry point's impact band, so it can no longer be listed: off-brand
+    # is checked before the allow-list, and a live token named here would fail
+    # the lint on any file that legitimately resolves it. The drift risk it used
+    # to guard against is real and is now carried by a comment in tokens.css
+    # beside the token instead — it is within dE ~1 of --ansr-teal-deep and the
+    # two are not separable by eye.
     "#082D36": "drifted dark ground - use --ansr-teal-deep (#08252F)",
     "#00544C": "drifted heading teal - use --ansr-teal (#004C4D)",
 }

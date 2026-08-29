@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef } from "react";
+
 
 import { ClosingCta } from "@/components/public/closing-cta";
 import { Section, type Ground } from "@/components/public/primitives";
@@ -13,10 +13,11 @@ import {
   ScreenTitle,
   type HeaderMotif,
 } from "@/components/public/screen-header";
+import type { HeroCopy, ImpactStat } from "@/data/schema";
 import { GCC_STATUS_LABELS, type PeerView, type PeerViewInput } from "@/data/screen1";
 import { cn } from "@/lib/utils";
 import { CityMap } from "./city-map";
-import type { BusinessTypeOption } from "./input-panel";
+import type { BusinessTypeOption, TieredOptions } from "./input-panel";
 import {
   CommonFunctionsView,
   IndustryCountView,
@@ -26,6 +27,8 @@ import {
 } from "./evidence";
 import { ADVANCE, ASK, framing, industryHeading, peerLead } from "./copy";
 import { AskHero } from "./ask-hero";
+import { CustomerLogos } from "./customer-logos";
+import { ImpactBand } from "./impact-band";
 import { InputPanel } from "./input-panel";
 
 /**
@@ -68,19 +71,42 @@ const PEER_MOTIF: HeaderMotif = {
 };
 
 /**
- * The ask: the hero, then the form panel. Two bands, no divider between them, and
- * one motif each.
+ * The ask: five bands that read as one composition.
+ *
+ *   1. the teal gradient hero, centred
+ *   2. the white form card, overlapping the hero's bottom edge
+ *   3. the pale-teal band the card's lower half sits on
+ *   4. the customer-logo strip
+ *   5. the dark impact band
  *
  * **The whole screen is on the display face** (`font-display`), which no other
  * surface is yet. Body copy on it is Light 300, which is the brand's single
  * biggest typographic tell and the thing this screen most obviously got wrong
  * before. It is scoped here rather than set on `body` deliberately: the answer
  * state and Screen 2 are a separate pass, and admin is a dense internal tool that
- * keeps Inter. Rolling it outward is the next screen's job, not a side effect of
- * this one.
+ * keeps Inter.
+ *
+ * **The overlap is two numbers in two files and they have to be read together.**
+ * The hero's bottom padding (`ask-hero.tsx`) is oversized so there is hero left
+ * under the card, and the card's negative top margin here pulls it up into that
+ * space. Neither is meaningful alone — increasing the pull without increasing the
+ * padding walks the card up into the supporting line. The pull is expressed in
+ * spacing steps rather than a percentage of the card, because a percentage of an
+ * element whose height depends on how many fields wrap is not a number anyone can
+ * reason about; the visible result is roughly the upper third of the card on the
+ * hero at desktop, less at tablet, least on a phone.
+ *
+ * **Two things the previous version had are gone rather than moved.** The bar-ramp
+ * field in the trailing ground, because the form is now centred and there is no
+ * trailing ground to put it in. And the line dissolve under the panel, because a
+ * card that overlaps two grounds needs a real edge on both of them — a dissolve
+ * only works where its own fill meets a different ground, and this card's fill
+ * meets two.
  */
 export function PeerViewAsk({
   headingRef,
+  heroCopy,
+  impactStats,
   industries,
   revenueBands,
   hqCountries,
@@ -91,134 +117,111 @@ export function PeerViewAsk({
   onSubmit,
 }: {
   headingRef: React.RefObject<HTMLHeadingElement | null>;
-  industries: readonly string[];
+  heroCopy: HeroCopy;
+  impactStats: readonly ImpactStat[];
+  industries: TieredOptions;
   revenueBands: readonly string[];
-  hqCountries: readonly string[];
+  hqCountries: TieredOptions;
   businessTypesByIndustry: Readonly<Record<string, readonly BusinessTypeOption[]>>;
   initial?: PeerViewInput;
   pending: boolean;
   submitError: string | null;
   onSubmit: (input: PeerViewInput) => void;
 }) {
-  /**
-   * The hero pill's target. A ref handed down to the form rather than a DOM query
-   * or a fragment link:
-   *
-   *   - A fragment link would push a history entry inside the iframe, and the tool
-   *     does not own its URL.
-   *   - `document.getElementById` would need an id on a control whose id comes
-   *     from `useId`, so it would have to be hardcoded and could collide.
-   *
-   * `focus()` scrolls the control into view as a side effect of the browser doing
-   * its job, which is the only scrolling mechanism the iframe constraints allow —
-   * nothing here reads scroll position or observes intersection.
-   */
-  const industryRef = useRef<HTMLSelectElement>(null);
-
   return (
     <div className="font-display">
-      <AskHero
-        headingRef={headingRef}
-        onJumpToForm={() => industryRef.current?.focus()}
-      />
+      <AskHero headingRef={headingRef} copy={heroCopy} />
 
       <section
         id="ask"
         aria-labelledby="ask-heading"
-        // No top padding below `md`. With the panel full-bleed on a phone, 64px of
-        // padding left a strip of mint between the hero and the panel that was too
-        // thin to read as a band and too thick to read as nothing. The brand draws no
-        // rule between bands and the ground change IS the separation, so two
-        // full-bleed blocks meeting is the correct mobile shape; the panel's own top
-        // shoulder carries the air. From `md` the panel is inset and the band needs
-        // its padding back.
-        className="relative overflow-hidden bg-surface-tint pb-16 md:pt-20 md:pb-24"
+        // The transition band. Its ground is `--ansr-surface-tint`, which is the
+        // pale mint the brief names — it was already in the palette as
+        // `--ansr-teal-100`, so no new colour was introduced for it.
+        //
+        // **No `overflow-hidden` here, and that is the load-bearing difference
+        // from the band this replaces.** The card is pulled up out of this
+        // section's own box by a negative margin, so a clipping ancestor would cut
+        // its top third off — which is exactly the part that is supposed to be on
+        // the hero. The old band clipped because it had a motif to crop; it has
+        // none now, so nothing needs clipping and the card is free to escape.
+        //
+        // **`flow-root` is what makes the overlap happen at all**, and without it
+        // the whole composition silently does not work. The card's negative top
+        // margin is on the first in-flow descendant of a section with no top
+        // padding or border, so it COLLAPSES THROUGH and moves the section itself
+        // up by the same 128px — the tint ground travels with the card, the two
+        // stay flush, and the rendered result is a card sitting exactly on the
+        // boundary with no overlap. It looks like the margin was ignored. A block
+        // formatting context stops the collapse, and `flow-root` is the one way to
+        // get one that does not also clip (`overflow-hidden`), float, or change
+        // the box's own layout.
+        //
+        // The bottom padding is what separates the card from the logo strip. Sized
+        // to read as air under the card rather than as an empty band: the strip
+        // has its own padding too, so these two add up and the pair was set
+        // together.
+        className="relative flow-root bg-surface-tint pb-10 md:pb-14"
       >
-        {/* Motif B, the reference's signature ornament, and the first thing in this
-            project to use `.ansr-bar-ramp`.
-
-            It is a VERTICAL FIELD IN THE TRAILING GROUND, not a full-bleed band, and
-            the difference is the whole placement. Run across the band's width it
-            drew a picket fence — the loudest thing on the screen after the headline,
-            reading as a divider rule between the two bands, which the brand never
-            draws, and continuing down either side of the panel as though the panel
-            had been dropped on top of it. Confined to a strip beside the panel it is
-            what the reference actually does with it: band 4 puts a 219-wide bar-ramp
-            panel flush to the trailing edge of a card and nothing else. See
-            `.gcc-ask-ramp`. */}
-        <div
-          className="ansr-motif gcc-ask-ramp ansr-bar-ramp ansr-bar-ramp--tile hidden lg:block"
-          aria-hidden="true"
-        />
-
-        {/* `px-0` below `md`, so the panel is full-bleed on a phone.
-            Two things it buys, and both were visible in the render: the panel's own
-            padding then puts its content at the same inset as the hero's text
-            instead of 24px further in, and the fields get 48px back on a 390px
-            screen, where they were the narrowest thing on either screen. From `md`
-            up the panel is an inset card again, which is what gives it an edge. */}
-        <div className="relative mx-auto max-w-content px-0 md:px-12">
-          <div className="grid lg:grid-cols-12">
-            {/* Ten of twelve, leaving the trailing ground for the ramp.
-                Deliberately not centred — the reference's own stat card sits right of
-                centre with empty ground beside it rather than balanced in its band.
-
-                The panel is the reference's offer-card anatomy rather than a bordered
-                box, and each part of that is load-bearing:
-
-                  - **Radius 0.** Every panel, card and accordion row in the
-                    reference is a true 0; only the pill CTA and one stat card round.
-                  - **A generous top shoulder.** The reference leaves 95px of empty
-                    card above its first ink. That emptiness is what makes a
-                    hard-edged panel read as composed rather than as a container,
-                    and it is the cheapest thing here to spoil by tightening.
-                  - **No border and no shadow.** A white panel on the tinted ground
-                    already has an edge, and the brand is graphic, not glossy.
-                  - **It ends in a dissolve rather than an edge.** */}
-            <div className="lg:col-span-10">
-              <div className="flex flex-col gap-10 bg-surface px-6 pt-16 pb-12 md:px-10 md:pt-20 md:pb-16 lg:px-12">
-                <h2
-                  id="ask-heading"
-                  className="text-3xl leading-tight font-bold tracking-display text-balance text-text md:text-4xl lg:text-5xl"
-                >
-                  {ASK.panelTitle}
-                </h2>
-                <InputPanel
-                  industryRef={industryRef}
-                  industries={industries}
-                  revenueBands={revenueBands}
-                  hqCountries={hqCountries}
-                  businessTypesByIndustry={businessTypesByIndustry}
-                  initial={initial}
-                  pending={pending}
-                  submitError={submitError}
-                  onSubmit={onSubmit}
-                />
-              </div>
-
-              {/* Motif C, and the first thing to use `.ansr-dissolve`: 27 hairlines of
-                  the panel's own white decaying into the band, so the panel has no
-                  bottom edge. It stays crisp at any zoom, which a gradient fade does
-                  not.
-
-                  **A sibling of the panel, not a child of it.** As a child it
-                  inherited the panel's own white fill underneath itself, so the
-                  masked hairlines were white on white — invisible — while the
-                  panel's background still filled the box and drew exactly the hard
-                  edge this exists to remove. It rendered as 96px of blank card. The
-                  effect only exists where the fill it carries is against a
-                  DIFFERENT ground. */}
-              <div
-                // 112px against the reference's 154. The effect is white-on-mint at
-                // 1.27:1 by construction, so it needs length to read at all — at
-                // 80px it was a smudge rather than a dissolve.
-                className="ansr-dissolve gcc-panel-dissolve h-16 md:h-28"
-                aria-hidden="true"
+        {/* Twelve columns' worth of container, but the card is centred and
+            narrower than the full measure rather than taking ten of twelve off to
+            one side. That was right when a motif occupied the trailing ground; with
+            a centred hero above it, an off-centre card breaks the one thing the
+            brief asks for — that every band shares a visual centre. */}
+        <div className="mx-auto max-w-content px-4 md:px-12">
+          <div
+            className={cn(
+              // The pull, and it is the negative counterpart of the hero's own
+              // bottom padding — 128/160/192px there against 80/112/128 here, so
+              // roughly a third of the card sits on the gradient and the rest of
+              // that padding stays visible as hero. Read the two together: raising
+              // this without raising that walks the card up into the supporting
+              // line. Less pull on a phone, where the hero's copy ends closer to
+              // the band's bottom edge and a deep overlap would crowd it.
+              "relative -mt-20 md:-mt-28 lg:-mt-32",
+              // Centred and capped at `--ansr-container-card`. Wider than the
+              // hero's text block, which the brief allows and the form needs, and
+              // well inside the container — see the token for both bounds.
+              "mx-auto max-w-card",
+              // The card. Rounded, which is a departure from the public screens'
+              // hard-edged panels and is the brief's own call; a restrained step,
+              // not a pill. One very light shadow, no border, no ring: it has to
+              // read as lifted off two grounds at once, and a border on a card
+              // that crosses a light-to-dark boundary is visible against one and
+              // invisible against the other.
+              "rounded-lg bg-surface shadow-md",
+              // Generous but controlled. The top shoulder is smaller than the old
+              // panel's 80px: that emptiness made a hard-edged panel read as
+              // composed, and a rounded card lifted onto a gradient does not need
+              // it.
+              "px-5 py-8 sm:px-8 md:px-10 md:py-12 lg:px-12",
+            )}
+          >
+            <div className="flex flex-col gap-8 md:gap-10">
+              <h2
+                id="ask-heading"
+                className="text-2xl leading-tight font-bold tracking-display text-balance text-text md:text-3xl lg:text-4xl"
+              >
+                {ASK.panelTitle}
+              </h2>
+              <InputPanel
+                industries={industries}
+                revenueBands={revenueBands}
+                hqCountries={hqCountries}
+                businessTypesByIndustry={businessTypesByIndustry}
+                initial={initial}
+                pending={pending}
+                submitError={submitError}
+                onSubmit={onSubmit}
               />
             </div>
           </div>
         </div>
       </section>
+
+      <CustomerLogos />
+
+      <ImpactBand stats={impactStats} />
     </div>
   );
 }
@@ -379,15 +382,22 @@ export function PeerViewAnswer({
           </p>
 
           <div className="flex flex-wrap items-center gap-x-6 gap-y-3">
+            {/* Three facts, not four. "India today" was here and is gone with the
+                question that produced it: `gccStatus` is now a constant supplied by
+                the form rather than an answer the visitor gave — see
+                `ASSUMED_GCC_STATUS` in `input-panel.tsx` — so echoing it back would
+                be the tool telling the visitor what they said about something it
+                never asked. The value still frames the whole answer; it is just no
+                longer presented as theirs.
+
+                Every remaining fact is an answer they actually typed, which is the
+                property this summary needs to keep: it exists so a visitor can see
+                what the result was built from before deciding to change it. */}
             <InputSummary
               facts={[
                 { term: "Industry", value: view.industry.industry },
                 { term: "Revenue", value: view.input.revenueBand },
                 { term: "Headquarters", value: view.input.hqCountry },
-                {
-                  term: "India today",
-                  value: GCC_STATUS_LABELS[view.input.gccStatus],
-                },
               ]}
             />
             <QuietButton onClick={onChangeDetails}>

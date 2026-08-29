@@ -11,7 +11,15 @@ import {
 } from "react";
 
 import { alignValue } from "@/data/metrics";
-import type { BusinessType, Company, Dataset, Metric, Taxonomy } from "@/data/schema";
+import type {
+  BusinessType,
+  Company,
+  Dataset,
+  HeroCopy,
+  ImpactStat,
+  Metric,
+  Taxonomy,
+} from "@/data/schema";
 import { slugify, uniqueSlug } from "@/data/normalize";
 
 /**
@@ -46,13 +54,13 @@ import { slugify, uniqueSlug } from "@/data/normalize";
  *
  * `tests/browser/helpers.ts` owns `DRAFT_STORAGE_KEY` and must move with it.
  */
-const STORAGE_KEY = "gcc-admin-draft-v3";
+const STORAGE_KEY = "gcc-admin-draft-v4";
 const AUTOSAVE_DEBOUNCE_MS = 800;
 
 /** Everything the admin can edit. Metadata is server-owned. */
 type EditableDataset = Pick<
   Dataset,
-  "taxonomy" | "companies" | "businessTypes" | "metrics"
+  "taxonomy" | "companies" | "businessTypes" | "metrics" | "siteContent"
 >;
 
 export type TaxonomyKey = keyof Taxonomy;
@@ -102,6 +110,25 @@ interface DraftContextValue {
   updateBusinessType: (id: string, patch: Partial<Omit<BusinessType, "id">>) => void;
   removeBusinessType: (id: string) => void;
 
+  /**
+   * The hero's copy. A patch rather than a whole-object replace, because the two
+   * fields are edited in separate controls and there is no cross-field rule that
+   * needs them to land together — unlike a metric, where a shape change and the
+   * numbers re-fitted to it must be one edit.
+   */
+  updateHeroCopy: (patch: Partial<HeroCopy>) => void;
+  /** Returns the id of the new row, so the caller can focus it. */
+  addImpactStat: () => string;
+  updateImpactStat: (id: string, patch: Partial<Omit<ImpactStat, "id">>) => void;
+  removeImpactStat: (id: string) => void;
+  /**
+   * Reorder by one step. Impact stats render as one ordered row, so their order
+   * is the display order and an admin has to be able to set it — the same
+   * reasoning as `moveTaxonomyValue`, for a different reason: there the order is
+   * a matching contract, here it is what the visitor reads left to right.
+   */
+  moveImpactStat: (index: number, delta: number) => void;
+
   setTaxonomyValues: (key: TaxonomyKey, values: string[]) => void;
   addTaxonomyValue: (key: TaxonomyKey, value: string) => void;
   renameTaxonomyValue: (key: TaxonomyKey, from: string, to: string) => void;
@@ -124,6 +151,7 @@ function editableOf(dataset: Dataset): EditableDataset {
     companies: dataset.companies,
     businessTypes: dataset.businessTypes,
     metrics: dataset.metrics,
+    siteContent: dataset.siteContent,
   };
 }
 
@@ -213,7 +241,8 @@ export function DraftProvider({
     if (
       !stored.editable?.companies ||
       !stored.editable?.taxonomy ||
-      !stored.editable?.metrics
+      !stored.editable?.metrics ||
+      !stored.editable?.siteContent
     ) {
       window.localStorage.removeItem(STORAGE_KEY);
       return;
@@ -326,6 +355,7 @@ export function DraftProvider({
       companies: editable.companies,
       businessTypes: editable.businessTypes,
       metrics: editable.metrics,
+      siteContent: editable.siteContent,
     }),
     [currentBaseline, editable],
   );
@@ -460,6 +490,92 @@ export function DraftProvider({
           : company,
       ),
     }));
+  }, [applyEdit]);
+
+  /* ----------------------------------------------------------------------
+     Site content. No cascade and no referential integrity to maintain —
+     nothing else in the dataset points at the hero copy or an impact figure —
+     so these are the simplest mutators in the file. They still go through
+     `applyEdit` so the draft is marked unsaved in the same update, which is the
+     one property none of them may skip.
+     ---------------------------------------------------------------------- */
+
+  const updateHeroCopy = useCallback((patch: Partial<HeroCopy>) => {
+    applyEdit((current) => ({
+      ...current,
+      siteContent: {
+        ...current.siteContent,
+        hero: { ...current.siteContent.hero, ...patch },
+      },
+    }));
+  }, [applyEdit]);
+
+  /**
+   * A new row starts empty apart from its id, and the id is generated rather
+   * than typed.
+   *
+   * An impact stat's id is never shown to anyone and never referenced from
+   * outside this list — it exists so React and the form have a stable row
+   * identity. Deriving it from the label the way `addCompany` derives a company
+   * slug from a name would mean the id changing as the admin types, which is
+   * exactly how a controlled input loses focus on every keystroke.
+   */
+  const addImpactStat = useCallback(() => {
+    const id = uniqueSlug(
+      `stat-${editable.siteContent.impactStats.length + 1}`,
+      new Set(editable.siteContent.impactStats.map((stat) => stat.id)),
+    );
+    applyEdit((current) => ({
+      ...current,
+      siteContent: {
+        ...current.siteContent,
+        // Appended, not prepended. Unlike a company row, order here is what the
+        // visitor reads, so a new figure lands at the end and is moved into
+        // place deliberately.
+        impactStats: [...current.siteContent.impactStats, { id, value: "", label: "" }],
+      },
+    }));
+    return id;
+  }, [applyEdit, editable.siteContent.impactStats]);
+
+  const updateImpactStat = useCallback(
+    (id: string, patch: Partial<Omit<ImpactStat, "id">>) => {
+      applyEdit((current) => ({
+        ...current,
+        siteContent: {
+          ...current.siteContent,
+          impactStats: current.siteContent.impactStats.map((stat) =>
+            stat.id === id ? { ...stat, ...patch } : stat,
+          ),
+        },
+      }));
+    },
+    [applyEdit],
+  );
+
+  const removeImpactStat = useCallback((id: string) => {
+    applyEdit((current) => ({
+      ...current,
+      siteContent: {
+        ...current.siteContent,
+        impactStats: current.siteContent.impactStats.filter((stat) => stat.id !== id),
+      },
+    }));
+  }, [applyEdit]);
+
+  const moveImpactStat = useCallback((index: number, delta: number) => {
+    applyEdit((current) => {
+      const stats = [...current.siteContent.impactStats];
+      const target = index + delta;
+      if (index < 0 || index >= stats.length) return current;
+      if (target < 0 || target >= stats.length) return current;
+      const [moved] = stats.splice(index, 1);
+      stats.splice(target, 0, moved as ImpactStat);
+      return {
+        ...current,
+        siteContent: { ...current.siteContent, impactStats: stats },
+      };
+    });
   }, [applyEdit]);
 
   const setTaxonomyValues = useCallback((key: TaxonomyKey, values: string[]) => {
@@ -609,6 +725,7 @@ export function DraftProvider({
         companies: editable.companies,
         businessTypes: editable.businessTypes,
         metrics: editable.metrics,
+        siteContent: editable.siteContent,
       }));
       pinnedBaseline.current = metadata.generatedAt;
       setConflict(null);
@@ -640,6 +757,11 @@ export function DraftProvider({
       metricById: (id) => metricIndex.get(id),
       replaceMetric,
       clearMetricValue,
+      updateHeroCopy,
+      addImpactStat,
+      updateImpactStat,
+      removeImpactStat,
+      moveImpactStat,
       setTaxonomyValues,
       addTaxonomyValue,
       renameTaxonomyValue,
@@ -662,6 +784,11 @@ export function DraftProvider({
       metricIndex,
       replaceMetric,
       clearMetricValue,
+      updateHeroCopy,
+      addImpactStat,
+      updateImpactStat,
+      removeImpactStat,
+      moveImpactStat,
       editable.businessTypes,
       addBusinessType,
       updateBusinessType,

@@ -59,36 +59,78 @@ import type { PeerView } from "@/data/screen1";
  * qualifies, hedges or sells: the number is either persuasive on its own or it is
  * not, and this audience discounts a screen that reads as marketing.
  */
+/**
+ * **The hero's own words are no longer here.** The title and the supporting line
+ * come from `dataset.siteContent.hero`, edited in admin and published with
+ * everything else — see `heroCopySchema`. They moved because they are
+ * positioning rather than an argument about the data: every other string in this
+ * file is derived from or reasons about the dataset, and changing one is a
+ * reviewable code change. A headline is marketing's to change on a Tuesday.
+ *
+ * What is left here is the form's own chrome, which is not positioning: it
+ * describes controls this file's own component owns.
+ *
+ * Three lines were removed outright rather than moved, and each is asserted
+ * absent by a browser spec:
+ *
+ *   - The hero's uppercase kicker. The product label IS the headline now, so an
+ *     eyebrow above it would have been the same words twice.
+ *   - The hero's outlined pill ("Choose your industry"). It moved focus to the
+ *     industry select, which earned its place when the form was a full band
+ *     below the fold. The form now overlaps the hero, so its first field is
+ *     already on screen and the pill was a control that scrolled you to
+ *     something you could see.
+ *   - "Your answers build this one result. Nothing is kept." True, and still
+ *     true, but it answers a doubt at the exact moment the visitor is deciding
+ *     to submit — and the tool does not narrate its own integrity. Not keeping
+ *     anything is enforced by there being no store, not by a promise.
+ */
 export const ASK = {
-  kicker: "India GCC landscape",
-  title: "Your industry is already in India",
-  lead: "1,834 global companies run a centre here. See the ones that compare to yours.",
-  /**
-   * The hero's one control. It moves the keyboard to the industry select rather
-   * than linking to it: the tool cannot own the URL bar, so a fragment link would
-   * push a history entry inside the iframe, and nothing in the public screens may
-   * read scroll position. Focusing a control scrolls it into view as a side effect
-   * of the browser doing its job, which is the only mechanism here that is allowed
-   * to.
-   *
-   * It names the field it lands on. "Get started" would have been the reference's
-   * own label and says nothing about what happens next.
-   */
-  jump: "Choose your industry",
-  panelTitle: "Tell us about your company",
-  submit: "Show me the landscape",
+  panelTitle: "Set your company context",
+  submit: "See my results",
   submitPending: "Finding comparable companies…",
+} as const;
+
+/**
+ * The customer-logo strip.
+ *
+ * **It has no visible heading, and that is the requirement rather than an
+ * oversight** — so the section carries an accessible name instead, which is what
+ * makes it a real `region` landmark rather than an anonymous `<section>`.
+ *
+ * The name is the one place the claim gets stated precisely, and the precision
+ * matters: these are companies ANSR has worked with in India. Nothing here says
+ * or implies they used this tool, because they did not.
+ */
+export const CUSTOMERS = {
+  label: "Companies ANSR has worked with in India",
+} as const;
+
+/**
+ * The impact band.
+ *
+ * The figures themselves are `dataset.siteContent.impactStats` — ANSR's own
+ * corporate numbers, editable in admin, because they move on their own schedule
+ * and a stale one is worse than none. Only the heading is fixed, because it
+ * names what the band is rather than asserting anything.
+ */
+export const IMPACT = {
   /**
-   * Two short sentences, and the first one is why the second is credible.
+   * Split into two parts because the brand name is set in the action orange, and a
+   * highlight inside a heading is structure rather than styling — it needs its own
+   * element. Kept as two fields rather than one string the component slices on the
+   * last word: a slice would silently move the highlight if the heading were ever
+   * reworded, and the point of holding copy in one file is that rewording it is
+   * safe.
    *
-   * It used to read "Nothing you enter is stored or sent to us", which was half
-   * false and false in the half that matters: the answers ARE sent, to a server
-   * action that filters the dataset, because peer matching cannot happen in the
-   * browser without shipping the dataset to it. In front of an audience that reads
-   * privacy language for a living, a claim they can disprove with a network tab
-   * discredits everything measured beside it.
+   * The rendered heading is still one accessible name, "Impact delivered by ANSR".
+   *
+   * Orange here is legal on both counts. It measures 4.95:1 on the impact ground, so
+   * it clears AA as text; and the brand restricts orange to one appearance per band,
+   * which this band has spare — it carries no CTA.
    */
-  privacy: "Your answers build this one result. Nothing is kept.",
+  titleLead: "Impact delivered by",
+  titleBrand: "ANSR",
 } as const;
 
 /** The visitor's company name when given, else a neutral stand-in. */

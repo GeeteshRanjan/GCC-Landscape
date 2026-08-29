@@ -3,6 +3,8 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import { fetchPeerView } from "@/app/actions";
+import type { HeroCopy, ImpactStat } from "@/data/schema";
+import type { TieredOptions } from "@/components/screen1/input-panel";
 import type { PeerView, PeerViewInput } from "@/data/screen1";
 import type { FunctionView } from "@/data/screen2";
 import type { BusinessTypeOption } from "@/components/screen1/input-panel";
@@ -39,12 +41,26 @@ import { FunctionViewScreen } from "@/components/screen2/function-view";
  */
 
 export interface GccLandscapeToolProps {
-  industries: readonly string[];
+  industries: TieredOptions;
   revenueBands: readonly string[];
-  hqCountries: readonly string[];
+  /**
+   * The HQ dropdown's two tiers — countries our data has evidence about, then the
+   * rest of the world. Computed in `page.tsx` from company counts rather than
+   * passed as one flat list, so the form does not have to know how the split is
+   * decided. See `hqCountryOptions`.
+   */
+  hqCountries: TieredOptions;
   businessTypesByIndustry: Readonly<Record<string, readonly BusinessTypeOption[]>>;
   /** Screen 2's payload, already through the gate. Visitor-independent. */
   functionView: FunctionView;
+  /**
+   * The entry point's editable content: the hero's two lines, and ANSR's impact
+   * figures. Threaded from `page.tsx` rather than fetched here, for the same
+   * reason `functionView` is — it does not depend on the visitor, so a server
+   * action for it would be a round trip that can only ever return one answer.
+   */
+  heroCopy: HeroCopy;
+  impactStats: readonly ImpactStat[];
   /** Where both screens' closing CTAs send the visitor. There is no form. */
   ctaHref: string;
 }
@@ -60,6 +76,8 @@ export function GccLandscapeTool({
   hqCountries,
   businessTypesByIndustry,
   functionView,
+  heroCopy,
+  impactStats,
   ctaHref,
 }: GccLandscapeToolProps) {
   useFrameHeight();
@@ -172,6 +190,8 @@ export function GccLandscapeTool({
       {phase.kind === "ask" ? (
         <PeerViewAsk
           headingRef={askHeadingRef}
+          heroCopy={heroCopy}
+          impactStats={impactStats}
           industries={industries}
           revenueBands={revenueBands}
           hqCountries={hqCountries}

@@ -6,6 +6,7 @@
  *   npm run data:import -- --in <path>       # a later batch of new companies
  *   npm run data:import -- --reseed-metrics  # adopt the catalogue in code over the stored one
  *   npm run data:import -- --reseed-business-types   # same, for business types
+ *   npm run data:import -- --reseed-site-content     # same, for the hero copy and impact figures
  *
  * The spreadsheet is a SEED, not a system of record. It is read once, cleaned on
  * the way in, and after that admin is the authoritative editor. This script is
@@ -41,6 +42,7 @@ import {
 } from "../src/data/normalize";
 import {
   DATASET_VERSION,
+  DEFAULT_SITE_CONTENT,
   datasetSchema,
   formatIssues,
   type Company,
@@ -79,6 +81,7 @@ interface Args {
   dryRun: boolean;
   reseedMetrics: boolean;
   reseedBusinessTypes: boolean;
+  reseedSiteContent: boolean;
 }
 
 function parseArgs(argv: string[]): Args {
@@ -87,12 +90,14 @@ function parseArgs(argv: string[]): Args {
     dryRun: false,
     reseedMetrics: false,
     reseedBusinessTypes: false,
+    reseedSiteContent: false,
   };
   for (let i = 0; i < argv.length; i += 1) {
     const arg = argv[i];
     if (arg === "--dry-run") args.dryRun = true;
     else if (arg === "--reseed-metrics") args.reseedMetrics = true;
     else if (arg === "--reseed-business-types") args.reseedBusinessTypes = true;
+    else if (arg === "--reseed-site-content") args.reseedSiteContent = true;
     else if (arg === "--in") {
       const next = argv[i + 1];
       if (!next) fail("--in needs a path");
@@ -450,6 +455,44 @@ async function main(): Promise<void> {
     );
   }
 
+  /**
+   * Site content, on the same terms again: preserved unless asked to reseed.
+   *
+   * Same failure mode as the metric catalogue and worse in one way — the hero's
+   * headline and the five impact figures are typed in by whoever owns ANSR's
+   * positioning, they have no spreadsheet behind them, and rebuilding them from
+   * the seed would replace live marketing copy with the developer's default
+   * during what looks like a routine monthly company append. The visible symptom
+   * would be the entry point silently reverting its headline.
+   *
+   * Unlike the other two, "has existing" cannot be a length check: the key always
+   * parses to a populated object, because its default is real content rather than
+   * `[]`. So the test is whether the stored copy DIFFERS from the default — which
+   * is the same question one step later and needs no second read of the raw file.
+   * If they are equal, reseeding is a no-op and either log line is true.
+   */
+  const hasExistingContent =
+    previous !== null &&
+    JSON.stringify(previous.siteContent) !== JSON.stringify(DEFAULT_SITE_CONTENT);
+  const siteContent =
+    hasExistingContent && !args.reseedSiteContent
+      ? (previous?.siteContent as Dataset["siteContent"])
+      : DEFAULT_SITE_CONTENT;
+
+  if (hasExistingContent && args.reseedSiteContent) {
+    console.log(
+      `\n  --reseed-site-content: REPLACING the stored hero copy and ${previous?.siteContent.impactStats.length} impact\n` +
+        `  figures with the defaults in src/data/schema.ts. Anything edited through admin is\n` +
+        `  discarded. The diff below is the record of what moved.`,
+    );
+  } else {
+    console.log(
+      hasExistingContent
+        ? `  keeping the stored hero copy and ${siteContent.impactStats.length} impact figures untouched`
+        : `  seeding the hero copy and ${siteContent.impactStats.length} impact figures from the default`,
+    );
+  }
+
   const tagged = companies.filter((c) => c.businessTypes.length > 0).length;
   console.log(
     `  tagged ${tagged}/${companies.length} companies (${Math.round((tagged / companies.length) * 100)}%) with a business type`,
@@ -463,6 +506,7 @@ async function main(): Promise<void> {
     companies,
     businessTypes,
     metrics,
+    siteContent,
   };
 
   const validated = datasetSchema.safeParse(dataset);

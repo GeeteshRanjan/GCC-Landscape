@@ -291,6 +291,10 @@ function summarise(diff: DatasetDiff): string {
       `${diff.counts.metrics} metric${diff.counts.metrics === 1 ? "" : "s"} updated`,
     );
   }
+  // Named rather than counted, because "1 edit" here can be the headline every
+  // visitor reads and the admin should see which surface moved before they read
+  // how much of it did.
+  if (diff.counts.siteContent) parts.push("entry point edited");
   return parts.length > 0 ? parts.join(", ") : "No changes";
 }
 
@@ -310,13 +314,72 @@ function DiffView({ diff }: { diff: DatasetDiff }) {
 
   return (
     <div className="flex flex-col gap-5">
-      <dl className="grid grid-cols-2 gap-px border border-border-subtle bg-border-subtle sm:grid-cols-3 lg:grid-cols-5">
+      <dl className="grid grid-cols-2 gap-px border border-border-subtle bg-border-subtle sm:grid-cols-3 lg:grid-cols-6">
         <Count label="Added" value={diff.counts.added} />
         <Count label="Removed" value={diff.counts.removed} />
         <Count label="Edited" value={diff.counts.changed} />
         <Count label="Taxonomy lists" value={diff.counts.taxonomy} />
         <Count label="Metrics" value={diff.counts.metrics} />
+        <Count label="Entry point" value={diff.counts.siteContent} />
       </dl>
+
+      {diff.counts.siteContent > 0 ? (
+        /* First, and deliberately ahead of the company and taxonomy sections.
+           Every other part of a publish changes what SOME visitor is shown once
+           they have answered the form; this changes the first thing all of them
+           read. Spelled out in full rather than sampled, because a reviewer has to
+           read the before and after of a headline, not count that it moved. */
+        <DiffSection title={`Entry point (${diff.counts.siteContent})`}>
+          <ul className="divide-y divide-border-subtle">
+            {diff.siteContent.hero.map((change) => (
+              <li key={change.field} className="px-5 py-3 text-sm">
+                <p className="text-xs uppercase tracking-caps text-text-muted">
+                  Hero {change.field}
+                </p>
+                <p className="mt-1 text-text-muted line-through">{change.before}</p>
+                <p className="mt-0.5 text-text">{change.after}</p>
+              </li>
+            ))}
+            {diff.siteContent.impactStats.changed.map((stat) => (
+              <li key={stat.id} className="px-5 py-3 text-sm">
+                <p className="font-medium text-text">{stat.label || stat.id}</p>
+                <ul className="mt-1.5 flex flex-col gap-1">
+                  {stat.changes.map((change) => (
+                    <li key={change.field} className="flex flex-wrap gap-x-2">
+                      <span className="text-xs uppercase tracking-caps text-text-muted">
+                        {change.field}
+                      </span>
+                      <span className="text-text-muted line-through">
+                        {change.before}
+                      </span>
+                      <span aria-hidden="true" className="text-text-muted">
+                        →
+                      </span>
+                      <span className="text-text">{change.after}</span>
+                    </li>
+                  ))}
+                </ul>
+              </li>
+            ))}
+            {diff.siteContent.impactStats.added.map((stat) => (
+              <li key={stat.id} className="px-5 py-2.5 text-sm text-text">
+                Figure added: {stat.value} {stat.label}
+              </li>
+            ))}
+            {diff.siteContent.impactStats.removed.map((stat) => (
+              <li key={stat.id} className="px-5 py-2.5 text-sm text-text">
+                Figure removed: {stat.value} {stat.label}
+              </li>
+            ))}
+            {diff.siteContent.impactStats.reordered ? (
+              <li className="px-5 py-2.5 text-sm text-text">
+                Impact figures reordered. The order is what a visitor reads left to
+                right, so this changes the page even though no figure changed.
+              </li>
+            ) : null}
+          </ul>
+        </DiffSection>
+      ) : null}
 
       {diff.taxonomy.length > 0 ? (
         <section

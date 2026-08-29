@@ -29,8 +29,7 @@ async function submit(
   if (options.businessType) {
     await page.getByLabel(CONTROL).selectOption({ label: options.businessType });
   }
-  await page.getByRole("radio", { name: "No India GCC yet" }).check();
-  await page.getByRole("button", { name: "Show me the landscape" }).click();
+  await page.getByRole("button", { name: "See my results" }).click();
 }
 
 test("is disabled until an industry is chosen, and says so", async ({ page }) => {

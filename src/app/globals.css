@@ -71,6 +71,7 @@
   --color-black: var(--ansr-black);
   --color-white: var(--ansr-white);
 
+  --color-teal-950: var(--ansr-teal-950);
   --color-teal-900: var(--ansr-teal-900);
   --color-teal-800: var(--ansr-teal-800);
   --color-teal-700: var(--ansr-teal-700);
@@ -80,6 +81,7 @@
   --color-teal-300: var(--ansr-teal-300);
   --color-teal-200: var(--ansr-teal-200);
   --color-teal-100: var(--ansr-teal-100);
+  --color-teal-50: var(--ansr-teal-50);
 
   --color-orange-500: var(--ansr-orange-500);
   --color-orange-400: var(--ansr-orange-400);
@@ -99,6 +101,8 @@
   --color-surface-subtle: var(--ansr-surface-subtle);
   --color-surface-sunken: var(--ansr-surface-sunken);
   --color-surface-tint: var(--ansr-surface-tint);
+  --color-surface-pale: var(--ansr-surface-pale);
+  --color-surface-deep: var(--ansr-surface-deep);
   --color-surface-inverse: var(--ansr-surface-inverse);
   --color-surface-inverse-soft: var(--ansr-surface-inverse-soft);
   --color-surface-accent: var(--ansr-surface-accent);
@@ -237,6 +241,10 @@
   /* ---- Layout ---------------------------------------------------------- */
   --container-content: var(--ansr-container);
   --container-wide: var(--ansr-container-wide);
+  /* `max-w-hero` — the cap on a centred display block. See the token. */
+  --container-hero: var(--ansr-container-hero);
+  /* `max-w-card` — the cap on the entry point's form card. See the token. */
+  --container-card: var(--ansr-container-card);
   /* Reading measure, so `max-w-measure` caps body copy at the token's own
      line length instead of an improvised ch value. */
   --container-measure: var(--ansr-measure);
@@ -362,81 +370,249 @@
 
    Not flipped. The asset's rays radiate from an origin at its own leading edge, so
    left unflipped and anchored past the trailing edge they open AWAY from the
-   headline and bleed off it, which is the reference's arrangement. Mirrored, they
-   would sweep back into the copy.
+   centre and bleed off the band, which is the reference's arrangement. Mirrored,
+   they would sweep back into the copy.
+
+   **Re-placed for a centred hero, and the mask is the substantive change.** When
+   the headline sat in the leading six columns the fan filled the trailing half and
+   was masked away over 68% of its own width, so that it had visibly stopped before
+   the copy began. Centred copy has no trailing half to fill, and that long mask
+   was what made the fan's left side read as blurred rather than as ornament — a
+   graphic dissolving across two thirds of itself looks like a rendering fault, not
+   a fade. So it is now:
+
+     - **Narrower, and living in the trailing margin.** The text block is capped at
+       `--ansr-container-hero` and centred, which leaves a real margin either side;
+       the fan occupies the trailing one instead of the trailing half of the band.
+     - **Masked only at its leading edge, and only briefly.** Solid for the outer
+       60%, fading over the last 40%. It reads as a complete graphic sliced by the
+       band edge, which is what the reference does with it, rather than as
+       something half-erased.
    -------------------------------------------------------------------------- */
 .gcc-ask-fan {
-  /* Oversized and past the trailing edge, so it reads as a slice of something
-     larger crossing the band. `overflow-hidden` on the hero does the cropping.
-
-     Sized to fill the band's HEIGHT, which took a second pass. The asset is 2.15:1
-     where the reference's own hero fan is 1.19:1, so a width that looked right left
-     a third of the band's trailing side as empty gradient — and an empty corner on
-     a saturated ground reads as an unfinished screen rather than as air. */
+  /* Oversized past the trailing edge, so it reads as a slice of something larger
+     crossing the band. `overflow-hidden` on the hero does the cropping. */
   inset-block-start: -4%;
-  inset-inline-end: -16%;
-  inline-size: 84%;
+  inset-inline-end: -6%;
+  inline-size: 46%;
 
-  /* Fades away from its anchor so it has visibly stopped before the headline
-     column begins. A mask reads only alpha, so the colour is machinery — but it
-     still comes from a token. */
-  mask-image: linear-gradient(to left, var(--ansr-black), transparent 68%);
+  /* A short terminal fade rather than a long dissolve. A hard cut here would draw
+     a vertical rule down the band, which the brand never does; 40% is the least
+     that hides the edge. A mask reads only alpha, so the colour is machinery — but
+     it still comes from a token. */
+  mask-image: linear-gradient(
+    to left,
+    var(--ansr-black) 60%,
+    transparent 100%
+  );
+
+  /* **A local opacity override, and it is a CONTRAST fix rather than a taste one.**
+     `--ansr-motif-opacity-inverse` is 0.4, and at 0.4 this fan puts white text at
+     **4.39:1 at the top of the band and 3.24:1 seven tenths down** — a WCAG AA
+     failure, because the fan's own lightest step is a near-white and the ground it
+     lightens is already only 4.93:1 against white at the ramp's bright end.
+
+     It did not fail before, and centring the copy is what surfaced it. With the
+     headline in the leading six columns the fan sat in the trailing half and was
+     masked away over 68% of its own width, so the alpha where the two met was
+     nearly zero — the pairing was legal by accident of placement rather than by
+     construction. A centred block reaches into the fan's half, and shortening the
+     mask (above) put real alpha behind real text.
+
+     0.20 is the measured answer: white clears AA anywhere the copy can land, down
+     to seven tenths of the band, which is well past where a three-line lead
+     reaches. Deeper than that the ground alone is too bright for a light motif to
+     sit under text at all — but nothing is there, because the form card covers it.
+     Re-measure before moving the copy down or lightening the ramp.
+
+     The trade is that the fan is quieter than the posture intends, which is what
+     the brief asked for anyway: a subtle background element that does not compete
+     with the hero text. `.gcc-close-streaks` set the precedent for overriding this
+     token per placement. */
+  --ansr-motif-opacity: 0.2;
+}
+
+/* ==========================================================================
+   The customer-logo marquee
+
+   The first continuous motion anywhere in this project, and the only thing on
+   either public screen that moves without the visitor doing something. Everything
+   else is `.gcc-enter`, tied to a state change. So the constraints it has to
+   satisfy are worth stating, because three of them rule out the obvious
+   implementations:
+
+     - **It cannot be scroll-driven, and it cannot pause on scroll.** The tool is
+       iframed and does not own the scroll container, so an IntersectionObserver
+       against our own viewport fires for content the visitor cannot see and stays
+       silent for content they can. A `transform` animation on a timeline has no
+       such dependency.
+     - **It cannot be fixed or sticky.** A browser spec asserts that nothing on the
+       page computes to either, because both break the moment the frame is
+       embedded. So the movement is a transform inside an `overflow-hidden` box,
+       which is also what keeps it from adding horizontal page scroll.
+     - **It must survive `prefers-reduced-motion`.** Continuous, unstoppable
+       movement is exactly what that preference exists to switch off, and unlike a
+       200ms entrance this one never ends. tokens.css clamps
+       `animation-duration` globally under `reduce`, which is right for a short
+       entrance and WRONG here — a 1ms clamp on an infinite loop leaves the track
+       flickering at frame rate. So the animation is opt-in inside
+       `no-preference`, and under `reduce` the track becomes a normal horizontally
+       scrollable row instead. Not a wrapped grid: the section is a strip, and
+       reflowing it into three rows changes the page's shape depending on a media
+       query.
+
+   **The seam.** The track holds the logo sequence twice and translates by exactly
+   -50% of its own width, so the moment it completes, copy two is where copy one
+   started and the reset is invisible. Two properties make that true and both are
+   easy to lose: the duplicate must be identical (a different gap on the second
+   copy shows up as a stutter once per cycle), and the gap between the last logo of
+   one copy and the first of the next has to equal the gap between any other pair,
+   which is why the gap is on the flex container rather than a margin on each item.
+
+   `linear`, not an eased token. Every easing in this project accelerates or
+   decelerates, which is correct for something that starts and stops; a loop that
+   eases visibly slows at each seam. This is the one place a linear timing function
+   is the right answer, so it is written literally rather than reaching for an
+   `--ansr-ease-*` token that would be wrong.
+   ========================================================================== */
+.gcc-marquee {
+  /* The clip. Also what stops the oversized track from widening the document —
+     without it the second copy of the sequence is real layout and the page gains
+     a horizontal scrollbar. */
+  overflow: hidden;
+  /* Fades the strip into the band at both ends, so a logo enters and leaves
+     rather than appearing at a hard edge. Symmetric, because the movement is
+     one-directional but both edges are visible. */
+  mask-image: linear-gradient(
+    to right,
+    transparent 0,
+    var(--ansr-black) 8%,
+    var(--ansr-black) 92%,
+    transparent 100%
+  );
+}
+
+.gcc-marquee-track {
+  display: flex;
+  align-items: center;
+  /* `max-content`, so the track is as wide as its contents rather than its
+     parent — the precondition for translating by -50% of itself. */
+  inline-size: max-content;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .gcc-marquee-track {
+    animation: gcc-marquee var(--ansr-duration-marquee) linear infinite;
+  }
+}
+
+/* Under `reduce` the strip is a scrollable row instead of a moving one. The
+   logos are all still reachable, which is the property that matters; they are
+   just reached by the visitor rather than by a timer. */
+@media (prefers-reduced-motion: reduce) {
+  .gcc-marquee {
+    overflow-x: auto;
+    mask-image: none;
+  }
+}
+
+@keyframes gcc-marquee {
+  from {
+    transform: translate3d(0, 0, 0);
+  }
+  to {
+    /* Exactly half the track, which is exactly one full copy of the sequence.
+       Any other value shows a jump. */
+    transform: translate3d(-50%, 0, 0);
+  }
 }
 
 /* --------------------------------------------------------------------------
-   The ask form band's bar ramp
+   The impact band's rings
 
-   Motif B from the reference, and the first thing to use `.ansr-bar-ramp`: vertical
-   bars at a constant pitch whose width grows linearly, tiled full-bleed the way the
-   reference's closing band runs it behind a heading.
+   `assets/brand/motif/arc-dome.svg` recoloured off its orange onto
+   `--ansr-teal-200`, then given its own real frame, then normalized to
+   public/brand/impact-rings.svg. Reproduce by mapping the asset's single source
+   colour — run `brand_asset.py stat` on the source for it — onto the light ramp
+   step named above, widening the viewBox to 0 0 1103 1103, then `normalize`. The
+   colour values are deliberately not quoted: brand_lint.py is right to refuse a
+   literal hex even in a comment.
 
-   It sits BEHIND the form panel, which is opaque, so what is visible is the band's
-   own top padding either side of the panel. That is deliberate: the panel is the one
-   thing on this screen a visitor has to work in, and ornament under a control is
-   noise at best. Faded downward so the density sits at the band's top edge, where it
-   reads as the hero carrying through rather than as a rule between the two — the
-   brand draws no rule between bands, and a hairline field across a boundary would
-   read as one.
+   **The widened viewBox is the whole fix, and it is not a crop — it is the
+   opposite of one.** The export declares `viewBox="0 0 784 378"` while its paths
+   are a COMPLETE set of concentric rings centred at (551.5, 551.5) inside an
+   1103-square clip. So the frame was slicing every circle through its middle, and
+   the visible result was a fan of arcs ending on a hard straight chord partway up
+   the band — which reads as a rendering fault rather than as ornament. Nothing was
+   redrawn or traced: the frame was told the truth about what the file already
+   contained, and the rings are whole.
 
-   `--bar-color` is the motif ink rather than a lighter tint: at the `.ansr-motif`
-   posture's 0.18 a `teal-200` ink over this ground composites to nothing.
+   **Both placements put the ring set's CENTRE on a corner of the band**, leading
+   bottom and trailing top. That is what keeps the fix from being undone by the
+   placement: a whole circle sitting inside the band would just move the visible cut
+   to the band's own edges, so instead exactly one quarter of the set sweeps in from
+   each corner and everything else is outside the section. There is no chord
+   anywhere, and the arcs bleed off two edges, which is what the brand skill means
+   by reading as a slice of something larger.
+
+   No mirroring, deliberately. Concentric circles are radially symmetric, so
+   flipping the asset is a no-op — the pair is made symmetric by where it is put,
+   not by transforming it. The previous version carried a `scale(-1)` that did
+   nothing visible.
+
+   Both sit at the `.gcc-motif-inverse` posture on top of the asset's own baked
+   0.45, so the effective ink is about 0.18 of `teal-200` over the deep ground.
+   White over the motif's densest point measures 10.92:1, so the copy above it is
+   unaffected — which is the check that matters, since a motif under text raises
+   the floor rather than lowering the ceiling.
    -------------------------------------------------------------------------- */
-.gcc-ask-ramp {
-  inset-block: 0;
+/* The layer both ring sets live in. `.ansr-motif` makes it absolute,
+   non-interactive and held back; this gives it the whole band to position inside.
+   It exists as a wrapper rather than the two images being motifs in their own right
+   because `.ansr-motif + *` would otherwise re-position the second one — the reason
+   is recorded in impact-band.tsx, where the bug was visible. */
+.gcc-impact-rings {
+  inset: 0;
+}
+
+.gcc-impact-ring {
+  position: absolute;
+  /* Square, because the asset is. Sized against the band's WIDTH so the two
+     quarters read at the same scale regardless of how tall the figures make the
+     band — and large, since only a quarter of each is on screen. */
+  inline-size: 58%;
+  aspect-ratio: 1;
+  block-size: auto;
+
+  /* Radial rather than linear, and that is what makes one declaration correct in
+     both corners. The element's centre is on a band corner, so "fade outward from
+     my own centre" is exactly "dense at the corner, gone before the content" —
+     with no direction to get wrong per placement, which a `to top right` linear
+     mask had. `closest-side` so the falloff completes at the circle's own edge
+     rather than at the box's diagonal.
+
+     A mask reads only alpha, so the colour is machinery — but it still comes from a
+     token. */
+  mask-image: radial-gradient(
+    closest-side,
+    var(--ansr-black) 30%,
+    transparent 100%
+  );
+}
+/* Centre exactly on the corner via a half-translate, rather than a negative inset.
+   An `inset-block-end` percentage resolves against the container's HEIGHT while the
+   element is sized from its WIDTH, so a negative inset would drift as the band's
+   height changed with the number of figures. A translate is a percentage of the
+   element itself, so the centre stays on the corner at any band height. */
+.gcc-impact-ring--start {
+  inset-block-end: 0;
+  inset-inline-start: 0;
+  transform: translate(-50%, 50%);
+}
+.gcc-impact-ring--end {
+  inset-block-start: 0;
   inset-inline-end: 0;
-  /* Wide enough to cover the two columns the panel gives up plus the gutter
-     outside the container, so the field bleeds off the trailing edge rather than
-     stopping at a visible boundary. */
-  inline-size: 22%;
-  --bar-color: var(--ansr-motif-ink);
-  /* Sparser than the token's measured default. The reference's own figures — 20px
-     pitch on a 7 to 18px width — are for a 219-wide panel, where the ramp reads as
-     one graphic. Tiled down a strip several hundred px tall the same pitch reads as
-     a barcode, because what the eye picks up is the repeat rather than the ramp.
-     Widening the pitch and the step keeps the ramp legible as a ramp. */
-  --bar-pitch: 34px;
-  --bar-w: 8px;
-  --bar-step: 2.4px;
-  /* Fades away from its anchor, so the bars are densest at the edge they bleed off
-     and have stopped before the panel's own edge. Without this the strip ends in a
-     straight vertical line beside the panel, which reads as a second edge on a
-     panel whose whole point is not having one. */
-  mask-image: linear-gradient(to left, var(--ansr-black), transparent 88%);
-}
-
-/* --------------------------------------------------------------------------
-   How the form panel ends
-
-   Motif C, and the first thing to use `.ansr-dissolve`. The panel's content runs to
-   its true bottom edge and this carries the fill out into the band with 27
-   hairlines whose alpha decays — so the panel has no bottom border and no shadow,
-   which is how every card on the reference ends.
-
-   Its own fill is the panel's, set here rather than inherited, because the mask
-   applies to whatever the element paints and an unfilled div would mask nothing.
-   -------------------------------------------------------------------------- */
-.gcc-panel-dissolve {
-  background: var(--ansr-surface);
+  transform: translate(50%, -50%);
 }
 
 /* --------------------------------------------------------------------------
@@ -460,26 +636,67 @@
    two signals, because the ring alone is easy to lose against a busy panel.
    -------------------------------------------------------------------------- */
 .gcc-field {
-  background: var(--ansr-surface-tint);
-  border-radius: var(--ansr-radius-none);
-  border-block-end: 1px solid var(--ansr-accent);
+  /* A near-white fill with the mint still in it, so the field is a shade off the
+     card without becoming a block of colour. The previous version filled with
+     `surface-tint` — the band's own ground — which made the field read as cut out
+     of a hard-edged panel. That was right for that panel; against a rounded, lifted
+     card it read as a heavy inset well, which is most of why the form looked dated. */
+  background: var(--ansr-teal-50);
+
+  /* **Rounded and fully outlined, which is a real change of pattern rather than a
+     tweak.** The field used to be a filled box with radius 0 and a single bottom
+     rule, because that is the reference's own geometry. Five of them stacked in a
+     card read as a spreadsheet, and the one-sided rule is the specific detail that
+     dates a form.
+
+     `lg` (8px) rather than `md` (4px): the radius scale's default is 4px so UI does
+     not drift soft against the brand's square-cut motifs, but nothing here sits
+     against a motif, and the card these live in is rounded too — a 4px field inside
+     an 8px card reads as a mismatch rather than as restraint. */
+  border-radius: var(--ansr-radius-lg);
+
+  /* **The border colour is a contrast floor, not a style choice.** WCAG 1.4.11
+     wants 3:1 for whatever identifies a control, and the fill cannot do it here:
+     `teal-50` is 1.03:1 against the card's white, so it is decoration. The outline
+     is the boundary, so the outline has to clear the floor — `teal-500` is 5.14:1 on
+     white and 5.05:1 on the field's own fill.
+
+     This is also why the obvious modern look was not available: a hairline in
+     `--ansr-border-strong` is 1.78:1 and one in `--ansr-border-tint` is 1.65:1.
+     Both look right and neither is a boundary. */
+  border: 1px solid var(--ansr-teal-500);
+
   transition: border-color var(--ansr-duration-fast) var(--ansr-ease-standard),
               background-color var(--ansr-duration-fast) var(--ansr-ease-standard);
 }
 .gcc-field:hover:not(:disabled) {
-  background: var(--ansr-teal-200);
+  background: var(--ansr-teal-100);
 }
+/* Focus thickens the outline to the action orange on top of the global focus ring —
+   two signals, because the ring alone is easy to lose against a busy card. The
+   1px-to-2px change is drawn INSIDE the box via an inset shadow rather than by
+   growing the border, so the control does not shift by a pixel on focus and nudge
+   every field after it. */
 .gcc-field:focus-visible,
 .gcc-field:focus {
-  border-block-end-width: 2px;
-  border-block-end-color: var(--ansr-action);
+  border-color: var(--ansr-action);
+  box-shadow: inset 0 0 0 1px var(--ansr-action);
 }
-/* An invalid field carries a thicker rule in the attention colour AND the error
+/* An invalid field carries a thicker outline in the attention colour AND the error
    text below it. Form plus text, never hue alone — this palette has no danger
    colour, and 1.4.1 would require the text regardless. */
 .gcc-field[aria-invalid="true"] {
-  border-block-end-width: 2px;
-  border-block-end-color: var(--ansr-feedback-attention);
+  border-color: var(--ansr-feedback-attention);
+  box-shadow: inset 0 0 0 1px var(--ansr-feedback-attention);
+}
+
+/* A native select with `appearance-none` still reserves room for a chevron on some
+   platforms and none on others. The component draws its own and pads for it; this
+   just makes sure no platform draws a second one. See `SelectShell`. */
+.gcc-field select,
+select.gcc-field {
+  appearance: none;
+  background-image: none;
 }
 
 /* --------------------------------------------------------------------------

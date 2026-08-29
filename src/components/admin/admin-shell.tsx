@@ -7,7 +7,7 @@ import { useDraft } from "@/components/admin/draft-provider";
 import { Button } from "@/components/ui/button";
 
 /**
- * App-shell chrome: a skip link, four tabs, and one honest status line.
+ * App-shell chrome: a skip link, the section tabs, and one honest status line.
  *
  * Deliberately not a marketing surface, so the tastemaker asset and
  * scroll-motion defaults do not apply here — this is the app-shell track. No
@@ -25,6 +25,10 @@ const TABS = [
   { href: "/admin/taxonomy", label: "Taxonomy" },
   { href: "/admin/business-types", label: "Business types" },
   { href: "/admin/metrics", label: "Metrics" },
+  // The hero copy and the impact figures. Named for the surface it edits rather
+  // than for the dataset key behind it — an admin is looking for "the headline on
+  // the first page", not for `siteContent`.
+  { href: "/admin/entry-point", label: "Entry point" },
   { href: "/admin/publish", label: "Publish" },
 ] as const;
 

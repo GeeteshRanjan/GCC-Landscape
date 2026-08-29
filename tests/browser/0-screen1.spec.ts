@@ -28,7 +28,6 @@ async function ask(
     revenueBand: string;
     hqCountry?: string;
     companyName?: string;
-    status?: string;
   },
 ): Promise<void> {
   if (options.companyName) {
@@ -37,12 +36,27 @@ async function ask(
   await page.getByLabel("Industry").selectOption(options.industry);
   await page.getByLabel("Annual revenue").selectOption(options.revenueBand);
   await page.getByLabel("Headquarters").selectOption(options.hqCountry ?? "USA");
-  await page.getByRole("radio", { name: options.status ?? "No India GCC yet" }).check();
-  await page.getByRole("button", { name: "Show me the landscape" }).click();
+  /**
+   * No India-presence step. The question was removed at ANSR's request and the
+   * FIELD was not — `gccStatus` still reaches the server, as a constant, and still
+   * frames the whole answer. See `ASSUMED_GCC_STATUS` in `input-panel.tsx`.
+   *
+   * Which means the answer state is now always framed as "evaluating", and the
+   * assertions below that read the heading depend on that. If the control ever
+   * comes back, this helper regains a parameter and those headings become
+   * variable again.
+   */
+  await page.getByRole("button", { name: SUBMIT }).click();
 }
 
+/**
+ * The submit label, named once. Three tests press this button, and a copy change
+ * that had to be made in three places is a copy change that gets made in two.
+ */
+const SUBMIT = "See my results";
+
 test.describe("the ask", () => {
-  test("offers exactly the six inputs, and asks for no revenue figure", async ({
+  test("offers exactly the five inputs, and asks for no revenue figure", async ({
     page,
   }) => {
     await page.goto("/");
@@ -61,12 +75,14 @@ test.describe("the ask", () => {
     await expect(page.getByLabel(/^Line of business/)).toBeVisible();
     await expect(page.getByLabel("Annual revenue")).toBeVisible();
     await expect(page.getByLabel("Headquarters")).toBeVisible();
-    await expect(
-      page.getByRole("group", { name: "Where are you with India today?" }),
-    ).toBeVisible();
+    // **No India-presence control, and its absence is asserted.** The question was
+    // removed at ANSR's request; the field behind it was kept and is supplied as a
+    // constant. A radio group reappearing here means someone restored the control
+    // without deciding to.
+    expect(await page.locator("form input[type='radio']").count()).toBe(0);
 
-    // Five named controls plus the radio group, and no seventh: a field added
-    // without a consumer should fail here rather than ship silently.
+    // Five controls, and no sixth: a field added without a consumer should fail
+    // here rather than ship silently.
     expect(
       await page.locator("form select, form input[type='text']").count(),
     ).toBe(5);
@@ -110,16 +126,26 @@ test.describe("the ask", () => {
   }) => {
     await page.goto("/");
 
-    await expect(page.locator("h1#ask-title")).toHaveText(
-      "Your industry is already in India",
-    );
-    await expect(
-      page.getByText("1,834 global companies run a centre here."),
-    ).toBeVisible();
+    await expect(page.locator("h1#ask-title")).toHaveText("India GCC Intelligence");
+
+    /**
+     * The company count is asserted as "1,800+" and asserted NOT to be the exact
+     * figure, which is the unusual half.
+     *
+     * ANSR asked for the rounded form, so the hero deliberately disagrees with
+     * `companies.length`. That makes it the one number on the public screens that
+     * `data:verify` cannot check — it is editable copy, not a total — so the
+     * guard against someone "correcting" it to 1,834 lives here.
+     */
+    await expect(page.getByText("1,800+", { exact: false }).first()).toBeVisible();
 
     const text = (await page.locator("body").innerText()).toLowerCase();
+    expect(text).not.toContain("1,834 global companies");
     expect(text).not.toContain("twenty seconds");
     expect(text).not.toContain("or sent to us");
+    // The reassurance line was removed with the hero rework. It was true; it
+    // narrated the tool's own integrity at the moment of submitting.
+    expect(text).not.toContain("nothing is kept");
 
     // Line of business is the only field that carries the marker.
     expect(
@@ -133,7 +159,7 @@ test.describe("the ask", () => {
   }) => {
     await page.goto("/");
 
-    const submit = page.getByRole("button", { name: "Show me the landscape" });
+    const submit = page.getByRole("button", { name: SUBMIT });
     // Enabled before the form is valid: disabling it leaves a keyboard user with
     // no way to find out what is wrong.
     await expect(submit).toBeEnabled();
@@ -148,27 +174,178 @@ test.describe("the ask", () => {
   });
 
   /**
-   * The hero's pill, which is the reference's hero anatomy and is genuinely load
-   * bearing on a phone, where the form is entirely below the fold.
+   * The hero carries exactly two text elements and no control.
    *
-   * It moves focus rather than linking: the tool cannot own its URL, so a fragment
-   * would push a history entry inside the iframe, and nothing in the public screens
-   * may read scroll position. This also pins the two-refs-on-one-node arrangement in
-   * `input-panel.tsx` — passing the hero's ref as a second `ref` prop would have
-   * silently replaced the validation ref, and the only symptom would have been
-   * focus quietly not moving on a failed submit.
+   * It used to carry an outlined pill that moved the keyboard to the industry
+   * select, which earned its place when the form was a full band below the fold.
+   * The form now overlaps the hero, so its first field is already on screen and the
+   * pill was a control that scrolled you to something you could see. The spec that
+   * covered it is replaced by this one rather than deleted, so the removal stays a
+   * decision instead of becoming an untested gap.
+   *
+   * The submit button is the screen's only button, which is also the brand's
+   * one-orange-per-band rule holding: a second control in the hero would have had
+   * to be either a second primary or a visibly weaker one.
    */
-  test("the hero's pill puts the keyboard on the industry select", async ({
+  test("the hero is two text elements and no control", async ({ page }) => {
+    await page.goto("/");
+
+    const hero = page.locator("h1#ask-title").locator("..");
+    expect(await hero.locator("button, a").count()).toBe(0);
+
+    // One button on the whole entry point, and it is the form's.
+    const buttons = page.locator("button");
+    await expect(buttons).toHaveCount(1);
+    await expect(buttons.first()).toHaveText(SUBMIT);
+
+    // No eyebrow above the headline: the product label IS the headline, so a
+    // kicker would have been the same words twice.
+    expect(await page.locator("h1#ask-title ~ *, h1#ask-title").count()).toBe(2);
+  });
+});
+
+/**
+ * The three bands the entry point gained below the form: the pale-teal transition
+ * the card sits on, the customer-logo strip, and the dark impact band.
+ *
+ * Located by id throughout, never by heading text — the same rule `helpers.ts`
+ * states for the evidence bands, and the reason twenty specs broke once already.
+ */
+test.describe("the entry point's bands", () => {
+  test("the form card overlaps the hero rather than sitting under it", async ({
     page,
   }) => {
     await page.goto("/");
 
-    await page.getByRole("button", { name: "Choose your industry" }).click();
-    await expect(page.getByLabel("Industry")).toBeFocused();
+    /**
+     * The one geometric assertion on the public screens, and it earns its place:
+     * the overlap is produced by a negative margin on the card, and a negative
+     * margin on the first child of a section with no top padding COLLAPSES THROUGH
+     * and moves the section itself instead. The rendered result is a card flush to
+     * the boundary with no overlap at all, which looks exactly like the margin
+     * being ignored and is invisible to every other check in this repo.
+     *
+     * Measured as a fraction rather than in pixels, because the card's height
+     * depends on how the field labels wrap.
+     */
+    const geometry = await page.evaluate(() => {
+      const hero = document.querySelector(".gcc-ground-hero");
+      const card = document.querySelector("#ask [class*='rounded-']");
+      if (!hero || !card) return null;
+      const h = hero.getBoundingClientRect();
+      const c = card.getBoundingClientRect();
+      return { overlap: h.bottom - c.top, cardHeight: c.height };
+    });
+    expect(geometry).not.toBeNull();
+    const { overlap, cardHeight } = geometry!;
+    expect(overlap).toBeGreaterThan(0);
+    // The brief asks for roughly the upper quarter to third of the card on the
+    // hero. Bounded loosely at both ends: the point is that it is unmistakably an
+    // overlap and unmistakably not most of the card.
+    expect(overlap / cardHeight).toBeGreaterThan(0.15);
+    expect(overlap / cardHeight).toBeLessThan(0.45);
+  });
 
-    // And the validation ref still works, on the same node.
-    await page.getByRole("button", { name: "Show me the landscape" }).click();
-    await expect(page.getByLabel("Industry")).toBeFocused();
+  test("the logo strip names its companies without claiming they used the tool", async ({
+    page,
+  }) => {
+    await page.goto("/");
+
+    // A region with an accessible name but no visible heading — the name is the
+    // only thing making it a landmark, so losing it is losing the band's identity.
+    const strip = page.locator("section#customers");
+    await expect(strip).toHaveAttribute("aria-label", /worked with/i);
+
+    // Ten marks, twice: the duplicate is what makes the loop seamless.
+    await expect(strip.locator("img")).toHaveCount(20);
+    // Only the first copy is announced. Ten company names read out twice is the
+    // bug the `aria-hidden` on the second list prevents.
+    await expect(strip.locator('img:not([alt=""])')).toHaveCount(10);
+
+    // Every mark actually rendered. Six of the ten are SVGs that were served with
+    // no intrinsic size once, and all six collapsed to 0x0 inside the capped flex
+    // row — visible as an empty strip and caught by nothing else.
+    const collapsed = await strip.locator("img").evaluateAll((imgs) =>
+      imgs
+        .filter((i) => i.getBoundingClientRect().width < 8)
+        .map((i) => i.getAttribute("src")),
+    );
+    expect(collapsed).toEqual([]);
+
+    const text = (await strip.innerText()).toLowerCase();
+    expect(text).not.toContain("used");
+    expect(text).not.toContain("this tool");
+  });
+
+  test("the impact band shows ANSR's figures and hides its ornament", async ({
+    page,
+  }) => {
+    await page.goto("/");
+
+    // `expectBand` asserts the landmark; `band` is the locator to read from. It
+    // returns void deliberately — many specs call it for the assertion alone.
+    await expectBand(page, "impact");
+    const impact = band(page, "impact");
+    for (const figure of ["225K+", "210+", "14M+", "20+", "$2.5B+"]) {
+      await expect(impact.getByText(figure, { exact: true })).toBeVisible();
+    }
+
+    // Decorative, so out of the accessibility tree entirely. The ring layer is one
+    // element wrapping two images, because two adjacent `.ansr-motif` siblings made
+    // tokens.css re-position the second one into the flow.
+    const rings = impact.locator(".gcc-impact-rings");
+    await expect(rings).toHaveAttribute("aria-hidden", "true");
+    await expect(rings.locator("img")).toHaveCount(2);
+
+    // Nothing in the band announces itself as a heading below h2, so the document
+    // outline stays hero -> band.
+    await expect(impact.locator("h2")).toHaveCount(1);
+  });
+
+  test("the marquee moves without adding scroll or claiming the viewport", async ({
+    page,
+  }) => {
+    await page.goto("/");
+
+    // The whole reason this is a transform inside an overflow-hidden box: the
+    // duplicated track is twice the band's width, and as real layout it would give
+    // the document a horizontal scrollbar. The iframe spec asserts nothing is
+    // fixed or sticky; this asserts the other half.
+    const { scrollWidth, clientWidth } = await page.evaluate(() => ({
+      scrollWidth: document.documentElement.scrollWidth,
+      clientWidth: document.documentElement.clientWidth,
+    }));
+    expect(scrollWidth).toBe(clientWidth);
+
+    const animation = await page
+      .locator(".gcc-marquee-track")
+      .evaluate((el) => getComputedStyle(el).animationName);
+    expect(animation).toBe("gcc-marquee");
+  });
+
+  test("under reduced motion the strip is scrollable instead of moving", async ({
+    browser,
+  }) => {
+    // Continuous, unstoppable movement is exactly what this preference exists to
+    // switch off, and unlike a 200ms entrance it never ends. tokens.css clamps
+    // animation duration globally under `reduce`, which on an infinite loop leaves
+    // the track flickering at frame rate rather than stopping it — so the animation
+    // is opt-in inside `no-preference` and the fallback is a real scrollable row.
+    const context = await browser.newContext({ reducedMotion: "reduce" });
+    const page = await context.newPage();
+    await page.goto("/");
+
+    const style = await page
+      .locator("#customers .gcc-marquee")
+      .evaluate((el) => getComputedStyle(el).overflowX);
+    expect(style).toBe("auto");
+
+    const animation = await page
+      .locator(".gcc-marquee-track")
+      .evaluate((el) => getComputedStyle(el).animationName);
+    expect(animation).toBe("none");
+
+    await context.close();
   });
 });
 
@@ -260,20 +437,44 @@ test.describe("the answer", () => {
     expect(html.length).toBeLessThan(300_000);
   });
 
-  test("branches the framing on the GCC status input", async ({ page }) => {
+  /**
+   * The framing the form now always produces, and the fact it no longer echoes.
+   *
+   * This test used to drive the India-presence control through all three statuses
+   * and assert three different framings. That control is gone — the question was
+   * removed at ANSR's request and `gccStatus` is supplied as a constant — so the
+   * branch is no longer reachable from a browser at all. **The branching itself is
+   * still covered**, in `tests/unit/screen1.test.ts`, which asserts every status
+   * produces a distinct title and CTA label; moving it there rather than deleting
+   * it is what keeps the field from quietly becoming decoration.
+   *
+   * What only a browser can check is the pair of consequences: that the constant is
+   * the framing that makes no claim about the visitor, and that the answer's fact
+   * summary does not read the constant back to them as their own answer.
+   */
+  test("frames the answer without claiming an India status the visitor never gave", async ({
+    page,
+  }) => {
     await page.goto("/");
-    await ask(page, {
-      industry: "BFSI",
-      revenueBand: "Above $20 Bn",
-      status: "We run one and are expanding it",
-    });
+    await ask(page, { industry: "BFSI", revenueBand: "Above $20 Bn" });
 
+    // The `evaluating` branch: true for any reader, because it is a statement about
+    // the industry rather than about them.
     await expect(
-      page.getByRole("heading", { level: 1, name: /ground you are expanding into/ }),
+      page.getByRole("heading", { level: 1, name: /would not be first/ }),
     ).toBeVisible();
-    await expect(
-      page.getByRole("link", { name: /scaling your India GCC/ }),
-    ).toBeVisible();
+
+    // Three facts echoed back, and every one is something they typed. "India today"
+    // was the fourth and is gone with the question.
+    //
+    // Located on the summary's own `dl` rather than by walking up from the heading:
+    // the facts are a SIBLING of the heading's block, so `h1`'s parent does not
+    // contain them and the assertion passed vacuously against an empty scope.
+    await expect(page.getByText("India today")).toHaveCount(0);
+    const facts = page.locator("main dl").first();
+    for (const term of ["Industry", "Revenue", "Headquarters"]) {
+      await expect(facts.getByText(term, { exact: true })).toBeVisible();
+    }
   });
 
   test("returns to the form with the answers still in it", async ({ page }) => {

@@ -1,56 +1,66 @@
-"use client";
-
-import { ASK } from "./copy";
+import type { HeroCopy } from "@/data/schema";
 
 /**
- * The ask screen's hero, built to the reference's own measured hero anatomy.
+ * The ask screen's hero: a centred title and one supporting line on the brand's
+ * own display ground, and deliberately nothing else.
  *
- * **Why this is not `ScreenHeader`.** That component is shared by the answer state
- * and Screen 2, and both of them need something this band cannot give them: a
- * MUTED ink for a lead, a facts summary, and a way back. On
+ * **Why this is not `ScreenHeader`.** That component is shared by the answer
+ * state and Screen 2, and both of them need something this band cannot give
+ * them: a MUTED ink for a lead, a facts summary, and a way back. On
  * `--ansr-gradient-hero` a muted ink measures 2.23:1, so a shared header would
  * have had to either give up the reference's ground or ship an illegal pairing on
  * two screens. Those two screens keep `ScreenHeader` and its own gradient, which
  * is capped dark enough for a muted ink; this band is the one place the brand's
  * real display ground is used, and it is white-only by construction.
  *
- * The anatomy, from docs/ansrx-visual-language.md §8, normalised for a 1280
- * container inside an iframe:
+ * **Centred, not leading-aligned, and that changed what the band can hold.** The
+ * previous version was the reference's own hero anatomy: headline in six of
+ * twelve columns, the fan filling the trailing half, an outlined pill under the
+ * lead. A centred composition has no trailing half to give the ornament and no
+ * empty column to park a control in, so both went — the pill because the form now
+ * overlaps this band and its first field is already visible, which is the whole
+ * job the pill used to do.
  *
- *   - Headline in **under half the band width**. The reference sets ~500 of its
- *     1263, which is 6 of 12 columns once the gutter is counted, so that is how it
- *     is expressed here rather than as a picked max-width.
- *   - **80px at 1.05 leading**, Regular rather than Bold. Both are the reference's,
- *     and the leading is the load-bearing half: at our old `tight` 1.15 a
- *     three-line headline reads as three lines instead of one object.
- *   - The fan filling the trailing half and bleeding off that edge.
- *   - **One pill**, and it is outlined rather than orange. The reference's hero
- *     pill is orange because its hero is the only action in that band; ours is not.
- *     The form's submit directly below is the screen's one real ask, and a screen
- *     with two orange controls has no primary action at all. Same shape, different
- *     fill: both read as actions, only one reads as THE action.
+ * What survives from that anatomy is the part that was never about alignment:
+ *
+ *   - **80px at 1.05 leading**, Regular rather than Bold. Both are the
+ *     reference's, and the leading is the load-bearing half: at our `tight` 1.15
+ *     a two-line headline reads as two lines instead of one object.
+ *   - **Light 300 for the supporting line**, which is the brand's single biggest
+ *     typographic tell.
+ *   - Hierarchy carried by SIZE AND WEIGHT in one ink, because that is what the
+ *     ground allows.
+ *
+ * **The bottom padding is sized for the card that overlaps it, not for the copy.**
+ * `pb` here plus the card's negative top margin in `peer-view.tsx` are one
+ * measurement split across two files; the hero's own visible bottom edge is
+ * further down than its padding suggests, because the card is drawn over it.
  *
  * Nothing here is fixed, sticky, or measured against the viewport.
  */
 export function AskHero({
   headingRef,
-  onJumpToForm,
+  copy,
 }: {
   headingRef: React.RefObject<HTMLHeadingElement | null>;
-  onJumpToForm: () => void;
+  copy: HeroCopy;
 }) {
   return (
-    <div className="gcc-ground-hero relative overflow-hidden pt-16 pb-20 md:pt-24 md:pb-28">
+    <div className="gcc-ground-hero relative overflow-hidden pt-16 pb-28 md:pt-24 md:pb-40 lg:pt-28 lg:pb-48">
       {/* Decorative and redundant: everything it could convey is in the text
           beside it. Out of the tab order and out of the accessibility tree.
 
-          Hidden below `md`, where the headline runs the full width and there is no
-          empty ground for ornament to occupy. Nothing is lost — the gradient
+          Hidden below `md`, where the headline runs the full width and there is
+          no empty ground for ornament to occupy. Nothing is lost — the gradient
           carries the band on its own, and on a phone it carries it better. */}
-      <div
-        className="ansr-motif gcc-motif-inverse gcc-ask-fan hidden md:block"
-        aria-hidden="true"
-      >
+      {/* No `gcc-motif-inverse` here, deliberately. That class only sets
+          `--ansr-motif-opacity` to the inverse posture, and `.gcc-ask-fan` sets the
+          same custom property to a lower, MEASURED value — see globals.css for the
+          contrast reason. Both are single-class selectors, so whichever appears
+          later in the stylesheet wins; carrying both made the fan's opacity depend
+          on the order of two rule blocks, which is exactly the kind of thing that
+          silently reverts. One class owns it. */}
+      <div className="ansr-motif gcc-ask-fan hidden md:block" aria-hidden="true">
         {/* eslint-disable-next-line @next/next/no-img-element -- decorative,
             fixed intrinsic ratio, and not worth an optimiser round trip. */}
         <img
@@ -63,70 +73,65 @@ export function AskHero({
       </div>
 
       <div className="relative mx-auto max-w-content px-6 md:px-12">
-        <div className="grid lg:grid-cols-12">
-          {/* Six of twelve. The reference's headline occupies under half its band,
-              and that proportion is most of why the fan beside it reads as part of
-              the composition rather than as wallpaper behind the copy. */}
-          <div className="flex flex-col items-start gap-6 lg:col-span-6">
-            {/* 14px rather than the 12px the other screens' kickers use. The
-                reference's eyebrows are 22px Bold, and at 12px above an 80px
-                headline this read as a caption that had drifted upward rather than
-                as the label of the band. Bold, because on this ground the only
-                variables available are size and weight. */}
-            <p className="text-sm font-semibold tracking-caps text-text-inverse uppercase">
-              {ASK.kicker}
-            </p>
+        {/* Centred and capped, and the cap is the reason the block reads as one
+            object rather than as a banner. `max-w-measure` is the reading measure
+            — right for a paragraph, far too wide for an 80px headline, which
+            would run to a single line most of the way across a 1280 canvas and
+            leave the supporting line stranded under it. Narrower than the
+            measure, the headline takes two lines on desktop and the two elements
+            share an edge.
 
-            {/* Regular, not bold, and that is the reference's own weight. At 80px
-                with a real display face loaded, Bold reads as shouting and Light
-                reads as fashion; Regular is the one that reads as a statement.
+            No manual break anywhere: the wrap is the width's job, so it responds
+            to the viewport instead of snapping at one. */}
+        <div className="mx-auto flex max-w-hero flex-col items-center gap-6 text-center">
+          {/* **Bold at 80px, and this reverses the previous pass on purpose.** That
+              pass set Regular because it is the weight the reference's own hero
+              uses, and read against the reference alone that was right. Read against
+              this page it was not: the reference's hero is the only thing in its
+              band, while ours has a white card rising into it from below, and
+              Regular white on the gradient loses that contest — the eye lands on the
+              card and the headline reads as a caption above it. Weight is the only
+              variable available, since the ground admits exactly one ink.
 
-                `text-balance` matters more here than anywhere else on either
-                screen: an unbalanced five-word headline at this size drops one
-                short word onto a line of its own. */}
-            <h1
-              ref={headingRef}
-              tabIndex={-1}
-              id="ask-title"
-              className={
-                "text-4xl leading-display font-regular tracking-display text-balance " +
-                "text-text-inverse md:text-6xl lg:text-8xl"
-              }
-            >
-              {ASK.title}
-            </h1>
+              80px rather than 72, for the same reason. It wraps to two lines at the
+              hero measure, which the brief allows and which helps: two bold lines
+              are a block, one line is a strapline.
 
-            {/* Light 300, and this is the single biggest tell of the brand — the
-                reference's body copy is Light and ansr.com's own CSS says so on
-                every paragraph. White rather than a muted tint, because a muted
-                tint on this ground is 2.23:1; the size drop from 80px to 20px is
-                doing the hierarchy on its own, which is what the reference relies
-                on too.
+              `text-balance` matters more here than anywhere else on either
+              screen, and more again now that the block is centred: an unbalanced
+              centred headline at this size drops one short word onto a line of
+              its own, dead centre, where it is the most obvious thing on the
+              band. */}
+          <h1
+            ref={headingRef}
+            tabIndex={-1}
+            id="ask-title"
+            className={
+              "text-4xl leading-display font-bold tracking-display text-balance " +
+              "text-text-inverse md:text-6xl lg:text-8xl"
+            }
+          >
+            {copy.title}
+          </h1>
 
-                `text-pretty`, not `text-balance`: this is a two-sentence lead that
-                reads better ragged. Pretty only refuses to leave the last word
-                stranded. */}
-            <p className="max-w-measure text-lg leading-normal font-light text-pretty text-text-inverse md:text-xl">
-              {ASK.lead}
-            </p>
+          {/* White rather than a muted tint, because a muted tint on this ground
+              is 2.23:1. The size drop from 72px to 20px is doing the hierarchy on
+              its own, which is what the reference relies on too.
 
-            {/* The reference puts its pill 21px under the last baseline, which is
-                closer than a gap step. `mt-2` on top of the column's `gap-6`. */}
-            <button
-              type="button"
-              onClick={onJumpToForm}
-              // Sized against the reference's own pill: 225x49 carrying a 22px
-              // label. At 44px with a 16px label it read as a secondary control
-              // that had wandered into a display band.
-              className={
-                "mt-2 inline-flex min-h-12 items-center rounded-full border " +
-                "border-border-inverse px-7 text-lg font-medium text-text-inverse " +
-                "transition-colors duration-fast ease-standard hover:bg-surface-inverse"
-              }
-            >
-              {ASK.jump}
-            </button>
-          </div>
+              `text-pretty`, not `text-balance`: this is a long single sentence
+              that reads better ragged, and pretty only refuses to leave the last
+              word stranded. Capped at the reading measure inside the already
+              narrower block, so the line length stays comfortable even when the
+              headline above it is short. */}
+          {/* Light 300 stays — it is the brand's single biggest typographic tell,
+              and ansr.com sets it on every paragraph. What changed is the size: at
+              18/20px under an 80px bold headline the line read as small print rather
+              than as the second element of a two-part block. 24px Light against 80px
+              Bold is a real interval in both axes, which is what carries hierarchy on
+              a ground that allows only one ink. */}
+          <p className="max-w-measure text-lg leading-normal font-light text-pretty text-text-inverse md:text-xl lg:text-2xl">
+            {copy.lead}
+          </p>
         </div>
       </div>
     </div>

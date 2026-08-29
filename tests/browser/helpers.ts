@@ -57,7 +57,7 @@ export async function discardEverything(page: Page): Promise<void> {
  * `page.evaluate` callbacks cannot close over Node values, so this is passed in as
  * an argument rather than read from the enclosing scope.
  */
-export const DRAFT_STORAGE_KEY = "gcc-admin-draft-v3";
+export const DRAFT_STORAGE_KEY = "gcc-admin-draft-v4";
 
 /* ==========================================================================
    The public screens' bands

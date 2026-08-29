@@ -431,6 +431,120 @@ export const metricSchema = metricObjectSchema.superRefine((metric, ctx) => {
   }
 });
 
+/* ==========================================================================
+   Site content — the entry point's own words and figures
+
+   The two things on the public entry point that are neither a company row nor a
+   function metric, and that ANSR has to be able to change without a developer:
+   the hero's copy, and the corporate impact figures.
+
+   **Why these are data and the rest of the copy is not.** Every other string on
+   the public screens is an argument about the dataset, so it lives beside the
+   logic that makes the argument (`screen1/copy.ts`) and changing it is a
+   reviewable code change. These two are different: the hero is positioning,
+   which marketing owns, and the impact figures are corporate facts that move on
+   their own schedule and are wrong the moment they are stale. A figure that goes
+   stale because editing it needed a developer is the exact failure this key
+   exists to prevent.
+
+   Deliberately NOT in `taxonomy` — taxonomy is flat string lists with rename
+   cascades and usage counts, and none of that machinery applies here. `metrics`
+   and `businessTypes` set the precedent for an editable collection beside it.
+   ========================================================================== */
+
+/**
+ * The hero band's copy: a title and a supporting line, and deliberately nothing
+ * else.
+ *
+ * **There is no kicker field, and its absence is the design.** The product label
+ * IS the title here — the band used to carry an uppercase eyebrow above an
+ * unrelated headline, and collapsing the two is what lets a centred block read
+ * as one object instead of three stacked fragments. A schema with a `kicker` slot
+ * is an invitation to fill it, so the slot is gone rather than left empty.
+ *
+ * Bounded lengths rather than free text, because both have a typographic job the
+ * layout depends on. `title` renders at 60-80px in a centred column: past ~60
+ * characters it takes a third line on desktop and pushes the overlapping card
+ * below it off the first screen. `lead` is capped near the reading measure. An
+ * admin needing more words than this needs a different band, and the form says
+ * so rather than letting them find out on the live site.
+ */
+export const heroCopySchema = z.object({
+  title: nonEmpty.max(60),
+  lead: nonEmpty.max(240),
+});
+
+/**
+ * One corporate impact figure.
+ *
+ * `value` is free text and stays that way on purpose. These are not computed
+ * from anything — they are ANSR's own published figures, already carrying their
+ * own units and qualifiers ("225K+", "$2.5B+", "14M+"). Splitting a number from
+ * its suffix would mean the schema deciding how "$2.5B+" is assembled, and the
+ * next figure ANSR supplies would break the parts list. The `atLeast` reasoning
+ * from the metric catalogue does not transfer: there the `+` is a claim about
+ * how a figure was derived from data we hold, and here the whole string is
+ * supplied.
+ *
+ * Which also means nothing here can be validated as a number, so nothing
+ * pretends to. The gate checks it is short enough to render.
+ */
+export const impactStatSchema = z.object({
+  id: slug,
+  value: nonEmpty.max(16),
+  label: nonEmpty.max(64),
+});
+
+export const siteContentSchema = z.object({
+  hero: heroCopySchema,
+  /**
+   * Capped at six. The band is one centred row on desktop, and a seventh figure
+   * either wraps to a second row of one or shrinks all of them below the size
+   * that makes a figure read as a figure. Five is what ANSR supplied.
+   */
+  impactStats: z.array(impactStatSchema).max(6),
+});
+
+/**
+ * What ships when the key is absent, and what `--reseed-site-content` restores.
+ *
+ * Inline here rather than in a catalogue file of its own, unlike
+ * `metric-catalogue.ts`: this is three strings and five pairs, and a separate
+ * module would have to import the types from here, which is a cycle bought for
+ * nothing. It is also the schema's own `.default()`, so it has to be in scope at
+ * definition time.
+ *
+ * **Every figure below is ANSR's own supplied copy and none of it is derived.**
+ * The company count in the lead is deliberately "1,800+" and not the dataset's
+ * actual 1,834: ANSR asked for the rounded form, and a figure that moves by
+ * three every time a company is added is not the claim they want to make. So it
+ * is a string an admin edits, not `companies.length` — and `data:verify` cannot
+ * check it against the data, because it is not supposed to agree exactly.
+ */
+export const DEFAULT_SITE_CONTENT: SiteContent = {
+  hero: {
+    title: "India GCC Intelligence",
+    lead:
+      "Evaluate your GCC opportunity with evidence and benchmarks from 1,800+ " +
+      "global companies operating centres in India.",
+  },
+  impactStats: [
+    { id: "professionals-hired", value: "225K+", label: "Professionals hired" },
+    { id: "centers-established", value: "210+", label: "Global centres established" },
+    {
+      id: "workspace-managed",
+      value: "14M+",
+      label: "Sq ft of workspace under management",
+    },
+    { id: "years-experience", value: "20+", label: "Years of experience" },
+    { id: "capital-created", value: "$2.5B+", label: "Capital investment created" },
+  ],
+};
+
+export type HeroCopy = z.infer<typeof heroCopySchema>;
+export type ImpactStat = z.infer<typeof impactStatSchema>;
+export type SiteContent = z.infer<typeof siteContentSchema>;
+
 export type MetricStructure = z.infer<typeof metricStructureSchema>;
 export type MetricValue = z.infer<typeof metricValueSchema>;
 export type Metric = z.infer<typeof metricSchema>;
@@ -465,6 +579,21 @@ export const datasetSchema = z
      * The parsed type is non-optional, so no consumer has to consider absence.
      */
     metrics: z.array(metricSchema).max(400).default([]),
+    /**
+     * The entry point's hero copy and impact figures. Defaulted for the same
+     * reason `metrics` and `businessTypes` are — a dataset written before this
+     * key existed still reads, so it is a backwards-compatible addition rather
+     * than a `DATASET_VERSION` bump the fs store would refuse as an unknown
+     * version.
+     *
+     * The default is real content rather than `[]`, which is the one difference
+     * from the other two. An empty company list or metric catalogue is a
+     * coherent state — nothing renders. An empty hero is not: the entry point
+     * has no headline, and there is no visitor-facing story where that is the
+     * right outcome. So this key cannot be empty, and the seed is the approved
+     * copy.
+     */
+    siteContent: siteContentSchema.default(DEFAULT_SITE_CONTENT),
   })
   .superRefine((dataset, ctx) => {
     const seen = new Set<string>();
@@ -596,6 +725,20 @@ export const datasetSchema = z
         });
       }
       metricIds.add(metric.id);
+    }
+
+    // Impact stat ids are React keys and the admin form's row identity. A
+    // duplicate silently makes two rows edit as one.
+    const impactIds = new Set<string>();
+    for (const [index, stat] of dataset.siteContent.impactStats.entries()) {
+      if (impactIds.has(stat.id)) {
+        ctx.addIssue({
+          code: "custom",
+          path: ["siteContent", "impactStats", index, "id"],
+          message: `duplicate impact stat id: ${stat.id}`,
+        });
+      }
+      impactIds.add(stat.id);
     }
 
     for (const key of ["industries", "revenueBands", "cities", "hqCountries"] as const) {

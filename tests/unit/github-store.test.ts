@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { DATASET_VERSION, type Dataset } from "@/data/schema";
+import { DEFAULT_SITE_CONTENT, DATASET_VERSION, type Dataset } from "@/data/schema";
 import { DataStoreError, serializeDataset } from "@/data/store";
 import {
   GitHubConfigError,
@@ -67,6 +67,7 @@ function dataset(overrides: Partial<Dataset> = {}): Dataset {
     ],
     businessTypes: [],
     metrics: [],
+    siteContent: DEFAULT_SITE_CONTENT,
     ...overrides,
   };
 }

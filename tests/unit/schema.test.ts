@@ -7,6 +7,7 @@ import {
   formatIssues,
   type Company,
   type Dataset,
+  DEFAULT_SITE_CONTENT,
 } from "@/data/schema";
 
 /**
@@ -48,6 +49,7 @@ function dataset(overrides: Partial<Dataset> = {}): Dataset {
     companies: [company()],
     businessTypes: [],
     metrics: [],
+    siteContent: DEFAULT_SITE_CONTENT,
     ...overrides,
   };
 }

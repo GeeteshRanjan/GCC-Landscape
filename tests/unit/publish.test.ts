@@ -3,7 +3,7 @@ import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 
-import { DATASET_VERSION, type Dataset, type Metric } from "@/data/schema";
+import { DEFAULT_SITE_CONTENT, DATASET_VERSION, type Dataset, type Metric } from "@/data/schema";
 import { serializeDataset } from "@/data/store";
 
 /**
@@ -47,6 +47,7 @@ function dataset(overrides: Partial<Dataset> = {}): Dataset {
     ],
     businessTypes: [],
     metrics: [],
+    siteContent: DEFAULT_SITE_CONTENT,
     ...overrides,
   };
 }

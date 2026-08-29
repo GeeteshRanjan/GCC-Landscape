@@ -7,7 +7,7 @@ import {
   matchPeers,
   matchPeersByBandLadder,
 } from "@/data/peers";
-import { parseDataset, type BusinessType, type Company, type Dataset } from "@/data/schema";
+import { DEFAULT_SITE_CONTENT, parseDataset, type BusinessType, type Company, type Dataset } from "@/data/schema";
 import {
   BAND_ADJACENT,
   BAND_DISTANT,
@@ -86,6 +86,7 @@ function dataset(overrides: Partial<Dataset> = {}): Dataset {
     companies: [company()],
     businessTypes: [type()],
     metrics: [],
+    siteContent: DEFAULT_SITE_CONTENT,
     ...overrides,
   };
 }

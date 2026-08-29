@@ -14,6 +14,7 @@ import {
   type Company,
   type Dataset,
   type Metric,
+  DEFAULT_SITE_CONTENT,
 } from "@/data/schema";
 
 /**
@@ -57,9 +58,132 @@ function dataset(overrides: Partial<Dataset> = {}): Dataset {
     companies: [company()],
     businessTypes: [],
     metrics: [],
+    siteContent: DEFAULT_SITE_CONTENT,
     ...overrides,
   };
 }
+
+/**
+ * Site content — the hero copy and the impact figures.
+ *
+ * This category exists because it is the only part of a publish that changes what
+ * EVERY visitor sees on arrival, and the tests below are all guarding the same
+ * failure: an edit here that the diff does not report is a headline changed on the
+ * live site with nothing in the review saying so.
+ */
+describe("diffDatasets — site content", () => {
+  const content = (
+    overrides: Partial<Dataset["siteContent"]> = {},
+  ): Dataset["siteContent"] => ({
+    hero: { title: "India GCC Intelligence", lead: "Evaluate your opportunity." },
+    impactStats: [
+      { id: "hired", value: "225K+", label: "Professionals hired" },
+      { id: "centers", value: "210+", label: "Centres established" },
+    ],
+    ...overrides,
+  });
+
+  it("reports a hero edit with both sides of it", () => {
+    const diff = diffDatasets(
+      dataset({ siteContent: content({ hero: { title: "New title", lead: "Same." } }) }),
+      dataset({ siteContent: content({ hero: { title: "Old title", lead: "Same." } }) }),
+    );
+    expect(diff.counts.siteContent).toBe(1);
+    expect(diff.isEmpty).toBe(false);
+    // Both sides, because a reviewer approving a headline has to read it rather
+    // than be told a field moved.
+    expect(diff.siteContent.hero).toEqual([
+      { field: "title", before: "Old title", after: "New title" },
+    ]);
+  });
+
+  it("counts the entry point separately from companies and metrics", () => {
+    const diff = diffDatasets(
+      dataset({ siteContent: content({ hero: { title: "A", lead: "B" } }) }),
+      dataset({ siteContent: content() }),
+    );
+    // Separate for the same reason metrics are, one step sharper: folded into
+    // "changed" a two-field copy edit would vanish behind any company batch.
+    expect(diff.counts).toEqual({
+      added: 0,
+      removed: 0,
+      changed: 0,
+      taxonomy: 0,
+      businessTypes: 0,
+      metrics: 0,
+      siteContent: 2,
+    });
+  });
+
+  it("reports an added, a removed and an edited figure by id", () => {
+    const diff = diffDatasets(
+      dataset({
+        siteContent: content({
+          impactStats: [
+            { id: "hired", value: "250K+", label: "Professionals hired" },
+            { id: "sqft", value: "14M+", label: "Sq ft managed" },
+          ],
+        }),
+      }),
+      dataset({ siteContent: content() }),
+    );
+    expect(diff.siteContent.impactStats.added.map((s) => s.id)).toEqual(["sqft"]);
+    expect(diff.siteContent.impactStats.removed.map((s) => s.id)).toEqual(["centers"]);
+    expect(diff.siteContent.impactStats.changed).toEqual([
+      {
+        id: "hired",
+        label: "Professionals hired",
+        changes: [{ field: "value", before: "225K+", after: "250K+" }],
+      },
+    ]);
+  });
+
+  it("reports a reorder as a change, because order is what the visitor reads", () => {
+    const original = content();
+    const diff = diffDatasets(
+      dataset({
+        siteContent: content({ impactStats: [...original.impactStats].reverse() }),
+      }),
+      dataset({ siteContent: original }),
+    );
+    expect(diff.siteContent.impactStats.reordered).toBe(true);
+    expect(diff.counts.siteContent).toBe(1);
+    expect(diff.isEmpty).toBe(false);
+  });
+
+  it("does not call an addition a reorder as well", () => {
+    // A row added at the front moves every id after it, so a naive id-sequence
+    // comparison reports a reorder on top of the addition and double-counts it —
+    // the same trap `taxonomy` already guards against.
+    const original = content();
+    const diff = diffDatasets(
+      dataset({
+        siteContent: content({
+          impactStats: [
+            { id: "years", value: "20+", label: "Years" },
+            ...original.impactStats,
+          ],
+        }),
+      }),
+      dataset({ siteContent: original }),
+    );
+    expect(diff.siteContent.impactStats.added).toHaveLength(1);
+    expect(diff.siteContent.impactStats.reordered).toBe(false);
+    expect(diff.counts.siteContent).toBe(1);
+  });
+
+  it("reports no hero change on a first import, having nothing to compare against", () => {
+    // The shared fixture defaults to the real seeded content, so the two-figure
+    // one is passed explicitly rather than asserting against whatever the seed
+    // happens to hold today.
+    const diff = diffDatasets(dataset({ siteContent: content() }), null);
+    expect(diff.firstImport).toBe(true);
+    // The rows are genuinely new; the hero is not "changed from" anything, and
+    // listing both fields would be a diff against nothing.
+    expect(diff.siteContent.hero).toEqual([]);
+    expect(diff.siteContent.impactStats.added).toHaveLength(2);
+  });
+});
 
 describe("diffDatasets — no change", () => {
   it("reports an empty diff when nothing moved", () => {
@@ -73,6 +197,7 @@ describe("diffDatasets — no change", () => {
       taxonomy: 0,
       businessTypes: 0,
       metrics: 0,
+      siteContent: 0,
     });
   });
 
@@ -270,7 +395,7 @@ describe("renderDiffText", () => {
 
   it("says so plainly when there is nothing to report", () => {
     expect(renderDiffText(diffDatasets(dataset(), dataset()))).toContain(
-      "no company, taxonomy, business type or metric changes",
+      "no company, taxonomy, business type, metric or site content changes",
     );
   });
 
@@ -337,6 +462,7 @@ describe("diffDatasets — function metrics", () => {
       taxonomy: 0,
       businessTypes: 0,
       metrics: 1,
+      siteContent: 0,
     });
     expect(diff.isEmpty).toBe(false);
   });

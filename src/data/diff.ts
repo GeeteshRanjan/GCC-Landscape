@@ -1,4 +1,13 @@
-import type { BusinessType, Company, Dataset, Metric, Taxonomy } from "./schema";
+import type {
+  BusinessType,
+  Company,
+  Dataset,
+  HeroCopy,
+  ImpactStat,
+  Metric,
+  SiteContent,
+  Taxonomy,
+} from "./schema";
 
 /**
  * Dataset diff — one computation, two renderers.
@@ -95,6 +104,35 @@ export interface BusinessTypesDiff {
   changed: Array<{ id: string; name: string; changes: BusinessTypeFieldChange[] }>;
 }
 
+/**
+ * Site-content changes — the hero's copy and the impact figures.
+ *
+ * A fourth category rather than a field list folded into one of the others, and
+ * for the sharpest reason of the four: this is the only part of the dataset whose
+ * changes are visible on the entry point of the public site the moment they
+ * publish. A month of company edits changes what a few visitors are shown; a
+ * one-character edit here changes the headline every visitor reads. It gets its
+ * own count so it can never be the smaller number hidden inside a larger one.
+ *
+ * `hero` is a field list because there are two fields and both are prose worth
+ * reading in full before approving. `impactStats` is keyed by id like the other
+ * collections, since rows are added, removed and reordered.
+ */
+export interface SiteContentDiff {
+  hero: Array<{ field: keyof HeroCopy; before: string; after: string }>;
+  impactStats: {
+    added: Array<Pick<ImpactStat, "id" | "value" | "label">>;
+    removed: Array<Pick<ImpactStat, "id" | "value" | "label">>;
+    changed: Array<{
+      id: string;
+      label: string;
+      changes: Array<{ field: keyof ImpactStat; before: string; after: string }>;
+    }>;
+    /** Order is what the visitor reads left to right, so a reorder is a change. */
+    reordered: boolean;
+  };
+}
+
 export interface DatasetDiff {
   /** No previous dataset — a first import. */
   firstImport: boolean;
@@ -104,6 +142,7 @@ export interface DatasetDiff {
   taxonomy: TaxonomyDiff[];
   businessTypes: BusinessTypesDiff;
   metrics: MetricsDiff;
+  siteContent: SiteContentDiff;
   /** Metadata that moves on every publish; called out so it is not mistaken for an edit. */
   generatedAtChanged: boolean;
   sourceChanged: boolean;
@@ -116,6 +155,7 @@ export interface DatasetDiff {
     taxonomy: number;
     businessTypes: number;
     metrics: number;
+    siteContent: number;
   };
 }
 
@@ -246,6 +286,67 @@ function metricsCount(diff: MetricsDiff): number {
   return diff.added.length + diff.removed.length + diff.changed.length;
 }
 
+const HERO_FIELDS: ReadonlyArray<keyof HeroCopy> = ["title", "lead"];
+const IMPACT_FIELDS: ReadonlyArray<keyof ImpactStat> = ["value", "label"];
+
+function diffSiteContent(
+  next: SiteContent,
+  previous: SiteContent,
+): SiteContentDiff {
+  const hero = HERO_FIELDS.filter(
+    (field) => next.hero[field] !== previous.hero[field],
+  ).map((field) => ({
+    field,
+    before: previous.hero[field],
+    after: next.hero[field],
+  }));
+
+  const before = new Map(previous.impactStats.map((stat) => [stat.id, stat]));
+  const after = new Map(next.impactStats.map((stat) => [stat.id, stat]));
+
+  const added: SiteContentDiff["impactStats"]["added"] = [];
+  const changed: SiteContentDiff["impactStats"]["changed"] = [];
+  for (const [id, stat] of after) {
+    const old = before.get(id);
+    if (!old) {
+      added.push({ id, value: stat.value, label: stat.label });
+      continue;
+    }
+    const changes = IMPACT_FIELDS.filter(
+      (field) => stat[field] !== old[field],
+    ).map((field) => ({ field, before: old[field], after: stat[field] }));
+    if (changes.length > 0) changed.push({ id, label: stat.label, changes });
+  }
+
+  const removed: SiteContentDiff["impactStats"]["removed"] = [];
+  for (const [id, stat] of before) {
+    if (!after.has(id)) removed.push({ id, value: stat.value, label: stat.label });
+  }
+
+  // Reported only when membership is otherwise unchanged, the same way a
+  // taxonomy reorder is: an added or removed row moves the ids after it, so a
+  // naive comparison would call every addition a reorder as well.
+  const reordered =
+    added.length === 0 &&
+    removed.length === 0 &&
+    !sameValue(
+      previous.impactStats.map((stat) => stat.id),
+      next.impactStats.map((stat) => stat.id),
+    );
+
+  return { hero, impactStats: { added, removed, changed, reordered } };
+}
+
+function siteContentCount(diff: SiteContentDiff): number {
+  return (
+    diff.hero.length +
+    diff.impactStats.added.length +
+    diff.impactStats.removed.length +
+    diff.impactStats.changed.length +
+    (diff.impactStats.reordered ? 1 : 0)
+  );
+}
+
 export function diffDatasets(
   next: Dataset,
   previous: Dataset | null,
@@ -272,6 +373,22 @@ export function diffDatasets(
         removed: [],
         changed: [],
       },
+      siteContent: {
+        // A first import has nothing to compare the hero against, and reporting
+        // both fields as "changed" would be a diff against nothing. The impact
+        // rows are listed because they genuinely are new rows.
+        hero: [],
+        impactStats: {
+          added: next.siteContent.impactStats.map((s) => ({
+            id: s.id,
+            value: s.value,
+            label: s.label,
+          })),
+          removed: [],
+          changed: [],
+          reordered: false,
+        },
+      },
       generatedAtChanged: true,
       sourceChanged: true,
       isEmpty: false,
@@ -282,6 +399,7 @@ export function diffDatasets(
         taxonomy: TAXONOMY_KEYS.length,
         businessTypes: next.businessTypes.length,
         metrics: next.metrics.length,
+        siteContent: next.siteContent.impactStats.length,
       },
     };
   }
@@ -332,6 +450,7 @@ export function diffDatasets(
 
   const businessTypes = diffBusinessTypes(next.businessTypes, previous.businessTypes);
   const metrics = diffMetrics(next.metrics, previous.metrics);
+  const siteContent = diffSiteContent(next.siteContent, previous.siteContent);
 
   const counts = {
     added: added.length,
@@ -340,6 +459,7 @@ export function diffDatasets(
     taxonomy: taxonomy.length,
     businessTypes: businessTypesCount(businessTypes),
     metrics: metricsCount(metrics),
+    siteContent: siteContentCount(siteContent),
   };
 
   return {
@@ -350,6 +470,7 @@ export function diffDatasets(
     taxonomy,
     businessTypes,
     metrics,
+    siteContent,
     generatedAtChanged: next.generatedAt !== previous.generatedAt,
     sourceChanged: next.source !== previous.source,
     isEmpty:
@@ -358,7 +479,8 @@ export function diffDatasets(
         counts.changed +
         counts.taxonomy +
         counts.businessTypes +
-        counts.metrics ===
+        counts.metrics +
+        counts.siteContent ===
       0,
     counts,
   };
@@ -462,6 +584,7 @@ export function renderDiffText(diff: DatasetDiff): string {
       `  + ${diff.counts.added} companies`,
       `  + ${diff.counts.businessTypes} business types`,
       `  + ${diff.counts.metrics} metrics`,
+      `  + ${diff.counts.siteContent} impact figures, and the hero copy`,
     ].join("\n");
   }
 
@@ -529,8 +652,36 @@ export function renderDiffText(diff: DatasetDiff): string {
     ),
   );
 
+  /* Site content last, and spelled out rather than sampled. Two reasons: there
+     are at most eight lines of it, and it is the only part of the diff whose
+     before-and-after a reviewer has to actually READ rather than count — an id
+     list would tell them the headline changed without telling them to what. */
+  for (const change of diff.siteContent.hero) {
+    lines.push(`  hero ${change.field}:`);
+    lines.push(`    - ${change.before}`);
+    lines.push(`    + ${change.after}`);
+  }
+  for (const stat of diff.siteContent.impactStats.added) {
+    lines.push(`  impact figure added: ${stat.value} ${stat.label}`);
+  }
+  for (const stat of diff.siteContent.impactStats.removed) {
+    lines.push(`  impact figure removed: ${stat.value} ${stat.label}`);
+  }
+  for (const stat of diff.siteContent.impactStats.changed) {
+    for (const change of stat.changes) {
+      lines.push(
+        `  impact ${stat.id} ${change.field}: ${change.before} -> ${change.after}`,
+      );
+    }
+  }
+  if (diff.siteContent.impactStats.reordered) {
+    lines.push("  impact figures reordered");
+  }
+
   if (diff.isEmpty) {
-    lines.push("  no company, taxonomy, business type or metric changes");
+    lines.push(
+      "  no company, taxonomy, business type, metric or site content changes",
+    );
   }
 
   return lines.join("\n");

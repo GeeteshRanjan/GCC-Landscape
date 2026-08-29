@@ -34,20 +34,30 @@ The system is complete. Eight families, all defined:
 | Family | Prefix | Notes |
 | --- | --- | --- |
 | Colour | `--ansr-{black,white,grey,teal,teal-deep,teal-bright,orange}` | Core, measured off the reference |
-| — ramps | `--ansr-{teal,orange,grey}-{900..50}` | Oklab interpolations between measured anchors. Teal has four; `--ansr-teal` is **600**, not 500 |
+| — ramps | `--ansr-{teal,orange,grey}-{950..50}` | Oklab interpolations between measured anchors. Teal has four; `--ansr-teal` is **600**, not 500. `teal-950` and `teal-50` are **client-specified**, not measured |
 | — aliases | `--ansr-{surface,text,border,action,accent,focus,feedback}-*` | **Components use these** |
 | Gradients | `--ansr-gradient-{teal,orange,hero,conic}` | `teal`/`orange` are the docx's fitted geometry; `hero` is the reference's linear ground; conic is a reconstruction |
 | Type | `--ansr-{font,text,leading,weight,tracking,measure}-*` | Inter for UI, `font-display` for display; 12→80px scale |
-| Spacing | `--ansr-space-{0..32}` | 4px base unit |
+| Spacing | `--ansr-space-{0..32}`, plus `40/48/56` | 4px base unit. The 40–56 steps are **band scale**, past where component rhythm stops |
 | Radius | `--ansr-radius-{none,sm,md,lg,xl,pill}` | Minimal — brand geometry is hard-edged |
 | Elevation | `--ansr-shadow-{xs..lg}`, `--ansr-z-*` | Teal-tinted, shallow |
-| Motion | `--ansr-duration-*`, `--ansr-ease-*` | 120/180/240/320ms, all under 400ms |
-| Layout | `--ansr-container*`, `--ansr-gutter*` | 1280px content max |
+| Motion | `--ansr-duration-*`, `--ansr-ease-*` | 120/180/240/320ms, all under 400ms — plus `-marquee` (48s), which is AMBIENT motion and a different quantity |
+| Layout | `--ansr-container*`, `--ansr-gutter*` | 1280px content max. `-hero` (704px) caps a centred display block, `-card` (896px) the entry-point form |
 
 Hard rules:
 - Orange is a highlight, restricted to CTAs and hover states. Not a surface, not body text.
   **Once per band**, which is stricter than "restricted to CTAs" and is the reference's own rule.
 - Never a raw hex, magic pixel value, or ad-hoc duration. `scripts/brand_lint.py` enforces it.
+- **Three grounds were added at the client's request, and two are new values.** `#D1E9E7` was
+  already `--ansr-teal-100` / `--ansr-surface-tint`. `#F5FFFE` is now `--ansr-teal-50` /
+  `--ansr-surface-pale`, a near-white with the mint still in it. `#072228` is now
+  `--ansr-teal-950` / `--ansr-surface-deep` — **it was previously lint-blocked as a drift off
+  `--ansr-teal-deep`, and that OFF_BRAND entry was removed because it is now a live token.** The
+  drift risk is real and unchanged: the two darks are within dE ~1 and not separable by eye. So
+  `--ansr-surface-deep` has exactly one consumer, the entry point's impact band, and anything else
+  wanting a dark ground uses `--ansr-surface-inverse`. Both new steps keep the ramp monotonic in
+  Oklab lightness and both take every ink their neighbour does; the measurements are beside the
+  tokens.
 - **The teal family has three anchors, and the bright one is for dark grounds only.**
   `--ansr-teal` is the heading teal on a light ground; `--ansr-teal-bright` (= `teal-400`,
   = `--ansr-accent-inverse`) is the accent on a dark one, and measures 2.44:1 on white. Putting
@@ -61,7 +71,10 @@ Hard rules:
   replacement token.
 - Radius defaults to `md` (4px), and `none` for anything sitting against a brand motif. The
   reference is one step harder-edged than that: its cards, panels and accordion rows are true 0,
-  and only the pill CTA and one stat card are round. Prefer `none` on the public screens.
+  and only the pill CTA and one stat card are round. Prefer `none` on the public screens — **with
+  one sanctioned exception, the entry point's form card and its controls at `lg` (8px)**, which the
+  client asked for. Nothing there sits against a motif, and a 4px field inside an 8px card reads as
+  a mismatch rather than as restraint. Do not spread it to the evidence bands.
 - **Status is carried by form, not colour.** Re-measured against the new palette rather than
   carried over, because a bright accent could have overturned it: it did not. This palette
   supports exactly two semantic colour signals — `--ansr-feedback-neutral` (teal) and

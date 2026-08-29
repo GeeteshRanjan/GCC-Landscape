@@ -1,3 +1,4 @@
+import { HQ_COUNTRIES } from "./countries";
 import { fteDisplay, fteMidpoint, TIER1_CITIES } from "./derive";
 import { MAP_HEIGHT, MAP_WIDTH, projectCity, type Point } from "./geo";
 import {
@@ -110,11 +111,139 @@ export function businessTypesForIndustry(
  * through to "whatever matches" would return a peer set for a different
  * industry, which is worse than an error.
  */
+/**
+ * A dropdown's contents split into a leading tier and the rest.
+ *
+ * Used for industry and HQ country. Deliberately NOT for revenue band: that list's
+ * order is the peer-matching contract — the "adjacent band" step is index
+ * arithmetic on `taxonomy.revenueBands` — so it is rendered in its stored order and
+ * nothing in this file may sort it.
+ */
+export interface TieredOptions {
+  common: string[];
+  others: string[];
+}
+
+/**
+ * How many entries lead the list before it turns alphabetical.
+ *
+ * Six for 24 industries. The four largest cover 1,187 of 1,834 companies, and by
+ * the seventh the counts have flattened enough that frequency stops being a better
+ * guess than the alphabet — past that point a frequency order is just an order the
+ * visitor cannot predict.
+ */
+const COMMON_INDUSTRIES = 6;
+
+/**
+ * The same, for HQ country: twelve.
+ *
+ * **The tier is capped rather than being "every country in the data", which is what
+ * it was first.** That put 47 entries under a heading claiming they were the common
+ * ones, with Jamaica and Slovenia — one company each — among them. A label the list
+ * contradicts is worse than no label.
+ *
+ * Twelve covers 91.4% of the companies (1,677 of 1,834), and the twelfth is Sweden
+ * at 16. Past there the counts are in single figures and indistinguishable from the
+ * long tail, so frequency has stopped being informative. The other 35 countries with
+ * companies drop into the alphabetical group, where they are equally selectable and
+ * equally useful — the tier is a shortcut, not a permission.
+ */
+const COMMON_HQ_COUNTRIES = 12;
+
+/**
+ * The industry dropdown, most-represented industries first.
+ *
+ * Two tiers rather than a flat frequency sort of all 24. A pure frequency list puts
+ * the four big ones where they belong and then makes everything else unfindable,
+ * because nobody knows whether Retail outranks Telecom. Frequency for the head,
+ * alphabetical for the tail, is scannable at both ends.
+ *
+ * Unlike revenue bands, industry order carries no matching meaning — it is a filter
+ * key, matched by equality — so reordering it for display is safe.
+ */
+export function industryOptions(dataset: Dataset): TieredOptions {
+  const counts = new Map<string, number>();
+  for (const company of dataset.companies) {
+    counts.set(company.industry, (counts.get(company.industry) ?? 0) + 1);
+  }
+  const byFrequency = [...new Set(dataset.taxonomy.industries)].sort((a, b) => {
+    const byCount = (counts.get(b) ?? 0) - (counts.get(a) ?? 0);
+    return byCount !== 0 ? byCount : a.localeCompare(b, "en");
+  });
+  const common = byFrequency.slice(0, COMMON_INDUSTRIES);
+  const others = byFrequency
+    .slice(COMMON_INDUSTRIES)
+    .sort((a, b) => a.localeCompare(b, "en"));
+  return { common, others };
+}
+
+/**
+ * The HQ dropdown's contents, in two tiers.
+ *
+ * **Order is computed from the data, not hand-ranked.** The countries with the most
+ * companies rise to the top on their own, so the tier reflects what the dataset
+ * actually contains and re-derives itself as companies are added. A hardcoded list
+ * of "important" countries would be a second thing to maintain and would be wrong
+ * the first time nobody remembered to.
+ *
+ * `common` is the countries our data has evidence about, most-represented first;
+ * `others` is the rest of the world, alphabetical. The split is rendered as two
+ * `optgroup`s, which is what makes it legible rather than looking like a list that
+ * forgot to sort itself.
+ *
+ * The tiers are disjoint and together cover `HQ_COUNTRIES` plus anything in the
+ * taxonomy that somehow is not in it — a country in the data must be selectable
+ * even if this file's world list has not caught up with a new spelling.
+ */
+export function hqCountryOptions(dataset: Dataset): TieredOptions {
+  const counts = new Map<string, number>();
+  for (const company of dataset.companies) {
+    counts.set(company.hqCountry, (counts.get(company.hqCountry) ?? 0) + 1);
+  }
+
+  const byFrequency = [...new Set(dataset.taxonomy.hqCountries)].sort((a, b) => {
+    const byCount = (counts.get(b) ?? 0) - (counts.get(a) ?? 0);
+    // Name as the tiebreak, so two countries with equal counts do not swap
+    // position between requests on Map iteration order.
+    return byCount !== 0 ? byCount : a.localeCompare(b, "en");
+  });
+
+  const common = byFrequency.slice(0, COMMON_HQ_COUNTRIES);
+  const inCommon = new Set(common);
+
+  /**
+   * The tail of the data's own countries, unioned with the rest of the world.
+   *
+   * The union is what guarantees a country in the taxonomy is always selectable,
+   * even one this file's world list has not caught up with — a company can only be
+   * in the data if someone typed its country, and the form must not then refuse it.
+   */
+  const others = [
+    ...new Set([...byFrequency.slice(COMMON_HQ_COUNTRIES), ...HQ_COUNTRIES]),
+  ]
+    .filter((country) => !inCommon.has(country))
+    .sort((a, b) => a.localeCompare(b, "en"));
+
+  return { common, others };
+}
+
 export function peerViewInputSchema(taxonomy: Taxonomy, businessTypeIds?: readonly string[]) {
   const oneOf = (values: readonly string[], field: string) =>
     z.string().refine((value) => values.includes(value), {
       message: `unknown ${field}`,
     });
+
+  /**
+   * HQ is validated against the taxonomy UNION the world list, unlike every other
+   * field, which is validated against the taxonomy alone.
+   *
+   * The asymmetry is the point: industry, revenue band and line of business are
+   * keys the matching reads, so a value outside the data is meaningless and must be
+   * rejected. HQ is only a sort preference, so a country with no companies is a
+   * perfectly coherent answer that contributes no ordering signal. Rejecting it
+   * would mean the form offers an option the server refuses.
+   */
+  const hqAllowed = new Set<string>([...taxonomy.hqCountries, ...HQ_COUNTRIES]);
 
   return z
     .object({
@@ -123,7 +252,7 @@ export function peerViewInputSchema(taxonomy: Taxonomy, businessTypeIds?: readon
       companyName: z.string().trim().max(120).optional(),
       industry: oneOf(taxonomy.industries, "industry"),
       revenueBand: oneOf(taxonomy.revenueBands, "revenue band"),
-      hqCountry: oneOf(taxonomy.hqCountries, "HQ location"),
+      hqCountry: oneOf([...hqAllowed], "HQ location"),
       gccStatus: z.enum(GCC_STATUSES),
       /**
        * Optional, and validated only if a list is supplied. An id that is not on

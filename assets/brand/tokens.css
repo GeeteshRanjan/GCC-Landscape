@@ -61,6 +61,18 @@
      `--ansr-teal-bright` is 400 and NOT usable on a light ground: 2.44:1 on
      white, 1.92:1 on the pale ground. It is an ink for dark grounds, which is
      the only way the comp uses it. `--ansr-accent-inverse` is its alias.  */
+  /* 950 and 50 are CLIENT-SPECIFIED grounds, not measured anchors and not
+     interpolations — they were named directly for the entry point's impact band
+     and its logo strip. Both extend the ramp without breaking it: Oklab
+     lightness runs 0.232 -> 0.990 across 950..50, still monotonic end to end.
+
+     950 sits one hair below `teal-deep` and the two are not separable by eye
+     (dE ~1). That is a drift risk the lint can no longer catch for us, so it is
+     named here rather than pasted into a component, and it has exactly one
+     consumer: `.gcc-ground-deep`. Anything else wanting a dark ground uses
+     `--ansr-surface-inverse`. White is 16.56:1 on it, teal-300 7.15:1,
+     teal-bright 6.77:1 — every ink allowed on an inverse ground clears AA. */
+  --ansr-teal-950: #072228; /* client-specified */
   --ansr-teal-900: #08252F; /* = teal-deep    */
   --ansr-teal-800: #063239; /* measured       */
   --ansr-teal-700: #043F43;
@@ -70,6 +82,12 @@
   --ansr-teal-300: #85B3AF; /* measured       */
   --ansr-teal-200: #AFD0CD;
   --ansr-teal-100: #D1E9E7; /* measured       */
+  /* Client-specified. A near-white with the mint still in it, so a band can
+     read as "not white" without becoming a second tinted field beside
+     `teal-100`. Black is 20.62:1 on it, grey-700 8.43:1, teal-600 9.63:1 — it
+     takes every ink `--ansr-surface` does, which is what makes it safe as a
+     ground with no per-placement measurement. */
+  --ansr-teal-50:  #F5FFFE; /* client-specified */
 
   /* ---- Orange ramp -----------------------------------------------------
      Tints only. Orange stays restricted to CTAs and hover states — the comp
@@ -111,6 +129,14 @@
      grey-teal it replaces, which is most of why a tinted band now reads as a
      band rather than as an off-white. */
   --ansr-surface-tint:       var(--ansr-teal-100);
+  /* The palest ground. Between `surface` and `surface-tint`, for a band that
+     has to separate from white without competing with the tinted evidence
+     bands. Takes every ink white does — see the ramp note on `teal-50`. */
+  --ansr-surface-pale:       var(--ansr-teal-50);
+  /* The deepest ground, for the entry point's impact band only. One consumer,
+     deliberately — see the ramp note on `teal-950` for why this is not a
+     second general-purpose dark. */
+  --ansr-surface-deep:       var(--ansr-teal-950);
   /* One step off the inverse ground, for a card that has to read as raised
      against it without a shadow. White at 13.79:1. */
   --ansr-surface-inverse-soft: var(--ansr-teal-800);
@@ -401,6 +427,16 @@
   --ansr-space-24: 6rem;    /* 96px */
   --ansr-space-28: 7rem;    /* 112px */
   --ansr-space-32: 8rem;    /* 128px — section rhythm */
+  /* BAND-scale steps, past where component rhythm stops. The scale above tops out
+     at 128px because that is the largest gap anything inside a section needs; a
+     display band is a different quantity. Added when the entry point's hero had to
+     be tall enough for its gradient to read AND leave room under its own copy for
+     the form card that overlaps it — at 128px of bottom padding the card covered
+     the whole bright end of the ramp, so the band's own colour was only visible as
+     a dark strip. Same 4px base, so these are scale steps and not picked values. */
+  --ansr-space-40: 10rem;   /* 160px — display band */
+  --ansr-space-48: 12rem;   /* 192px — display band, desktop */
+  --ansr-space-56: 14rem;   /* 224px — display band with an overlapping card */
 
   /* ======================================================================
      5. RADIUS
@@ -448,6 +484,17 @@
   --ansr-duration-slow:    240ms; /* panels, disclosure               */
   --ansr-duration-slower:  320ms; /* full-surface or modal transition */
 
+  /* AMBIENT motion, and it is a separate quantity rather than a sixth step on
+     the scale above. Those five are transition durations and every one is under
+     the 400ms flow threshold on purpose, because a visitor is waiting at the end
+     of each. This is the period of a continuous loop nobody is waiting for, and
+     the number is chosen against the opposite constraint: slow enough that the
+     movement is not what the eye goes to.
+     One cycle of the customer-logo strip, which is one full pass of its ten
+     marks. Anything under about 30s reads as a slideshow demanding attention;
+     past about 60s the strip looks broken rather than restrained. */
+  --ansr-duration-marquee: 48s;
+
   --ansr-ease-standard: cubic-bezier(0.2, 0, 0, 1);    /* default          */
   --ansr-ease-entrance: cubic-bezier(0, 0, 0.2, 1);    /* decelerate in    */
   --ansr-ease-exit:     cubic-bezier(0.4, 0, 1, 1);    /* accelerate out   */
@@ -458,6 +505,21 @@
      ====================================================================== */
   --ansr-container:      80rem;  /* 1280px content max        */
   --ansr-container-wide: 90rem;  /* 1440px full-bleed sections */
+  /* 704px. The cap on a CENTRED display block, and it is a type measurement
+     rather than a layout one: `--ansr-measure` is the reading measure, which is
+     correct for a paragraph and far too wide for 72px type — a headline set to it
+     runs as one line most of the way across a 1280 canvas and leaves the line
+     below it stranded. At 704 the display headline wraps to at most two lines on
+     desktop and the two elements share an edge. Distinct from `--ansr-measure`
+     because they answer different questions: how long a line reads comfortably,
+     versus how wide a display block may be before it stops being a block. */
+  --ansr-container-hero: 44rem;
+  /* 896px. The cap on the entry point's form card. Wider than
+     `--ansr-container-hero`, because five controls on a six-column grid need the
+     room and the brief allows the card to be wider than the hero's text block;
+     well inside `--ansr-container`, because at the full 1280 the two field rows
+     stretch to a width no label on them is long enough to justify. */
+  --ansr-container-card: 56rem;
   --ansr-gutter:         var(--ansr-space-6);
   --ansr-gutter-lg:      var(--ansr-space-12);
 }

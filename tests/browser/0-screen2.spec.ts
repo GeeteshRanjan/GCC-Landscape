@@ -31,8 +31,7 @@ async function openFunctionView(page: Page): Promise<void> {
   await page.getByLabel("Industry").selectOption("BFSI");
   await page.getByLabel("Annual revenue").selectOption("Above $20 Bn");
   await page.getByLabel("Headquarters").selectOption("USA");
-  await page.getByRole("radio", { name: "No India GCC yet" }).check();
-  await page.getByRole("button", { name: "Show me the landscape" }).click();
+  await page.getByRole("button", { name: "See my results" }).click();
   await expect(band(page, "peers")).toBeVisible();
   await page.getByRole("button", { name: "See the function view" }).click();
 }
@@ -81,19 +80,23 @@ test.describe("getting there and back", () => {
     await page.getByLabel("Industry").selectOption("BFSI");
     await page.getByLabel("Annual revenue").selectOption("Above $20 Bn");
     await page.getByLabel("Headquarters").selectOption("Germany");
-    await page
-      .getByRole("radio", { name: "We run one and are expanding it" })
-      .check();
-    await page.getByRole("button", { name: "Show me the landscape" }).click();
+    await page.getByRole("button", { name: "See my results" }).click();
     await page.getByRole("button", { name: "See the function view" }).click();
 
-    // The GCC status branches the framing here as well as on Screen 1.
-    await expect(
-      page.getByRole("heading", { level: 1, name: /functions you are adding/ }),
-    ).toBeVisible();
+    /**
+     * The framing is no longer varied from the browser: the India-presence question
+     * was removed at ANSR's request and `gccStatus` is supplied as a constant, so
+     * this screen always gets the `evaluating` branch. That the three branches stay
+     * distinct is asserted in `tests/unit/screen1.test.ts`, where the input can
+     * actually be varied.
+     *
+     * What is still worth checking here, and what this test is really for, is that
+     * the ANSWERS cross the phase boundary — the visitor is not asked twice.
+     */
+    await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
     await expect(page.getByText("Germany")).toBeVisible();
     await expect(
-      page.getByRole("link", { name: /scaling your India GCC/ }),
+      page.getByRole("link", { name: /India GCC/ }),
     ).toBeVisible();
 
     // No second form, and no lead capture anywhere in this codebase.
