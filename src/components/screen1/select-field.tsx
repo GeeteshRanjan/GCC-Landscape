@@ -3,6 +3,7 @@
 import { Check, ChevronDown, ChevronLeft, ChevronRight, Search } from "lucide-react";
 import { useEffect, useId, useMemo, useRef, useState } from "react";
 
+import { matchesTokens, searchHaystack, searchTokens } from "@/data/search";
 import { cn } from "@/lib/utils";
 
 /**
@@ -26,10 +27,13 @@ import { cn } from "@/lib/utils";
  * panel is `position: absolute` inside the field's own wrapper: it moves with the
  * field because it is part of the document, with no measuring and no scroll listener.
  *
- * **It always opens downward**, for the same reason. Flipping upward when there is
- * no room below requires reading the viewport, and nothing in the public screens may
- * read scroll position — the parent decides what is on screen. A bounded
- * `max-height` plus the page being able to scroll is the honest alternative.
+ * **It always opens downward, and it never flips**, for the same reason. Choosing the
+ * other side when there is no room below requires reading the viewport, and the
+ * public screens may not — the parent decides what is on screen. What it does
+ * instead is ASK to be revealed: a bounded `max-height` and a `scrollIntoView` on
+ * open, which reads nothing and is inert inside a correctly sized frame. See the
+ * reveal effect below for why that is not the banned thing and for the 11px the
+ * entrance keyframe costs.
  *
  * **What was rebuilt, because the platform was giving it away free:** roving
  * selection with `aria-activedescendant`, Home/End, Escape, click-outside, focus
@@ -103,6 +107,16 @@ import { cn } from "@/lib/utils";
 export interface SelectOption {
   value: string;
   label: string;
+  /**
+   * Extra words this option can be found by, beyond its printed label.
+   *
+   * The label is what ANSR chose to call the row; these are what a visitor calls
+   * their own business. Nothing here is displayed — a row that showed its synonyms
+   * would also be handing them to `treeitem`'s name computation. See
+   * `src/data/search-terms.ts` for what earns a place in the list and why the list
+   * is code.
+   */
+  terms?: readonly string[];
   /**
    * One further level of narrower choices, and one only.
    *
@@ -237,11 +251,16 @@ export function SelectField({
         children?: readonly SelectOption[];
       }
     >();
+    // One searchable string per row, built ONCE per option set rather than once per
+    // keystroke: the country field has 201 rows and the industry tree has 182, and
+    // rebuilding either on every character is work with a visible cost on a phone.
+    const haystacks = new Map<string, string>();
     let nested = false;
     let count = 0;
     for (const group of groups) {
       for (const option of group.options) {
         map.set(option.value, { label: option.label, children: option.children });
+        haystacks.set(option.value, searchHaystack(option.label, option.terms));
         count += 1;
         for (const child of option.children ?? []) {
           nested = true;
@@ -251,15 +270,28 @@ export function SelectField({
             parentLabel: option.label,
             parent: option.value,
           });
+          haystacks.set(child.value, searchHaystack(child.label, child.terms));
         }
       }
     }
-    return { map, nested, count };
+    return { map, haystacks, nested, count };
   }, [groups]);
 
   const showFilter = index.count > FILTER_THRESHOLD;
   const nested = index.nested;
-  const needle = filter.trim().toLowerCase();
+  /**
+   * The query as tokens, normalised once. Empty array means no filter is applied.
+   *
+   * `matchesTokens` against a row's prebuilt haystack replaces what used to be
+   * `label.toLowerCase().includes(needle)`. It is a strict widening — see the note at
+   * the top of `src/data/search.ts` — so this cannot hide a row that was findable
+   * before, and it is what makes `3pl`, `insurtech`, `p and c` and `payment gateway`
+   * reach a row at all.
+   */
+  const tokens = useMemo(() => searchTokens(filter), [filter]);
+  const filtering = tokens.length > 0;
+  const rowMatches = (value: string) =>
+    matchesTokens(tokens, index.haystacks.get(value) ?? "");
 
   /**
    * The first pane: the industries, tiered, filtered.
@@ -275,10 +307,9 @@ export function SelectField({
 
       for (const option of group.options) {
         const children = option.children ?? [];
-        const selfMatch = !needle || option.label.toLowerCase().includes(needle);
+        const selfMatch = rowMatches(option.value);
         const childMatch =
-          Boolean(needle) &&
-          children.some((child) => child.label.toLowerCase().includes(needle));
+          filtering && children.some((child) => rowMatches(child.value));
         if (!selfMatch && !childMatch) continue;
 
         body.push({
@@ -301,7 +332,9 @@ export function SelectField({
     }
 
     return out;
-  }, [groups, needle]);
+    // `rowMatches` closes over `tokens` and `index`, both of which are in the list.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [groups, tokens, index]);
 
   const branchMeta = branch ? index.map.get(branch) : undefined;
   const branchChildren = branchMeta?.children ?? [];
@@ -316,8 +349,8 @@ export function SelectField({
    */
   const paneB = useMemo<readonly Row[]>(() => {
     if (!branch || !branchMeta) return [];
-    const shown = needle
-      ? branchChildren.filter((child) => child.label.toLowerCase().includes(needle))
+    const shown = filtering
+      ? branchChildren.filter((child) => rowMatches(child.value))
       : branchChildren;
     const rows: Row[] = [
       {
@@ -341,9 +374,10 @@ export function SelectField({
       });
     }
     return rows;
-    // `branchChildren` is derived from `branchMeta`, which is derived from `branch`.
+    // `branchChildren` is derived from `branchMeta`, which is derived from `branch`;
+    // `rowMatches` from `tokens` and `index`.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [branch, branchMeta, needle]);
+  }, [branch, branchMeta, tokens, index]);
 
   const options = (rows: readonly Row[]) =>
     rows.filter((row): row is Extract<Row, { kind: "option" }> => row.kind === "option");
@@ -462,6 +496,53 @@ export function SelectField({
     );
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, showFilter]);
+
+  /**
+   * Bring the open panel into view.
+   *
+   * **The bug this fixes.** The panel always opens downward and never flips, so a
+   * visitor who opens the industry control with the card's lower half below the fold
+   * saw the first three rows of thirty and nothing telling them there were more. It
+   * was not clipped — the panel extends the document and the page can be scrolled —
+   * which is worse than clipping, because a list cut off exactly at the window edge
+   * looks like the whole list. At 390px wide it showed one row.
+   *
+   * **Why this is allowed, when reading scroll position is not.** The public screens
+   * may not run scroll LISTENERS or `IntersectionObserver` against their own viewport,
+   * because the tool is framed and the parent decides what is on screen — an observer
+   * fires for content the visitor cannot see. `scrollIntoView` is the opposite
+   * direction of travel: it reads nothing and reports nothing, it asks the browser to
+   * reveal an element in whatever scrollport actually contains it. The rule was being
+   * read one step stronger than it is, and the panel's own "keep the active row in
+   * view" effect below has always relied on the same call.
+   *
+   * It is also correctly inert in the embed. A frame sized to its own content by
+   * `postMessage` has no scrollport of its own, so there is nothing to scroll and this
+   * is a no-op — which is right, because in that case the panel cannot be cut off by
+   * the frame either. What it fixes is every context where our viewport IS the
+   * visitor's: the tool opened directly, an in-house deployment served from ansr.com
+   * without a frame, and a frame embedded before the height snippet was added.
+   *
+   * `block: "nearest"` scrolls by the minimum needed and does nothing at all when the
+   * panel already fits, so it cannot move the page under a visitor who did not need
+   * it. No `behavior: "smooth"`: the panel's own 160ms entrance is the motion for this
+   * moment, and a second easing curve running against it reads as the page lurching.
+   *
+   * Keyed on `branch` as well as `open`, because at 1440 and up the cascade pane opens
+   * BESIDE the panel and is only as tall as its own list, so committing an industry can
+   * put rows below where the panel ended.
+   */
+  useEffect(() => {
+    if (!open) return;
+    // The pane rather than the panel when one is open, and it has to be this way
+    // round at 1440 and up: there the pane is absolutely positioned OUTSIDE the
+    // panel's border box, so revealing the panel says nothing about whether the pane
+    // beside it fits. Below 1440 the pane covers the panel exactly, so the two
+    // targets are the same rectangle and the distinction costs nothing.
+    const target =
+      panel.current?.querySelector<HTMLElement>(".gcc-select-pane") ?? panel.current;
+    target?.scrollIntoView({ block: "nearest", inline: "nearest" });
+  }, [open, branch]);
 
   // Keep the active row in view. `block: "nearest"` so it scrolls its pane by the
   // minimum, rather than jumping the row to the middle on every keystroke.
@@ -622,10 +703,10 @@ export function SelectField({
           // are on. The state it hints at is already carried properly by
           // `aria-expanded`, and the pane's own header says the count out loud once
           // it is open.
-          <span
-            aria-hidden="true"
-            className="flex shrink-0 items-center gap-1.5 text-text-muted"
-          >
+          // `.gcc-select-cue` groups the count and the chevron so the two take the
+          // accent together on the active row. One element, one colour transition —
+          // a cue whose halves change at different times reads as a fault.
+          <span aria-hidden="true" className="gcc-select-cue">
             {/* How many narrower choices are behind the row. Says a branch exists
                 and how deep it is, which a bare chevron does not. */}
             <span className="gcc-select-count">{index.map.get(row.value)?.children?.length}</span>
@@ -749,7 +830,7 @@ export function SelectField({
             // panel scrolls; the document does not have to. **And it no longer grows
             // when a branch opens**, which is the whole reason the second level moved
             // out of this list and into a pane of its own.
-            className="max-h-64 overflow-y-auto overscroll-contain rounded-b-lg py-1.5"
+            className="gcc-select-list max-h-64 overflow-y-auto overscroll-contain rounded-b-lg py-1.5"
           >
             {paneAOptions.length === 0 ? (
               <p className="px-4 py-3 text-sm text-text-muted">
@@ -815,9 +896,9 @@ export function SelectField({
                 id={groupId}
                 role="group"
                 aria-label={branchMeta.label}
-                className="max-h-64 flex-1 overflow-y-auto overscroll-contain rounded-b-lg py-1.5"
+                className="gcc-select-list max-h-64 flex-1 overflow-y-auto overscroll-contain rounded-b-lg py-1.5"
               >
-                {paneBOptions.length <= 1 && needle ? (
+                {paneBOptions.length <= 1 && filtering ? (
                   <p className="px-4 py-3 text-sm text-text-muted">
                     No {childLabel ?? "options"} match “{filter.trim()}”.
                   </p>

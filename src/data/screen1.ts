@@ -339,15 +339,31 @@ export function peerViewInputSchema(taxonomy: Taxonomy, businessTypeIds?: readon
    rather than at org-chart granularity. Headcount is not shown, per the brief.
    ========================================================================== */
 
+/**
+ * **Ampersands, not "and", and it is a fit decision rather than a style one.** Seven of
+ * the eight items were compound, so the list read as eight sentences and the longest
+ * wrapped to two lines in a four-column grid while its neighbours took one. The
+ * ampersand is what makes the set symmetrical enough to tile evenly. "Legal, risk &
+ * compliance" keeps its serial comma because it is a list of three, where the ampersand
+ * replaces only the final conjunction.
+ *
+ * **"Shared services & operations", where this was "Business operations & shared
+ * services".** At 37 characters it was half again as long as the next longest item and
+ * more than twice the shortest, which is what left the set ragged whatever the column
+ * count — and "business" was doing no work, since a GCC's operations function is
+ * business operations by definition. Reversing the pair puts the term a CIO recognises
+ * first and brings the whole set inside a 16-to-28 character range, so no item is the
+ * one that decides the layout.
+ */
 export const COMMON_FUNCTIONS = [
-  "Technology and engineering",
-  "Data and analytics",
-  "Finance and accounting",
-  "Business operations and shared services",
+  "Technology & engineering",
+  "Data & analytics",
+  "Finance & accounting",
+  "Shared services & operations",
   "Human resources",
-  "Customer and partner support",
-  "Procurement and supply chain",
-  "Legal, risk and compliance",
+  "Customer & partner support",
+  "Procurement & supply chain",
+  "Legal, risk & compliance",
 ] as const;
 
 /* ==========================================================================
@@ -468,6 +484,26 @@ export interface IndustryBlock {
   others: number;
   /** `others === 0`: the peers shown are the whole industry. */
   exhaustive: boolean;
+  /**
+   * The industry's share of every GCC in India, as a fraction.
+   *
+   * **It is derived here rather than as `total / scale.companyCount`, and that was a
+   * real arithmetic defect rather than a tidy-up.** `total` is the peer POOL's size,
+   * which excludes the visitor's own company where the dataset holds it;
+   * `scale.companyCount` is every company in the dataset, which does not. So the
+   * snapshot's opening figure was a ratio of two populations that differ by one, and
+   * the direction of the error depended on whether the visitor's own company happened
+   * to be in our data.
+   *
+   * Both sides are counted over the same population here: the industry INCLUDING the
+   * visitor's own company, over the whole base. The exclusion is right for a peer
+   * count — you are not your own peer — and wrong for a share of a national total,
+   * where the visitor's own centre is part of what is being measured.
+   *
+   * Null only when the base is empty, which is a division by zero rather than a
+   * finding. Formatted by the snapshot; never re-derived anywhere else.
+   */
+  shareOfIndia: number | null;
   /**
    * The visitor's own sub-industry, and how many other companies run one.
    *
@@ -693,8 +729,15 @@ export interface ScaleBlock {
   forbesGlobal2000Share: number;
   /** Rounded. See `roundProfessionals`. */
   professionals: number;
-  /** Rounded. Professionals inside Fortune Global 500 companies only. */
-  fortuneGlobal500Professionals: number;
+  /**
+   * Rounded. Professionals inside companies on EITHER index, counted once each.
+   *
+   * It was the Fortune Global 500 subset alone. The two memberships overlap heavily,
+   * so the union is self-deduplicating only because it is computed by filtering the
+   * company list on an OR rather than by adding two sums — see `indexedProfessionals`
+   * in `peers.ts`, which is where that property lives.
+   */
+  indexedProfessionals: number;
   /**
    * When the published dataset was generated, as the ISO string the schema holds.
    *
@@ -872,6 +915,14 @@ export function buildPeerView(
       total: match.industryTotal,
       others: match.industryOthers,
       exhaustive: match.industryOthers === 0,
+      // Counted over the same population as the denominator — see `shareOfIndia`. The
+      // peer pool cannot supply the numerator, because it drops the visitor's own
+      // company and the base does not.
+      shareOfIndia:
+        scale.companyCount > 0
+          ? companiesInIndustry(dataset, input.industry).length /
+            scale.companyCount
+          : null,
       businessType: selectedType
         ? {
             name: selectedType.name,
@@ -922,9 +973,7 @@ export function buildPeerView(
         1,
       ),
       professionals: roundProfessionals(scale.professionals),
-      fortuneGlobal500Professionals: roundProfessionals(
-        scale.fortuneGlobal500Professionals,
-      ),
+      indexedProfessionals: roundProfessionals(scale.indexedProfessionals),
       asOf: dataset.generatedAt,
     },
   };

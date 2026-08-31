@@ -480,7 +480,14 @@ async function main(): Promise<void> {
   profile("Fortune Global 500", scale.fortuneGlobal500Count, baseline);
   profile("Forbes Global 2000", scale.forbesGlobal2000Count, baseline);
   profile("professionals, all companies", scale.professionals, baseline);
-  profile("professionals, Fortune 500 subset", scale.fortuneGlobal500Professionals, baseline);
+  // The UNION of the two index memberships, counted once each — it was the Fortune
+  // Global 500 subset alone. Renamed as well as recomputed, so accepting the new
+  // baseline reads as a named change rather than as a number quietly moving.
+  profile(
+    "professionals, either index (deduplicated)",
+    scale.indexedProfessionals,
+    baseline,
+  );
 
   console.log("\nProfile — derived fields, never stored");
   profile(

@@ -41,8 +41,15 @@ async function submit(
   page: import("@playwright/test").Page,
   options: { industry?: string; businessType?: string } = {},
 ) {
-  if (options.businessType && options.industry) {
+  if (options.industry && options.businessType) {
     await chooseSubIndustry(page, options.industry, options.businessType);
+  } else if (options.industry) {
+    // **An industry on its own, which is the default path and had no caller until
+    // now.** The helper used to answer the industry only as a side effect of picking a
+    // sub-industry, so passing `industry` alone silently left the field blank and the
+    // form refused to submit. `choose` takes the cascade's `All of {industry}` exit,
+    // which is what keeps the broad answer.
+    await chooseIndustry(page, options.industry);
   }
   await choose(page, "Annual revenue", "Above $20 Bn");
   await choose(page, "Headquarters", "USA");
@@ -287,9 +294,23 @@ test("skipping it returns the same peers as before the field existed", async ({
   // The industry-level split, not the business-type one: two segments rather than
   // three, because there is no sub-industry to draw a middle band from.
   const industry = page.locator("#industry");
+  /**
+   * **The lead no longer restates the industry count, so this asserts the SENTENCE
+   * rather than the figure.** It used to read "189 other Retail companies run a centre
+   * in India" — the count's second of four appearances on the surface, and "other" was
+   * a question the page never answered. The lead now describes the three layers the
+   * chart draws and states no quantity; the chart below is where the figure lives,
+   * because that is the only place it has a denominator.
+   */
+  /**
+   * **The lead is GONE from the render, at ANSR's request, and the absence is asserted so
+   * nobody restores half of it.** It described the three layers the chart draws, in the
+   * order it draws them — which the chart's own labels already say. `industrySentence` is
+   * still exported and still unit-tested on both branches, so restoring it is one prop.
+   */
   await expect(
-    industry.getByText(/Retail companies run a centre in India/),
-  ).toBeVisible();
+    industry.getByText(/Every GCC in India, with Retail inside it/),
+  ).toHaveCount(0);
   /**
    * **The containment chart's three layers, and with no sub-industry the innermost one
    * is the comparison set rather than a cohort.** The chart substitutes it deliberately
@@ -335,9 +356,12 @@ test("choosing it narrows the peer set to the same sub-industry", async ({
   await expect(
     industry.getByText(/selected from the \d+ in a comparable sub-industry/),
   ).toHaveCount(0);
-  // And the method line names what the peers share rather than a revenue band the
-  // peer cards do not even display.
-  await expect(page.getByText(/Matched on your sub-industry/)).toBeVisible();
+  // **The method line is gone from the render, at ANSR's request.** `peerLead` was the
+  // block's only statement of method — which sub-industry was matched on, and that a
+  // closer business outranks a closer band. What still proves the sub-industry was used
+  // is the chart's own third layer, asserted just above, plus the unit suite's ordering
+  // tests. The sentence is asserted absent so it cannot come back by accident.
+  await expect(page.getByText(/matched on your sub-industry/i)).toHaveCount(0);
 
   /*
     The original complaint, asserted directly: a home-improvement chain is not a
@@ -387,8 +411,11 @@ test("the peer block's lead describes the set under it", async ({ page }) => {
   await expect(peers).toBeVisible();
   const block = (await peers.innerText()).replace(/\s+/g, " ");
 
-  // What the lead now has to say on its own: the sub-industry it matched on.
-  expect(block).toMatch(/Matched on your sub-industry/i);
+  // **No lead at all now, at ANSR's request**, so what this test still holds is that the
+  // block does not make any of the false claims the lead used to be the risk of. The
+  // sentence itself is unit-tested in `screen1.test.ts`, which is where its two branches
+  // can be varied without driving a browser.
+  expect(block).not.toMatch(/Matched on your sub-industry/i);
   // And the footnote it used to agree with really is gone rather than moved.
   expect(block).not.toMatch(/preferences rather than filters/i);
   expect(block).not.toMatch(/They all share/i);
@@ -397,11 +424,57 @@ test("the peer block's lead describes the set under it", async ({ page }) => {
   expect(block).not.toMatch(/closest revenue band/i);
   expect(block).not.toMatch(/own market first/i);
 
-  // And the lead leads on what actually decided the set. Asserted as an ORDER
-  // rather than a phrase: the wording is a copywriter's to change, but "business
-  // before size" is the ranking and has to stay true of the sentence describing it.
-  expect(block).toMatch(/business/i);
-  expect(block.search(/business/i)).toBeLessThan(block.search(/then by size/i));
+  /**
+   * **The "business before size" ordering claim moved to the unit suite with the sentence
+   * it was about.** It was asserted here as an ORDER within the rendered lead — business
+   * mentioned before the second key — and there is no rendered lead to assert it in.
+   * `screen1.test.ts` holds it on both branches, including the named counter-example that
+   * makes the longer sentence fail rather than drift.
+   *
+   * What this spec still owns is the part only a browser can see: that the BLOCK makes no
+   * claim the cards contradict. Every `not.toMatch` above is that.
+   */
+});
+
+/**
+ * **The same lead on the path where no sub-industry was given, which is the path most
+ * visitors take and the one that had no spec at all.**
+ *
+ * That is how the false sentence survived: the fix reached the sub-industry branch,
+ * the test above was written against it, and the default branch went on returning
+ * "Same industry, closest revenue band, and companies from your own market first."
+ * under a comment claiming it was accurate again. It was not — headquarters is a
+ * tiebreak beneath the score and cannot put anything first, and the comparison card
+ * stopped showing headquarters at all, so a visitor could not check the claim.
+ *
+ * **Asserted against the rendered text rather than through `expectBand`**, because here
+ * the copy IS the subject. `band()` is for locating a section whose wording is
+ * incidental to what is being tested; this test has nothing else to test.
+ */
+test("the peer block's lead is true with no sub-industry given", async ({ page }) => {
+  await page.goto("/");
+  // No `businessType`, so the industry keeps its broad answer and business similarity
+  // is zero for every company — the score reduces to band proximity alone.
+  await submit(page, { industry: "Retail" });
+
+  const peers = page.locator("#peers");
+  await expect(peers).toBeVisible();
+  const block = (await peers.innerText()).replace(/\s+/g, " ");
+
+  // **"India GCCs", not "companies".** Every card in the set runs a centre in India by
+  // construction, and nothing on the block said so once the heading dropped its place
+  // phrase — so a reader met five company names and a headcount and had to infer the
+  // subject. The ORDERING claim is unchanged: closest revenue band first, one key.
+  expect(block).not.toContain(
+    "India GCCs in your industry, closest to your revenue band first.",
+  );
+
+  // The sentence that was there, and the claim inside it that could never come true.
+  expect(block).not.toMatch(/own market first/i);
+  expect(block).not.toMatch(/\bmarket\b/i);
+  // No second key either. Size is what a reader would assume next and the HQ tiebreak
+  // makes it false — see the unit suite's named counter-example.
+  expect(block).not.toMatch(/largest India centres/i);
 });
 
 test("the tag vocabulary never reaches the browser", async ({ page }) => {

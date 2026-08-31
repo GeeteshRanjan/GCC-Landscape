@@ -42,8 +42,19 @@ import type { Metric } from "./schema";
 /** Ordinal steps for the capability grid, weakest first. */
 const CAPABILITY_SCALE = ["Developing", "Moderate", "Strong", "Very strong"] as const;
 
-const FIRST_HIRE_EOR = "on an employer of record";
-const FIRST_HIRE_DIRECT = "hiring directly into your own entity";
+/**
+ * The two ends of the first-hire range, as whole clauses.
+ *
+ * **They read on their own now, where they used to read only after their figure.** They
+ * were "on an employer of record" and "hiring directly into your own entity" —
+ * fragments, written to be prefixed with the endpoint value by `RangeBar`. The HR tab
+ * draws this metric as a benchmark whose figures sit on the rail itself, so a fragment
+ * beneath it had nothing to attach to, and repeating "7 days" 20px under the 7 already
+ * on the mark is the duplication this project removes everywhere else. `RangeBar` drops
+ * the prefix to match, so the operations tab reads the same way.
+ */
+const FIRST_HIRE_EOR = "Hiring through an employer of record";
+const FIRST_HIRE_DIRECT = "Hiring directly into your own entity";
 
 /* ==========================================================================
    Shared metrics — authored once, shown on more than one tab
@@ -196,18 +207,43 @@ const TIME_TO_FIRST_HIRE: SharedMetric = {
   gated: false,
 };
 
-/** The scale curve. One curve, four milestones, on every tab that shows it. */
+/**
+ * The scale curve. One curve, four milestones, on every tab that shows it.
+ *
+ * **`progression` is what stops this being drawn as four unrelated bars**, which is
+ * what it was: four tracks on one axis, sharing nothing, saying "here are four
+ * separate quantities" about a single centre measured four times as it grows. The
+ * flag is authored rather than derived for the reason recorded on the field in
+ * `schema.ts` — the operations tab's latency breakdown has the same format and the
+ * same rising values and is genuinely four destinations, so monotonicity cannot tell
+ * them apart.
+ *
+ * The values stay cumulative elapsed months from the first hire, exactly as
+ * supplied. The intervals a reader actually wants — six months to the first fifty,
+ * six more to a hundred, twelve more to three hundred — are derived in
+ * `screen2.ts`, so nothing here restates them and they cannot drift.
+ */
 const SCALE_MILESTONES: SharedMetric = {
   lens: "speed",
   title: "Time to reach each scale milestone",
   question: "Once the first team proves out, how quickly do centres here add the next hundred?",
   unit: "months, median",
   format: "duration",
+  progression: true,
   note:
     "Months rather than days, as supplied — converting would invent precision. The 100 FTE milestone was given as 9–12 months and the 500 as 500–600 FTEs in 36; the conservative end of each is stored. The HR tab used to omit the 50 FTE step, which made the curve look slower off the line than it is.",
   structure: {
     kind: "breakdown",
-    entries: ["To 50 FTEs", "To 100 FTEs", "To 300 FTEs", "To 500 FTEs"],
+    /**
+     * **"50 FTEs" rather than "To 50 FTEs", and the milestone track is why.** The HR
+     * tab draws this metric as four positions on one horizontal line, and at 1024 the
+     * first two land 56px apart — "To 50 FTEs" does not fit between them, and "To" was
+     * carrying nothing a reader needed: the card's own title already says "Time to
+     * reach each scale milestone", so every entry began by repeating the title's own
+     * preposition. It reads the same in `Journey`'s rows on the operations tab, where
+     * the label is followed by its interval.
+     */
+    entries: ["50 FTEs", "100 FTEs", "300 FTEs", "500 FTEs"],
   },
   value: { kind: "breakdown", values: [6, 12, 24, 36] },
   gated: false,
@@ -235,7 +271,53 @@ export const METRIC_CATALOGUE: readonly Metric[] = [
     gated: false,
   },
   onTab(LEADERSHIP_DEPTH, "tech-leadership-depth", "tech"),
-  onTab(GRADUATE_OUTPUT, "tech-graduate-output", "tech"),
+  /**
+   * The graduate pipeline, as the two parts of it a technology reader recruits from.
+   *
+   * **Not `GRADUATE_OUTPUT`, and this is the one place a tab deliberately shows less
+   * than the shared metric.** The nine-discipline list is still the right card for
+   * operations and HR, whose readers need the commerce, finance and HR streams. On
+   * the technology tab it drew nine hairlines in one card, six of which a CTO does
+   * not recruit against, and ANSR asked for the discipline split off this page. Both
+   * figures below are the shared metric's own, unchanged, so the two cards cannot
+   * disagree: 1.5M is its "Engineering, other disciplines" part and 450K is its
+   * "Management and MBA graduates" part.
+   *
+   * **Two things it deliberately does not do, and both were asked for explicitly.**
+   *
+   * It does not AGGREGATE. Engineering, computer science and IT, and electronics and
+   * communication are documented as disjoint, so 1.5M + 300K + 250K = 2.05M is
+   * arithmetically available — and it is not authored here, because "an aggregate
+   * engineering graduate figure" is a claim about what counts as engineering and that
+   * is ANSR's to approve rather than ours to derive. So the stored figure is preserved
+   * and the label says exactly what it measures, which is engineering disciplines
+   * OTHER than the two counted separately.
+   *
+   * It does not NEST. 450K is the total management and MBA output, not the count of
+   * MBA graduates who hold an engineering degree, and those are different statements.
+   * Drawing the smaller block inside the larger would assert an overlap the source
+   * never states, so the two are drawn adjacent — see `subset` in `schema.ts`, which
+   * is the field that makes that a decision rather than a side effect of both parts
+   * being measured in graduates. There is deliberately no overlap percentage anywhere:
+   * no verified figure supports one.
+   */
+  {
+    id: "tech-graduate-pipeline",
+    functionArea: "tech",
+    lens: "supply",
+    title: "Graduate talent relevant to technology",
+    question: "Will the talent pool still be deep enough tomorrow, as we grow?",
+    unit: "graduates a year",
+    format: "number",
+    note:
+      "Both figures are GRADUATE_OUTPUT's own parts, unchanged. Deliberately NOT aggregated with computer science and IT (300K) or electronics and communication (250K): those are counted separately in the shared metric and an aggregate engineering total needs ANSR's approval of what counts as engineering. Deliberately NOT nested: 450K is total management and MBA output, not MBA graduates with an engineering background, so no containment and no overlap percentage. The full nine-discipline split is still on the operations and HR tabs.",
+    structure: {
+      kind: "breakdown",
+      entries: ["Engineering, other disciplines", "Management and MBA graduates"],
+    },
+    value: { kind: "breakdown", values: [1_500_000, 450_000] },
+    gated: false,
+  },
   {
     id: "tech-ecosystem-size",
     functionArea: "tech",
@@ -293,22 +375,23 @@ export const METRIC_CATALOGUE: readonly Metric[] = [
     value: { kind: "scalar", value: 17_000_000 },
     gated: false,
   },
-  {
-    id: "tech-community-events",
-    functionArea: "tech",
-    lens: "supply",
-    title: "Technical community activity",
-    question: "Is there a working community around our stack, or would we be starting one?",
-    format: "number",
-    note:
-      "Groups counted across the top eight cities; Bengaluru alone has about 450. Largest chapters are Python, Kubernetes, AWS and PyTorch. No unit is set because the two parts count different things.",
-    structure: {
-      kind: "breakdown",
-      entries: ["Active technical meetup groups", "Major conferences a year"],
-    },
-    value: { kind: "breakdown", values: [1_400, 120] },
-    gated: false,
-  },
+  /**
+   * **`tech-community-events` was here and is deleted at ANSR's request.** Two parts
+   * — about 1,400 active technical meetup groups and about 120 major conferences a
+   * year — counted across the top eight cities.
+   *
+   * Deleted rather than gated or emptied, which is the same distinction
+   * `hr-workforce-diversity` was removed under: a gated card says a figure exists and
+   * is being held, an empty definition is one an admin can half-fill into a live
+   * card, and this metric is out of scope rather than either. The figures are in git;
+   * restoring it is a catalogue entry plus a dataset edit.
+   *
+   * It is also the metric the shared-unit containment heuristic was wrong about — it
+   * declared no unit precisely because a conference is not a kind of meetup group —
+   * so the reasoning behind `subset` outlived the case that motivated it. Do not
+   * fold either figure into the technology figure row: ANSR asked for the meetup
+   * count off this page, not moved up it.
+   */
   {
     id: "tech-capability-comparison",
     functionArea: "tech",
@@ -358,8 +441,18 @@ export const METRIC_CATALOGUE: readonly Metric[] = [
     question: "Is there space we could move into at the quality our people expect?",
     unit: "million sq ft",
     format: "number",
+    /**
+     * The one real containment in the catalogue, and now it is authored.
+     *
+     * Vacant stock is part of total stock, so "132 of the 854" is the relationship and
+     * the smaller bar belongs inside the larger. It used to be INFERRED from the two
+     * parts sharing a unit, which is a precondition for containment rather than
+     * evidence of it — the technology tab's graduate pair is two disjoint populations
+     * measured in the same unit, and the heuristic would have nested them.
+     */
+    subset: true,
     note:
-      "Both figures rather than a choice between them: total stock answers whether the market is deep, and vacant answers whether we could move in now. Across the top seven cities at 15.5% vacancy; Bengaluru alone holds 241 msf of the total.",
+      "Both figures rather than a choice between them: total stock answers whether the market is deep, and vacant answers whether we could move in now. Across the top seven cities at 15.5% vacancy; Bengaluru alone holds 241 msf of the total. `subset` is authored because vacant stock is genuinely part of total stock — the shared unit alone never established that.",
     structure: {
       kind: "breakdown",
       entries: ["Total Grade A stock, top seven cities", "Vacant and available now"],
@@ -426,30 +519,43 @@ export const METRIC_CATALOGUE: readonly Metric[] = [
   /* ===================== HR ===================== */
   onTab(BENCH_STRENGTH, "hr-bench-strength", "hr"),
   onTab(LEADERSHIP_DEPTH, "hr-leadership-depth", "hr"),
+  /**
+   * **`hr-graduate-output` is BACK, at ANSR's request**, taking HR from nine metrics to
+   * ten. It was removed for a pass on the argument that a nine-way disciplinary split is
+   * a claim about national graduate supply while the decision on this page is about
+   * hiring an India team — reach, speed to fill a seat, speed to scale, and what the same
+   * person costs next year.
+   *
+   * That argument is overruled rather than disproved: an HR leader sizing a centre is
+   * also the reader who has to say where next year's intake comes from, and this metric's
+   * commerce, finance and human-resources streams are the ones a CHRO recruits against
+   * and the technology tab deliberately does not show.
+   *
+   * **Restoring it was one line, which is the whole reason it stayed a shared metric.**
+   * `GRADUATE_OUTPUT` is untouched, so nothing about the figure moved and nothing forked
+   * — operations and HR now draw one definition through one component, `GraduateOutput`
+   * in `screen2/graduate-card.tsx`. Two of its parts are still quoted verbatim by
+   * `tech-graduate-pipeline`, which is the one tab that shows less than the shared metric.
+   */
   onTab(GRADUATE_OUTPUT, "hr-graduate-output", "hr"),
   onTab(BACKFILL_TIME, "hr-backfill-time", "hr"),
   onTab(TIME_TO_FIRST_HIRE, "hr-time-to-first-hire", "hr"),
   onTab(SCALE_MILESTONES, "hr-scale-milestones", "hr"),
-  {
-    id: "hr-workforce-diversity",
-    functionArea: "hr",
-    lens: "supply",
-    title: "Workforce diversity",
-    question: "Would a centre here look like the workforce we are trying to build?",
-    format: "percent",
-    note:
-      "Women in technology roles is projected to reach 35% by 2027; the current figure is stored, not the projection. Women in leadership, first-generation graduates and return-to-work were seeded parts with no figures and were removed.",
-    structure: {
-      kind: "breakdown",
-      entries: [
-        "Women across India GCCs",
-        "Women in technology roles",
-        "Women in engineering degree enrolment",
-      ],
-    },
-    value: { kind: "breakdown", values: [35, 25, 28.8] },
-    gated: false,
-  },
+  /**
+   * **`hr-workforce-diversity` was here and is removed at ANSR's request.** It held
+   * three percentages — women across India GCCs, women in technology roles, women in
+   * engineering degree enrolment — under the title "Workforce diversity".
+   *
+   * It is DELETED rather than gated or emptied, which are the two things that look
+   * like the same act and are not: a gated metric draws a sealed card claiming a
+   * figure exists and is being held, and an empty one leaves a definition an admin
+   * can half-fill into a live card. Neither is true here — the metric is out of
+   * scope, not withheld.
+   *
+   * What it cost: it was the only home for the brief's Optional diversity block,
+   * which `project.md` recorded as collapsing into the supply lens. That claim is
+   * corrected there rather than annotated here. The figures themselves are in git.
+   */
   {
     id: "hr-offer-acceptance",
     functionArea: "hr",
@@ -467,35 +573,68 @@ export const METRIC_CATALOGUE: readonly Metric[] = [
     id: "hr-salary-growth",
     functionArea: "hr",
     lens: "cost",
-    title: "Base salary growth year on year",
+    /**
+     * **Retitled to name the finding, with the quantity moved into the unit.** It was
+     * "Base salary growth year on year", which names the measurement and leaves the
+     * reader to work out what the ranking is for. The five figures answer a question —
+     * which skills are repricing fastest — and the title says it now, with the
+     * measurement directly under it as the unit, which is the field that names what
+     * every figure counts. Nothing else about the metric moved.
+     *
+     * **The entries are in DESCENDING order and the values are untouched.** The order
+     * is authored rather than sorted at render — `RankedBars` never re-sorts, and
+     * `project.md`'s rule is that a catalogue order is meaningful — so putting the
+     * scarce skills first is a decision recorded here. It has one derived consequence
+     * worth knowing: `nonIncreasing` now holds, so the set is self-labelling and the
+     * bars drop their grey track. Row one is full width and carries its own figure,
+     * which is what states the axis.
+     *
+     * **"All roles" is "All roles (reference)" so the comparator says so in text.** It
+     * is drawn in the action orange, which on a ranking of teal bars is the one mark
+     * that is not a specialism — and a colour cannot be the only carrier of that. The
+     * word in the label is what survives greyscale, and it is also what stops a reader
+     * taking the fourth row for a fourth specialism that happens to be a different
+     * colour.
+     */
+    title: "Where salary pressure is strongest",
+    unit: "Base salary growth, year on year",
     question: "How fast is the cost of the same person rising?",
     format: "percent",
     note:
-      "Split by specialism because a single average hides the scarce skills, which is where a plan actually gets repriced.",
+      "Split by specialism because a single average hides the scarce skills, which is where a plan actually gets repriced. Ordered descending so the ranking states its own axis in row one; 'All roles' carries '(reference)' because it is the comparator the other four are read against, and the label rather than the colour is what says so.",
     structure: {
       kind: "breakdown",
       entries: [
-        "All roles",
         "AI and machine learning",
         "Cybersecurity",
         "Cloud",
+        "All roles (reference)",
         "Non-ER&D roles",
       ],
     },
-    value: { kind: "breakdown", values: [9.8, 21.1, 20, 16.1, 7.5] },
+    value: { kind: "breakdown", values: [21.1, 20, 16.1, 9.8, 7.5] },
     gated: false,
   },
   {
     id: "hr-cost-per-employee-served",
     functionArea: "hr",
     lens: "cost",
-    title: "HR support ratio per employee served",
+    /**
+     * **Shortened to "HR support ratio", because the rest of it was the unit.** The
+     * title was "HR support ratio per employee served", and "per employee served" is
+     * exactly what `unit` says one line down — on a sealed card, where the title is
+     * one of only three fields the gate lets across, spending half of it on the unit
+     * is the whole card saying less. The unit is dropped by the gate, so the shorter
+     * title is what a visitor reads; the longer one was never adding the words the
+     * reader needed.
+     */
+    title: "HR support ratio",
     question:
       "How many employees does each HR person support once the centre is running, against while it is still being built?",
     unit: "employees per HR person",
     format: "number",
     note:
-      "Retitled from 'HR cost per employee served'. The supplied cost figure was an absolute annual amount per employee, which this schema cannot hold and the brief forbids showing; the staffing ratio is the part of the brief's own definition that survives. To restore the cost view, supply it as an index against the sending country.",
+      "Retitled from 'HR cost per employee served', then shortened from 'HR support ratio per employee served' — the trailing clause duplicated the unit. The supplied cost figure was an absolute annual amount per employee, which this schema cannot hold and the brief forbids showing; the staffing ratio is the part of the brief's own definition that survives. To restore the cost view, supply it as an index against the sending country.",
     structure: {
       kind: "breakdown",
       entries: ["Once running at scale", "During the build phase"],
@@ -550,6 +689,65 @@ export const METRIC_CATALOGUE: readonly Metric[] = [
       "India only. It used to sit beside US and UK wage growth and a 'the advantage narrowing' line, which turned one readable number into a three-way comparison a finance leader has to reconcile — and the narrowing figure was a derived opinion rather than a measurement. The gap is still 55–65% and is held to be durable to around 2032; that belongs in the conversation, not on a bar.",
     structure: { kind: "scalar" },
     value: { kind: "scalar", value: 9.8 },
+    gated: false,
+  },
+  /**
+   * The other two thirds of the brief's "cost advantage durability".
+   *
+   * `docs/brief.md` asks for historical movement in cost terms, **split three ways:
+   * compensation, operating cost, workplace**. Only the compensation third was ever
+   * built — that is `fin-cost-growth` above. These are the missing two, added at
+   * ANSR's request, and three scalars is the right shape rather than one three-part
+   * breakdown: the three measure different things against different bases, and as
+   * three thirds they fill a row exactly where a lone scalar leaves finance opening
+   * on the part-empty row `metricWidth` exists to prevent.
+   *
+   * **BOTH FIGURES ARE PLACEHOLDERS AT 10%, ON THE PROJECT OWNER'S INSTRUCTION, SO THE
+   * CARDS CAN BE DEMONSTRATED.** No real figure for either has been supplied — not in
+   * the brief, not in the 2026-08-27 data, not in ANSR's later revisions — so 10 is a
+   * round number chosen to be obviously provisional rather than an estimate derived
+   * from anything. It is the same footing as the three cells already filled from
+   * judgement (Vietnam's capability column, `hr-fully-loaded-cost`'s grid, and the depth
+   * row in `fin-cost-vs-ecosystem-depth`), and it is tracked the same way: flagged
+   * `PLACEHOLDER` in the note here, asserted by a unit test, and on `handoff.md`'s
+   * blocked list until replaced.
+   *
+   * **They are trivially replaceable and no developer is needed.** A figure is admin
+   * data, so both are edited under Metrics → Finance and land on the next publish. What
+   * needed a code change was the DEFINITION — admin can fill a metric and cannot create
+   * one — and that is what this block is.
+   *
+   * The one thing to keep true: neither figure may be quietly promoted from placeholder
+   * to fact by deleting the marker. Replace the number and the marker together.
+   */
+  {
+    id: "fin-operating-cost-growth",
+    functionArea: "finance",
+    lens: "cost",
+    title: "Operating cost growth year on year",
+    question:
+      "Is the cost of running the centre — utilities, transport, facilities management, local support — rising faster than the wage bill?",
+    format: "percent",
+    // A `note` is capped at 600 characters by the schema, so anything longer than a
+    // sentence or two of provenance belongs in the block comment above rather than here.
+    note:
+      "PLACEHOLDER at 10% — a demo figure, not a measurement. The operating-cost third of the brief's cost-durability metric; the compensation third is fin-cost-growth at 9.8%. Nothing supplied covers this one: the tier spread is a LEVEL difference between tier 1 and tier 2 rather than a movement over time, and no year-on-year operating figure exists in the supplied data. Deliberately not derived from the wage figure — the two move on different drivers, which is why the brief asks for them separately. Replace with a real rate before publication.",
+    structure: { kind: "scalar" },
+    value: { kind: "scalar", value: 10 },
+    gated: false,
+  },
+  {
+    id: "fin-workplace-cost-growth",
+    functionArea: "finance",
+    lens: "cost",
+    title: "Workplace cost growth year on year",
+    question:
+      "Is the cost of the space itself rising, and by enough to change a five-year plan?",
+    format: "percent",
+    note:
+      "PLACEHOLDER at 10% — a demo figure, not a measurement. The workplace third of the brief's cost-durability metric. The nearest supplied figures are a 15.5% vacancy rate across the top seven cities and the Bengaluru sub-market rent card behind fin-workplace-cost-gradient — both a position at one moment, neither a rate of change, and a gradient across sub-markets is not a movement over time. Rent growth is the figure to ask for, national or Bengaluru, stated as a percentage. Replace before publication.",
+    structure: { kind: "scalar" },
+    value: { kind: "scalar", value: 10 },
     gated: false,
   },
   {

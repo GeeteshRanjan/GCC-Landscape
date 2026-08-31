@@ -250,7 +250,21 @@ export function Section({
  *   - `inverse` — deep teal throughout. Reserved for the terminating scale strip,
  *     as before.
  */
-export type PanelTone = "plain" | "tint" | "accent" | "inverse";
+/**
+ * **Two of those four tones were dead and a third is new.** The paragraph above is
+ * kept because it records why the tonal system existed; the specificity pass
+ * replaced it with a structural rule, and the tones went with it. `tint` differs from
+ * `plain` by about 4% lightness and had no caller; `accent` was the gradient heading
+ * strip, and what announces the primary evidence now is `weight="lead"` on a `Block`,
+ * which is size rather than colour. Neither was passed anywhere in `src/` — they were
+ * an API nobody could use correctly, since the one thing they were for is now done by
+ * a different primitive.
+ *
+ * `sealed` arrives from Screen 2, which is the one surface with a card that is
+ * deliberately closed rather than empty. It is not a colour either: it is a step
+ * firmer on the same border, which is the whole signal.
+ */
+export type PanelTone = "plain" | "inverse" | "sealed";
 
 /**
  * A bordered card section — the unit the result surface is built from.
@@ -290,11 +304,33 @@ export type PanelTone = "plain" | "tint" | "accent" | "inverse";
  * name are one unit, and so no card has to open its body with a paragraph that
  * looks like content.
  */
+/**
+ * How round a card's corners are.
+ *
+ * **`none` is the default and is the derived answer; `md` is a per-surface request.**
+ * The board was rendered at 1440 and every container on it is true zero — see the
+ * comment inside `Panel` — so nothing gets a radius by default. `md` is 4px, which is
+ * the step the entry point's form card and its fields already carry at the client's
+ * own request, and it is what the HR composition asks for in its own words: subtle and
+ * consistent rather than soft. It is a caller's decision because it is a decision about
+ * a SURFACE, not about a card: a tab where two cards disagree about their corners is
+ * worse than either value.
+ */
+export type PanelRadius = "none" | "md";
+
+const PANEL_RADIUS: Record<PanelRadius, string> = {
+  none: "rounded-none",
+  md: "rounded-md",
+};
+
 export function Panel({
   id,
   title,
   lead,
   tone = "plain",
+  radius = "none",
+  chip,
+  headingLevel = 2,
   motif,
   bodyClassName,
   className,
@@ -305,6 +341,22 @@ export function Panel({
   /** The card's finding, in one line. Rendered in the header, not the body. */
   lead?: string;
   tone?: PanelTone;
+  /** See `PanelRadius`. One surface passes this; everything else is square. */
+  radius?: PanelRadius;
+  /**
+   * A short status beside the heading. One caller: Screen 2's sealed cards, where it
+   * says "Held back".
+   */
+  chip?: string;
+  /**
+   * 2 by default. 3 for a card that sits under a group heading of its own, which is
+   * Screen 2's held group and nothing else.
+   *
+   * A level is a real outline rather than a size — skipping one leaves a
+   * screen-reader user with a broken structure — so it is a prop rather than being
+   * inferred, and the size does not change with it.
+   */
+  headingLevel?: 2 | 3;
   /**
    * A muted brand graphic behind the header. Supplied by the caller so this file
    * draws no art and knows no file paths; `aria-hidden` is applied here, because a
@@ -318,27 +370,50 @@ export function Panel({
 }) {
   const headingId = `${id}-heading`;
   const inverse = tone === "inverse";
-  const accent = tone === "accent";
+  const sealed = tone === "sealed";
+  const Heading = headingLevel === 3 ? "h3" : "h2";
 
   return (
     <section
       id={id}
       aria-labelledby={headingId}
       className={cn(
-        // **Radius `lg` and a soft shadow, where this was radius `md` and a border
-        // alone.** The rule that the public screens carry no shadow was written when
-        // every card sat on one white page, and it is what made eight cards read as
-        // eight outlined rectangles. These cards now sit on alternating grounds, and a
-        // card that has to read as lifted off a pale mint band needs elevation from
-        // somewhere — a hairline against a tint is nearly invisible. `lg` is the same
-        // step the entry point's form card takes, which is the composition this
-        // surface is being brought into line with.
-        "gcc-panel relative flex min-w-0 flex-col overflow-hidden rounded-lg border",
+        /**
+         * **Radius `none` and no shadow, re-derived from `Group 149.svg` rather than
+         * from a description of it.** The board was rendered at 1440 and read: every
+         * container on it is TRUE ZERO — the three white model cards, the FAQ rows,
+         * all of it — and the only round things are the pill CTA and two 4px social
+         * squares. Nothing carries a shadow anywhere on 5,531px of board.
+         *
+         * This card had `rounded-lg` and `shadow-sm`, on the reasoning that a card
+         * sitting on a mint zone needs elevation because a hairline against a tint is
+         * nearly invisible. The board answers that directly and differently: its white
+         * cards sit on a mint ground with **no border and no shadow at all**, because
+         * the fill against the tint IS the boundary. So the premise was right and the
+         * conclusion was one device too many.
+         *
+         * What is left is the hairline, and it is kept for the reason the earned-border
+         * rule gives rather than for separation: a `Panel` is what a block takes when
+         * it draws a MARK, and a bar's full width means nothing without an edge to
+         * measure it against. That edge has to be explicit on a white zone, where the
+         * fill supplies no boundary at all. One treatment on both zones, because the
+         * border is about the marks and not about the ground.
+         *
+         * The floating result card keeps its own radius and its two shadow layers —
+         * `.gcc-result-card`, on a teal-deep ground where the shadow tokens are
+         * invisible. It is the container; these are its contents, and the container
+         * being the one round object on the surface is what says so.
+         */
+        "gcc-panel relative flex min-w-0 flex-col overflow-hidden",
+        PANEL_RADIUS[radius],
         inverse
-          ? "border-border-inverse bg-surface-inverse"
-          : tone === "tint"
-            ? "border-border-tint bg-surface-pale shadow-xs"
-            : "border-border-strong/60 bg-surface shadow-sm",
+          ? "border border-border-inverse bg-surface-inverse"
+          : sealed
+            ? // A step firmer than its neighbours, which is the entire statement that
+              // the slot is closed rather than broken. Never a dimmer card: dimming
+              // says unavailable, a firmer edge says withheld.
+              "border-2 border-border-strong bg-surface"
+            : "border border-border bg-surface",
         className,
       )}
     >
@@ -347,38 +422,58 @@ export function Panel({
           {motif}
         </div>
       ) : null}
-      {/* The header. `accent` draws it as the teal gradient strip, which is the one
-          place a card announces itself in colour rather than in weight; the others
-          keep a hairline under a plain fill. Either way the heading wraps inside its
-          own column rather than pushing the row taller than its neighbour's. */}
+      {/* The header. A hairline under a plain fill, on every tone — the gradient
+          strip that used to mark the two analytical cards is gone with the `accent`
+          tone, because what announces the primary evidence is now size rather than
+          colour. The heading wraps inside its own column rather than pushing the row
+          taller than its neighbour's. */}
       <div
         className={cn(
           "relative flex flex-col gap-1.5 px-5 py-4 md:px-6 md:py-4.5",
-          accent
-            ? "gcc-ground-gradient"
-            : inverse
-              ? "border-b border-border-inverse"
-              : tone === "tint"
-                ? "border-b border-border-tint"
-                : "border-b border-border",
+          inverse ? "border-b border-border-inverse" : "border-b border-border",
         )}
       >
-        <h2
-          id={headingId}
-          className={cn(
-            // 16/18px, not 48. On this surface the figures are the subject and the
-            // heading is the label.
-            "min-w-0 text-base font-semibold tracking-heading text-pretty md:text-lg",
-            inverse || accent ? "text-text-inverse" : "text-text",
-          )}
-        >
-          {title}
-        </h2>
+        {/* **20/24px Bold, up from 16/18px Semibold, and it is a scale fix rather
+            than a preference.** The reasoning for 16px was sound and was answering the
+            wrong question: a 48px band heading over a chart makes the heading the
+            loudest thing in the band, so the size came down until the figures won.
+            What that produced across six cards was a surface whose largest type was a
+            figure and whose every heading was the size of a UI label — so the result
+            screen read as a different product from the entry point, whose own `h1` is
+            80px. A heading can be subordinate to the evidence without being chrome.
+
+            20/24 is the register the brand board sets its card headings in (~26px),
+            and it stays a clear step under the 30/38px figures the cards carry, so the
+            original ordering is intact. `font-bold` and `tracking-display` per the
+            display rule; the two headings on these screens that contain a DRAWN
+            wordmark are the exception and stay Medium 500 with `tracking-body`,
+            measured off the mark's own stem. Neither of them is here. */}
+        {/* The heading, and a chip beside it where the card has one. A row rather
+            than a column, and `items-baseline`, so a "Held back" chip sits on the
+            heading's own baseline instead of above a wrapped second line — and
+            `flex-wrap`, so at 320 the chip drops under the heading rather than
+            squeezing it. Screen 2's sealed cards are the only caller; Screen 1 passes
+            no chip and gets the heading alone, with no extra box in the tree. */}
+        <div className="flex flex-wrap items-baseline gap-x-3 gap-y-2">
+          <Heading
+            id={headingId}
+            className={cn(
+              "min-w-0 text-xl leading-snug font-bold tracking-display text-pretty md:text-2xl",
+              inverse ? "text-text-inverse" : "text-text",
+            )}
+          >
+            {title}
+          </Heading>
+          {chip ? <Chip>{chip}</Chip> : null}
+        </div>
         {lead ? (
+          // Up from 14px with the heading. A 24px heading over a 14px lead is a
+          // jump the eye reads as a caption rather than as the card's claim, and the
+          // lead is where several cards state their finding.
           <p
             className={cn(
-              "max-w-measure text-sm",
-              inverse || accent ? "text-text-inverse-muted" : "text-text-muted",
+              "max-w-measure text-sm md:text-base",
+              inverse ? "text-text-inverse-muted" : "text-text-muted",
             )}
           >
             {lead}
@@ -389,6 +484,165 @@ export function Panel({
         {children}
       </div>
     </section>
+  );
+}
+
+/**
+ * A section with the same landmark contract as `Panel` and no container at all.
+ *
+ * **This is the other half of the rule that a border has to be EARNED**, and it is
+ * what the result surface was missing. Every section on the peer view was a `Panel`,
+ * so the page rendered as eleven bordered objects on a page whose own zones were
+ * already doing the sectioning — and nothing told the eye that a chart and a list of
+ * eight words are different kinds of claim. Four `PanelTone` values were supposed to
+ * carry that and could not: `plain` covered three unrelated kinds of evidence and
+ * `tint` differed from it by about 4% lightness.
+ *
+ * The rule now is structural rather than tonal:
+ *
+ *   - **A block that draws a MARK gets a `Panel`.** A chart or a map needs a frame:
+ *     the marks are measured against the card's own edges, and a bordered ground is
+ *     what makes a bar's full width mean something. The containment chart, the ranked
+ *     centres and the density map.
+ *   - **A block that is a grid of its own cards gets a `Block`.** Wrapping five
+ *     floating company cards in a sixth bordered box is a card inside a card, which
+ *     is the one nesting no brief earns — and the outer border adds nothing, because
+ *     the cards already have edges.
+ *   - **A block that is text gets a `Block`.** The function list claims no share and
+ *     no order; a container around it asserts it is an object with properties.
+ *
+ * The zone's own ground is the container in both cases. That is what a zone was for.
+ *
+ * `weight` is how the surface gets a hierarchy it previously faked with tone. The
+ * primary evidence on a screen takes `lead` and reads a step larger than everything
+ * under it; every other block takes the same size as a `Panel` heading, so a card and
+ * a bare block in one row still read as peers.
+ */
+export function Block({
+  id,
+  title,
+  lead,
+  weight = "standard",
+  className,
+  children,
+}: {
+  id: string;
+  title: string;
+  lead?: string;
+  /** `lead` is one step up, for the one section that is the screen's primary evidence. */
+  weight?: "standard" | "lead";
+  className?: string;
+  children: React.ReactNode;
+}) {
+  const headingId = `${id}-heading`;
+  return (
+    // Same landmark contract as `Panel`: a <section> with no accessible name is not a
+    // `region`, so it is unreachable by role and untestable by role. `expectBand` in
+    // the browser helpers asserts exactly this.
+    <section
+      id={id}
+      aria-labelledby={headingId}
+      className={cn("flex min-w-0 flex-col", className)}
+    >
+      <header className="flex flex-col gap-1.5">
+        <h2
+          id={headingId}
+          className={cn(
+            "min-w-0 font-bold tracking-display text-balance text-text",
+            weight === "lead"
+              ? // A step above every `Panel` heading on the surface. This is the
+                // hierarchy the four tones were trying to supply: the primary evidence
+                // is larger, and nothing else has to be a different colour to say it
+                // is a different kind of claim.
+                "text-2xl leading-tight md:text-3xl"
+              : "text-xl leading-snug md:text-2xl",
+          )}
+        >
+          {title}
+        </h2>
+        {/* One muted ink, because every ground a `Block` renders on is light —
+            `surface`, `surface-tint` and `surface-pale` all take `--ansr-text-muted`
+            at 5.6:1 or better. A block on an inverse ground would need its own ink and
+            deliberately is not offered one: the only inverse section on either screen
+            is the terminating strip, which is a `Panel` because its fill is its
+            meaning. */}
+        {lead ? (
+          <p className="max-w-measure text-sm text-text-muted md:text-base">
+            {lead}
+          </p>
+        ) : null}
+      </header>
+      <div className="mt-5 md:mt-6">{children}</div>
+    </section>
+  );
+}
+
+/**
+ * One full-bleed band of ground inside the floating result card.
+ *
+ * **Moved here from `screen1/peer-view.tsx`, because both result screens draw with it
+ * now.** It was local to the peer view while the peer view was the only surface with
+ * alternating grounds; the function view's own sections are the same kind of object —
+ * a colour change at a boundary and nothing else — and two copies of this markup would
+ * be two rhythms and two insets to keep in agreement. That is the reason
+ * `components/public/` exists: importing across screen folders would have made
+ * `screen1` the owner of a shape both screens depend on.
+ *
+ * **The grounds STRICTLY ALTERNATE, and the caller owns the sequence.** White beside
+ * white is not a boundary, so every adjacent pair has to differ; `surface-pale` is
+ * about 2% off white and may only ever neighbour the mint. Nothing here enforces it,
+ * because the sequence depends on which sections a result actually has — see how each
+ * screen derives its own.
+ *
+ * `overflow-hidden` via `.gcc-zone`, because a zone is where a full-bleed ornament
+ * would be cropped, and adding one must not silently widen a document whose scroll
+ * the iframe does not own.
+ */
+export function Zone({
+  ground,
+  className,
+  style,
+  children,
+}: {
+  ground: "surface" | "tint" | "pale";
+  /** Applied to the inner container, which is what carries the rhythm. */
+  className?: string;
+  /**
+   * Also the inner container, so a caller staggering its zones can put
+   * `--gcc-enter-index` on the same element as `.gcc-enter`. The function view is the
+   * one caller.
+   */
+  style?: React.CSSProperties;
+  children: React.ReactNode;
+}) {
+  const GROUND = {
+    surface: "bg-surface",
+    tint: "bg-surface-tint",
+    pale: "bg-surface-pale",
+  } as const;
+  return (
+    <div className={cn("gcc-zone", GROUND[ground])}>
+      <div
+        className={cn(
+          // Tighter than the band system's rhythm, on purpose. This is an embedded
+          // tool inside a page with its own rhythm, and the complaint this pass is
+          // answering was that everything was too far apart.
+          //
+          // **`md:px-8` rather than the container's own `md:px-12`, and the 16px is
+          // measured rather than trimmed by eye.** A zone is inside the floating card,
+          // so it is inset three times over — the container's gutter, the card's 8px
+          // rim, then this — and at `md:px-12` the snapshot's leading city name
+          // overflowed its cell by 3px and truncated to "Bengalu…". The figure cells
+          // are the narrowest thing on the surface and the first to fail, so this
+          // padding is set by them.
+          "mx-auto max-w-content px-6 py-8 md:px-8 md:py-10",
+          className,
+        )}
+        style={style}
+      >
+        {children}
+      </div>
+    </div>
   );
 }
 
@@ -417,11 +671,29 @@ export function PanelAction({
       onClick={onClick}
       aria-expanded={expanded}
       aria-controls={controls}
-      className="inline-flex min-h-9 items-center gap-1.5 text-sm font-semibold text-accent-teal transition-colors duration-fast ease-standard hover:text-text"
+      /* **`min-h-11`, up from `min-h-9`.** It measured 126.5 × 36 on the peer view,
+         which is under the 44px minimum on one axis — and it is one of only four
+         focusable things on the whole screen, so there was no reason for it to be the
+         tight one. The extra height is padding around the same label, so nothing
+         moves except the hit area. */
+      className="inline-flex min-h-11 items-center gap-1.5 text-sm font-semibold text-accent-teal transition-colors duration-fast ease-standard hover:text-text"
     >
       {children}
-      <span aria-hidden="true" className="text-base leading-none">
-        {expanded === true ? "\u2013" : "\u2192"}
+      {/* **A chevron, not an arrow.** `→` is the glyph for going somewhere, and this
+          control goes nowhere: it expands a region in place, on a tool that does not
+          own the URL bar. A reader who reads it as navigation is being told the wrong
+          thing by the one character that is not a word. `⌄` and `⌃` are the disclosure
+          pair, so the collapsed and expanded states are the same glyph rotated rather
+          than an arrow becoming a dash — which is what it was, and a dash reads as
+          "minus" or as an em rule rather than as "this closes". */}
+      <span
+        aria-hidden="true"
+        className={cn(
+          "text-base leading-none transition-transform duration-fast ease-standard",
+          expanded === true ? "rotate-180" : "",
+        )}
+      >
+        {"\u2304"}
       </span>
     </button>
   );
@@ -515,6 +787,7 @@ export function Stat({
 export function Chip({
   children,
   tone = "neutral",
+  size = "md",
   ground = "surface",
 }: {
   children: React.ReactNode;
@@ -524,6 +797,16 @@ export function Chip({
    * hue, and a chip has no form to vary.
    */
   tone?: "neutral" | "accent";
+  /**
+   * `sm` is a step down in type and padding, for a chip that sits beside a heading or
+   * inside a dense row rather than in a list of its own.
+   *
+   * **The index memberships take it, at ANSR's request.** "Fortune Global 500" is eighteen
+   * characters and it appeared at the same size as a city chip — on the ranked rows that
+   * put a full-size pill in the middle of a one-line row, competing with the company name
+   * it qualifies. It is a footnote about the company, not a second subject.
+   */
+  size?: "md" | "sm";
   /**
    * A neutral chip is a filled grey pill, which disappears on the tint ground and
    * inverts wrongly on the inverse one. Passing the ground is what keeps one chip
@@ -539,7 +822,10 @@ export function Chip({
   return (
     <span
       className={cn(
-        "inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium",
+        "inline-flex items-center rounded-full font-medium",
+        size === "sm"
+          ? "px-2 py-0.5 text-[0.6875rem] leading-snug"
+          : "px-2.5 py-1 text-xs",
         tone === "accent"
           ? "bg-surface-accent text-text-on-accent"
           : neutral[ground],

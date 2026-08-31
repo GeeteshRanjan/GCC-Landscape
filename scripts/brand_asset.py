@@ -135,6 +135,15 @@ def build_ramps():
             100: pale,
         },
         "orange": {
+            # The one dark step, and the mirror of 400: a quarter of the way to
+            # black where 400 is a quarter of the way to white. It exists because
+            # the brand puts orange on small type and the anchor measures 3.35:1
+            # on white — see the ramp note in tokens.css.
+            # 800 mirrors 300 (48% to white) the way 700 mirrors 400, so the dark
+            # end is a derivation on the ramp's own construction rather than a
+            # picked brown. Its one consumer is the density map's city marks.
+            800: mix(orange, CORE["black"], 0.48),
+            700: mix(orange, CORE["black"], 0.25),
             500: orange,
             400: mix(orange, white, 0.25),
             300: mix(orange, white, 0.48),

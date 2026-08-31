@@ -4,6 +4,7 @@ import { useState } from "react";
 
 import type { MapBlock } from "@/data/screen1";
 import { INDIA_ISLAND_MARKS, INDIA_OUTLINE_PATH } from "@/data/india-outline";
+import { MAP_HEIGHT, MAP_WIDTH } from "@/data/geo";
 import {
   formatCount,
   PanelAction,
@@ -33,6 +34,30 @@ import { RankedBars, type BarRow } from "@/components/public/charts";
  * the most defensible position available — and it joins the hero's silhouette on
  * the list for ANSR's sign-off rather than opening a second question.
  *
+ * **The graphic is soft marks on an unstroked silhouette, and that pass is what
+ * stopped it reading as a school diagram.** Five things were wrong at once and
+ * each had the same cause — every element on the field had a hard edge, so nothing
+ * was ground and everything was a figure:
+ *
+ *   - **Two strokes and two fills.** Established hubs were a solid disc with a
+ *     white stroke; emerging ones a white disc with a teal stroke. Now a hub is a
+ *     radial falloff with a hard core and an emerging city is a hairline ring with
+ *     no fill: one stroke and one fill on the field, differing in whether the mark
+ *     has a body. Area is still the encoding and `radiusFor` is untouched.
+ *   - **The country was stroked**, so India read as a boundary drawing rather than
+ *     as the ground the marks sit on. It is a filled silhouette now. Invariant 8
+ *     governs where the geometry comes from, not whether it is outlined.
+ *   - **The island specks were the highest-contrast marks in the eastern half of
+ *     the frame** while carrying no data, which is how territory comes to read as
+ *     dirt on a screen. They are drawn in the land's own value now.
+ *   - **Labels collided with marks.** They sat beside their dots with a knockout
+ *     stroke, and the knockout is what ate a bite out of the Pune dot. They are in
+ *     the open sea east of the coast now, with a leader line back — see
+ *     `layOutLabels`, which also explains why that field was the right place.
+ *   - **The legend was at the foot of a 430px graphic**, further from the marks it
+ *     decodes than from anything else on the card. It is at the head of the ranked
+ *     list, beside the rows that use the same word.
+ *
  * **What the outline replaced, and what it fixed.** Seven dots on a tinted panel
  * with a dashed graticule read as a scatter of marks, not as a country: the
  * graticule asserted nothing, which was the point, and therefore told the eye
@@ -58,8 +83,19 @@ import { RankedBars, type BarRow } from "@/components/public/charts";
  * square root: a city with four times the companies gets twice the radius, not
  * four times.
  */
-const RADIUS_MIN_RATIO = 0.018;
-const RADIUS_MAX_RATIO = 0.062;
+/**
+ * **Both ends came down by the same factor at ANSR's request**, so the encoding is
+ * untouched: area still tracks the count and the ratio between any two cities is
+ * exactly what it was. What changed is the scale the whole set is drawn at.
+ *
+ * The reason is the southern cluster. Bengaluru, Chennai, Mysuru, Mangaluru,
+ * Coimbatore and Salem sit inside a few degrees of each other, and at the old peak
+ * radius the leading city's halo swallowed its neighbours rather than overlapping
+ * them — which reads as one enormous blob instead of as a dense region, and loses the
+ * very thing the map is for. Smaller marks overlap and stay countable.
+ */
+const RADIUS_MIN_RATIO = 0.0135;
+const RADIUS_MAX_RATIO = 0.046;
 
 function radiusFor(companies: number, peak: number, width: number): number {
   const min = width * RADIUS_MIN_RATIO;
@@ -70,26 +106,393 @@ function radiusFor(companies: number, peak: number, width: number): number {
 }
 
 /**
- * Fill depth by share of the peak. Two steps, not three, and both are legible on
- * the pale-mint land.
+ * The hard core inside a halo, as a fraction of the field's width.
  *
- * Classed rather than computed as an opacity, so the depth comes from the token
- * ramp. It went from three steps to two because the old middle step was
- * `--ansr-teal-bright`, which this palette does not permit in a chart on a light
- * ground at all, and the step below it was within a hair of the land it was drawn
- * on. Depth is the redundant second encoding here — area is the primary one — so
- * two steps that can both be seen beats three where one cannot.
+ * **The halo is soft, so something has to stay sharp or the position stops being
+ * a position.** A radial falloff has no edge, and a mark with no edge cannot be
+ * read against a coastline — Mumbai and Pune are 80km apart and the reader has to
+ * see that as two places. The core is a fixed radius rather than a share of the
+ * halo's: it carries no quantity, so scaling it would be a second encoding of the
+ * same figure drawn at a different size.
  *
- * Tier-2 cities keep their outlined treatment regardless: that distinction is
- * categorical, it has to survive greyscale, and it is carried by form.
+ * Capped at a fraction of the halo it sits in, so the smallest hub does not come
+ * out as a solid disc with a faint rim — which is the old fill-plus-stroke mark
+ * back again at the bottom of the scale.
  */
-function fillFor(companies: number, peak: number): string {
-  const share = peak > 0 ? companies / peak : 0;
-  return share >= 0.33 ? "fill-accent-teal" : "fill-teal-500";
+const CORE_RATIO = 0.0044;
+const CORE_MAX_SHARE = 0.3;
+
+function coreFor(radius: number, width: number): number {
+  return Math.min(width * CORE_RATIO, radius * CORE_MAX_SHARE);
 }
 
-/** How many cities get a label drawn on the field itself. */
-const LABELLED = 3;
+/**
+ * The coastline, per latitude band, derived from the outline path itself.
+ *
+ * **This is what makes "outside the country" a computable fact rather than a
+ * guess**, and it is why the labels can sit in the frame's own seas instead of in
+ * gutters bolted onto the side. For each band it holds the westmost and eastmost x
+ * the silhouette reaches, so a label can be placed just beyond the coast at its own
+ * latitude — which is also what makes the placement scatter around the country's
+ * shape rather than stack into one column.
+ *
+ * **Parsed from `INDIA_OUTLINE_PATH` rather than generated beside it.** The path is
+ * pure `M`/`L`/`Z` polygons in absolute coordinates, so the extents are exact, and
+ * deriving them from the same string means there is no second artefact to keep in
+ * step — a generated table could go stale against a regenerated outline and nothing
+ * would say so. It also inherits invariant 8 for free: the extents are a property of
+ * the Natural Earth geometry, not of anything hand-authored.
+ *
+ * Computed once at module load. Segments are sampled rather than only their
+ * vertices, because a long coastal run can cross several bands without putting a
+ * vertex in any of them.
+ */
+const COAST_BANDS = 96;
+
+interface Extent {
+  min: number;
+  max: number;
+}
+
+function buildCoast(width: number, height: number): Extent[] {
+  const bands: Extent[] = Array.from({ length: COAST_BANDS }, () => ({
+    min: Infinity,
+    max: -Infinity,
+  }));
+  const bandHeight = height / COAST_BANDS;
+  const bandOf = (y: number) =>
+    Math.min(COAST_BANDS - 1, Math.max(0, Math.floor(y / bandHeight)));
+
+  const record = (x: number, y: number) => {
+    const band = bands[bandOf(y)]!;
+    if (x < band.min) band.min = x;
+    if (x > band.max) band.max = x;
+  };
+
+  /**
+   * **The MAINLAND polygon only, and this one mattered.** The outline holds every
+   * island large enough to draw, and the Andaman and Nicobar chain sits at the far
+   * east of the frame at exactly the latitudes of Chennai and Bengaluru. Measured
+   * across every subpath, the east "coast" at those latitudes came out as the
+   * Andamans rather than the mainland, so the Bay of Bengal — the roomiest empty
+   * water in the frame — read as fully occupied and the southern labels were all
+   * pushed west across the country.
+   *
+   * The mainland is the subpath with the most points, by a wide margin, so this needs
+   * no threshold to tune. The cost is that a label may now be placed over an island
+   * speck; they are drawn in the land's own value under a blur, and no label reaches
+   * that far east in practice, so the trade is worth it.
+   */
+  const subpaths = INDIA_OUTLINE_PATH.split("M").slice(1);
+  const mainland = subpaths.reduce((longest, candidate) =>
+    candidate.length > longest.length ? candidate : longest,
+  );
+
+  for (const subpath of [mainland]) {
+    const numbers = subpath.match(/-?\d+(?:\.\d+)?/g);
+    if (!numbers) continue;
+    let previousX: number | null = null;
+    let previousY: number | null = null;
+    for (let i = 0; i + 1 < numbers.length; i += 2) {
+      const x = Number(numbers[i]);
+      const y = Number(numbers[i + 1]);
+      if (previousX !== null && previousY !== null) {
+        // Sample at half a band so no crossing is missed.
+        const steps = Math.max(
+          1,
+          Math.ceil(Math.abs(y - previousY) / (bandHeight / 2)),
+        );
+        for (let step = 1; step <= steps; step += 1) {
+          const t = step / steps;
+          record(previousX + (x - previousX) * t, previousY + (y - previousY) * t);
+        }
+      } else {
+        record(x, y);
+      }
+      previousX = x;
+      previousY = y;
+    }
+  }
+
+  // A band the country does not reach inherits its nearest populated neighbour, so
+  // a label north or south of the landmass still has a defined coast to sit beyond
+  // rather than an infinity.
+  let lastKnown: Extent | null = null;
+  for (const band of bands) {
+    if (band.min === Infinity) {
+      if (lastKnown) Object.assign(band, lastKnown);
+    } else {
+      lastKnown = { min: band.min, max: band.max };
+    }
+  }
+  for (let i = bands.length - 1; i >= 0; i -= 1) {
+    const band = bands[i]!;
+    if (band.min === Infinity) {
+      const next = bands[i + 1];
+      if (next) Object.assign(band, next);
+      else Object.assign(band, { min: width / 2, max: width / 2 });
+    }
+  }
+  return bands;
+}
+
+const COAST = buildCoast(MAP_WIDTH, MAP_HEIGHT);
+
+/** The country's west and east edge at a given y. */
+function coastAt(y: number, height: number): Extent {
+  const bandHeight = height / COAST_BANDS;
+  const index = Math.min(
+    COAST_BANDS - 1,
+    Math.max(0, Math.floor(y / bandHeight)),
+  );
+  return COAST[index]!;
+}
+
+/**
+ * Where the city labels go.
+ *
+ * **Every city the ranked list names gets one**, at ANSR's request — the leading
+ * eight, and all of them once the visitor expands. And they are SCATTERED around the
+ * country rather than stacked in one column, which is the other half of the ask and
+ * the reason the coast table above exists.
+ *
+ * Three things decide a placement, in order:
+ *
+ *   1. **Which side has room.** Room is measured from the coast at that latitude to
+ *      the frame's edge, so it is the Arabian Sea on one side and the Bay of Bengal
+ *      on the other, and it varies down the country. A label goes to the side that
+ *      can actually hold its text.
+ *   2. **Then the nearer coast**, when both sides fit, which keeps the leader short
+ *      and is what makes the set scatter: the southern cities reach the Bay, the
+ *      western ones the Arabian Sea.
+ *   3. **Then vertical de-collision within each side**, after which the coast is read
+ *      AGAIN at the settled y — otherwise a label that moved down a hundred units
+ *      would still be hugging the coastline of the latitude it came from.
+ *
+ * **A single side was tried first and was wrong for a reason specific to this data:
+ * every Indian GCC city is west of the frame's midline**, so a rule as obvious as
+ * "nearer half of the frame" put all eight in one gutter and left the Bay of Bengal
+ * empty. The frame is wide because it has to contain the whole of India including the
+ * northeast, not because the cities are spread across it.
+ *
+ * Nothing here is per-city. The labelled set changes with the visitor's own
+ * disclosure, so any hand-placed offset would be wrong on the next click.
+ */
+interface Label {
+  city: string;
+  figure: string;
+  /** The leader's start: the city's own position. */
+  dotX: number;
+  dotY: number;
+  /** The dotted pointer, at the label end. */
+  circleX: number;
+  /**
+   * The leader's bend, ON THE COASTLINE at the label's own settled latitude.
+   *
+   * **This is what stops a leader running flat across the country.** The elbow used to
+   * be derived from the vertical offset alone — `dotX + min(|dotY - y|, run * 0.55)` —
+   * which meant a label needing no de-collision sat about one line-height above its
+   * dot, so the diagonal leg covered barely a dozen units and the remaining horizontal
+   * leg covered everything else. For an inland city that is a long horizontal rule
+   * drawn across the landmass, which the style lock calls the one mark this graphic
+   * must not draw: on a map whose borders are the whole point, a straight line over
+   * land is read as a border.
+   *
+   * Pinning the bend to the coast splits the leader by TERRITORY rather than by
+   * arithmetic. Everything over land is the single diagonal from the dot to the
+   * coastline; everything from the coastline to the pointer is the short leg out into
+   * open water, where a horizontal line cannot be mistaken for anything. The diagonal
+   * gets the vertical budget it needs from `rise`, which now grows with the distance
+   * the leader has to cross — see there.
+   *
+   * The orthogonal alternative — a vertical stub then a horizontal run — is the shape
+   * this file rejected before, and for the same reason it is rejected again: a purely
+   * axis-aligned leader reads as a graticule rule, and this map dropped its graticule
+   * precisely because a straight horizontal or vertical line over India is the mark
+   * most easily mistaken for a boundary. Two diagonals do not have that problem.
+   */
+  elbowX: number;
+  /** Where the text anchors, just past the pointer. */
+  textX: number;
+  /** Shared by the pointer and the text. */
+  y: number;
+  side: "left" | "right";
+}
+
+/**
+ * Average glyph advance as a share of the font size, for the display face at
+ * medium.
+ *
+ * An estimate, and it only decides which side a label goes to and how much room it
+ * is assumed to need — never what anything says. Measuring for real would mean
+ * `getComputedTextLength`, which needs a layout pass and would make the graphic
+ * shift after paint.
+ */
+const GLYPH_ADVANCE = 0.55;
+
+/**
+ * The pointer's radius, derived from the label size rather than set.
+ *
+ * **Smaller than it was, and a complete circle rather than a dashed one.** The dash
+ * pattern was four arcs round the circumference, and at this size that does not read
+ * as "dotted" — it reads as a circle that has failed to draw. A small solid ring says
+ * the same thing (annotation, not a city) without looking broken, because the size
+ * and the grey already separate it from a mark.
+ */
+function pointerRadiusFor(fontSize: number): number {
+  return fontSize * 0.26;
+}
+
+function layOutLabels(
+  cities: readonly { city: string; companies: number; point: { x: number; y: number } }[],
+  width: number,
+  height: number,
+  fontSize: number,
+): Label[] {
+  if (cities.length === 0) return [];
+
+  const pointerRadius = pointerRadiusFor(fontSize);
+  /**
+   * **How far off the coast the pointer sits, and it more than doubled.** At 0.022 of
+   * the width the names sat almost against the coastline, and a soft blurred edge
+   * immediately behind small type is what was costing legibility — the glyphs had no
+   * clear ground of their own. Pushed out, each name sits on the card's own white.
+   *
+   * It is paid for out of the room available inside the frame, so a wider inset sends
+   * more labels into the wrapper's padding. That is the right way to spend it: the
+   * padding exists, and a name that is hard to read is not worth keeping inside the
+   * viewBox.
+   */
+  const inset = width * 0.05;
+  const textGap = fontSize * 0.55;
+  const step = fontSize * 1.7;
+  const lead = inset + pointerRadius * 2 + textGap;
+  /**
+   * The vertical offset every label starts with, which is what guarantees the elbow
+   * has a bend to draw. Without it a label that needs no de-collision sits at its own
+   * dot's latitude, the diagonal leg has zero length, and the leader comes out as a
+   * plain horizontal rule — which is both the shape this map must not draw and, with
+   * some leaders bent and some not, visibly inconsistent across the set.
+   */
+  const baseRise = fontSize * 1.15;
+  /**
+   * **How much vertical offset a label gains per unit of LAND its leader has to
+   * cross**, which is what turns the land leg from a flat rule into a diagonal.
+   *
+   * The base rise alone is about one line-height, which is plenty for a coastal city —
+   * Mumbai's leader leaves the dot and is over water almost immediately, so a short
+   * 45° stub is the whole land crossing. It is nowhere near enough for an inland one:
+   * Hyderabad's dot is a long way from the Bay, so with a fixed rise the diagonal
+   * covered a dozen units and a horizontal leg covered the rest of the peninsula.
+   *
+   * Scaling the offset by the land distance gives every leader roughly the same ANGLE
+   * over land instead of the same vertical offset. At 0.45 the land leg sits at about
+   * 24° from horizontal, which is unmistakably a diagonal at every width the map
+   * renders at, and it is shallow enough that eight labels still fit the frame's height
+   * once the de-collision below has spread them.
+   *
+   * It is deliberately not steeper. At 45° the two inland northern cities would need
+   * more vertical offset than the frame has left above them, and the overflow
+   * correction would then drag the whole column down past its own dots.
+   */
+  const LAND_RISE = 0.45;
+
+  const rows = cities.map((row) => {
+    const figure = formatCount(row.companies);
+    const textWidth =
+      `${row.city} ${figure}`.length * GLYPH_ADVANCE * fontSize;
+    const coast = coastAt(row.point.y, height);
+    const roomLeft = coast.min;
+    const roomRight = width - coast.max;
+    const need = lead + textWidth;
+
+    /**
+     * **One cost per side, in the same units, so the two concerns can actually be
+     * traded off.** A hard "does it fit inside the frame" test was tried first and
+     * sent Ahmedabad — a city on the Arabian Sea — to the Bay of Bengal, because
+     * Gujarat reaches far enough west that its own sea was 33 units short. The leader
+     * then crossed the entire country to reach water it did not need.
+     *
+     * So overflowing the frame by a little is priced, and priced the same as crossing
+     * the country by a little. A short leader with a label that runs slightly into the
+     * wrapper's padding beats a correct-by-the-rule label on the far side, which is
+     * the right way round: the padding exists for this, and a leader spanning India is
+     * the one mark this graphic keeps having to avoid.
+     */
+    const cost = (room: number, distance: number) =>
+      distance + Math.max(0, need - room);
+    const side: "left" | "right" =
+      cost(roomLeft, row.point.x - coast.min) <=
+      cost(roomRight, coast.max - row.point.x)
+        ? "left"
+        : "right";
+
+    /**
+     * The land the leader has to cross on the chosen side: the dot to that side's
+     * coastline at the dot's own latitude. Near zero for a coastal city, and the
+     * whole width of the peninsula for an inland one.
+     */
+    const landRun =
+      side === "left"
+        ? Math.max(0, row.point.x - coast.min)
+        : Math.max(0, coast.max - row.point.x);
+    const rise = baseRise + landRun * LAND_RISE;
+
+    return {
+      city: row.city,
+      figure,
+      dotX: row.point.x,
+      dotY: row.point.y,
+      side,
+      // Above its own dot, or below where there is no room above.
+      y:
+        row.point.y - rise < fontSize
+          ? row.point.y + rise
+          : row.point.y - rise,
+    };
+  });
+
+  const placed: Label[] = [];
+  for (const side of ["left", "right"] as const) {
+    const column = rows
+      .filter((row) => row.side === side)
+      .sort((a, b) => a.y - b.y);
+
+    let previous = -Infinity;
+    for (const row of column) {
+      row.y = Math.max(row.y, previous + step);
+      previous = row.y;
+    }
+    const last = column[column.length - 1];
+    const overflow = last ? last.y - (height - fontSize * 0.6) : 0;
+    if (overflow > 0) for (const row of column) row.y -= overflow;
+
+    for (const row of column) {
+      // Read the coast again at the SETTLED latitude, not the city's own.
+      const coast = coastAt(row.y, height);
+      const circleX =
+        side === "left" ? coast.min - inset : coast.max + inset;
+      placed.push({
+        city: row.city,
+        figure: row.figure,
+        dotX: row.dotX,
+        dotY: row.dotY,
+        circleX,
+        // The bend, on the coastline at the SETTLED latitude — the same reading of the
+        // coast that places the pointer, so the two cannot disagree about where the
+        // water starts. See `Label.elbowX`.
+        elbowX: side === "left" ? coast.min : coast.max,
+        textX:
+          side === "left"
+            ? circleX - pointerRadius - textGap
+            : circleX + pointerRadius + textGap,
+        y: row.y,
+        side,
+      });
+    }
+  }
+  return placed;
+}
 
 /**
  * How many hubs carry the pulse.
@@ -107,11 +510,61 @@ const LABELLED = 3;
  */
 const PULSED = 3;
 
+/**
+ * Cycles the halo runs before it stops.
+ *
+ * **Two, not forever.** An infinite loop on a data mark is the one place the
+ * project's motion read as decoration: nothing about the map changes after the
+ * screen arrives, so a pulse that never stops is announcing an event that is not
+ * happening, and a reader comparing two dot sizes is doing it against a graphic
+ * that keeps moving. Two cycles is enough to say "these three are the leading
+ * hubs" and then get out of the way — the same logic as the enter animations,
+ * which are tied to a state change and then done.
+ *
+ * Ambient period, not a step on the duration scale, so it stays on
+ * `--ansr-duration-pulse`. What changed is the iteration count, in CSS beside it.
+ */
+const PULSE_CYCLES = 2;
+
 /** How many cities the ranked list shows before "Explore all cities". */
 const RANKED = 8;
 
 /** The region the disclosure controls, so `aria-controls` has something to name. */
 const CITY_LIST_ID = "city-ranking";
+
+/**
+ * The halo gradient's id.
+ *
+ * Referenced from the legend's own `<svg>` as well as from the map's, which works
+ * because `url(#id)` resolves against the document rather than the element — and it
+ * is the point: a legend swatch drawn as a flat disc would be decoding a mark that
+ * does not exist on the field.
+ */
+const HALO_GRADIENT_ID = "gcc-map-halo";
+
+/** The land's dot texture. One consumer, but `url(#…)` needs the name twice. */
+const DOT_PATTERN_ID = "gcc-map-dots";
+
+/**
+ * The dot field's grain, as fractions of the projected map's width.
+ *
+ * **The two are set together and the coverage is what actually matters.** A circle of
+ * radius r on an s x s grid inks `pi * r^2 / s^2` of the area, and that ratio is what
+ * the eye reads as the country's value — so the pair can be made as fine as wanted
+ * while the country keeps exactly the presence it had as a flat fill. At these values
+ * coverage is ~16%, which puts `--ansr-motif-ink` dots at an average of about
+ * `--ansr-teal-100` over the card: the same wash the flat fill gave, now as texture.
+ *
+ * That is why the ink is a mid teal rather than the pale one it replaced. Dots at
+ * `teal-100` over 16% of the area average out to roughly nothing — the country would
+ * not be faint, it would be absent, and "almost unnoticeable" still has to leave a
+ * country for the marks to sit on.
+ *
+ * The blur is deliberately smaller than the spacing. Past it the dots merge into a
+ * flat fill and the whole texture is gone; see `.gcc-map-land`.
+ */
+const DOT_SPACING_RATIO = 0.0066;
+const DOT_RADIUS_RATIO = 0.0015;
 
 export function CityMap({ map }: { map: MapBlock }) {
   /**
@@ -146,65 +599,197 @@ export function CityMap({ map }: { map: MapBlock }) {
     .map((city) => `${city.city}, ${formatCount(city.companies)}`)
     .join("; ")}${plotted.length > 3 ? `; and ${plotted.length - 3} more cities` : ""}. The ranked list beside this map carries every figure.`;
 
-  const rows: BarRow[] = ranked.map((city, index) => ({
+  /**
+   * **No `emphasis` on the leading row, and dropping it is a correctness fix rather
+   * than a restraint one.** It was set on `index === 0`, which drew the first bar in
+   * `--ansr-accent` and every other bar in a lighter step — so colour was encoding
+   * RANK while length encoded quantity, and the second-placed city at 64% of the peak
+   * carried exactly the same fill as the eighth at 4%. On a ramp whose whole contract
+   * is "darker means more", that is the one thing a fill may not do.
+   *
+   * Nothing is lost: the list is sorted, so the leading row is already first, its bar
+   * is already full width by construction, and its figure is already beside it. The
+   * emphasis was a fourth statement of a fact three other things carry.
+   *
+   * `BarTrack` keeps the prop, because there is a legitimate use for it — the
+   * visitor's OWN position in a set, which is a categorical distinction rather than a
+   * rank. Nothing on Screen 1 has one.
+   */
+  const rows: BarRow[] = ranked.map((city) => ({
     label: city.city,
     figure: formatCount(city.companies),
     share: map.peak > 0 ? city.companies / map.peak : 0,
-    emphasis: index === 0,
     qualifier: city.tier1 ? undefined : "emerging",
   }));
 
-  return (
-    <div className="grid items-start gap-8 lg:grid-cols-[minmax(0,7fr)_minmax(0,6fr)] lg:gap-10">
-        {/* **Two columns only at `lg`, not `md`.** At 768 the map column came out
-            around 370px, which puts the in-place city labels at about 11px and the
-            three southern hubs on top of one another — the graphic was present and
-            unreadable. Below `lg` the map takes the full width and the ranked list
-            follows it, which is also the order the two are read in. */}
-        {/* No panel. The country is the graphic, so it sits on the band's own
-            ground — a tinted box around it was what made the previous version read
-            as a widget rather than as a map.
+  /**
+   * **The labelled set is exactly the ranked list's set**, at ANSR's request — the
+   * leading eight, and every city once the visitor expands. So the two readings name
+   * the same places and the disclosure drives both at once, which is what stops the
+   * graphic and the list beside it disagreeing about how much of the industry is on
+   * screen.
+   *
+   * Filtered to the plotted ones, because a city admin added with no coordinate has
+   * no dot to point at. It stays in the list and the unplotted note names it.
+   */
+  const labelFontSize = map.width * (showAll ? 0.023 : 0.027);
+  const labels = layOutLabels(
+    ranked
+      .filter((city) => city.point !== null)
+      .map((city) => ({ ...city, point: city.point! })),
+    map.width,
+    map.height,
+    labelFontSize,
+  );
+  const pointerRadius = pointerRadiusFor(labelFontSize);
 
-            The legend is capped to the same width as the map and centred with it,
-            so the two share a leading edge. Left to the column's full width the
-            legend started 60px before the coastline did. */}
-        <div className="mx-auto flex w-full max-w-[30rem] flex-col gap-5">
+  return (
+    /**
+     * **Side by side, map and ranked list — the layout ANSR asked to keep.**
+     *
+     * A full-width map with the list beneath it was built in between, to buy room for
+     * label gutters on both sides, and it is not needed: the labels sit in the
+     * frame's OWN seas now rather than outside it, so the map keeps its column and
+     * the country keeps its size. `coastAt` is what made that possible. The only
+     * thing outside the viewBox is the occasional label at a latitude where the
+     * country is too wide to leave room, which the wrapper's small padding absorbs.
+     */
+    <div className="grid items-start gap-8 lg:grid-cols-[minmax(0,7fr)_minmax(0,6fr)] lg:gap-6">
+        {/* **`overflow-visible` plus a small inline padding is the safety valve, not
+            the layout.** Almost every label lands inside the viewBox; the few at wide
+            latitudes run past it, and rather than shrink the whole map to guarantee
+            room that most labels do not need, the wrapper reserves a little and the
+            SVG is allowed to draw into it.
+
+            Percentage padding, because it has to be a share of the map's own width
+            for the reserved room to mean the same thing in user units at every size.
+            **Below `sm` there is no padding and no label layer at all** — a phone gets
+            the country at full width, and the ranked list under it carries the names. */}
+        <div className="mx-auto w-full max-w-[32rem] sm:px-[10%]">
           <svg
             viewBox={`0 0 ${map.width} ${map.height}`}
             role="img"
             aria-label={summary}
-            // Bounded by WIDTH, not height. With `w-full` plus a max-height the
-            // drawing letterboxes inside its own box — `preserveAspectRatio`
-            // centres it and the spare width goes to nothing. A width cap keeps
-            // the box the same shape as the country, and the cap is on the wrapper
-            // so the legend inherits it.
-            className="block h-auto w-full"
+            // Bounded by WIDTH, not height: with `w-full` plus a max-height the
+            // drawing letterboxes inside its own box, because `preserveAspectRatio`
+            // centres it and the spare width goes to nothing.
+            className="block h-auto w-full overflow-visible"
           >
-            {/* India, filled in the pale mint with a hairline coast.
-                `fill-rule: evenodd` resolves interior rings as holes, which is why
-                every ring is in one path. */}
-            <path
-              d={INDIA_OUTLINE_PATH}
-              fillRule="evenodd"
-              // `teal-500` for the coast, not `teal-300`. The land is the pale mint
-              // and the two are close enough that a 300 hairline left the country
-              // with no edge at all — the shape was carried entirely by a 1.15:1
-              // fill difference against the band.
-              className="fill-surface-tint stroke-teal-500"
-              strokeWidth={map.width * 0.002}
-            />
-            {/* The 27 islands below the width of the stroke that would draw them —
+            {/* The halo's falloff, defined once and referenced by every hub.
+                `objectBoundingBox` units are the default, so one gradient scales to
+                each circle's own bounding box and the profile is identical at every
+                radius — which is what keeps the falloff from becoming a second,
+                accidental encoding. */}
+            <defs>
+              {/* **The land is a fine DOT FIELD at ANSR's request, and it is a
+                  pattern rather than generated geometry.** The ask was for the hero's
+                  dotted treatment but finer — fine enough to be almost unnoticeable.
+
+                  The hero gets its dots from `scripts/build_dot_map.py`, which writes
+                  ~112KB of zero-length subpaths. Finer dots over India at this scale
+                  would be more than that again, shipped to a visitor's browser for a
+                  texture the point of which is that you barely see it. A pattern is a
+                  few bytes, is clipped to the country by the fill itself, and lets the
+                  spacing be set to whatever "fine" turns out to mean.
+
+                  **The geometry is unchanged and invariant 8 is untouched.** It governs
+                  where the outline comes from, not how it is filled — the same reasoning
+                  that allowed unstroking it. What is drawn is still the Natural Earth
+                  India point-of-view polygon; only its fill is now a texture.
+
+                  Unlike the hero, dot size scales with the drawing rather than holding
+                  constant in device pixels. The hero needs `non-scaling-stroke` because
+                  it is a subject at one width; this is ground at four, and a texture
+                  that keeps its absolute grain while the country shrinks gets coarser
+                  relative to what it fills. */}
+              <pattern
+                id={DOT_PATTERN_ID}
+                patternUnits="userSpaceOnUse"
+                width={map.width * DOT_SPACING_RATIO}
+                height={map.width * DOT_SPACING_RATIO}
+              >
+                <circle
+                  cx={(map.width * DOT_SPACING_RATIO) / 2}
+                  cy={(map.width * DOT_SPACING_RATIO) / 2}
+                  r={map.width * DOT_RADIUS_RATIO}
+                  className="gcc-map-dot"
+                />
+              </pattern>
+              <radialGradient id={HALO_GRADIENT_ID}>
+                {/* **Dense to ~45% of the radius, not 30%, and the render is what
+                    moved it.** At 30% the falloff was so gradual that the visible
+                    extent of a mark was well inside its encoded radius, and
+                    Bengaluru at 90 and Chennai at 34 came out looking the same size
+                    — which is the encoding failing, not a styling preference. Held
+                    dense for nearly half the radius, area reads again and the mark
+                    still has no edge to make it a diagram.
+
+                    Stop colours are set in CSS so the token is named rather than
+                    written out; see `.gcc-map-halo-stop`. */}
+                <stop offset="0" className="gcc-map-halo-stop" stopOpacity="1" />
+                <stop offset="0.45" className="gcc-map-halo-stop" stopOpacity="0.88" />
+                <stop offset="0.78" className="gcc-map-halo-stop" stopOpacity="0.42" />
+                <stop offset="1" className="gcc-map-halo-stop" stopOpacity="0" />
+              </radialGradient>
+            </defs>
+
+            {/* India, filled and UNSTROKED — a silhouette rather than a boundary
+                drawing. Invariant 8 governs where the geometry comes from, not
+                whether it is outlined: a filled shape is the same claim, drawn as
+                ground. `fill-rule: evenodd` resolves interior rings as holes, which
+                is why every ring is in one path.
+
+                **`teal-200`, not the pale mint the land used to be.** Unstroking at
+                `teal-100` leaves no country at all — 1.27:1 against the card is a
+                ghost, and the hairline coast was there to compensate for exactly
+                that. One step down is 1.65:1: a shape the eye reads as ground, with
+                black label ink at 12.7:1 on it and the emerging ring's hairline at
+                3.12:1, which clears the non-text boundary floor. */}
+            {/* **The land and its islands share one blurred group, at ANSR's
+                request.** The blur is what lets the country be ground rather than
+                subject: a crisp silhouette behind soft marks was the last hard edge
+                left on the field, and it was competing with them. Blurring the group
+                rather than each path keeps the coast and the islands at the same
+                softness — done separately the specks would stay sharp and go back to
+                reading as dirt.
+
+                The land also went a step LIGHTER with the blur, from `teal-200` to
+                `teal-100`. That is not a second opinion about the earlier darkening,
+                it is what the bright orange needs: at `teal-200` the mint and the
+                orange sit at nearly the same luminance and the marks vibrated against
+                the ground, which is most of what read as bad colour. A lighter, softer
+                ground is what makes the orange the brightest thing on the card. */}
+            <g className="gcc-map-land">
+              <path
+                d={INDIA_OUTLINE_PATH}
+                fillRule="evenodd"
+                fill={`url(#${DOT_PATTERN_ID})`}
+              />
+              {/* The 27 islands below the width of the stroke that would draw them —
                 most of Lakshadweep, the smaller Nicobars. Zero-length subpaths
                 rendered as dots by a round cap, the same technique the hero's map
                 uses. They are drawn because they are Indian territory: an outline
-                that omits them draws a claim smaller than India's own. */}
-            <path
-              d={INDIA_ISLAND_MARKS}
-              fill="none"
-              strokeLinecap="round"
-              className="stroke-teal-500"
-              strokeWidth={map.width * 0.005}
-            />
+                that omits them draws a claim smaller than India's own.
+
+                **Drawn in the land's own value now, not a step darker.** At
+                `teal-500` they were the highest-contrast marks in the eastern half
+                of the frame while carrying no data, so they read as specks of dirt
+                on the screen rather than as territory. In the same token as the
+                land they are the quietest thing in the graphic and still present,
+                which is the whole requirement. */}
+              {/* Sized to the land's own dot and inked the same, so an island reads as
+                  one more grain of the same texture rather than as a different kind of
+                  mark. They are round-cap zero-length subpaths, which is the technique
+                  the hero's map uses — so on this surface the islands are the one place
+                  the dots really are geometry. */}
+              <path
+                d={INDIA_ISLAND_MARKS}
+                fill="none"
+                strokeLinecap="round"
+                className="gcc-map-dot-stroke"
+                strokeWidth={map.width * DOT_RADIUS_RATIO * 2}
+              />
+            </g>
 
             {/* The pulse, behind every dot so a halo never crosses a mark. */}
             {plotted.slice(0, PULSED).map((city, index) => {
@@ -218,116 +803,204 @@ export function CityMap({ map }: { map: MapBlock }) {
                   cy={point.y}
                   r={radiusFor(city.companies, map.peak, map.width)}
                   strokeWidth={map.width * 0.004}
-                  style={{ "--gcc-pulse-index": index } as React.CSSProperties}
+                  style={
+                    {
+                      "--gcc-pulse-index": index,
+                      "--gcc-pulse-cycles": PULSE_CYCLES,
+                    } as React.CSSProperties
+                  }
                 />
               );
             })}
 
+            {/* **Angled elbow callouts, at ANSR's request.** A 45° leg out of the
+                city, then a horizontal leg out to the gutter where the name sits.
+
+                A right-angled version was built first and lost for a reason worth
+                keeping: **a purely orthogonal leader reads as a graticule rule**, and
+                this map dropped its graticule precisely because a horizontal or
+                vertical line drawn across India is the mark most easily mistaken for
+                a boundary. A 45° leg belongs to no coordinate system, so it reads as
+                annotation. The diagonal is clamped so it can never overshoot the
+                gutter and double back.
+
+                **They are the quietest ink on the field, and with up to twenty-two of
+                them that is what keeps this from becoming a starburst.** Grey rather
+                than the marks' orange: the leaders are wayfinding between two things
+                that already carry the data, so anything louder competes with the marks
+                for the same attention. `--ansr-grey-500` is the project's designated
+                boundary grey and the only light neutral clearing 3:1.
+
+                **They go under the marks, the text and pointers over them**, so a
+                leader crossing a city it does not belong to disappears behind it and
+                comes out the other side — which reads as passing rather than as
+                stopping at it. */}
+            <g className="hidden sm:block" aria-hidden="true">
+              {labels.map((label) => {
+                const outward = label.side === "left" ? -1 : 1;
+                const toX = label.circleX - outward * pointerRadius;
+                /**
+                 * **Both legs always exist, and the bend is now a place rather than a
+                 * ratio.** The elbow sits on the coastline at the label's own latitude,
+                 * so the first leg is the diagonal across land and the second is the
+                 * short run out into open water. Clamped so the bend cannot end up
+                 * beyond the pointer itself, which would fold the leader back on itself
+                 * for a city whose coast is further out than its own label — the
+                 * northeastern latitudes, where the frame's water is narrow.
+                 *
+                 * The previous version derived the bend from the vertical offset and a
+                 * 55% cap on the horizontal run; see `Label.elbowX` for why that put a
+                 * flat rule across the peninsula.
+                 */
+                const elbowX =
+                  outward === -1
+                    ? Math.max(label.elbowX, toX)
+                    : Math.min(label.elbowX, toX);
+                return (
+                  <polyline
+                    key={`leader-${label.city}`}
+                    points={`${label.dotX},${label.dotY} ${elbowX},${label.y} ${toX},${label.y}`}
+                    fill="none"
+                    strokeLinejoin="round"
+                    strokeLinecap="round"
+                    className="stroke-grey-500"
+                    strokeWidth={map.width * 0.002}
+                  />
+                );
+              })}
+            </g>
+
+            {/* **ONE mark form on the field, at ANSR's request.** It was a solid
+                disc with a white stroke against a white disc with a teal stroke —
+                two strokes and two fills on one grid, which is what made the graphic
+                read as a school diagram. That became a halo against a hairline ring,
+                and it is now a halo against a smaller halo: every city gets the same
+                treatment and area is the only thing that varies.
+
+                **What that costs is the established/emerging distinction ON THE
+                GRAPHIC, and it is a real loss rather than a simplification.** The
+                hollow ring was the project's status-by-form rule doing actual work —
+                two marks differing in whether they had a body, which survives
+                greyscale, on a palette whose own note says it cannot separate
+                meanings by hue. With one form there is nothing left to carry it, and
+                a second colour step would be the thing that rule exists to forbid.
+                The distinction now lives only in the ranked list beside the map,
+                where each tier-2 city is labelled "emerging". The two-shape legend
+                went with it, since a key naming two marks that no longer differ is
+                simply false. On the blocked list for ANSR. */}
             {plotted.map((city) => {
               const point = city.point!;
               const radius = radiusFor(city.companies, map.peak, map.width);
               return (
-                <circle
-                  key={city.city}
-                  cx={point.x}
-                  cy={point.y}
-                  r={radius}
-                  // Tier-1 is filled at a depth set by density, tier-2 is
-                  // hollow. A difference in form, not in hue: this palette cannot
-                  // separate two meanings by colour, and fill against outline
-                  // survives greyscale and colour blindness.
-                  className={
-                    city.tier1
-                      ? `${fillFor(city.companies, map.peak)} stroke-surface`
-                      : "fill-surface stroke-accent-teal"
-                  }
-                  strokeWidth={map.width * 0.004}
-                >
-                  <title>{`${city.city}: ${formatCount(city.companies)}`}</title>
-                </circle>
+                <g key={city.city}>
+                  {/* Area is still the encoding and the radius function is
+                      untouched — the halo's outer edge is the same circle the
+                      solid disc drew, so the claim has not moved. */}
+                  <circle
+                    cx={point.x}
+                    cy={point.y}
+                    r={radius}
+                    className="gcc-map-halo"
+                  >
+                    <title>{`${city.city}: ${formatCount(city.companies)}`}</title>
+                  </circle>
+                  <circle
+                    aria-hidden="true"
+                    cx={point.x}
+                    cy={point.y}
+                    r={coreFor(radius, map.width)}
+                    className="fill-action"
+                  />
+                </g>
               );
             })}
 
-            {/* Labels last, so they sit over every dot rather than under the next
-                one drawn. Only the leading few, because six of the seven tier-1
-                cities cluster tightly enough that labelling all of them collides
-                at any width an iframe is likely to get. */}
-            {plotted.slice(0, LABELLED).map((city) => {
-              const point = city.point!;
-              const radius = radiusFor(city.companies, map.peak, map.width);
-              // Placed on whichever side has room, decided from the dot's own
-              // position rather than tuned per city — a hand-placed offset would
-              // be wrong the first time an industry had a different leading three.
-              const onLeft = point.x > map.width * 0.55;
-              const gap = radius + map.width * 0.022;
-              return (
+            {/* **The dotted pointer sits at the LABEL end, at ANSR's request** —
+                where the name is, rather than at the city. It replaced a solid pin at
+                the city end, which had a problem of its own: that end already has the
+                halo's hard core, so a second circle there was either invisible behind
+                it or a competing mark on top of it. At the name end there is nothing
+                to compete with, and the dotted stroke says plainly that it is
+                annotation rather than another city.
+
+                Drawn above the leaders so the line stops cleanly at its rim. */}
+            <g className="hidden sm:block" aria-hidden="true">
+              {labels.map((label) => (
+                <circle
+                  key={`pointer-${label.city}`}
+                  cx={label.circleX}
+                  cy={label.y}
+                  r={pointerRadius}
+                  // The card's own fill, so the leader stops at the rim rather than
+                  // showing through a hollow ring.
+                  className="fill-surface stroke-grey-500"
+                  strokeWidth={map.width * 0.002}
+                />
+              ))}
+            </g>
+
+            {/* **The names, outside the country and never over it** — the whole point
+                of the gutters. No knockout stroke is needed any more, because there is
+                nothing underneath to knock out; the knockout is what used to eat a bite
+                out of the Pune dot.
+
+                Typography is the display face at Medium with the figure alongside in
+                tabular numerals and a muted ink, so a column of names reads as one
+                list and the counts line up down it. `paint-order` and semibold both
+                went: at this size semibold in a gutter reads as shouting, and the
+                project's own display scale puts Medium here.
+
+                **Hidden below `sm`, along with the gutters that hold them.** At 390 the
+                map box is ~318px, which puts a label under 8px in a gutter ~100px wide.
+                The ranked list under the map carries every name and figure, which is
+                what makes dropping them honest rather than a gap — the same pairing the
+                accessible summary is built on. */}
+            <g className="hidden sm:block" aria-hidden="true">
+              {labels.map((label) => (
                 <text
-                  key={`label-${city.city}`}
-                  x={onLeft ? point.x - gap : point.x + gap}
-                  y={point.y}
-                  textAnchor={onLeft ? "end" : "start"}
+                  key={`label-${label.city}`}
+                  x={label.textX}
+                  y={label.y}
+                  textAnchor={label.side === "left" ? "end" : "start"}
                   dominantBaseline="middle"
-                  // Knocked out of whatever is under it. Every label sits on the
-                  // land, so it crosses the coastline, another city's dot, or both
-                  // — and `paint-order: stroke` draws a halo of the band's own
-                  // ground behind the glyphs before filling them, which is what
-                  // keeps the name readable without moving it somewhere there is
-                  // nothing to collide with. Placing labels in the sea instead
-                  // would need a leader line per city and would put Bengaluru's
-                  // name in the Arabian Sea.
-                  paintOrder="stroke"
-                  className="fill-text stroke-surface font-semibold"
-                  strokeWidth={map.width * 0.008}
-                  strokeLinejoin="round"
-                  style={{ fontSize: `${map.width * 0.03}px` }}
+                  className="fill-text font-display font-medium tracking-body"
+                  style={{ fontSize: `${labelFontSize}px` }}
                 >
-                  {city.city}
-                  <tspan className="fill-text-muted">
+                  {label.city}
+                  <tspan className="fill-text-muted tabular-nums">
                     {" "}
-                    {formatCount(city.companies)}
+                    {label.figure}
                   </tspan>
                 </text>
-              );
-            })}
+              ))}
+            </g>
           </svg>
-
-          {/* One line, where there were four. The legend decodes the two mark
-              shapes and stops there.
-
-              **Two lines were removed at ANSR's request and one of them costs
-              something real.** "Larger means more GCCs" was the area encoding said
-              out loud — the ranked list beside the map carries every figure, so a
-              reader can still recover it, but nothing on the graphic now says what
-              size means. The other was the boundary attribution: "Boundaries as India
-              states them, from Natural Earth's India point-of-view dataset."
-              **Invariant 8 in project.md required that line on the page** — a drawn
-              boundary saying whose it is, in words — and the outline is still drawn
-              from exactly that dataset. The claim did not change; the statement of it
-              did. This is the one removal in the pass that needs ANSR's explicit
-              sign-off rather than just their instruction. */}
-          <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-xs text-text-muted">
-            <span className="inline-flex items-center gap-2">
-              <svg viewBox="0 0 12 12" aria-hidden="true" className="size-3">
-                <circle cx="6" cy="6" r="5" className="fill-accent-teal" />
-              </svg>
-              Established hub
-            </span>
-            <span className="inline-flex items-center gap-2">
-              <svg viewBox="0 0 12 12" aria-hidden="true" className="size-3">
-                <circle
-                  cx="6"
-                  cy="6"
-                  r="4.5"
-                  className="fill-surface stroke-accent-teal"
-                  strokeWidth="1.5"
-                />
-              </svg>
-              Emerging location
-            </span>
-          </div>
         </div>
 
         <div className="flex flex-col gap-5">
+          {/* **THERE IS NO LEGEND ANY MORE, and it is the third line this block has
+              lost to an instruction rather than to an argument.** It named two mark
+              shapes — "Established hub" and "Emerging location" — and every city on
+              the field now draws the same halo, so the key was describing a
+              distinction the graphic had stopped making. A false key is worse than
+              none, so it went with the ring rather than being reworded.
+
+              It had already moved here from the foot of the map in the same pass,
+              because under a 430px graphic it sat further from the marks it decoded
+              than from anything else on the card. That move is moot now and the
+              reasoning is kept only so the next person does not put it back down
+              there.
+
+              **What the graphic no longer says, in order of when it was lost.**
+              "Larger means more GCCs" — the area encoding said out loud. "Boundaries
+              as India states them, from Natural Earth's India point-of-view dataset."
+              — which **invariant 8 in project.md required on the page**, and the
+              outline is still cut from exactly that dataset, so the claim drawn has
+              not changed while the statement of whose claim it is has gone. And now
+              the tier distinction. Each was ANSR's call; all three are on the blocked
+              list, because the accumulation is the problem rather than any one of
+              them. The ranked list is doing all of the explaining. */}
+
           {/* The two column names, which the ranked list itself does not carry. A
               `dl` of city-and-count pairs with no headings leaves the reader to work
               out whether the trailing figure is companies, centres or people, and

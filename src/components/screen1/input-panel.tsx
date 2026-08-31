@@ -3,6 +3,11 @@
 import { useId, useMemo, useRef, useState } from "react";
 
 import { type GccStatus, type PeerViewInput } from "@/data/screen1";
+import {
+  HQ_COUNTRY_TERMS,
+  INDUSTRY_TERMS,
+  SUB_INDUSTRY_TERMS,
+} from "@/data/search-terms";
 import { cn } from "@/lib/utils";
 import { SelectField } from "./select-field";
 import { ASK } from "./copy";
@@ -36,8 +41,9 @@ import { ASK } from "./copy";
  * thing it describes actually is; see `SelectField`'s `hint`.
  *
  * **The India-presence question was removed at ANSR's request, and its FIELD was
- * not.** `gccStatus` still exists on `PeerViewInput`, still drives `framing()`, and
- * is now supplied as a constant — see `ASSUMED_GCC_STATUS` for which value and why.
+ * not.** `gccStatus` still exists on `PeerViewInput`, still branches Screen 2's
+ * `functionFraming` and reaches the page through it, and is now supplied as a
+ * constant — see `ASSUMED_GCC_STATUS` for which value and why.
  * So this is a form with five controls over a six-field contract, deliberately,
  * and restoring the question is a UI change rather than a data migration.
  *
@@ -192,8 +198,11 @@ const CONTROL_CLASS = cn(
  * stores the display string and the matching compares it. Only sub-industry has a
  * separate id, and it builds its options inline.
  */
-function asOptions(values: readonly string[]) {
-  return values.map((value) => ({ value, label: value }));
+function asOptions(
+  values: readonly string[],
+  terms?: Readonly<Record<string, readonly string[]>>,
+) {
+  return values.map((value) => ({ value, label: value, terms: terms?.[value] }));
 }
 
 export interface BusinessTypeOption {
@@ -242,18 +251,23 @@ type Errors = Partial<Record<"industry" | "revenueBand" | "hqCountry", string>>;
 /**
  * The India-presence answer the form no longer asks for.
  *
- * **`gccStatus` is still in `PeerViewInput`, still required, and still the only
- * consumer of `framing()` — the QUESTION was removed, not the field.** Keeping the
- * contract intact is deliberate: the branch it drives is a real product feature
- * (the answer is framed differently for someone evaluating a first centre than for
- * someone expanding a tenth), the schema and server validation are untouched, and
- * restoring the control is a UI change rather than a data migration if ANSR wants
- * the question back.
+ * **`gccStatus` is still in `PeerViewInput`, still required, and still RENDERED — the
+ * QUESTION was removed, not the field.** What renders it is `functionFraming` on Screen
+ * 2, which branches on it for the `h2`, the lead and all three fields of the closing CTA.
+ * Keeping the contract intact is deliberate: the branch is a real product feature (the
+ * answer is framed differently for someone evaluating a first centre than for someone
+ * expanding a tenth), the schema and server validation are untouched, and restoring the
+ * control is a UI change rather than a data migration if ANSR wants the question back.
+ *
+ * **It used to say the field's only consumer was Screen 1's `framing()`, and that is now
+ * backwards twice over.** `framing()` has no caller in `src/` at all — Screen 1's band
+ * line is a constant — while Screen 2 has always rendered five strings off this field. A
+ * reader who takes `framing()`'s deadness for the field's would delete `gccStatus` and
+ * break Screen 2's heading and its call to action.
  *
  * `evaluating` is the branch to stand in on, because it is the one whose copy is
- * true regardless of who is reading: "You would not be first. Here is who already
- * is." is a statement about the industry, not a claim about the visitor. The other
- * two assert something the visitor never told us.
+ * true regardless of who is reading — a statement about the industry rather than a claim
+ * about the visitor. The other two assert something the visitor never told us.
  *
  * **The other half of this is in the answer header**, which no longer lists "India
  * today" among the facts it echoes back. Showing a constant there would have been
@@ -290,9 +304,15 @@ export function InputPanel({
     const nest = (name: string) => ({
       value: name,
       label: name,
+      // Search terms, not display text. This is the row a visitor has to be able to
+      // reach: taking `All of {industry}` instead drops the primary ordering signal,
+      // and the peer set that comes back is then band-and-size only. See
+      // `src/data/search-terms.ts` for the measurement.
+      terms: INDUSTRY_TERMS[name],
       children: (businessTypesByIndustry[name] ?? []).map((option) => ({
         value: option.id,
         label: option.name,
+        terms: SUB_INDUSTRY_TERMS[option.id],
       })),
     });
     return [
@@ -513,8 +533,14 @@ export function InputPanel({
                  counts are in single figures and frequency stops being informative.
                  Long enough that the panel gives itself a filter. */
               groups={[
-                { label: "Most common", options: asOptions(hqCountries.common) },
-                { label: "All countries", options: asOptions(hqCountries.others) },
+                {
+                  label: "Most common",
+                  options: asOptions(hqCountries.common, HQ_COUNTRY_TERMS),
+                },
+                {
+                  label: "All countries",
+                  options: asOptions(hqCountries.others, HQ_COUNTRY_TERMS),
+                },
               ]}
             />
           )}

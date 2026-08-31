@@ -165,8 +165,13 @@ test.describe("a breakdown", () => {
 
   test("cannot be cut below the two parts the schema requires", async ({ page }) => {
     await page.goto("/admin/metrics");
-    // Technical community activity is the two-part metric, already at the floor.
-    await openMetric(page, "Technical community activity");
+    /**
+     * The graduate pipeline is the two-part metric at the floor. It was "Technical
+     * community activity", which was deleted from the catalogue at ANSR's request —
+     * this pair is the technology tab's graduate blocks, and it is at the floor for the
+     * same reason: two entries is the schema's minimum for a breakdown.
+     */
+    await openMetric(page, "Graduate talent relevant to technology");
 
     // Disabled rather than allowed and then rejected at the publish gate.
     await expect(page.getByRole("button", { name: "Remove part 1" })).toBeDisabled();

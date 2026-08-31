@@ -1,10 +1,22 @@
+import {
+  Cloud,
+  CodeXml,
+  Database,
+  Layers,
+  Settings,
+  ShieldCheck,
+  type LucideIcon,
+} from "lucide-react";
+
 import type { HeldMetric, MetricWidth, ShownMetric } from "@/data/screen2";
 import { cn } from "@/lib/utils";
-import { Chip } from "@/components/public/primitives";
+import { Block, Panel } from "@/components/public/primitives";
 import {
+  AdjacentBlocks,
   Dumbbells,
   FigureRow,
   IndexLollipop,
+  Journey,
   NestedBar,
   NumberGridChart,
   OrdinalGrid,
@@ -12,24 +24,42 @@ import {
   RankedBars,
   StackedShare,
 } from "@/components/public/charts";
-import { HELD_CHIP, heldShapeNote, RATING_KEY_LABEL } from "./copy";
+import {
+  FLOOR_NOTE,
+  HELD_CHIP,
+  heldShapeNote,
+  indexedNote,
+  RATING_KEY_LABEL,
+} from "./copy";
 
 /**
  * One metric, drawn.
  *
- * **This file selects no charts and does no arithmetic.** Both used to happen
- * here, and both moved: every figure arrives as a string, every mark as a
- * fraction, and which of the nine renderings a metric gets is decided by
- * `breakdownDisplay` / `gridDisplay` in `src/data/screen2.ts`, where a test can
- * pin it. What is left here is layout — which is the only thing a component
- * should have an opinion about.
+ * **This file selects no charts, does no arithmetic, and no longer owns a card
+ * shell.** Chart selection is `breakdownDisplay` / `gridDisplay` in
+ * `src/data/screen2.ts`, widths and packing are `layoutArea` there, and the card is
+ * `Panel` from `components/public/primitives.tsx` — the same component Screen 1's
+ * evidence is built from. What is left here is which chart component receives which
+ * fields.
  *
- * The chart vocabulary itself is `components/public/charts.tsx`, shared with
- * Screen 1 so a bar means the same thing on both. Its governing rule is worth
- * repeating because it is what rules out a charting library here: every mark
- * carries its figure in text beside it and nothing is behind a hover. A
- * tooltip-driven chart puts the number one pointer-hover away, which on a phone
- * is nowhere.
+ * **The bespoke `Card` that used to live here is gone, and its own comment is what
+ * retired it.** It justified bordering every card on the grounds that the selected
+ * view tab had become a white surface the content must be continuous with, so a white
+ * card on a white ground had no edge to borrow. That stopped being true when the
+ * switch became the floating card's top row: the tab is now filled with the content's
+ * own ground by construction, and the joint it was reasoning about is the absence of
+ * anything rather than two edges lined up. What decides a border now is Screen 1's
+ * earned-border rule, and these cards earn one — every card in this grid draws a
+ * MARK, and a bar's full width means nothing without an edge to measure it against.
+ *
+ * The scalars do not earn one and are not here at all: they are `FunctionFigures`
+ * below, which is the figure row.
+ *
+ * The chart vocabulary is `components/public/charts.tsx`, shared with Screen 1 so a
+ * bar means the same thing on both. Its governing rule is why there is no charting
+ * library under it: every mark carries its figure in text beside it and nothing is
+ * behind a hover, because a tooltip puts the number one pointer-hover away, which on
+ * a phone is nowhere.
  */
 
 /* ==========================================================================
@@ -39,114 +69,49 @@ import { HELD_CHIP, heldShapeNote, RATING_KEY_LABEL } from "./copy";
 /**
  * How a card's width maps onto the grid.
  *
- * Twelve columns rather than two, because widths are now weighted by what the
- * card draws — see `metricWidth`. Two columns could only ever express "half" and
- * "full", which is what produced the layout's worst artefact: a single figure
- * paired with a nine-part breakdown stretched to the taller card's height, and
- * rendered as a card four fifths full of nothing.
+ * **Two values, and it is correct at every breakpoint for the first time.** `third`
+ * mapped to `sm:col-span-6 lg:col-span-4`, so between `sm` and `lg` a third was
+ * really a half — and the packing rule reasoned in thirds-of-twelve, which is why it
+ * could leave a hole at 768 that never appeared at 1440. A half is six columns at
+ * every width the grid has columns at, so there is no width whose meaning changes.
+ *
+ * **The grid starts at `lg`, not at `sm`, and 768 is why.** Two cards abreast from
+ * 640px gave each of them a 300–490px column, and both of technology's halves broke in
+ * it: the graduate blocks put a 24px figure inside a proportional block 81px wide, and
+ * the specialism rows had to fit a name, a bar and a figure into 350px, which wrapped
+ * the figure onto its own line under the label. A tablet is a one-column reading of
+ * this screen and always was — the previous grid simply never had a card narrow enough
+ * to notice. Below `lg` there are no grid columns at all, so a card is full width and
+ * every width class is inert.
  */
 const WIDTH_CLASS: Record<MetricWidth, string> = {
-  third: "sm:col-span-6 lg:col-span-4",
-  half: "sm:col-span-6",
-  full: "sm:col-span-12",
+  half: "lg:col-span-6",
+  full: "lg:col-span-12",
 };
 
-function Card({
-  width,
-  sealed = false,
-  children,
-}: {
-  width: MetricWidth;
-  /** A held metric. Bordered strongly, so it reads as closed rather than empty. */
-  sealed?: boolean;
-  children: React.ReactNode;
-}) {
-  return (
-    <li
-      className={cn(
-        // `self-start` is the other half of the stretch fix: a grid item stretches
-        // to its row by default, so even correct widths would leave a short card
-        // padded out to a tall neighbour. Height follows content instead.
-        "flex flex-col gap-5 self-start rounded-md bg-surface p-6 md:p-7",
-        /**
-         * **Every card is bordered now, and the reason is the tab strip.** An open
-         * card used to be borderless and take its edge from the pale-teal band the
-         * grid sat on — which worked, and stopped working when the selected view tab
-         * became a white surface that has to be continuous with the content beneath
-         * it. A white tab meeting a teal band is not one layer, so this screen's
-         * ground went white, and a white card on a white ground has no edge to
-         * borrow.
-         *
-         * A SEALED card keeps the STRONGER edge, which is what it always was: that
-         * firmer outline is the whole signal that the slot is closed rather than
-         * empty, and it now has to be a step above its neighbours rather than the
-         * only border on the screen.
-         */
-        sealed ? "border-2 border-border-strong" : "border border-border",
-        WIDTH_CLASS[width],
-      )}
-    >
-      {children}
-    </li>
-  );
-}
-
-function CardHead({
-  id,
-  title,
-  question,
-  chip,
-  level,
-}: {
-  id: string;
-  title: string;
-  question: string;
-  chip?: string;
-  /**
-   * 3 for an open card, which sits directly under the band's own h2; 4 for a held
-   * one, which sits under the held group's h3. Levels are a real outline, not a
-   * size — skipping one leaves a screen-reader user with a broken structure.
-   */
-  level: 3 | 4;
-}) {
-  const Heading = level === 3 ? "h3" : "h4";
-  return (
-    <div className="flex flex-col gap-2">
-      <div className="flex flex-wrap items-baseline gap-x-3 gap-y-2">
-        <Heading
-          id={id}
-          className="text-xl font-bold tracking-heading text-text"
-        >
-          {title}
-        </Heading>
-        {chip ? <Chip>{chip}</Chip> : null}
-      </div>
-      {/* The reason the card is on the screen, in the visitor's terms — not a
-          restatement of its title. */}
-      <p className="max-w-measure text-sm text-text-muted">{question}</p>
-    </div>
-  );
-}
-
 /**
- * Provenance a figure needs to be readable: the index base, and where it came
- * from.
+ * What a figure needs to be read correctly: how to take the index, how to take the
+ * plus, and where it came from.
  *
- * The unit is no longer here. It used to sit in this row alongside them, which
- * put "days" two lines below "40 to 90" with the end labels in between, reading
- * as an orphan rather than as part of the figure. It travels with the figure now,
- * and a set-level unit ("graduates a year") travels as the chart's axis note,
- * where it labels every part at once.
+ * The unit is not here — it travels with the figure, and a set-level unit
+ * ("graduates a year") travels as the chart's axis note, where it labels every part
+ * at once.
  */
 function CardMeta({
   indexBaseline,
+  atLeast,
   asOf,
 }: {
   indexBaseline?: string;
+  atLeast?: boolean;
   asOf?: string;
 }) {
   const parts = [
-    indexBaseline ? `Indexed: ${indexBaseline}` : undefined,
+    // `indexedNote`, not a literal: the composed finance cards state the same string as
+    // a card SUBTITLE rather than as a foot note, and two copies of the prefix would let
+    // one of them be reworded alone.
+    indexBaseline ? indexedNote(indexBaseline) : undefined,
+    atLeast ? FLOOR_NOTE : undefined,
     // Verbatim, not prefixed with "As of". The schema calls this free-text
     // provenance rather than a date, so a prefix turns a phrase into nonsense the
     // moment somebody types anything other than a quarter.
@@ -157,24 +122,16 @@ function CardMeta({
   return <p className="text-xs text-text-muted">{parts.join(" · ")}</p>;
 }
 
-/**
- * A figure and its unit on one line.
- *
- * Sized down from the previous 48px display, which is the size Screen 1's
- * national scale figures use. Three of those on a tab, then five more, spends the
- * emphasis until none of them has any — and a metric card's figure is evidence
- * inside an argument rather than the headline of a band.
- */
-function ScalarValue({ figure, unit }: { figure: string; unit?: string }) {
-  return (
-    <p className="flex flex-wrap items-baseline gap-x-3 text-3xl leading-tight font-bold tracking-display text-text tabular-nums md:text-4xl">
-      {figure}
-      {unit ? (
-        <span className="text-sm font-medium text-text-muted">{unit}</span>
-      ) : null}
-    </p>
-  );
-}
+/* ==========================================================================
+   The figure row moved out of this file
+
+   **Every tab's opening row of figures is `SummaryFigures` now, in
+   `summary-figures.tsx`.** This file drew technology's — with a line glyph over each
+   figure and CSS hairlines between the cells — while HR, operations and finance each
+   drew their own, so one screen had four different opening objects. One component
+   draws all four, on Screen 1's snapshot treatment; the reasoning, including why the
+   glyphs and the dividers went, is on that file.
+   ========================================================================== */
 
 /* ==========================================================================
    The open card
@@ -183,25 +140,54 @@ function ScalarValue({ figure, unit }: { figure: string; unit?: string }) {
 export function MetricCard({
   shown,
   width,
+  container = "panel",
 }: {
   shown: ShownMetric;
-  /** From `metricWidth`, so the grid and the ordering agree on one value. */
+  /** From `layoutArea`, already packed, so the component does no arithmetic. */
   width: MetricWidth;
+  /**
+   * Whether the card draws its own edge.
+   *
+   * **`panel` is the default, which reverses a recorded decision and puts this screen
+   * back on the peer view's rule.** For one pass it was `block`: the argument was that
+   * the zones do the sectioning, so a boundary between sections is a colour change
+   * rather than two hairlines, and that an inline ranked row puts its bar in a 38%
+   * middle column with no track, so the card's edge was never what the bar measured
+   * against. Both halves are still true and neither was the problem.
+   *
+   * What settled it is that the other three tabs never gave their borders up. So the
+   * one screen carried borderless cards on technology and bordered ones on HR,
+   * operations and finance — a difference a visitor meets by clicking a tab, with
+   * nothing behind it but which file drew the tab. The peer view answers the same
+   * question one way for the whole surface: a block that draws a MARK gets a `Panel`,
+   * a grid of its own cards or a run of text gets a `Block`, and the zones alternate
+   * underneath both. Every card in this grid draws a mark.
+   *
+   * `block` is kept and is not dead: it is what a section of text or of its own cards
+   * would take, and it is one prop away.
+   */
+  container?: "panel" | "block";
 }) {
   const { metric } = shown;
-  const headingId = `metric-${metric.id}-heading`;
+  // Both containers derive their heading id as `${id}-heading`, which is the id the
+  // grid charts point `aria-labelledby` at.
+  const panelId = `metric-${metric.id}`;
+  const headingId = `${panelId}-heading`;
+  const Container = container === "panel" ? Panel : Block;
 
   return (
-    <Card width={width}>
-      <CardHead
-        id={headingId}
-        title={metric.title}
-        question={metric.question}
-        level={3}
-      />
-
+    <Container id={panelId} title={metric.title} className={WIDTH_CLASS[width]}>
+      {/* One column with a real gap, so `CardMeta` is not butted against the last
+          row of the chart above it. Neither container supplies one — `Panel`'s body
+          and `Block`'s both stack their children — and the reading instruction is the
+          one element on the card that must not look like part of the chart. */}
+      <div className="flex flex-col gap-4">
       {shown.shape === "scalar" ? (
-        <ScalarValue figure={shown.figure} unit={metric.unit} />
+        // Unreachable through `layoutArea`, which routes every scalar to the figure
+        // row. Kept so a card can still render one rather than nothing.
+        <p className="text-3xl leading-tight font-bold tracking-display text-text tabular-nums md:text-4xl">
+          {shown.figure}
+        </p>
       ) : null}
 
       {shown.shape === "range" ? (
@@ -244,23 +230,72 @@ export function MetricCard({
         <OrdinalGrid
           columns={shown.grid.columns}
           steps={shown.grid.steps}
-          rows={shown.grid.rows}
+          rows={withRowIcons(shown.grid.rows)}
           anchorColumn={shown.grid.anchorColumn}
           labelledBy={headingId}
           keyLabel={RATING_KEY_LABEL}
         />
       ) : null}
 
-      <CardMeta indexBaseline={metric.indexBaseline} asOf={metric.asOf} />
-    </Card>
+      <CardMeta
+        indexBaseline={metric.indexBaseline}
+        atLeast={metric.atLeast}
+        asOf={metric.asOf}
+      />
+      </div>
+    </Container>
   );
 }
 
 /**
- * One of four readings of a set of named parts.
+ * A glyph beside each capability in the comparison grid.
  *
- * Which one is `shown.display`, decided from the values in `screen2.ts`. The two
- * that are not a bar chart are the interesting ones, and both exist because a bar
+ * **Keyed off the row LABEL, which is the one place on this screen that reads one,
+ * and it is licensed by what happens when it is wrong.** Every other rule here is
+ * forbidden from parsing a label because the consequence is a changed CLAIM — a
+ * renamed part silently redrawing a chart, or a parsed axis name changing a number.
+ * The consequence here is a missing 16px outline glyph, and the grid says exactly the
+ * same thing without it.
+ *
+ * The all-or-nothing guard is the same as the figure row's, for the same reason: five
+ * rows of which four have a glyph reads as one that failed to load. A renamed row
+ * therefore drops the whole column rather than leaving a gap in it.
+ *
+ * `FIGURE_ICONS` is keyed by id and this is not, because a matrix row is not a metric
+ * — it is one of the admin-editable strings inside one, and there is no id to key on.
+ */
+const CAPABILITY_ICONS: Record<string, LucideIcon> = {
+  "Product engineering": CodeXml,
+  "Data and AI": Database,
+  "Cloud and platform": Cloud,
+  Cybersecurity: ShieldCheck,
+  "Enterprise technology": Settings,
+  // The two other matrix row vocabularies a rated grid could arrive with. Present so
+  // the guard is satisfiable on more than the one grid it was written for.
+  "Shared services": Layers,
+  Engineering: Settings,
+};
+
+function withRowIcons<T extends { label: string }>(
+  rows: readonly T[],
+): Array<T & { icon?: React.ReactNode }> {
+  const mapped = rows.every((row) => CAPABILITY_ICONS[row.label] !== undefined);
+  if (!mapped) return rows.map((row) => ({ ...row }));
+  return rows.map((row) => {
+    // Non-null by the guard above, which the compiler cannot see.
+    const Icon = CAPABILITY_ICONS[row.label]!;
+    return {
+      ...row,
+      icon: <Icon aria-hidden="true" strokeWidth={1.5} className="size-4.5" />,
+    };
+  });
+}
+
+/**
+ * One of five readings of a set of named parts.
+ *
+ * Which one is `shown.display`, decided from the values in `screen2.ts`. The ones
+ * that are not a bar chart are the interesting ones, and each exists because a bar
  * would have been actively worse:
  *
  *   - `stack` — a percentage split that sums to a whole. Four bars against a 100%
@@ -269,6 +304,8 @@ export function MetricCard({
  *   - `figures` — percentages clustered at the top of their domain. On an honest
  *     axis 99.95% and 99.5% draw as identical bars; on a truncated one they draw
  *     a difference that is not there. So no bar, and the figures carry it.
+ *   - `journey` — the parts are waypoints on one path. Bars from a shared zero
+ *     say "four separate quantities" about one centre measured four times.
  */
 function BreakdownChart({
   shown,
@@ -284,11 +321,44 @@ function BreakdownChart({
     case "figures":
       return <FigureRow parts={shown.parts} />;
 
+    case "journey":
+      // Guarded rather than asserted, like `nested` below: `breakdownDisplay` only
+      // returns "journey" when the legs can be built, and a half-drawn card is the
+      // thing worth avoiding.
+      return shown.legs ? (
+        <Journey legs={shown.legs} axisNote={unit} />
+      ) : (
+        <RankedBars rows={shown.parts} axisNote={unit} inline />
+      );
+
+    case "adjacent": {
+      /**
+       * Two proportional blocks side by side, asserting nothing about how the two
+       * populations relate. See `AdjacentBlocks` and `subset` in `schema.ts` — this is
+       * what a two-part breakdown draws when containment is NOT claimed, and the
+       * graduate pair is the case it exists for.
+       */
+      const blocks = shown.parts.flatMap((part) =>
+        part.span === undefined
+          ? []
+          : [{ label: part.label, figure: part.figure, span: part.span }],
+      );
+      // Guarded rather than asserted, like the two below: `span` is set on exactly the
+      // parts of an adjacent breakdown, and a half-drawn card is the thing worth
+      // avoiding.
+      return blocks.length === shown.parts.length ? (
+        <AdjacentBlocks blocks={blocks} unit={unit} />
+      ) : (
+        <RankedBars rows={shown.parts} axisNote={unit} inline />
+      );
+    }
+
     case "nested": {
       const [total, part] = shown.parts;
       // Guarded rather than asserted: `breakdownDisplay` only returns "nested"
       // for exactly two parts, and a half-drawn card is the thing worth avoiding.
-      if (!total || !part) return <RankedBars rows={shown.parts} axisNote={unit} />;
+      if (!total || !part)
+        return <RankedBars rows={shown.parts} axisNote={unit} inline />;
       return (
         <NestedBar
           total={{ label: total.label, figure: total.figure }}
@@ -305,11 +375,20 @@ function BreakdownChart({
     }
 
     case "bars":
+      /**
+       * **`inline`, which is a third of the height and is the same chart.** Label, bar
+       * and figure on one line, with the bar as the middle column and no grey track
+       * behind it. Safe here because every bar set this screen draws is ranked by the
+       * quantity its bars encode, so row one is full width and states the axis — the
+       * self-labelling exemption. It wraps back to the two-line layout below `sm`.
+       */
       return (
         <RankedBars
           rows={shown.parts}
           axisNote={unit}
           dense={shown.parts.length > 5}
+          inline
+          bareTrack={shown.selfLabelling}
         />
       );
   }
@@ -334,7 +413,9 @@ function BreakdownChart({
         visible axis can imply the answer. So the shape is drawn true and named in
         text, and nothing is invented to fill it.
      - **A stronger border and a chip, not a dimmer card.** Dimming says
-       unavailable. A firmer edge says closed.
+       unavailable. A firmer edge says closed. That is `tone="sealed"` on `Panel`
+       now rather than a bespoke shell here, so a held card and an open one cannot
+       drift apart in radius, padding or heading scale.
      - **Never a blur over real text.** There is no real text here to blur: the
        value never reached the browser, and `GatedMetric` has no field it could
        have travelled in.
@@ -400,20 +481,29 @@ function HeldShape({ shape }: { shape: HeldMetric["metric"]["shape"] }) {
   }
 }
 
-export function HeldMetricCard({ held }: { held: HeldMetric }) {
+export function HeldMetricCard({
+  held,
+  width,
+}: {
+  held: HeldMetric;
+  /** From `layoutArea`. The held grid is packed now too — it used to leave a hole. */
+  width: MetricWidth;
+}) {
   const { metric } = held;
 
   return (
-    <Card width={metric.shape.kind === "matrix" ? "full" : "half"} sealed>
-      <CardHead
-        id={`metric-${metric.id}-heading`}
-        title={metric.title}
-        question={metric.question}
-        chip={HELD_CHIP}
-        level={4}
-      />
+    <Panel
+      id={`metric-${metric.id}`}
+      title={metric.title}
+      tone="sealed"
+      className={WIDTH_CLASS[width]}
+      chip={HELD_CHIP}
+      // Under the held group's own `h2`, so a level down. The size is unchanged —
+      // a sealed card is not a smaller card, it is a closed one.
+      headingLevel={3}
+    >
       <HeldShape shape={metric.shape} />
       <p className="text-xs text-text-muted">{heldShapeNote(metric.shape)}</p>
-    </Card>
+    </Panel>
   );
 }

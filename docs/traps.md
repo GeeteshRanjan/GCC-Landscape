@@ -1,0 +1,167 @@
+# Traps — things that have cost real time here
+
+Code only. Brand lives in `design-stack.md`, visual reasoning in `.tastemaker/style-lock.md`,
+invariants in `project.md`. Moved out of `handoff.md` when that file went over its ceiling: a trap is
+durable reference rather than current state, so it does not belong in a file that is rewritten every
+session. Read on demand, and add to it whenever something costs more than one attempt.
+
+## The tool and the test suite
+
+- **Reach the dev server at `http://localhost:3000`, never `127.0.0.1`.** Next 16 403s React's chunk
+  cross-origin and the page renders perfectly with ZERO interactivity. **Check whether one is already
+  running before starting another.** **And kill stale Playwright runs before starting a new one**: the
+  config's own server binds 3210 and a second run dies with "already used" rather than reusing it.
+- **Never touch `.next/` while a dev server holds it.** Deleting `.next/dev` under a running process
+  leaves Turbopack looking up `.sst` files that no longer exist: every request 500s,
+  `TurbopackInternalError: Failed to lookup task ids` fills
+  `.next/dev/logs/next-development.log`, and the process does not recover on its own. Recovery is kill
+  the `next dev` AND its `next-server` child, `rm -rf .next`, restart. Cost a full round of
+  debugging once, presenting as a working tree that had suddenly stopped serving.
+- **`sr-only` text is reported by `innerText` and Playwright counts it visible** — its box is 1×1, not
+  zero. Assert the geometry, or a "not in visible text" check passes whether the change happened or not.
+- **`getByRole("combobox", { name })`, never `getByLabel`**, which matches the open tree. Industry rows
+  are labelled by ABBREVIATION ("BFSI"); the `All of {industry}` exit row is a **treeitem**. The submit
+  button is "See my results". Screen 2's function tab is **"HR"**, not "Human resources".
+- **`await expect(band(page, id)).toBeVisible()` before counting anything in it.** Locators evaluated
+  straight after `ask()` sample a page mid-phase-change and every count reads 0.
+- **A JS regex `matches?` means "matche" plus an optional s.** A spec asserting a singular/plural pair
+  needs `match(es)?`. Cost one full browser run.
+- **A throwaway harness under `.cache/review/` needs `main()`** — `tsx` emits CJS here and rejects
+  top-level `await` — **and `page.evaluate` must take a STRING, not a closure**: `tsx` rewrites arrow
+  functions and the injected code throws `__name is not defined`. Plain `.mjs` under `node` sidesteps
+  both.
+- **`getComputedStyle().transitionProperty` is `all` by default**, so a "no `transition-all`" check must
+  also require `transitionDuration > 0` or it flags several hundred innocent elements.
+- **`detect.mjs src` times out at 120s.** Pass the two or three component directories instead. And
+  `npx eslint src/**` does not finish inside five minutes here — rely on `tsc` plus `next build`.
+
+## Markup and CSS
+
+- **`display: flex` on a `<summary>` silently removes the native disclosure marker**, leaving a
+  pressable heading with no affordance. `list-inside` then puts the marker ABOVE the heading rather than
+  beside it; `list-item list-outside` plus inline padding is the fix, with the flex moved to a wrapper
+  inside.
+- **Anything mounted outside `tool.tsx` must carry `font-display` itself**, or the whole surface renders
+  in Inter including the `h1` lockup. `project.md`'s architecture map explains why it is set once.
+- **`.gcc-*` blocks in `globals.css` and `tokens.css` are UNLAYERED** and outrank Tailwind utilities.
+  A Tailwind class cannot be interpolated: `lg:col-span-${n}` generates nothing.
+- **Content inside the card is inset three times** — container gutter, card, zone padding — so both
+  content surfaces are on `md:px-8`. The result band's ornaments are SWAPPED at `lg`, not layered, and
+  the tab bar takes its corners from `.gcc-result-card`'s radius and must never get one of its own.
+- **The land's dot pattern and the blur are coupled.** `filter: blur()` on `.gcc-map-land` above the dot
+  spacing merges the field into a flat fill, so the texture silently disappears.
+- **`brand_lint.py` rejects a raw hex inside a COMMENT.** Name the token, never quote its value.
+
+## Data and the catalogue
+
+- **Do not delete `gccStatus` on the strength of `framing()` having no caller.** Screen 2's
+  `functionFraming` still branches its three closing-CTA fields off it. `project.md`'s input table is the
+  authority.
+- **A chart may never be chosen by parsing a label**, and monotonic values are not a discriminator
+  either: latency and the scale curve are both four rising durations. `progression` is authored, and
+  `tests/unit/screen2.test.ts` pins the counter-example.
+- **Editing the metric catalogue does not change the app.** The seed is only adopted by
+  `data:import -- --reseed-metrics`; `data/dataset.json` is the record, so adding, removing or
+  re-flagging a metric has to be patched there too. Round-tripping that file through
+  `json.dumps(indent=2, ensure_ascii=False)` plus a trailing newline reproduces its formatting exactly,
+  so a surgical edit stays a small diff. **Running vitest while that file is mid-write** makes unrelated
+  suites fail to collect; re-run before believing it.
+- **A moved profile figure is a two-file commit.** `npm run data:verify -- --accept` rewrites
+  `data/verify-baseline.json`; `docs/data-audit.md` has to follow in the same commit.
+- **`tsc` covers `scripts/` but `tsx` does not typecheck**, `noUncheckedIndexedAccess` is on,
+  `hqCountry` is `"USA"`, the taxonomy holds `"Scotland"`, and there is no "SaaS" business type.
+
+## Rendering and review
+
+- **`fullPage` screenshots time out on `Group 149.svg`** — 7.4MB, 5,531px tall. Inline it with
+  `setContent` at a 1440×1383 viewport, then scroll a viewport at a time and take four shots. Reading
+  the board is the only way to settle a card-chrome question; a description of it is not the board.
+- **A Tailwind class cannot be interpolated.** `lg:grid-cols-${n}` generates no CSS at all, which
+  renders as a single column and looks deliberate. Use a static map keyed by the count.
+- **The revenue bands use an EN DASH**, not a hyphen: `$1 Bn – $5 Bn`. A spec or harness typing a
+  hyphen waits 30s and fails on a control that is working correctly. The form's label is "Annual
+  revenue", not "Revenue band" — the pill on the result band says the latter.
+- **`getComputedStyle(el).outlineWidth` on a programmatically focused element reads 0.** `:focus-visible`
+  needs keyboard-ish focus, so `el.focus()` from `page.evaluate` reports no ring on a control that has
+  one. Drive it with real `Tab`/arrow presses before concluding a focus ring is missing.
+- **The HR tab is COMPOSED, so its shape does not follow `layoutArea` like the other three.** Its
+  three scalars are bordered summary cards in a `ul` (still `li`s, so `getByRole("listitem")` still
+  means a figure cell) and only its four remaining open metrics plus two held ones are
+  `section[id^="metric-"]`. So `#function-metrics` holds 3 figures and 6 metric sections on HR, where
+  the derived tabs' counts come straight from the view model. Its sections are located by id —
+  `hr-velocity`, `hr-analysis`, `hr-held`, plus `#figures-hr-heading` — and never by heading text.
+- **Its held group's heading is not `heldHeading`'s wording.** HR uses `HR_HELD_HEADING`, "Figures
+  shaped by your roles and cities", where the derived tabs say "depend on". A spec matching
+  `/depends? on your roles and cities/` finds nothing on HR. The id is the contract.
+- **HR's cards have borders and a 4px radius; the other three tabs' do not.** A spec asserting a
+  borderless card, or `rounded-none`, fails on HR and passes everywhere else.
+- **"Held back" is inside a lock on HR, not in a chip.** It is `sr-only` text on the padlock disc, so
+  it is in the accessibility tree and in `textContent` but has no visible chip to locate.
+- **`FLOOR_NOTE` is imported into `0-screen2.spec.ts`, not retyped.** It was spelled out in three
+  places, so rewording it — "+ indicates a floor" for "+ is a floor" — failed a spec that was testing
+  WHERE the note renders rather than what it says. Import the constant.
+- **A `RangeBenchmark` endpoint figure has no element whose exact text is the numeral.** "7" and "days"
+  are two children of one span, so `getByText("7", { exact: true })` finds nothing and a non-exact
+  match hits "70" as well. Read the card's normalised `textContent` and match a pattern.
+- **A `MilestoneTrack` item's text has no separator in it** — `"50 FTEs6"`, not `"50 FTEs 6"` — because
+  the milestone and its duration are a `dt` and a `dd` of one pair with no whitespace between them.
+- **The milestone positions are read off `--gcc-at`, not off geometry.** `.gcc-milestones__item` is
+  absolutely positioned only from `sm`; below it there is no rail and no dot at all, so a spec
+  measuring bounding boxes at 390 measures a vertical list.
+- **`npx playwright test` does NOT rebuild the fixture.** Only `npm run test:browser` runs
+  `prepare.ts`, which copies `data/dataset.json` into `tests/browser/.tmp`. After a catalogue change,
+  running Playwright directly tests the OLD data and the failures point at the wrong thing — a stale
+  fixture is how a removed metric turns up as a mystery half-empty grid row.
+- **TWO tabs are composed now, HR and OPERATIONS, so "the composed tab" is ambiguous.** Everything
+  above about HR's shape applies to operations with its own numbers: `#function-metrics` holds **4
+  figures and 5 metric sections** on operations, against HR's 3 and 6 and the derived tabs' own
+  view-model counts. Its bands are `ops-velocity` and `ops-supporting`, plus
+  `#figures-operations-heading`, and its cards are bordered at 4px like HR's.
+- **Three operations metrics have NO `metric-*` section at all.** `ops-grade-a-office-stock`,
+  `ops-power-uptime` and `ops-disruption-days` are summary CELLS, so `#metric-ops-power-uptime` does
+  not exist and a spec looking for the card finds nothing. The figure is in the first `ul` of the band.
+- **The operations summary carries no glyph and HR's carries three.** A spec asserting `svg` count on
+  "the composed tab's summary" gets 0 on operations and 3 on HR. Both are deliberate; see
+  `project.md`.
+- **The disruption cell reads "2 – 6", not "0", and its text contains "to".** The visible en dash is
+  `aria-hidden` with an `sr-only` " to " beside it, so `textContent` is `"2–to6"` once whitespace is
+  collapsed. Matching `/2\s*–\s*6/` fails; match `/2\s*–\s*to\s*6/` or read the two figures
+  separately.
+- **`VELOCITY_HEADING` is one constant on two tabs.** "Hiring velocity benchmarks" appears on HR AND
+  operations, so `getByRole("heading", { name: "Hiring velocity benchmarks" })` is not tab-specific and
+  cannot be used to prove which panel is mounted. Use an exclusive heading — "Supporting operational
+  benchmarks" or "Scale and salary analysis" — or a section id.
+- **A card's heading LEVEL differs between a derived and a composed tab.** It is `h2` on technology,
+  where a card is a top-level section of the panel, and `h3` on HR, operations and finance, where it
+  sits under a section heading — except a composed tab's own analytical `Panel`s, which are `h2` with
+  their contents at `h3`. A locator pinning `level: 2` silently matches nothing on much of the
+  screen — which is exactly what happened to the shared-figures spec, whose own "not every metric is on
+  every tab" escape hatch turned the miss into a skip.
+- **"the composed tab" now means one of THREE, and none of them is shaped like another.** HR is 3
+  summary cells and 6 sections; operations 4 and 5; finance 3 and 5. Three operations metrics have no
+  `metric-*` section at all, being summary cells, and finance's three analytical `Panel`s are direct
+  children of the zone rather than of a grid.
+- **A finance `Panel` is a direct child of the zone's padded container.** Anything measuring a card
+  against `cards[0].parentElement` is measuring against a box that includes the surface's horizontal
+  padding — a full-width 1120px card inside a 1184px padded box reads as 94.6% full. The part-empty-row
+  spec now reads each row's own container CONTENT box; copy that, do not copy the old version.
+- **`#function-metrics ul > li` means "a figure-row cell", on all four tabs.** It is the count several
+  specs use for how many figures a tab leads on, so a composed tab must not introduce a second list —
+  which is why finance's three tier-spread cards are a `div` of `div`s despite being a set.
+- **The operations tab renders ONE zone.** Every other tab renders two or three, because it has no
+  gated metric and therefore no mint band. A spec asserting "at least two `.gcc-zone` per tab" fails on
+  it; the property worth asserting is that adjacent grounds differ.
+- **`IndexSpread`'s hidden wrapper holds marks AND axis labels.** `div[aria-hidden="true"] > span` used
+  to reach the two rail dots and now reaches nothing, the dots being one level deeper since the "0" and
+  base-figure ticks were added. Select `div[aria-hidden="true"] span` and filter on a non-empty inline
+  `insetInlineStart`, which is what the dots have and the labels do not.
+- **`Dumbbells` and `IndexLollipop` are drawn nowhere.** The finance composition replaced them with
+  `IndexSpread` and `IndexTable`, and technology — the only derived tab left — has no index grid. A
+  spec looking for a lollipop row or a dumbbell connector is testing a rendering that no longer exists;
+  both are still what `metric-card.tsx` would route a derived tab's index grid to.
+- **`Journey`'s intervals — "+6", "+12" — are on no screen any more.** All three composed tabs draw the
+  progression as a `MilestoneTrack`, and operations was the last tab drawing the staircase. A spec
+  looking for a leg, a run-up or an interval on operations is testing a rendering that no longer
+  exists; `journeyLegs` is still unit-tested in `screen2.test.ts`.
+- **The function tab strip has no `svg` in it.** The four glyphs were removed at ANSR's request, so a
+  spec locating a tab by its icon, or counting icons in `tablist`, finds none.

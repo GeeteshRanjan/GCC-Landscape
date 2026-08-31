@@ -83,6 +83,8 @@
   --color-teal-100: var(--ansr-teal-100);
   --color-teal-50: var(--ansr-teal-50);
 
+  --color-orange-800: var(--ansr-orange-800);
+  --color-orange-700: var(--ansr-orange-700);
   --color-orange-500: var(--ansr-orange-500);
   --color-orange-400: var(--ansr-orange-400);
   --color-orange-300: var(--ansr-orange-300);
@@ -126,6 +128,11 @@
      see the token. 6.53:1 on the inverse band and 2.44:1 on white, so it is only
      ever correct on an inverse ground. */
   --color-accent-inverse: var(--ansr-accent-inverse);
+  /* The WARM accent, as ink on a LIGHT ground — `text-accent-warm`. Reached by
+     that name and not by `text-action`, which is the anchor and is 3.35:1 on
+     white: the split between the two is a size rule, and the token names carry
+     it. 6.53:1 on white, 5.14:1 on the mint. Never on a dark ground. */
+  --color-accent-warm: var(--ansr-accent-warm);
   --color-focus: var(--ansr-focus);
 
   --color-feedback-neutral: var(--ansr-feedback-neutral);
@@ -841,12 +848,110 @@
 
 @media (prefers-reduced-motion: no-preference) {
   .gcc-map-pulse {
+    /* **Two cycles, not `infinite`.** This was the one place the project's motion
+       read as decoration rather than as meaning: nothing about the map changes
+       after the screen arrives, so a pulse that never stops announces an event
+       that is not happening — and a reader comparing two dot areas is doing it on
+       a graphic that keeps moving under them. Two cycles is long enough to say
+       which three are the leading hubs and then get out of the way, which puts it
+       on the same footing as the enter animations rather than on the marquee's.
+
+       The count comes from the component (`PULSE_CYCLES`) so the number lives in
+       one place, beside the reasoning for it. */
     animation: gcc-map-pulse var(--ansr-duration-pulse) var(--ansr-ease-exit)
-      infinite;
+      var(--gcc-pulse-cycles, 2);
     animation-delay: calc(
       var(--gcc-pulse-index) * var(--ansr-duration-pulse) / 3
     );
   }
+}
+
+/* --------------------------------------------------------------------------
+   The hub halo — the mark itself, not the pulse above it
+
+   **A hub is a radial falloff with a hard core, not a disc with a stroke.** The
+   previous mark was a solid fill plus a white stroke, sitting on a grid where the
+   emerging mark was a white fill plus a teal stroke: two strokes and two fills,
+   which is what made a density map read as a school diagram. A halo has no stroke
+   and the emerging ring has no fill, so there is exactly one of each on the field
+   and the two differ in whether they have a body — a distinction that survives
+   greyscale, on a palette whose own note says it cannot separate meanings by hue.
+
+   The gradient is declared in the map's `<defs>` with the default
+   `objectBoundingBox` units, so one definition scales to every circle and the
+   falloff profile is identical at every radius. That matters for more than tidiness:
+   a profile that varied with size would be a second, accidental encoding of the
+   figure the radius already carries.
+
+   Stop colours are set here rather than as `stop-color` attributes so the token is
+   named — brand_lint.py is right to refuse a literal value, and an attribute cannot
+   carry a class's worth of reasoning.
+   -------------------------------------------------------------------------- */
+.gcc-map-halo {
+  fill: url(#gcc-map-halo);
+}
+
+/* **The mark's ink is the BRIGHT brand orange, and the ground was rebuilt around it
+   rather than the other way round.** The ask went orange, then brown, then bright and
+   vibrant, and the third one is `--ansr-action` — the anchor itself, nothing derived.
+
+   **What made that legal was moving the land, not bending the rule.** The anchor is
+   2.03:1 on `--ansr-teal-200`, which is where these marks used to sit: nearly the same
+   luminance as the ground, which is precisely why the colour read badly — two
+   saturated fills at one value vibrate against each other instead of separating. On
+   `--ansr-teal-100`, blurred, the ground drops out of the way and the mark is the
+   brightest thing on the card.
+
+   It is still under 3:1 against that ground, and the position taken is the project's
+   own: **every mark here is a second reading of a figure that is already in text.**
+   The ranked list under the map carries every city and count, which is the same reason
+   the marks are `aria-hidden` rather than described. A graphic that is redundant to
+   text is not the sole carrier of the information, so the 1.4.11 floor is not what
+   decides it. Where that argument does NOT reach is a mark carrying something the text
+   does not — no other chart in the project may borrow this.
+
+   **It also departs from project.md's chart rule**, which says colour inside a chart
+   is ordinal on the teal ramp; the scoped exception is recorded there. Both this and
+   the contrast position are on the blocked list in handoff.md. */
+.gcc-map-halo-stop {
+  stop-color: var(--ansr-action);
+}
+
+/* **The country is a fine dot field, blurred, so it reads as ground rather than as
+   subject.** ANSR asked for the hero's dotted treatment but finer — fine enough to be
+   almost unnoticeable — with a blur over it. The dots are an SVG pattern rather than
+   generated geometry, and `city-map.tsx` carries why, along with why the grain and the
+   ink had to be chosen together.
+
+   **The blur has to stay SMALLER THAN THE DOT SPACING or there is no texture left.**
+   That is the whole constraint on this value. The spacing is ~3 user units, so at the
+   old 1.6 the dots merged into a flat wash and the change would have been invisible —
+   the same country as before with extra work behind it. At 0.7 they stay individually
+   present while the field as a whole goes soft, which is the "almost unnoticeable"
+   the ask is after. Anyone raising this should raise the spacing with it.
+
+   The blur is on a GROUP holding the outline and the island specks together, not on
+   each path: done separately the specks keep their own hard edge and go back to reading
+   as dirt on the screen.
+
+   The radius is in user units, because a CSS filter on an SVG element resolves against
+   the current user space — so it scales with the drawing rather than getting relatively
+   heavier as the map gets smaller. `--ansr-space-1` would be the wrong kind of value
+   here: this is a fraction of a 457-unit-wide projection, not a step on a 4px grid. */
+.gcc-map-land {
+  filter: blur(0.7px);
+}
+
+/* The land's grain and the islands drawn to match it. `--ansr-motif-ink` because that
+   is what this now is: a texture, not a fill. A pale ink cannot do the job — see the
+   coverage note in `city-map.tsx`. */
+.gcc-map-dot {
+  fill: var(--ansr-motif-ink);
+}
+
+.gcc-map-dot-stroke {
+  fill: none;
+  stroke: var(--ansr-motif-ink);
 }
 
 @keyframes gcc-map-pulse {
@@ -1057,6 +1162,23 @@
     inset 0 0 0 1px var(--ansr-accent),
     0 0 0 4px color-mix(in oklab, var(--ansr-accent) 12%, transparent);
 }
+/* **An OPEN combobox keeps the focused edge, even though focus has left it.**
+
+   This is not a decoration; it fixes a real disconnect. The panel focuses its filter
+   input the instant it opens, so the trigger loses `:focus` and dropped back to the
+   neutral grey-500 hairline — leaving a teal-haloed panel hanging under a grey
+   rectangle, two objects that looked unrelated at the exact moment they are one
+   control in two parts. Matching the focus treatment ties them together, and the
+   `aria-expanded` attribute is already on the trigger for the assistive tree, so the
+   selector needs no extra class and cannot drift from the state it describes.
+
+   The outer 12% bloom is deliberately NOT repeated: the panel sits 8px below with its
+   own halo, and two glows meeting in that gap read as a smudge rather than as depth.
+   The inset ring alone is what does the thickening. */
+.gcc-field[aria-expanded="true"]:not(:focus-visible) {
+  border-color: var(--ansr-accent);
+  box-shadow: inset 0 0 0 1px var(--ansr-accent);
+}
 /* An invalid field carries a thicker outline in the attention colour AND the error
    text below it. Form plus text, never hue alone — this palette has no danger
    colour, and 1.4.1 would require the text regardless.
@@ -1106,13 +1228,37 @@
   transform-origin: top center;
   animation: gcc-select-in var(--ansr-duration-base) var(--ansr-ease-entrance) both;
 
+  /* **Air below the panel when the browser reveals it, and it absorbs the entrance at
+     the same time.** `select-field.tsx` asks the browser to scroll the open panel into
+     view; without a margin the browser lands its bottom edge exactly on the window
+     edge, which reads as a list still running off the page rather than as one that
+     fits.
+     It is also what makes that reveal land correctly at all. The scroll happens on the
+     frame the panel mounts, when the keyframe above still has it at `scale(0.98)`
+     translated up 4px — so the box the browser aligns is around 11px shorter and higher
+     than the one that settles 240ms later, and the panel ended up hanging that far past
+     the window edge every time. Measured at four viewports before this was added. 24px
+     covers the delta with room to spare and leaves the air.
+     Deliberately only on the block END: aligning the top is what happens when the panel
+     is taller than the scrollport, and a margin there would push the field that owns it
+     further off screen. */
+  scroll-margin-block-end: var(--ansr-space-6);
+
   border-radius: var(--ansr-radius-lg);
   /* Opaque, and it always was. The bug this is fixing was never transparency: the
      panel overhangs the form card onto the customer-logo strip, and at the card's
      own shadow weight it had no evidence of being in FRONT of that strip — so the
      logos sitting beside it at the same height read as showing through it. */
   background: var(--ansr-surface);
-  border: 1px solid var(--ansr-border-strong);
+  /* **The edge is teal-tinted, and the previous neutral was a hierarchy inversion.**
+     `--ansr-border-strong` is grey-300 at 1.78:1 on white, while the field this panel
+     comes out of is outlined in grey-500 at 3.28:1 — so the popup, the loudest thing
+     on the card and the one element in front of everything else, had a visibly
+     FAINTER edge than the closed control. Mixing a quarter of the accent into
+     grey-500 keeps the neutral's weight and puts the panel in the same colour family
+     as the lit trigger above it, without becoming a saturated teal box on a card whose
+     whole rule is that teal means "in use". */
+  border: 1px solid color-mix(in oklab, var(--ansr-accent) 25%, var(--ansr-grey-500));
 
   /* Three layers, and each is doing a different job.
 
@@ -1176,9 +1322,27 @@
 }
 
 /* Where the keyboard is, and where the pointer is — one state, because they are one
-   thing: the row that Enter would act on. */
+   thing: the row that Enter would act on.
+
+   **It is a 10% wash of the accent, not `--ansr-surface-tint`, and the swap is the
+   single change that stops this list reading as a spreadsheet.** `surface-tint` is
+   `teal-100` — the BAND ground the whole form card is sitting on. Using it here put
+   the panel's loudest fill at the same strength as a full-bleed page band, 4px from
+   the row above it, so a hovered row read as a filled table cell rather than as a
+   target the pointer is over. A wash mixed off the accent is a tenth of that weight,
+   is unmistakably the same teal as the lit trigger and the check glyph, and leaves the
+   row's TEXT as the loudest thing in it — which is what a list of choices wants.
+
+   **Mixed off `surface-tint` and not off `--ansr-accent`, which was tried and rendered
+   grey.** The accent is `teal-600` — a dark, low-chroma teal whose job is ink — so a
+   tenth of it in white lands on a neutral grey with barely any hue left, and a grey
+   hover fill on a teal brand reads as the browser's default rather than as a decision.
+   `surface-tint` is the MEASURED mint, so diluting it keeps the reference's own hue and
+   only takes weight out of it. It is declared as a mix rather than as a ramp step
+   because no step is this light: `teal-50` is 2% off white and invisible against the
+   panel, `teal-100` is the slab this replaces, and the ramp has nothing between them. */
 .gcc-select-row--active {
-  background: var(--ansr-surface-tint);
+  background: color-mix(in oklab, var(--ansr-surface-tint) 60%, var(--ansr-surface));
 }
 
 /* The row whose branch is open in the second pane. A 2px accent rule on its leading
@@ -1187,7 +1351,11 @@
    pseudo-element inside the row's own padding so it cannot shift the text by a pixel
    when it appears. */
 .gcc-select-row--branch {
-  background: var(--ansr-surface-tint);
+  /* One step above the active wash, so a row whose branch is open still reads as the
+     stronger of the two when the pointer has moved on to a neighbour. Same mix, same
+     hue — the difference is depth rather than colour, which is what keeps two states
+     legible without introducing a third fill nobody can name. */
+  background: color-mix(in oklab, var(--ansr-surface-tint) 85%, var(--ansr-surface));
 }
 
 .gcc-select-row--branch::before {
@@ -1201,19 +1369,45 @@
   background: var(--ansr-accent);
 }
 
+/* The trailing cue: how many narrower choices sit behind a row, and the chevron that
+   opens them. Grouped in one element so both take the accent together on the active
+   row — a cue that half-changes colour reads as a rendering fault.
+
+   The accent is legal on both washes at 12px: it is 6.63:1 on white and the strongest
+   of the two fills is a diluted `teal-100`, where the same ink measures 5.9:1 — past
+   4.5:1 with room. At rest the cue is `--ansr-text-muted`, which is the same ink the
+   count carried before. */
+.gcc-select-cue {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: var(--ansr-space-1);
+  color: var(--ansr-text-muted);
+  transition: color var(--ansr-duration-fast) var(--ansr-ease-standard);
+}
+
+.gcc-select-row--active .gcc-select-cue,
+.gcc-select-row--branch .gcc-select-cue {
+  color: var(--ansr-accent);
+}
+
 /* How many narrower choices sit behind a row. A number says a branch exists AND how
    deep it is, which a bare chevron does not — and on this control the depth is the
    information a visitor is deciding on. Tabular, so a column of them does not jitter
-   between one and two digits. */
+   between one and two digits.
+
+   **The grey pill it used to sit in is gone, and the pill was noise rather than
+   chrome.** Thirty filled `grey-100` capsules down the trailing edge of a thirty-row
+   list, each holding one or two digits, next to a chevron already saying "there is
+   more behind this row" — the container carried nothing the numeral did not, it went
+   muddy wherever it landed on a tinted row, and it was the second loudest object in a
+   panel whose subject is the labels. What the pill was actually providing was the
+   alignment, and `min-inline-size` provides that on its own. */
 .gcc-select-count {
-  min-inline-size: 1.5rem;
-  padding-inline: var(--ansr-space-1);
-  border-radius: var(--ansr-radius-pill);
-  background: var(--ansr-surface-sunken);
+  min-inline-size: 1.25rem;
   font-size: var(--ansr-text-xs);
   font-variant-numeric: tabular-nums;
-  text-align: center;
-  color: var(--ansr-text-muted);
+  text-align: end;
 }
 
 /* The tier headings. A hairline above rather than a wider gap: two tiers separated
@@ -1241,7 +1435,7 @@
    part of the panel's chrome with the filter above it rather than as a first list
    row that cannot be chosen. */
 .gcc-select-hint {
-  padding-block: var(--ansr-space-2);
+  padding-block: 0 var(--ansr-space-2);
   padding-inline: var(--ansr-space-4);
   border-block-end: 1px solid var(--ansr-border);
   background: var(--ansr-surface-pale);
@@ -1249,6 +1443,41 @@
   font-weight: var(--ansr-weight-light);
   line-height: var(--ansr-leading-normal);
   color: var(--ansr-text-muted);
+}
+
+/* **The filter and the hint are ONE header band, not two.** They already shared a
+   ground, so the hairline between them divided `surface-pale` from `surface-pale` —
+   two near-identical strips stacked under the field, which is three pieces of chrome
+   (search, note, tier heading) to read past before the first choosable row. Dropping
+   the internal rule and the hint's top padding makes the note read as a caption
+   belonging to the search above it, and leaves the panel with exactly one boundary
+   between its chrome and its content.
+
+   `:has` rather than a class on the panel, so the rule is a statement about the two
+   elements being adjacent — which is the actual condition — and cannot be left behind
+   on a control that has a hint and no filter. */
+.gcc-select-filter:has(+ .gcc-select-hint) {
+  border-block-end: 0;
+}
+
+/* --------------------------------------------------------------------------
+   The panes' own scrollbars
+
+   A 201-country list is scrolled by everyone who reaches it, so the scrollbar is part
+   of this control rather than part of the browser. Left alone it ships macOS's
+   translucent grey overlay and Windows' 15px light-grey trough — the one surface on
+   this panel that belongs to no design system. Scoped to the two scrolling lists
+   rather than set globally: the public screens do not own their scroll container, so
+   theming the document's scrollbar would be styling the host page's furniture.
+
+   Standard properties only. `::-webkit-scrollbar` would let the thumb be drawn to the
+   pixel and it also opts that element out of overlay behaviour entirely, which turns a
+   scrollbar that floats over the list into one that permanently takes 15px out of a
+   13rem pane.
+   -------------------------------------------------------------------------- */
+.gcc-select-list {
+  scrollbar-width: thin;
+  scrollbar-color: color-mix(in oklab, var(--ansr-accent) 35%, transparent) transparent;
 }
 
 /* --------------------------------------------------------------------------
@@ -1353,11 +1582,15 @@
   display: flex;
   flex-direction: column;
   border-radius: var(--ansr-radius-lg);
+  /* Same air below as the panel gets, for the same reason: this is the reveal target
+     whenever a branch is open. No entrance delta to absorb here — the pane's keyframe
+     is a horizontal slide — so the whole 24px is air. */
+  scroll-margin-block-end: var(--ansr-space-6);
   /* Opaque for the same reason the panel is, and here it is load-bearing rather
      than cosmetic: below `md` this box is the only thing hiding the list it
      covers. */
   background: var(--ansr-surface);
-  border: 1px solid var(--ansr-border-strong);
+  border: 1px solid color-mix(in oklab, var(--ansr-accent) 25%, var(--ansr-grey-500));
   box-shadow:
     0 0 0 1px color-mix(in oklab, var(--ansr-accent) 18%, transparent),
     0 20px 48px color-mix(in oklab, var(--ansr-teal-deep) 22%, transparent),
@@ -1686,6 +1919,31 @@ select.gcc-field {
   border-color: color-mix(in oklab, var(--ansr-white) 52%, transparent);
 }
 
+/* **The 44px target, expanded past the visible pill rather than drawn as it.**
+
+   The control had `min-h-11` on it, which met the minimum by making the one button in
+   the band 44px tall beside four 30px answer tags — so the loudest object in the header
+   was the piece of chrome rather than any of the four answers it acts on. That is the
+   same defect as the pass before it, which pushed the button to the opposite end of the
+   container: a control has to look like it belongs to the things it changes, and
+   outsizing them by half is not belonging.
+
+   A transparent pseudo-element overhangs the box by 7px top and bottom, which takes a
+   30px pill to a 44px target without moving a pixel of ink. `inset-inline: 0` rather
+   than a negative inline value: the row's own `gap-x-2` is 8px, so overhanging
+   horizontally would put this target under the last pill — and a pill is not a control,
+   so a press landing on it would do nothing while feeling like a miss.
+
+   The row's `gap-y-3` is 12px, which is under the 14px of vertical overhang — but the
+   pills either side are not focusable and there is exactly one of these per screen, so
+   there is no second target for it to collide with. */
+.gcc-context-edit::after {
+  content: "";
+  position: absolute;
+  inset-block: -7px;
+  inset-inline: 0;
+}
+
 /* --------------------------------------------------------------------------
    The result band's dot lattice
 
@@ -1776,22 +2034,18 @@ select.gcc-field {
 }
 
 /* --------------------------------------------------------------------------
-   The rank badge on a comparison card
+   `.gcc-rank` was here: the filled mint counter on a comparison card.
 
-   A hard-edged square counter in the pale mint. It is the one place a number is
-   drawn as chrome on this surface and it earns it: the comparison cards are in
-   relevance order, and a grid of cards has no row position to carry that — which
-   is the one thing the table it replaced did for free.
+   Deleted rather than left unused. Every ordinal on this surface is typographic
+   now — a quiet small-caps eyebrow above the company name on the comparison
+   cards, a muted display numeral inline on the largest-centres ranking — which is
+   the brand board's own device for numbering a set ("Problem 1", "Problem 2",
+   above the heading, in a quiet neutral). A filled chip is a "notice this" signal
+   and five of them competed with the five company names for first read.
 
-   Deliberately NOT the accent-filled disc the removed section ordinals used. That
-   fill is now spent once per card at most, on a figure rather than on a step
-   number.
+   Nothing about the ORDER changed. It is still relevance order, still never
+   re-sorted, and still stated on every card; see `PeerBlockView`.
    -------------------------------------------------------------------------- */
-.gcc-rank {
-  background-color: var(--ansr-surface-tint);
-  color: var(--ansr-accent);
-  border-radius: var(--ansr-radius-sm);
-}
 
 /* --------------------------------------------------------------------------
    The industry containment chart
@@ -1803,15 +2057,24 @@ select.gcc-field {
    with no gap between the rows for the eye to read as separation.
 
    The geometry is inline (each layer's width is a datum), so what lives here is
-   the depth ramp and the shared left edge. Every layer is `aria-hidden`; the
-   figures are in the text beside them.
+   the depth ramp, the shared leading edge, and where a label goes relative to the
+   mark it belongs to. Every mark is `aria-hidden`; the figures are in the text
+   beside them.
 
-   **The three fills are LIGHT steps and that is a contrast constraint.** Each
-   layer carries its own figure and label ON the bar, so every fill has to take
-   black ink at AA: teal-100 measures 15.4:1, teal-200 12.73:1 and teal-300 9.06:1.
-   `teal-500` is 4.09:1 and `--ansr-accent` 2.14:1, so neither is available here
-   however much more emphatic the innermost layer would look. Do not deepen these
-   without re-measuring the ink on them.
+   **The BAR fills are light steps and that is a contrast constraint.** The
+   outermost bar carries its own figure and label, and every narrower layer's label
+   lands on the fills behind it, so each of those has to take black ink at AA:
+   teal-100 measures 15.4:1, teal-200 12.73:1 and teal-300 9.06:1. `teal-500` is
+   4.09:1 and `--ansr-accent` 2.14:1. Do not deepen a BAR without re-measuring the
+   ink on it.
+
+   **The marker is the exception, and it is `--ansr-accent`.** No label ever lands on
+   it: a label starts at or after its own layer's extent and is confined to its own
+   layer's band, so the marker's 8px is the one region of the chart guaranteed to
+   carry no text. That is what makes the accent available for the level that most
+   needs to be emphatic — and it is the only non-light fill here, so a reader reads it
+   as a different kind of mark rather than as a bar that came out short. Which it is:
+   see `Containment` for why five of 1,834 cannot be a length.
    -------------------------------------------------------------------------- */
 .gcc-containment {
   position: relative;
@@ -1820,14 +2083,30 @@ select.gcc-field {
      component for why the bands exist.
 
      Sized for THREE bands, which is what the chart draws in every non-degenerate
-     case — the component substitutes the comparison set for the sub-industry when no
-     sub-industry was answered, precisely so the two-layer shape is rare.
+     case — the component substitutes a position marker for an unanswered
+     sub-industry, precisely so the two-layer shape is rare.
 
-     200px gives each band about 67px: comfortable for a 24px figure and its label, and
-     enough that the outermost bar reads as a surface the others sit on rather than as a
-     rule. It is also what brings this card within about 20px of the function list
-     beside it, which is what keeps the pale zone from ending in a band of nothing. */
-  block-size: calc(var(--ansr-space-48) + var(--ansr-space-2));
+     **144px, down from 200.** Each band is 48px, which holds one line of a 24px
+     figure and its label — and one line is all a band needs now that every label sits
+     beside its own mark rather than overhanging it. At 200 the extra 56px was fill: on
+     the default path two thirds of the chart is the outermost layer's own pale ground,
+     and making that region taller made the card read as mostly empty tint without
+     making a single figure easier to read. */
+  block-size: calc(var(--ansr-space-32) + var(--ansr-space-4));
+  /* **A CEILING on the stretch, and it exists because this chart shares a row.** The
+     card it sits in opts into the row's height (`lg:h-full` in `peer-view.tsx`) and its
+     body lets this chart grow into it, so the stack's real height is set by whatever the
+     ranking beside it happens to run to — which moved once already when that block grew
+     a tag line per row. Unbounded, three bands of 200px each put one 24px figure at the
+     top of a region six times its own height, which is the "mostly empty tint" the drop
+     from 200 to 144 was fixing, arrived at from the other direction.
+
+     224px is 75px a band: half again the 48px a figure and its label need, which reads as
+     air rather than as fill. Past the cap the leftover space stays in the CARD, where
+     `justify-center` splits it above and below the chart — a symmetrical inset reads as
+     padding, where the same space collected under the chart read as a card that failed to
+     fill. */
+  max-block-size: calc(var(--ansr-space-56) + var(--ansr-space-32));
 }
 
 .gcc-containment__bar,
@@ -1837,10 +2116,11 @@ select.gcc-field {
      step down from a shared top edge and end on a shared bottom one; each label sits
      in its own layer's exposed band. Nothing here is centred, deliberately — a shared
      centre is what made two labels collide at phone width. */
-  inset-inline-start: 0;
 }
 
 .gcc-containment__bar {
+  inset-inline-start: 0;
+  inline-size: var(--gcc-extent);
   /* Hard-edged on the leading side, rounded on the trailing one: the shared zero is
      a real edge and the far end is the quantity, so only the end that carries a
      value gets a radius. */
@@ -1857,19 +2137,60 @@ select.gcc-field {
   box-shadow: var(--ansr-shadow-xs);
 }
 
-.gcc-containment__bar:first-of-type {
+/* The outermost layer. An explicit modifier rather than `:first-of-type`, which
+   matched on element type and so depended on the outermost bar being the first `div`
+   among its siblings — a wrapper, or one future layer drawn as anything else, would
+   have silently given every bar the shadow back. */
+.gcc-containment__bar--back {
   box-shadow: none;
+}
+
+/* **A position marker, not an extent**, for a level that is a selection rather than a
+   population. Fixed width, so it is legible whatever the ratio behind it — and capped
+   by its parent's own extent, so a thin industry gets a marker clipped to the
+   population it is inside rather than one sticking out of it. `min()` resolves the
+   percentage against the chart, which is the box `--gcc-extent` is expressed in.
+
+   Square on both ends: the trailing radius on a bar means "this end is the value", and
+   a marker has no value at its end. */
+.gcc-containment__bar--marker {
+  inline-size: min(var(--ansr-space-2), var(--gcc-extent));
+  border-start-end-radius: 0;
+  border-end-end-radius: 0;
 }
 
 /* The figures sit in their own layer above every bar, so the growth animation on a
    bar cannot wipe the text with it and a label is never clipped by the layer it
-   belongs to. */
+   belongs to.
+
+   **It starts where its own mark ends**, which the component decides per layer: at the
+   leading edge for a full-width bar, and after the trailing edge for every narrower
+   mark. `inset-inline-end: 0` rather than a width, so the box takes exactly the room
+   that is left and the text wraps inside the chart instead of overflowing it. */
 .gcc-containment__label {
-  inline-size: 100%;
+  inset-inline-start: var(--gcc-label-start);
+  inset-inline-end: 0;
   display: flex;
   align-items: center;
   padding-inline-start: var(--ansr-space-3);
   pointer-events: none;
+}
+
+/* **A marker's label starts at the MARKER's trailing edge, not at `--gcc-extent`.**
+
+   For a marker layer `--gcc-extent` is the parent population's share — the room the
+   mark may not draw past — and the mark itself is `min(--ansr-space-2, --gcc-extent)`.
+   Taking the extent as the label origin therefore put the figure at the parent's
+   trailing edge, about 90px from an 8px tick on the default path, with pale fill
+   between the two: a figure belonging to nothing.
+
+   The width expression is repeated from `.gcc-containment__bar--marker` deliberately
+   and must stay identical to it. It cannot be factored into a custom property set on
+   the bar, because the label is a SIBLING of the bar rather than a descendant, so it
+   does not inherit anything the bar declares. If one of the two changes, change both.
+   The trailing pad comes from the block above, so the gap matches every other label's. */
+.gcc-containment__label--marker {
+  inset-inline-start: min(var(--ansr-space-2), var(--gcc-extent));
 }
 
 @media (prefers-reduced-motion: no-preference) {
@@ -1954,7 +2275,16 @@ select.gcc-field {
   inset-inline-end: -10%;
   inline-size: 44%;
   transform: rotate(180deg);
-  mask-image: linear-gradient(to bottom left, var(--ansr-black), transparent 66%);
+  /* **`to top right`, and the direction has to be read THROUGH the rotation.** A mask
+     applies to the element's own box and the transform rotates the masked result, so a
+     gradient written `to bottom left` — correct for the unrotated placement above —
+     arrives visually reversed here: dense against the card's interior and transparent
+     off the card's outer corner. What that rendered was a hard straight edge on the
+     motif's inner side, which read as a rectangular texture swatch pasted into the
+     corner rather than as brand ornament, directly above the surface's best block.
+     Written for the element and rotated with it, the density lands in the outer corner
+     the content never reaches. */
+  mask-image: linear-gradient(to top right, var(--ansr-black), transparent 66%);
 }
 
 /* --------------------------------------------------------------------------
@@ -1977,4 +2307,499 @@ select.gcc-field {
 .gcc-zone {
   position: relative;
   overflow: hidden;
+}
+
+/* --------------------------------------------------------------------------
+   The function view's figure row — the dividers are GONE
+
+   Recorded because the mechanism was right and the device was wrong. There were
+   hairlines between the cells, drawn here rather than as a `border-s` on every cell
+   but the first, because the row wraps — five figures are five columns at `lg`, three
+   at `sm` and two below it, so "every cell except the first" leaves the first cell of
+   every WRAPPED row carrying a leading rule down the middle of the band. Which cell
+   begins a row is a function of the breakpoint, and only `:nth-child` can express it.
+
+   What removed them is that all four tabs now draw one component on Screen 1's
+   snapshot treatment, and that strip had already ruled the device out: with no
+   container around the cells, a rule between two of them puts the row back to reading
+   as a table, which is the artefact its own bordered version failed on. The gap is the
+   separation. Nothing sets `data-cols` any more either.
+   -------------------------------------------------------------------------- */
+/* --------------------------------------------------------------------------
+   The result surface as ONE floating card
+
+   Both result screens used to be two full-bleed stacks: a teal band, then a white
+   content surface running edge to edge to the end of the document. The zones did
+   the work of telling a reader that the kind of claim had changed, and they still
+   do — but nothing said that the whole answer is one object, produced by one act,
+   distinct from the page ANSR embeds it in. So the evidence now sits inside a
+   single card that runs to the end of the page, on a dark ground the card is
+   visibly lifted off, with the view switch as the card's own top row.
+
+   `.gcc-result-page` is the ground the card floats on: the flat inverse teal, the
+   same token the impact band and the scale panel use. It is deliberately NOT the
+   teal gradient — that gradient is fitted with its hot spot at 95% 85% of its own
+   box, so stretched over a 3,500px document the bright quarter lands behind the
+   card's foot and the header, which is the part that wants it, goes flat.
+
+   `.gcc-result-band` is the header's own box, which keeps the gradient at the size
+   it was fitted for. Its bottom edge is where the gradient meets the flat ground,
+   and at the gradient's own hot spot those two are several steps apart — a visible
+   seam across the full width of the frame, in the gutters the card does not cover.
+   The `::after` resolves it by fading the band's last stretch into the page ground.
+   It can only ever DARKEN a ground whose ink is white, so it needs no contrast
+   measurement of its own: every ink legal on the gradient is legal on the fade.
+   -------------------------------------------------------------------------- */
+.gcc-result-page {
+  position: relative;
+  background-color: var(--ansr-surface-inverse);
+}
+
+.gcc-result-band {
+  position: relative;
+  overflow: hidden;
+  background: var(--ansr-gradient-teal);
+}
+
+.gcc-result-band::after {
+  content: "";
+  position: absolute;
+  inset-inline: 0;
+  inset-block-end: 0;
+  /* One band step, which is the scale past where component rhythm stops — the
+     right family for a distance measured against a header's height rather than
+     against a control. */
+  block-size: var(--ansr-space-24);
+  pointer-events: none;
+  background-image: linear-gradient(
+    to bottom,
+    transparent,
+    var(--ansr-surface-inverse)
+  );
+}
+
+/* --------------------------------------------------------------------------
+   The card
+
+   **SOLID, and the translucent version is what it replaced.** The first pass made
+   this a glass frame — a translucent white rim with a `backdrop-filter` behind it,
+   the card's content opaque inside. It was rejected on sight and correctly: a
+   blurred translucent panel is the single most over-used surface treatment of the
+   last five years, it reads as a default rather than as a decision, and on a
+   backdrop that is a flat ground and a smooth fitted gradient the blur had almost
+   nothing to blur. What it actually contributed was a milky edge, which is the part
+   that looked cheap.
+
+   What holds the card off the ground instead is three things, each doing one job
+   and none of them an effect:
+
+     1. **A hairline ring, not a border.** Drawn as the first `box-shadow` layer so
+        it sits OUTSIDE the fill and cannot be clipped by `overflow: hidden` the way
+        a real border on a rounded box with an inset child is. At 9% white it is a
+        line the eye resolves at any distance and never a grey frame around the
+        content.
+     2. **Two shadow layers with very different spreads** — a wide, deep one that
+        separates the card from the ground, and a tight one that seats it. The
+        `--ansr-shadow-*` tokens cannot supply this: they are fitted for a light
+        surface, at 8–14% of `--ansr-teal-deep`, and on a ground that IS teal-deep a
+        14% teal-deep shadow is invisible. So the values are composed here, still out
+        of tokens, and the reason is written down rather than assumed.
+     3. **A radius one step up from every panel inside it**, so the card is
+        unambiguously the container and the evidence cards are unambiguously
+        contents. `xl` is the top of the scale; the brand is hard-edged and the panels
+        are on `md`.
+
+   `overflow: hidden` is load-bearing rather than defensive: it is what clips the tab
+   bar's own corners to the card's radius, which is why the bar needs no radius of
+   its own and has no bend anywhere in it.
+   -------------------------------------------------------------------------- */
+.gcc-result-card {
+  position: relative;
+  border-radius: var(--ansr-radius-xl);
+  overflow: hidden;
+  background-color: var(--ansr-surface);
+  box-shadow:
+    0 0 0 1px color-mix(in oklab, var(--ansr-white) 9%, transparent),
+    0 32px 64px color-mix(in oklab, var(--ansr-black) 38%, transparent),
+    0 6px 16px color-mix(in oklab, var(--ansr-black) 26%, transparent);
+}
+
+/* --------------------------------------------------------------------------
+   The view switch, as the card's own top row
+
+   **Full width, two equal halves, and no shape of its own.** Two earlier versions
+   are worth recording because each failed for a different reason. It began as a
+   strip dividing the header BAND's foot, whose selected half was white and
+   continued into a full-bleed white page — correct for a full-bleed page, and
+   orphaned the moment the content moved inside a card. It then became a
+   content-sized notch sticking up out of the card's top edge, which is where the
+   bends came from: a rounded tab meeting a rounded card produces two curves that
+   have to agree and cannot, plus a step where the notch ends and the card
+   continues.
+
+   This has neither problem because it is not attached to the card — it IS the card,
+   its first row. The corners come from the card's own radius and its own
+   `overflow: hidden`, so there is exactly one curve in the composition and the bar
+   cannot disagree with it.
+
+   **The bar's ground is `--ansr-teal-200`, and the important property is that it is
+   DARKER than either content ground rather than lighter.** Two things follow from
+   that, neither of them taste. The card stays a LIGHT object on a dark ground, so
+   its top corners still read as the card's — a dark bar here merged into the band
+   above it and the card appeared to start halfway down. And the selected cell is
+   then the lightest thing in the row, which is the direction the hierarchy has to
+   run: the first version used the near-white `--ansr-surface-pale`, which left the
+   UNSELECTED half brighter than the selected one on Screen 1, so the row argued with
+   its own indicator.
+
+   Every ink used on it is measured against it: `--ansr-text-muted` is 5.2:1 there,
+   the heading teal 5.94:1, black 12.73:1.
+
+   **THE ORANGE RULE ALONG THE SELECTED CELL'S TOP EDGE IS GONE, and it was the
+   loudest thing about this component.** A 3px accent bar over a tab is the single most
+   reproduced indicator in the framework-template idiom, and putting it on the first row
+   of the page's main object meant a reader met it before any evidence. It was also the
+   only orange on the surface not doing the job the brand board gives orange — figures
+   and categorical eyebrows — so it was spending the accent on chrome.
+
+   **What carries selection instead is the JOINT, which is the one signal a template
+   cannot copy.** The selected cell is filled with the ground of the content beneath it
+   and has no bottom edge, so the cell and the surface are physically one shape — that
+   is why `ViewTabs` takes a `ground` prop rather than hard-coding white: Screen 1 opens
+   on white and Screen 2 on white, and a cell that says "this is the surface you are on"
+   has to actually be that surface.
+
+   The unselected cell is then held BACK rather than given an edge of its own. It carried
+   a teal bottom border for one pass, on the reasoning that the cell which gives up its
+   edge to flow into the content leaves the other one to take it — and ANSR rejected it:
+   on the rendered page it is a coloured line arriving from nowhere and stopping halfway
+   across the card's top edge, with a curve bending it out of the cell at each end. What is
+   there instead is nothing at all: the cell is empty and the bar's own pale mint shows
+   through it. See `.gcc-result-tab--off`.
+
+   So selection is carried three ways over `aria-selected` and none of them is a drawn
+   line: the selected cell being filled with the content's own ground where the other shows
+   the bar's, the ink moving from muted to the heading teal, and the weight.
+
+   There is no divider BETWEEN the cells. Exactly one of the two is always selected, so
+   their fills always differ, and a rule between two different fills is a line drawn for
+   its own sake.
+   -------------------------------------------------------------------------- */
+/* **`--ansr-teal-100`, a step lighter than the `teal-200` this used to be, at ANSR's
+   request that the unselected half be more transparent.** The property that matters is
+   unchanged and is the reason the step could only go one way: the bar must be DARKER than
+   either content ground, so the card stays a light object whose top corners read as its
+   own and the selected cell stays the lightest thing in the row. `teal-100` is 1.27:1
+   against white, which is the same magnitude of step `teal-200` gave and is the value the
+   mint zones on this surface already use — so the unselected cell now reads as a pale
+   veil over the card rather than as a saturated slab parked in its top corner.
+
+   Every ink on it improves rather than degrades, since the ground got lighter:
+   `--ansr-text-muted` was 5.2:1 on `teal-200`, the heading teal 5.94:1, black 12.73:1. */
+.gcc-result-tabs {
+  display: flex;
+  background-color: var(--ansr-teal-100);
+}
+
+.gcc-result-tab {
+  flex: 1 1 0%;
+  /* Only the two properties that still change. There is no border on either state now —
+     the 3px orange track went first, then the unselected cell's teal edge — so animating
+     `border-color` was transitioning a value nothing sets. */
+  transition:
+    background-color var(--ansr-duration-fast) var(--ansr-ease-standard),
+    color var(--ansr-duration-fast) var(--ansr-ease-standard);
+}
+
+/* Nothing to declare: the selected cell's whole indicator is its fill (set by the
+   `--on-*` ground classes below) and the transparent bottom edge it inherits above, which
+   is what leaves the joint with the content unbroken. */
+.gcc-result-tab--on {
+  position: relative;
+}
+
+/* **The unselected cell declares NO fill and NO edge, and both removals are ANSR's.**
+
+   It carried a `--ansr-teal-500` bottom border with a one-step curve on its lower
+   corners. That was the previous pass's answer to "what does an unselected tab look like
+   when the selected one has no indicator": the selected cell gives its bottom edge up to
+   flow into the content, so the other one takes it. Read on the rendered page it is a
+   coloured line arriving from nowhere, stopping halfway across the card's top edge, with a
+   curve bending it out of the cell at each end — two curves in the composition with
+   nothing to agree with, which is the exact failure the notch shape was rebuilt to remove.
+
+   What carries the recessed reading now is the bar's own ground showing through. The cell
+   is empty, so what is under it is `--ansr-teal-100`, 1.27:1 darker than the white the
+   selected cell is filled with — the unselected half reads as a pale veil over the card
+   and the selected half reads as the card.
+
+   A darken over the cell was the first attempt and it went the wrong way: 8% black over
+   `teal-200` rendered as a saturated slab in the card's top corner, heavier than the
+   version ANSR had already asked to lighten. Lightening the bar and leaving the cell empty
+   is the same effect reached by removing a value rather than adding one. */
+
+/* The two grounds a selected cell may take, matching the two the content surfaces
+   open on. Set here rather than as a utility because these blocks are unlayered and
+   would otherwise be outranked in one direction and not the other. */
+.gcc-result-tab--on-surface {
+  background-color: var(--ansr-surface);
+}
+
+.gcc-result-tab--on-tint {
+  background-color: var(--ansr-surface-tint);
+}
+
+/* The near-white mint, which is what Screen 1's first zone is now. The snapshot's
+   figures sit on the zone rather than on a card of their own, and the action orange
+   is 2.63:1 on `--ansr-surface-tint` against 3.29:1 here — so the zone moved to clear
+   the large-text floor and this cell follows it. See `ViewTabs`. */
+.gcc-result-tab--on-pale {
+  background-color: var(--ansr-surface-pale);
+}
+
+/* Hover on an unselected cell: a barely-there darken and the ink coming forward.
+   DARKER rather than lighter, so hovering can never be mistaken for selection —
+   selection is the lightest state in this row, which is the failure mode of a
+   two-cell switch that lightens on hover. */
+.gcc-result-tab--off:hover {
+  /* A barely-there darken, and DARKER rather than lighter. Selection is the lightest state
+     in this row, so hover has to move away from it — a lighten here is the failure mode of
+     a two-cell switch, where pointing at the cell you are not on looks like arriving on
+     it. */
+  background-color: color-mix(in oklab, var(--ansr-black) 6%, transparent);
+}
+
+/* --------------------------------------------------------------------------
+   The result band's dotted world map
+
+   The entry point's hero graphic, brought onto the result band at ANSR's request so
+   the two surfaces read as one product. Same component and the same two child
+   classes — `.gcc-hero-map__world` and `.gcc-hero-map__india` carry the inks, the
+   dot radius and the entrance — so there is one graphic here, not a second copy of
+   one. What differs is only what this band needs differently, and each difference
+   has a reason:
+
+     - **It is NOT blurred, at ANSR's request, and the blur is what it stopped
+       being.** It carried `blur(1.6px)` over a ~2.2px dot at a ~6px pitch on the
+       argument that the band already holds a finding, four answers and the switch,
+       so a crisp second graphic would compete with all three. Rendered, a softened
+       dot at half opacity does not read as depth — it reads as a low-resolution
+       copy of the entry point's own map, which is the one thing the shared component
+       exists to prevent. What holds it back is what always did the work anyway: the
+       opacity, the vignette and the four mask ramps below. Do not reintroduce a
+       filter to quieten it; lower the opacity instead, which costs nothing in
+       apparent quality.
+     - **Held back by OPACITY** — 0.5 against the hero's 0.86 — which is now the only
+       thing separating the two placements apart from the masks.
+     - **A long, smooth fade to nothing at the foot.** The hero's bottom edge is cut
+       short and covered by the form card; this one has to disappear before the
+       result card's top edge with no visible boundary anywhere, so the fade spans
+       more than half the band's height in five stops. A short fade over a dot field
+       shows the ramp as a band of thinning dots, which is the artefact this is sized
+       to avoid.
+     - **Smaller and further out**, so the graphic clears the finding at every width
+       above `lg` rather than by the measurement the hero's copy width supplies.
+
+   Desktop only, like the hero's: below `lg` the finding runs most of the band and
+   the frame is too narrow for the dots to resolve. The band's own motif takes over
+   there — see `ResultSurface`, where the two are swapped at exactly that
+   breakpoint so every width has one ornament and no width has two.
+   -------------------------------------------------------------------------- */
+.gcc-header-map {
+  position: absolute;
+  inset-block: 0;
+  inset-inline-end: -6%;
+  inline-size: 74%;
+  /* Not `display`, deliberately: these blocks are unlayered, so setting it here
+     would beat the `hidden lg:flex` on the element itself. Same trap as
+     `.gcc-hero-map`. */
+  align-items: center;
+  pointer-events: none;
+  /* Read off the render at 1440 rather than derived: 0.42 put the field so far back
+     that India stopped resolving as a shape at all, which is a graphic paying its
+     layout cost and returning nothing. */
+  opacity: 0.5;
+
+  mask-image:
+    /* The focus vignette, shallower than the hero's — India is still the lit part,
+       but this map is atmosphere and a deep spotlight on it would make it a
+       subject again. */
+    radial-gradient(
+      ellipse 54% 120% at 68% 47%,
+      var(--ansr-black) 0%,
+      var(--ansr-black) 22%,
+      color-mix(in oklab, var(--ansr-black) 66%, transparent) 48%,
+      color-mix(in oklab, var(--ansr-black) 30%, transparent) 100%
+    ),
+    /* The leading fade, protecting the finding. Eased rather than linear, like the
+       hero's, so the field is near nothing across the copy and arrives only in the
+       part of the band the copy cannot reach. */
+    linear-gradient(
+      to right,
+      transparent 0%,
+      color-mix(in oklab, var(--ansr-black) 6%, transparent) 26%,
+      color-mix(in oklab, var(--ansr-black) 22%, transparent) 40%,
+      color-mix(in oklab, var(--ansr-black) 60%, transparent) 52%,
+      var(--ansr-black) 64%
+    ),
+    /* A short fade at the cropped trailing edge, so the slice does not end in a
+       vertical rule where the viewport cuts it. */
+    linear-gradient(to left, transparent 0%, var(--ansr-black) 16%),
+    /* The block edges. The foot is the long one — five stops over more than half
+       the box — because it has to reach nothing before the card's top edge without
+       the ramp ever being visible as a band of thinning dots. */
+    linear-gradient(
+      to bottom,
+      transparent 0%,
+      color-mix(in oklab, var(--ansr-black) 55%, transparent) 10%,
+      var(--ansr-black) 26%,
+      color-mix(in oklab, var(--ansr-black) 62%, transparent) 58%,
+      color-mix(in oklab, var(--ansr-black) 24%, transparent) 80%,
+      transparent 96%
+    );
+  mask-composite: intersect;
+  -webkit-mask-composite: source-in;
+}
+
+/* A graphic under text cuts effective contrast, so it goes when the visitor has
+   asked for more of it — the same call `.gcc-hero-map` and `.ansr-motif` make. */
+@media (prefers-contrast: more) {
+  .gcc-header-map {
+    display: none;
+  }
+}
+
+/* --------------------------------------------------------------------------
+   Screen 2 — a cumulative progression on one line
+
+   The HR tab's scale curve. `MilestoneTrack` in `components/public/charts.tsx`
+   emits one `dl` and this decides whether it is read horizontally along a rail or
+   vertically as a list.
+
+   **Two layouts, one DOM tree, and that is the whole reason this is a class.** Below
+   `sm` the rail is about 246px, which puts the first two milestones 41px apart — no
+   label fits in that, so the honest fallback is a vertical list. Rendering a
+   horizontal version and a vertical version and hiding one would put every milestone
+   in the accessibility tree twice; the items carry `--gcc-at` instead and are only
+   positioned absolutely where there is room for them — a layout that depends on which
+   cell begins a wrapped row is something only CSS can express.
+
+   **The label's height is RESERVED, and the rail's position depends on it.** Each
+   item is a three-row column — label, dot, figure — and the rail is one element drawn
+   behind all of them at a fixed offset from the top. A milestone whose name wraps to
+   two lines would otherwise push its own dot lower than its neighbours' and the rail
+   would pass through none of them. So the label row is two lines tall whether it
+   needs them or not, exactly as the figure row reserves its own label-and-unit pair.
+   -------------------------------------------------------------------------- */
+.gcc-milestones {
+  /* Two lines at `text-xs` with tight leading. Named rather than inlined because the
+     rail's offset is derived from it, and two copies of that number is how a rail
+     stops meeting its dots. */
+  --gcc-milestone-label: 2.5rem;
+  --gcc-milestone-dot: 1rem;
+
+  display: flex;
+  flex-direction: column;
+  gap: var(--ansr-space-3);
+}
+
+/* Below the breakpoint the rail and the dots do not exist at all, rather than being
+   `visibility: hidden`. There is no line to be a position on in a vertical list, so a
+   dot on each row would be a bullet pretending to be a mark. */
+.gcc-milestones__rail,
+.gcc-milestones__dot {
+  display: none;
+}
+
+/* The vertical reading: milestone, then its duration, on one row with a hairline
+   above it — the same shape the stacked figure cells use. */
+.gcc-milestones__item {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--ansr-space-4);
+  border-block-start: 1px solid var(--ansr-border);
+  padding-block-start: var(--ansr-space-2);
+}
+
+@media (min-width: 40rem) {
+  .gcc-milestones {
+    display: block;
+    position: relative;
+    /* Label, dot, figure. The figure's own line plus its top gap is the last term, and
+       the block padding is what stops the rail sitting hard against the card's own
+       header rule. */
+    min-height: calc(
+      var(--gcc-milestone-label) + var(--gcc-milestone-dot) + var(--ansr-space-10)
+    );
+    padding-block: var(--ansr-space-4);
+  }
+
+  .gcc-milestones__rail {
+    display: block;
+    position: absolute;
+    inset-inline: 0;
+    /* The dot's own centre, measured from the first item's top — which is the block
+       padding, not zero. */
+    top: calc(
+      var(--ansr-space-4) + var(--gcc-milestone-label) +
+        (var(--gcc-milestone-dot) / 2)
+    );
+    height: 2px;
+    transform: translateY(-1px);
+    background-color: var(--ansr-accent);
+  }
+
+  .gcc-milestones__item {
+    position: absolute;
+    top: var(--ansr-space-4);
+    inset-inline-start: var(--gcc-at);
+    /* Physical rather than logical, which is a known limit: there is no logical
+       translate, and the public screens are English-only. The extremes are pinned
+       with `end-0` / `start-0` instead wherever a component can avoid this. */
+    transform: translateX(-50%);
+    width: max-content;
+    /**
+     * **Capped, so a milestone WRAPS rather than colliding with its neighbour.** The
+     * positions are proportional to the stored figures, which puts the first two
+     * waypoints of the scale curve about 56px apart at 1024 — the tightest pair the
+     * chart is drawn at. `max-content` alone made every item as wide as its own label
+     * and the first two ran together. At 3.5rem "50 FTEs" breaks after the numeral,
+     * which is the two-line reading the reserved label height already accounts for.
+     */
+    max-inline-size: 3.5rem;
+    display: grid;
+    grid-template-rows: var(--gcc-milestone-label) var(--gcc-milestone-dot) auto;
+    justify-items: center;
+    /* The vertical reading's hairline is a divider between rows. There are no rows
+       here. */
+    border-block-start: 0;
+    padding-block-start: 0;
+    gap: 0;
+  }
+
+  /* Bottom-aligned inside its reserved rows, so a one-line and a two-line milestone
+     both sit against the rail rather than against the top of the block. */
+  .gcc-milestones__label {
+    align-self: end;
+    text-align: center;
+  }
+
+  .gcc-milestones__dot {
+    display: block;
+    align-self: center;
+    inline-size: var(--ansr-space-4);
+    block-size: var(--ansr-space-4);
+    border-radius: var(--ansr-radius-pill);
+    background-color: var(--ansr-surface);
+    /* A ring rather than a disc, so the rail is visibly continuous THROUGH each
+       milestone: a filled dot on a 2px line reads as a join between two segments. */
+    border: 2px solid var(--ansr-accent);
+  }
+
+  .gcc-milestones__figure {
+    align-self: start;
+    text-align: center;
+    padding-block-start: var(--ansr-space-2);
+  }
 }

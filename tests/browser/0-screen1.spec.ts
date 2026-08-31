@@ -406,7 +406,7 @@ test.describe("the answer", () => {
      */
     const heading = page.getByRole("heading", {
       level: 1,
-      name: "ANSR. GCC Intelligence",
+      name: "ANSR GCC Intelligence",
     });
     await expect(heading).toBeVisible();
     /**
@@ -418,8 +418,32 @@ test.describe("the answer", () => {
      */
     const panel = page.getByRole("tabpanel", { name: /Peer Landscape/ });
     await expect(panel).toBeFocused();
-    // The finding, announced rather than headlined.
-    await expect(page.getByRole("status")).toContainText(/5 relevant peers/);
+    // **The finding is asserted where it renders, on the band.** It used to be checked
+    // through the live region, which opened with the same sentence — and the live region
+    // no longer restates it: the finding is visible on the band, the count is visible
+    // under the grid, and the tab panel announces itself on focus, so reading the
+    // finding there made it the third thing said about one state change.
+    /**
+     * **The band's line states no COUNT, and that is the assertion.** Three wordings
+     * failed here in sequence: "5 relevant peers operate a GCC in India" graded its own
+     * output and spent its verb on something true of every company in the dataset; "5
+     * India GCCs match your BFSI profile" fixed both and was still false in the one
+     * direction that matters — five is what the grid SHOWS, capped by the peer limit, not
+     * how many matched, and the count line under the grid says "Showing 5 of 189". So the
+     * band understated the evidence beneath it and read as "we could only find five".
+     *
+     * It does not claim the opposite either: a denominator belongs on the count line,
+     * which states it exactly.
+     */
+    await expect(page.locator("#header-finding")).toHaveText(
+      "How your industry operates in India",
+    );
+    await expect(page.locator("#header-finding")).not.toContainText(/relevant/);
+    await expect(page.locator("#header-finding")).not.toContainText(/\d/);
+    // What the live region is for now: that a result exists, and how large the set is.
+    await expect(page.getByRole("status")).toContainText(
+      /Showing 5 comparable companies in BFSI/,
+    );
     // Every card is a named region, so it is reachable by role. Located by id and
     // checked for a name, rather than located BY its name — the ids are the
     // structural contract and the headings are a copywriter's to change.
@@ -441,12 +465,57 @@ test.describe("the answer", () => {
      * statistic about the tool is not what a CIO is sizing.
      */
     const snapshot = band(page, "snapshot");
-    await expect(snapshot.getByText("BFSI companies in India")).toBeVisible();
-    await expect(snapshot.getByText("Typical centre size in BFSI")).toBeVisible();
-    await expect(snapshot.getByText("Indian cities in play")).toBeVisible();
+    /**
+     * **The first cell is the industry's SHARE of the national base, not its count.**
+     * The count appeared four times on this surface in three framings — here, the
+     * industry card's lead, the containment chart's middle layer, and the denominator
+     * of the peer count line — so the strip that exists to save the reader work was
+     * making them reconcile one number four times. The share is the one figure the
+     * chart draws and never states.
+     */
+    /**
+     * **The industry is named by the section HEADING now, and by none of the four
+     * labels.** Three of them interpolated it, which put one label at 34 characters
+     * against another at 24 under four figures that align perfectly, and stated the same
+     * word three times inside 900px. Both halves are asserted here so the change cannot
+     * come back one label at a time.
+     */
+    await expect(
+      snapshot.getByRole("heading", { name: "Snapshot of BFSI GCCs in India" }),
+    ).toBeVisible();
+    await expect(snapshot.getByText("Of every GCC in India")).toBeVisible();
+    await expect(snapshot.getByText("Typical GCC headcount")).toBeVisible();
+    // **Not "Indian cities in play"**, which was consultants' shorthand and made a
+    // plain count of cities sound like a shortlist somebody had drawn up.
+    await expect(snapshot.getByText("Indian cities with a GCC")).toBeVisible();
+    await expect(snapshot.getByText(/in play/)).toHaveCount(0);
+    await expect(snapshot.getByText("Leading GCC city")).toBeVisible();
+    // Two earlier headings, and the label that carried the concentration finding.
+    await expect(snapshot.getByText("Your industry in India")).toHaveCount(0);
+    await expect(snapshot.getByText(/^BFSI in India$/)).toHaveCount(0);
     await expect(
       snapshot.getByText("Where the industry concentrates"),
-    ).toBeVisible();
+    ).toHaveCount(0);
+    // "GCCs", never "GCC's", which ANSR asked never to appear anywhere.
+    await expect(snapshot.getByText(/GCC's/)).toHaveCount(0);
+    /**
+     * **The leading city takes the same orange and one size step down, not two.** It was
+     * `--ansr-accent-warm` at 20/30px beside three `--ansr-action` figures at 36/48 — two
+     * different oranges and a two-step gap, which read as a cell from another component.
+     * The deeper step was needed while the value was 20px; at 30px rising to 38, Semibold,
+     * the anchor clears the 3:1 large-text floor on white.
+     */
+    const [cityInk, figureInk] = await Promise.all([
+      snapshot
+        .getByText("Bengaluru")
+        .evaluate((el) => getComputedStyle(el.closest("p")!).color),
+      snapshot
+        .getByText("Typical GCC headcount")
+        .evaluate((el) =>
+          getComputedStyle(el.previousElementSibling as Element).color,
+        ),
+    ]);
+    expect(cityInk).toBe(figureInk);
     /**
      * **The method line under the mean headcount is gone**, at ANSR's request — it read
      * "Mean of reported employee bands, rounded". The figure is still a rounded mean of
@@ -502,9 +571,33 @@ test.describe("the answer", () => {
      */
     await expect(peers.getByText("Headquarters")).toHaveCount(0);
     await expect(peers.getByText("USA")).toHaveCount(0);
-    // What each card does carry, at a size worth reading.
-    await expect(peers.getByText("India employees").first()).toBeVisible();
-    await expect(peers.getByText("India locations").first()).toBeVisible();
+    /**
+     * What each card does carry, at a size worth reading — **and every label names the
+     * GCC.** "India employees" and "India locations" both named the country the whole
+     * page is about and left the reader to infer that the subject is the CENTRE rather
+     * than the company. On a card about JPMorgan Chase that inference is not safe.
+     */
+    /**
+     * **Two of the three labels dropped the "GCC" prefix, at ANSR's request.** All three
+     * opened on the same three letters inside 120px, on a card whose section heading
+     * already says "India GCCs closest to your profile". What each replacement had to
+     * keep is the thing the prefix was protecting: the year is the CENTRE's, so a bare
+     * "Since 1799" on a JPMorgan Chase card is exactly the misreading the label exists
+     * to prevent — "In India since" says the same thing without the third "GCC".
+     */
+    await expect(peers.getByText("GCC headcount").first()).toBeVisible();
+    await expect(peers.getByText("Cities").first()).toBeVisible();
+    await expect(peers.getByText(/In India since \d{4}/).first()).toBeVisible();
+    await expect(peers.getByText("GCC cities")).toHaveCount(0);
+    await expect(peers.getByText(/GCC since \d{4}/)).toHaveCount(0);
+    /**
+     * **No ordinal on any card.** It was a `Match N` eyebrow above every company name,
+     * carrying the relevance order because a multi-row grid has no row position to carry
+     * it. The set is one row now, so left-to-right reading position states the order and
+     * the eyebrow is a claim the layout makes instead of a line of grey small caps above
+     * five names.
+     */
+    await expect(peers.getByText(/^Match \d+$/)).toHaveCount(0);
     /**
      * **No "Why in this set?" column, and no similarity-reason column of any kind.**
      * Per-peer scores never leave `similarity.ts`, and what the set has in common is a
@@ -518,7 +611,7 @@ test.describe("the answer", () => {
     // Exact both sides of the count. "5 of many comparable companies" is in the
     // reference composition and is the one thing in it that must not ship.
     await expect(
-      peers.getByText(/Showing 5 of \d+ comparable BFSI companies\./),
+      peers.getByText(/Showing 5 of \d+ comparable BFSI GCCs\./),
     ).toBeVisible();
     await expect(peers.getByText(/of many/)).toHaveCount(0);
     /**
@@ -542,7 +635,25 @@ test.describe("the answer", () => {
      * industry — so a divided bar would invite the reader to add them.
      */
     const industry = band(page, "industry");
-    await expect(industry.getByText(/BFSI companies run a centre/)).toBeVisible();
+    /**
+     * **The lead states no quantity, which is the point of asserting it here.** It read
+     * "189 other BFSI companies run a centre in India" — the count's second of four
+     * appearances on this surface, 120px above the chart layer labelled with the same
+     * figure. The lead now names the three layers the chart draws, in the order it draws
+     * them, and the figure lives only where it has a denominator. "other" went with it:
+     * it invited "other than which?" and nothing on the page answered.
+     */
+    /**
+     * **The lead is GONE from the render, at ANSR's request.** It described the three
+     * layers the chart draws, in the order it draws them, which the chart's own labels
+     * already say. Asserted absent rather than deleted, so it cannot come back by
+     * accident — and "other BFSI companies", the phrasing before it that raised a question
+     * the page never answered, must stay gone too.
+     */
+    await expect(
+      industry.getByText(/Every GCC in India, with BFSI inside it/),
+    ).toHaveCount(0);
+    await expect(industry.getByText(/\bother BFSI companies\b/)).toHaveCount(0);
     /**
      * **Three overlapping layers on one z-stack**, in the shape ANSR asked for: the
      * national base, the industry inside it, and — with no sub-industry answered — the
@@ -553,6 +664,35 @@ test.describe("the answer", () => {
     await expect(industry.getByText("GCCs across India")).toBeVisible();
     await expect(industry.getByText("in BFSI")).toBeVisible();
     await expect(industry.getByText("shown above")).toBeVisible();
+    /**
+     * **The innermost level is a POSITION MARKER, not a third bar, and this asserts
+     * the geometry rather than the pixels.** Five of 1,834 is 0.27%: as an extent it
+     * was a floored sliver nobody could see and no scale fixes it — a log axis would
+     * make the length a lie. So the marker is a fixed width capped by the layer it is
+     * inside, and its figure carries the count exactly as every other layer's does.
+     *
+     * The cap is what the assertion is really for: it is the difference between a
+     * marker inside the industry and one sticking out of it, which is what a thin
+     * industry would produce if the width were unconditional.
+     */
+    const marker = industry.locator(".gcc-containment__bar--marker");
+    await expect(marker).toHaveCount(1);
+    const markerBox = await marker.boundingBox();
+    const industryBar = industry.locator(".gcc-containment__bar").nth(1);
+    const industryBox = await industryBar.boundingBox();
+    expect(markerBox!.width).toBeGreaterThan(0);
+    expect(markerBox!.width).toBeLessThanOrEqual(industryBox!.width + 0.5);
+    /**
+     * **Every label starts at or after its own mark's trailing edge**, which is what
+     * stopped the chart drawing a figure that overhangs the bar it belongs to and what
+     * turned the width it used to leave empty into where the figures are read. Asserted
+     * on the two narrow layers: the outermost is full width and keeps its label inside.
+     */
+    for (const text of ["in BFSI", "shown above"]) {
+      const label = industry.getByText(text);
+      const box = await label.boundingBox();
+      expect(box!.x, text).toBeGreaterThanOrEqual(industryBox!.x);
+    }
     // The labels of both shapes this replaced.
     await expect(industry.getByText("Total industry companies")).toHaveCount(0);
     await expect(industry.getByText("Named above")).toHaveCount(0);
@@ -562,27 +702,104 @@ test.describe("the answer", () => {
      * from the industry as a whole." The chart's own labelled layers carry it.
      */
     await expect(industry.getByText(/selected from the/)).toHaveCount(0);
-    // The largest card is a ranking, and an overlap with the comparison set is marked
-    // rather than restated as a second identical card.
+    /**
+     * The largest card is a ranking, and it is a CHART rather than a stack of company
+     * cards. Neither a table nor a card grid: both were tried, and the card version was
+     * what made a third of this page the same data twice — three of these five are in
+     * the comparison set above, and each one restated that company's headcount range,
+     * city list and establishment year in a bordered card the reader had already seen.
+     */
     const largest = band(page, "largest");
-    // A stacked ranking of cards, not a table. Deliberately a different shape from the
-    // comparison grid — two grids of company cards under two headings is what makes a
-    // page read as padded.
     await expect(largest.getByRole("table")).toHaveCount(0);
     await expect(largest.getByRole("listitem")).toHaveCount(5);
-    await expect(largest.getByText("Also in your peer set").first()).toBeVisible();
     /**
-     * **The ordering is stated as the section's LEAD now, not as a footnote.** It read
-     * "Ranges reflect reported employee bands, so nothing here is ranked by revenue." at
-     * 12px under the block. We hold employee bands and never revenue, so it is the one
-     * note in this pass that could not simply go — it moved to where it is read before
-     * the ranking is.
+     * **The city list and the establishment year are BACK, as tags, at ANSR's request —
+     * and what this asserts is the shape rather than the fields.** They were dropped with
+     * the company CARD, and the earlier assertion here read that as "these fields may
+     * never return", which was one step stronger than the finding: the duplication was a
+     * bordered card restating four facts the reader had passed a screen earlier, not the
+     * facts. As one line of `sm` pills under a one-line ranking row they cost about 26px
+     * and there is no second card.
+     *
+     * So the assertions that matter are still above and below this one — no table, no
+     * card, five rows — and these two say the tags are on every row and are pills rather
+     * than prose. The year keeps "In India since" in full because a bare year on a
+     * JPMorgan Chase row reads as 1799.
      */
-    await expect(largest.getByText(/never by revenue/)).toBeVisible();
+    await expect(largest.getByText(/^In India since \d{4}$/)).toHaveCount(5);
+    // Every row carries at least one city pill beside its year pill. Counted rather than
+    // named: which cities the industry's biggest centres sit in is a dataset fact, and a
+    // spec that names one fails on a legitimate publish.
+    expect(
+      await largest.locator("li span.rounded-full").count(),
+    ).toBeGreaterThanOrEqual(10);
+    /**
+     * **The overlap marker's wording changed with its job.** "Also in your peer set" on
+     * a duplicate card admitted the repeat; on a chart row the marker lets a reader map
+     * the ranking onto the set they were given, and the sentence under the block states
+     * what that mapping amounts to — which is a finding rather than an apology.
+     */
+    await expect(largest.getByText("Also in your peer set")).toHaveCount(0);
+    await expect(
+      largest.getByText("in your comparison set", { exact: true }),
+    ).toHaveCount(3);
+    await expect(
+      largest.getByText(
+        "3 of the 5 largest BFSI GCCs in India are in your comparison set above.",
+      ),
+    ).toBeVisible();
+    /**
+     * **The ordering qualifier is GONE, at ANSR's request, and of the six leads removed in
+     * that pass this is the one with the sharpest edge on it.**
+     *
+     * It travelled as a footnote — "Ranges reflect reported employee bands, so nothing here
+     * is ranked by revenue." at 12px under the block — then as the section's lead, "Ranked
+     * by the size of the centre itself, never by revenue." Either way it was the one
+     * sentence stopping a reader taking "largest" for largest by revenue, on a page that
+     * holds revenue BANDS and can never rank by them.
+     *
+     * What is left on screen is the evidence rather than the statement: the heading says
+     * "centres", every row shows a headcount range, and the bars encode that range, so a
+     * reader who checks can see which quantity ordered the list. What no longer appears is
+     * the sentence that says so before they check.
+     *
+     * `LARGEST_LEAD` is still exported and still unit-tested, so restoring it is one prop.
+     * Both wordings are asserted absent here so the removal stays deliberate; it is on the
+     * blocked list with the other provenance removals.
+     */
+    await expect(largest.getByText(/never by revenue/)).toHaveCount(0);
     await expect(
       largest.getByText(/Ranges reflect reported employee bands/),
     ).toHaveCount(0);
-    await expect(largest.getByText(/Full width is .+, at /)).toBeVisible();
+    /**
+     * **The axis note is gone from this block too**, and it is the one axis note whose
+     * absence costs nothing. It read "Full width is JPMorgan Chase, at 59,900–60,000."
+     * under a ranked stack whose FIRST ROW is JPMorgan Chase, drawing a full-width bar,
+     * with 59,900–60,000 beside it at 24px — so it restated a name and a figure the
+     * reader had passed four rows earlier. An unstated axis is a problem when nothing on
+     * screen reveals it; on a ranking sorted by the quantity the bars encode, row one is
+     * the axis. The bars themselves are unchanged.
+     */
+    await expect(largest.getByText(/Full width is/)).toHaveCount(0);
+    /**
+     * **The count line is gone, at ANSR's request.** It read "The 5 largest BFSI GCCs in
+     * our India data." directly under a five-row ranking headed "The largest BFSI GCCs in
+     * India" — the heading restated with the row count in front of it, which the reader
+     * can see. `largestCountLine` is kept in `copy.ts` and still unit-tested, so restoring
+     * it is one line; asserted absent here so the removal stays deliberate.
+     */
+    await expect(
+      largest.getByText(/largest BFSI GCCs in our India data/),
+    ).toHaveCount(0);
+    await expect(largest.getByText(/we hold/)).toHaveCount(0);
+    /**
+     * **What replaced it is a column header naming the QUANTITY.** Nothing on the block
+     * said what the five ranges are: over five bars, under a heading that says "largest",
+     * a reader could take them for revenue, for the company's whole Indian workforce, or
+     * for the company. The section heading names the subject and cannot carry the
+     * quantity too.
+     */
+    await expect(largest.getByText("GCC headcount")).toBeVisible();
     /**
      * The function card draws no share against any function, and that is the
      * assertion rather than an omission. There is no per-company function record in
@@ -590,7 +807,7 @@ test.describe("the answer", () => {
      * have been invented.
      */
     const functions = band(page, "functions");
-    await expect(functions.getByText("Technology and engineering")).toBeVisible();
+    await expect(functions.getByText("Technology & engineering")).toBeVisible();
     /**
      * **Both caveat paragraphs are gone**, at ANSR's request: "The general pattern
      * across India GCCs… Not a per-company breakdown of the companies above." and
@@ -609,6 +826,36 @@ test.describe("the answer", () => {
     // The property those sentences protected, still asserted: no share is drawn or
     // stated against any function.
     await expect(functions.getByText(/%/)).toHaveCount(0);
+    /**
+     * **No ordering claim, and no numbering to imply one.** The lead read "Most to least
+     * common across India GCCs." over eight numbered tiles — and `COMMON_FUNCTIONS` is a
+     * hardcoded list with `COMMON_FUNCTIONS_BASIS` deleted, so nothing measures a
+     * frequency. The rank badges made an unmeasured claim look measured, so they went
+     * with the sentence.
+     *
+     * The element changed with them: an ordered list IS an ordering claim, announced as
+     * one to a screen reader, and it would have survived the badges being deleted. So
+     * the assertion is on the `<ul>` rather than on the badge text — which is also the
+     * only half of this a reader using a screen reader would have noticed.
+     */
+    await expect(functions.getByText(/most to least/i)).toHaveCount(0);
+    await expect(functions.locator("ol")).toHaveCount(0);
+    await expect(functions.locator("ul")).toHaveCount(1);
+    /**
+     * **`FUNCTIONS_LEAD` is gone from the render, at ANSR's request.** It said "Common
+     * across India GCCs, whatever the industry." — which is the sentence that made the
+     * block's scope explicit: this list does not move with the visitor's answers. The
+     * HEADING still carries the general claim ("Functions most GCCs run from India", a
+     * statement about GCCs rather than about the five companies above), which is what
+     * `project.md` relies on, so what is lost is the "whatever the industry" half.
+     *
+     * Asserted absent so the removal stays deliberate. The constant is still exported and
+     * still unit-tested for the two things it may never do — state a share or claim an
+     * order.
+     */
+    await expect(
+      functions.getByText("Common across India GCCs, whatever the industry."),
+    ).toHaveCount(0);
     /**
      * The terminating evidence strip. Scale proof is national, the denominators are
      * drawn rather than left in a footnote, and both index names are written out in
@@ -632,17 +879,47 @@ test.describe("the answer", () => {
     await expect(scale.getByText(/indicative rather than audited/)).toHaveCount(0);
     await expect(scale.getByText("Source: ANSR GCC Database")).toHaveCount(0);
     await expect(scale.getByText(/Data as at \w+ \d{4}/)).toHaveCount(0);
-    // Every mark carries its figure in text.
-    await expect(scale.getByText("36% of the list")).toBeVisible();
+    /**
+     * **All three labels are whole sentences now, and the duplicated denominator is
+     * gone.** The first two cells rendered "181", then a smaller "of 500" beside it,
+     * then "of the Fortune Global 500 companies have GCCs in India" underneath — so a
+     * reader met the denominator twice and then a line opening with a preposition. Each
+     * label is now the predicate of a sentence whose subject is the figure above it.
+     */
     await expect(
-      scale.getByText("of the Fortune Global 500 companies have GCCs in India"),
+      scale.getByText("Fortune Global 500 companies run a GCC in India."),
     ).toBeVisible();
     await expect(
-      scale.getByText("of the Forbes Global 2000 companies have GCCs in India"),
+      scale.getByText("Forbes Global 2000 companies run a GCC in India."),
     ).toBeVisible();
+    /**
+     * **The third cell covers BOTH indices now, and the figure is their union.** It was
+     * the Fortune Global 500 subset alone, sitting under two cells that name two different
+     * memberships — so the narrower of the two stood in as the total for both, and "those
+     * GCCs" pointed at one while reading as both. The union is deduplicated by
+     * construction: the sum is taken over companies filtered on `either index`, so a
+     * company on both lists appears once. See `indexedProfessionals`.
+     */
     await expect(
-      scale.getByText("people across those Fortune Global 500 GCCs in India"),
+      scale.getByText(
+        "people work in those Fortune Global 500 and Forbes Global 2000 GCCs in India.",
+      ),
     ).toBeVisible();
+    // The standalone denominator that made it "500" twice.
+    await expect(scale.getByText("of 500")).toHaveCount(0);
+    await expect(scale.getByText("of 2,000")).toHaveCount(0);
+    /**
+     * **No label states a share, at ANSR's request.** Both carried one — ", 36% of the
+     * list." — which arrived when the two proportion bars came off, on the argument that a
+     * figure with a denominator should state it. The count and the index name are what is
+     * left, and the index name still carries its own denominator.
+     *
+     * The bars are still gone and still for their own reason: they were drawn on the first
+     * two cells and the third has no denominator to draw, so the row read as two marks
+     * beside a figure carrying neither.
+     */
+    await expect(scale.getByText(/of the list/)).toHaveCount(0);
+    await expect(scale.getByText(/%/)).toHaveCount(0);
     // The one thing the reference composition got wrong here: it labels the third
     // figure "Fortune 500", which is a different index from the one counted.
     await expect(scale.getByText(/Fortune 500 GCCs/)).toHaveCount(0);
@@ -665,10 +942,21 @@ test.describe("the answer", () => {
     await expect(map.getByText(/Larger means more GCCs/)).toHaveCount(0);
     await expect(map.getByText(/Counted as company presences/)).toHaveCount(0);
     await expect(map.getByText(/cities in all/)).toHaveCount(0);
-    // The legend still decodes the two mark shapes, which is what the graphic cannot
-    // convey on its own.
-    await expect(map.getByText("Established hub")).toBeVisible();
-    await expect(map.getByText("Emerging location")).toBeVisible();
+    /**
+     * **The legend is gone too, and it is the third thing this block has lost.** It
+     * named two mark shapes, "Established hub" and "Emerging location" — and every
+     * city now draws the same orange halo at ANSR's request, so the key described a
+     * distinction the graphic had stopped making. A false key is worse than none, so
+     * it went with the ring rather than being reworded.
+     *
+     * **What that costs: the established/emerging distinction is no longer on the
+     * graphic at all.** It survives only as the "emerging" qualifier on the ranked
+     * list's rows, which is asserted below. On the blocked list.
+     */
+    await expect(map.getByText("Established hub")).toHaveCount(0);
+    await expect(map.getByText("Emerging location")).toHaveCount(0);
+    // The one place the tier distinction still exists for a visitor.
+    await expect(map.getByText("emerging").first()).toBeVisible();
     // Scoped to the `dl`, not the band: every dot on the map also carries its city in
     // an SVG `<title>`, which is what the accessible summary is built from and is
     // `hidden` to a visibility assertion. That is the pairing working — the graphic
@@ -736,7 +1024,7 @@ test.describe("the answer", () => {
     const tablist = page.getByRole("tablist", { name: "Result view" });
     await expect(tablist).toBeVisible();
     const peersTab = page.getByRole("tab", { name: /Peer Landscape/ });
-    const functionsTab = page.getByRole("tab", { name: /Function Opportunity/ });
+    const functionsTab = page.getByRole("tab", { name: /Function Metrics/ });
     await expect(peersTab).toHaveAttribute("aria-selected", "true");
     await expect(functionsTab).toHaveAttribute("aria-selected", "false");
     /**
@@ -757,19 +1045,40 @@ test.describe("the answer", () => {
     await expect(page.locator(`#${panelId}`)).toHaveAttribute("role", "tabpanel");
     expect(await functionsTab.getAttribute("aria-controls")).toBeNull();
     /**
-     * **The selected tab is physically continuous with the content surface**, which is
-     * the whole reason this is a tab strip rather than a floating segmented control.
-     * Asserted as geometry: the tab's bottom edge and the panel's top edge are the
-     * same line, and both are the same fill.
+     * **The switch is the CARD'S OWN TOP ROW: full width, two equal halves, and the
+     * selected cell filled with the ground of the content under it.** Two earlier
+     * shapes are recorded in `ViewTabs`; what a spec can hold is the three properties
+     * that make this one seamless rather than attached.
+     *
+     * One: the bar spans the card, and each cell is half of it. Two: the selected
+     * cell's fill is the same fill as the zone beneath it, so the joint is the absence
+     * of an edge rather than two colours that nearly match — this is the assertion
+     * that fails if someone hard-codes white here, which is exactly what happened
+     * once. Three: the bar is inside the card, which is what makes it the card's row
+     * rather than a strip above it.
      */
+    const card = page.locator(".gcc-result-card");
+    await expect(card).toHaveCount(1);
     const tab = (await peersTab.boundingBox())!;
-    const body = (await page.locator(`#${panelId}`).boundingBox())!;
-    expect(Math.abs(tab.y + tab.height - body.y)).toBeLessThanOrEqual(1);
-    const [tabFill, panelFill] = await Promise.all([
+    const cardBox = (await card.boundingBox())!;
+    expect(Math.abs(tab.width * 2 - cardBox.width)).toBeLessThanOrEqual(2);
+    expect(Math.abs(tab.y - cardBox.y)).toBeLessThanOrEqual(2);
+    // The first zone is the content directly under the bar. Its fill and the selected
+    // cell's are one value, and the two boxes share an edge.
+    const firstZone = page.locator(".gcc-zone").first();
+    const zoneBox = (await firstZone.boundingBox())!;
+    expect(Math.abs(tab.y + tab.height - zoneBox.y)).toBeLessThanOrEqual(1);
+    const [tabFill, zoneFill, otherFill] = await Promise.all([
       peersTab.evaluate((el) => getComputedStyle(el).backgroundColor),
-      page.locator(`#${panelId}`).evaluate((el) => getComputedStyle(el).backgroundColor),
+      firstZone.evaluate((el) => getComputedStyle(el).backgroundColor),
+      functionsTab.evaluate((el) => getComputedStyle(el).backgroundColor),
     ]);
-    expect(tabFill).toBe(panelFill);
+    expect(tabFill).toBe(zoneFill);
+    expect(otherFill).not.toBe(tabFill);
+    // The panel is inside the card, not beside it.
+    const body = (await page.locator(`#${panelId}`).boundingBox())!;
+    expect(body.y).toBeGreaterThanOrEqual(cardBox.y);
+    expect(body.width).toBeLessThanOrEqual(cardBox.width);
     /**
      * Manual activation. Arrowing onto the other tab moves focus and does NOT swap the
      * screen; the peer view is still the one selected and still the one rendered.
@@ -783,7 +1092,7 @@ test.describe("the answer", () => {
     // becomes the selected one and the peer cards are gone.
     await page.keyboard.press("Enter");
     await expect(
-      page.getByRole("tab", { name: /Function Opportunity/ }),
+      page.getByRole("tab", { name: /Function Metrics/ }),
     ).toHaveAttribute("aria-selected", "true");
     await expect(
       page.getByRole("tab", { name: /Peer Landscape/ }),
@@ -825,7 +1134,7 @@ test.describe("the answer", () => {
      */
     await expect(profile.getByRole("button")).toHaveCount(1);
     await expect(
-      profile.getByRole("button", { name: "Change my answers" }),
+      profile.getByRole("button", { name: "Edit answers" }),
     ).toBeVisible();
     // The four answers, as text. "Company" rather than "Your company": a pill is sized
     // to its own content and the possessive was two thirds of the width of the value.
@@ -846,7 +1155,7 @@ test.describe("the answer", () => {
       page.getByRole("heading", { level: 1, name: /Northwind Financial/ }),
     ).toHaveCount(0);
     // Pressing it returns to the form with the answers intact.
-    await profile.getByRole("button", { name: "Change my answers" }).click();
+    await profile.getByRole("button", { name: "Edit answers" }).click();
     await expect(page.locator("h1#ask-title")).toBeVisible();
     // Without a name: three pills, no empty fourth, no stub — and still one control.
     await page.goto("/");
@@ -880,6 +1189,22 @@ test.describe("the answer", () => {
     expect((d ?? "").length).toBeGreaterThan(5_000);
 
     /**
+     * **And it is UNSTROKED.** A hairline coast made India read as a boundary
+     * drawing rather than as the ground the marks sit on, which is most of why the
+     * graphic looked like a school diagram. Invariant 8 governs where the geometry
+     * comes from, not whether it is outlined — a filled silhouette is the same
+     * claim, drawn as ground.
+     *
+     * Asserted here rather than left to the render because the fix has a tempting
+     * wrong repair: unstroking at the pale mint the land used to be leaves a 1.27:1
+     * shape, and the obvious response to an invisible country is to put the stroke
+     * back. The land is a step darker instead.
+     */
+    expect(
+      await outline.evaluate((el) => getComputedStyle(el).stroke),
+    ).toBe("none");
+
+    /**
      * **The caption invariant 8 required is no longer on the page**, removed at ANSR's
      * request. The outline is still cut from Natural Earth's India point-of-view set —
      * that is what the generated path above is — so what is asserted here is the part
@@ -894,6 +1219,58 @@ test.describe("the answer", () => {
     await expect(
       map.getByText(/The grid is a reference, not a boundary/),
     ).toHaveCount(0);
+  });
+
+  /**
+   * **The map labels and the ranked list name the same cities, and the disclosure
+   * drives both.** That coupling is ANSR's ask and it is the kind of thing that
+   * decays quietly: the two are built from separate expressions, so one could keep
+   * showing eight while the other showed twenty-two and the screen would still look
+   * fine.
+   *
+   * The other half is the `overflow-visible` hazard. Labels are drawn outside the
+   * viewBox on purpose, into the wrapper's padding, and content that overflows
+   * visibly does not affect layout but DOES enlarge an ancestor's scrollable region —
+   * so a label reaching too far is a horizontal scrollbar on a document this tool
+   * does not own the scroll of. The 320px reflow test does not catch it, because
+   * below `sm` the labels are not drawn at all.
+   */
+  test("labels every ranked city on the map, and never widens the document", async ({
+    page,
+  }) => {
+    // 640 is the narrowest width that draws labels, so it is the tightest case for
+    // the gutters.
+    await page.setViewportSize({ width: 640, height: 900 });
+    await page.goto("/");
+    await ask(page, { industry: "BFSI", revenueBand: "Above $20 Bn" });
+    const map = band(page, "map");
+
+    // Wait for the band before counting. Without this the counts are taken while the
+    // phase change is still committing: the section is absent, every locator reports
+    // zero, and the failure reads as a broken selector rather than as a race.
+    await expect(map).toBeVisible();
+
+    const labels = map.locator("svg text");
+    const rows = map.locator("dl dt");
+    const leading = await rows.count();
+    expect(leading).toBeGreaterThan(1);
+    await expect(labels).toHaveCount(leading);
+
+    const noScroll = async () => {
+      const { scrollWidth, clientWidth } = await page.evaluate(() => ({
+        scrollWidth: document.documentElement.scrollWidth,
+        clientWidth: document.documentElement.clientWidth,
+      }));
+      expect(scrollWidth).toBeLessThanOrEqual(clientWidth + 1);
+    };
+    await noScroll();
+
+    // Expanding the list has to expand the map's labels with it.
+    await map.getByRole("button", { name: /Explore all cities/ }).click();
+    const all = await rows.count();
+    expect(all).toBeGreaterThan(leading);
+    await expect(labels).toHaveCount(all);
+    await noScroll();
   });
 
   /**
@@ -917,6 +1294,19 @@ test.describe("the answer", () => {
     expect(
       await halos.first().evaluate((el) => getComputedStyle(el).animationName),
     ).toBe("gcc-map-pulse");
+    /**
+     * **And it STOPS.** It ran `infinite`, which is the one place the project's
+     * motion read as decoration rather than as meaning: nothing about the map
+     * changes once the screen has arrived, so a pulse that never ends announces an
+     * event that is not happening — and a reader comparing two halo areas is doing
+     * it on a graphic that keeps moving under them. Two cycles, then still, which
+     * puts it on the enter animations' footing rather than the marquee's.
+     */
+    expect(
+      await halos
+        .first()
+        .evaluate((el) => getComputedStyle(el).animationIterationCount),
+    ).toBe("2");
 
     const context = await browser.newContext({ reducedMotion: "reduce" });
     const still = await context.newPage();
@@ -987,20 +1377,29 @@ test.describe("the answer", () => {
     await ask(page, { industry: "BFSI", revenueBand: "Above $20 Bn" });
 
     /**
-     * The `evaluating` branch. It no longer reads "would not be first", which was the
-     * framing this constant was chosen for and was the wrong sentence for it: it
-     * presumes the reader's concern is priority and answers it as a rebuttal. What
-     * makes the constant safe is unchanged — the finding is a statement about the
-     * industry rather than about the visitor — and it is now the count, which is true
-     * of any reader whatever they run today.
+     * **`framing()` no longer reaches this band, so the browser-side assertion is the
+     * ABSENCE of it.** The line is a constant from `HEADER_LINES`, because the wording it
+     * replaced stated a peer count the grid's own count line contradicted. `framing()` is
+     * kept and unit-tested, which is where its branching is covered.
+     *
+     * **`gccStatus` is still rendered, on the OTHER screen** — `functionFraming` branches
+     * on it for the three fields of its closing CTA, which is now the only thing it
+     * branches: that screen's `h2` and lead have gone with the rest of its copy strip.
+     * `screen2.test.ts` covers the three branches. So this test is about Screen 1 saying
+     * nothing the visitor did not tell us, not about the field being unused.
+     *
+     * What only a browser can check is that nothing here reads the constant back to them
+     * as something they said: no "India today" pill, and no framing sentence that presumes
+     * what they run.
      */
-    // The finding is in the live region rather than in an `h1` now — the teal hero it
-    // used to headline is gone. `framing()` still produces it and `gccStatus` still
-    // selects the branch, so what is asserted is unchanged; only where it lands moved.
-    await expect(page.getByRole("status")).toContainText(
-      /relevant peers? operates? a GCC in India/,
+    await expect(page.locator("#header-finding")).toHaveText(
+      "How your industry operates in India",
     );
     await expect(page.getByText(/would not be first/)).toHaveCount(0);
+    // Neither of the two earlier band lines, both of which made a claim about the visitor
+    // or about how many companies matched.
+    await expect(page.getByText(/relevant peers/)).toHaveCount(0);
+    await expect(page.getByText(/match your BFSI profile/)).toHaveCount(0);
 
     /**
      * Three answers echoed back, and every one is something they typed. **"India
@@ -1015,7 +1414,7 @@ test.describe("the answer", () => {
     }
     // And the one control, which is the only way back from either result screen.
     await expect(
-      profile.getByRole("button", { name: "Change my answers" }),
+      profile.getByRole("button", { name: "Edit answers" }),
     ).toHaveCount(1);
   });
 
@@ -1038,7 +1437,7 @@ test.describe("the answer", () => {
      */
     await page
       .getByRole("group", { name: /Your profile/ })
-      .getByRole("button", { name: "Change my answers" })
+      .getByRole("button", { name: "Edit answers" })
       .click();
 
     // Back on the form, and a correction starts from the last answer rather than
@@ -1101,14 +1500,28 @@ test.describe("a thin industry", () => {
      */
     const industry = band(page, "industry");
     await expect(industry).toBeVisible();
-    await expect(
-      industry.getByRole("heading", {
-        name: "How much of your industry is in India",
-      }),
-    ).toBeVisible();
+    // **The heading is only asserted to EXIST, not to say a particular thing.** It was
+    // pinned to "How much of your industry is in India", which a copy pass then changed
+    // for a reason that had nothing to do with this spec's subject — the same failure
+    // mode as the twenty specs that used to locate a band by its heading text. What
+    // this test is about is the SENTENCE underneath, which is the thing that has to
+    // stay honest for an exhausted industry.
+    await expect(industry.getByRole("heading")).toBeVisible();
+    /**
+     * **The exhaustive claim is no longer on the page, and this is the removal with the
+     * real cost.** `industrySentence`'s exhaustive branch said "…and that is all of them
+     * in our data" — the sentence that tells a reader of a six-company industry that the
+     * set above IS the industry rather than a selection from something larger. It went with
+     * the lead at ANSR's request, so an exhausted industry now looks like any other.
+     *
+     * The claim still exists in `industryLine` and is still unit-tested per industry, so
+     * restoring it is one prop. Asserted absent here so the loss is deliberate and visible
+     * to whoever reads this next; it is on the blocked list with the other provenance
+     * removals.
+     */
     await expect(
       industry.getByText(/that is all of them in our data/),
-    ).toBeVisible();
+    ).toHaveCount(0);
     // And nothing anywhere on the card claims the industry runs past the table above,
     // which would be a plain falsehood here.
     await expect(industry.getByText(/much larger industry base/)).toHaveCount(0);
@@ -1151,13 +1564,22 @@ test.describe("a thin industry", () => {
      * never do is fill one: a cell the data cannot supply says "Data unavailable".
      */
     const strip = band(page, "snapshot");
+    // The labels no longer interpolate the industry; the section heading names it once.
     await expect(
-      strip.getByText("Electrical & Electronics companies in India"),
+      strip.getByRole("heading", { name: "Snapshot of Electrical & Electronics GCCs in India" }),
     ).toBeVisible();
-    await expect(
-      strip.getByText("Typical centre size in Electrical & Electronics"),
-    ).toBeVisible();
+    await expect(strip.getByText("Of every GCC in India")).toBeVisible();
+    await expect(strip.getByText("Typical GCC headcount")).toBeVisible();
     await expect(strip.getByText(/^(—|n\/a)$/i)).toHaveCount(0);
+    /**
+     * **A thin industry's share reads "<1%", never "0%".** Two companies against a
+     * national base of 1,834 rounds to nought, and a nought in the opening cell says
+     * the industry is not in India at all — to the exact visitors the shortfall copy
+     * below is written to reassure. This is the industry that produces it, so it is
+     * asserted here rather than in a unit test alone.
+     */
+    await expect(strip.getByText("<1%")).toBeVisible();
+    await expect(strip.getByText(/^0%$/)).toHaveCount(0);
 
     // The national scale block is unchanged — that is what it is for.
     await expect(band(page, "scale").getByText("181")).toBeVisible();

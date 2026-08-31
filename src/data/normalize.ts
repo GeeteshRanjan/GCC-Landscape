@@ -57,6 +57,74 @@ export function canonicalIndustry(value: unknown): string {
   return INDUSTRY_ALIASES[cleaned] ?? cleaned;
 }
 
+/**
+ * Company names the spreadsheet writes in a shape the company does not, keyed by
+ * the source's own spelling.
+ *
+ * ── Why this is a TABLE and not a rule ──────────────────────────────────────
+ *
+ * Twenty-three names arrive in full capitals and eighteen of them are correct:
+ * SABIC, AECOM, IQVIA, ABBYY, GEODIS, MULTIVAC, STRATACACHE and the rest are how
+ * those companies write themselves. A "title-case anything shouting" rule would
+ * damage eighteen marks to repair five. Same on the other side: twenty names start
+ * lowercase and seventeen of them — eBay, iSolved, pSemi, smartShift, d-Matrix,
+ * ebm-papst, lastminute.com — are deliberate brand styling. There is no rule here,
+ * only a decision per name, so the artifact is a list somebody can read and argue
+ * with.
+ *
+ * ── What earns an entry ─────────────────────────────────────────────────────
+ *
+ * Only a name the company itself writes differently, checked one at a time. Not a
+ * house style: `Inc.`, `Corp.` and `plc` suffixes are left exactly as supplied even
+ * though only 28 of 1,834 carry one, because stripping them would rewrite a legal
+ * name on a judgement about tidiness. Not a merge either — two rows that look like
+ * one company stay two rows; see `mintSlug`.
+ *
+ * ── The constraint that shapes the list ─────────────────────────────────────
+ *
+ * `scripts/business-type-map.ts` is keyed on `industry||name` and folds case, so a
+ * CASE-ONLY correction is free. Anything that changes a letter has to be changed in
+ * that table too, or the company silently loses its business type — which is a safe
+ * state and therefore an invisible one. Two entries here do that and both are edited
+ * in both places: `EA - Electronic Arts`, the only spaced dash among 38 hyphenated
+ * names, moves to the parenthetical form the file already uses twenty times over;
+ * and `Victoria Secret` is a misspelling of a brand this tool shows to a CIO.
+ */
+const COMPANY_NAME_FIXES: Readonly<Record<string, string>> = {
+  /* Full capitals the company does not use. */
+  "DR. MARTENS": "Dr. Martens",
+  "GRUPO ANTOLIN": "Grupo Antolin",
+  "KDDI CORPORATION": "KDDI Corporation",
+  "OIA GLOBAL": "OIA Global",
+  "ADVANZ PHARMA": "Advanz Pharma",
+  /* Lowercase openings that are not brand styling. */
+  eurofins: "Eurofins",
+  ilantus: "Ilantus",
+  "o9 solutions": "o9 Solutions",
+  /* A lowercase letter after the hyphen, where the second half is an initialism. */
+  "Sanmina-sci": "Sanmina-SCI",
+  "Read-ink": "Read-Ink",
+  /**
+   * Two rows, one spelling. They stay two companies — merging them changes the
+   * count and every profile figure, and whether they are one entity is ANSR's
+   * call — but the case difference was hiding the duplicate rather than
+   * recording it. `mintSlug` suffixes the second.
+   */
+  "Iq-eq": "IQ-EQ",
+  /* The two that change a letter. Both are also edited in business-type-map.ts. */
+  "EA - Electronic Arts": "EA (Electronic Arts)",
+  "Victoria Secret": "Victoria's Secret",
+};
+
+/**
+ * The one spelling of a company name. Idempotent, like `canonicalIndustry`, and
+ * applied in the same place for the same reason — once, where the sheet is read.
+ */
+export function canonicalCompanyName(value: unknown): string {
+  const cleaned = cleanText(value);
+  return COMPANY_NAME_FIXES[cleaned] ?? cleaned;
+}
+
 export function cleanText(value: unknown): string {
   return String(value ?? "")
     .replace(/\s+/g, " ")

@@ -1,6 +1,6 @@
 {
   "describedAs": "1834 companies, from Consolidated_GCC_India_Database_2026_New.xlsx",
-  "recordedAt": "2026-08-28T06:33:07.047Z",
+  "recordedAt": "2026-08-31T07:02:45.793Z",
   "figures": {
     "companies": 1834,
     "industries": 24,
@@ -21,7 +21,7 @@
     "Fortune Global 500": 181,
     "Forbes Global 2000": 483,
     "professionals, all companies": 2610500,
-    "professionals, Fortune 500 subset": 1059175,
+    "professionals, either index (deduplicated)": 1688200,
     "tier-2 presence, derived": 176,
     "top six cities": [
       "Bengaluru 1004",
@@ -35,10 +35,10 @@
     "business types defined": 158,
     "distinct tags in use": 137,
     "companies with a business type": 1768,
-    "companies with two business types": 50,
+    "companies with two business types": 68,
     "industries fully tagged": 18,
     "peer sets the floor shortens": 147,
-    "business types with no company": 6,
+    "business types with no company": 1,
     "metrics defined": 35,
     "metrics with every figure entered": 35,
     "metrics part entered": 0,
@@ -50,10 +50,10 @@
       "hr-fully-loaded-cost"
     ],
     "metrics per function area": [
-      "tech 9",
+      "tech 8",
       "operations 9",
-      "hr 11",
-      "finance 6"
+      "hr 10",
+      "finance 8"
     ],
     "metrics with no provenance stated": 35,
     "metrics whose figures are a floor": [
@@ -64,10 +64,10 @@
       "tech-manager-depth"
     ],
     "metrics a visitor would receive, per function area": [
-      "tech 9",
+      "tech 8",
       "operations 9",
-      "hr 11",
-      "finance 6"
+      "hr 10",
+      "finance 8"
     ],
     "industry + revenue band": 1683,
     "industry + revenue band +/- 1 step": 1795,

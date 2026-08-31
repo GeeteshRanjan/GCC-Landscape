@@ -176,23 +176,53 @@ export const IMPACT = {
  * at 48px where a numeral reads as a data field that escaped a table; this IS the
  * figure, at 72px, and a figure is a numeral.
  */
+/**
+ * **"India GCCs", where this said "relevant peers".** Two problems with the old
+ * phrase, and the band is the worst place on the surface for either. "Relevant" is
+ * the tool grading its own output — a reader cannot check it, and a claim they cannot
+ * check in the first sentence after a form is where trust is spent rather than
+ * earned. And "peer" is our word for a matched company; the visitor's word for what
+ * these are is a GCC, which is the noun every other line on the surface now uses.
+ *
+ * Naming the centre also makes the line survive being read beside the function view's
+ * own band line, which is the same construction over the same subject. See
+ * `HEADER_LINES` in `screen-header.tsx`.
+ */
 function peerSubject(count: number): string {
-  if (count === 1) return "One relevant peer";
-  return `${count} relevant peers`;
-}
-
-export interface Framing {
-  title: string;
-  lead: string;
-  ctaHeading: string;
-  ctaBody: string;
-  ctaLabel: string;
+  if (count === 1) return "One India GCC";
+  return `${count} India GCCs`;
 }
 
 /**
- * The `gccStatus` input's entire consumer. It changes the framing of the whole
- * answer, because "should we do this" and "how does what we run compare" are
- * different questions over identical evidence.
+ * **ONE field, where this had five.** `lead`, `ctaHeading`, `ctaBody` and `ctaLabel`
+ * are gone, and four of the five were dead well before `title` was: Screen 1 has never
+ * rendered `framing().lead`, and it has no CTA at all — the page ends at its evidence
+ * strip, at ANSR's request. So three CTA strings sat in a function belonging to the one
+ * screen that must not have a CTA, which is how a reader restoring "the framing" would
+ * have wired up the element the page-end instruction forbids.
+ *
+ * `title` stays because it is the one field that was rendered until this pass and is the
+ * one thing there is a decision to revisit: whether the band's line varies with what the
+ * visitor already runs. Screen 2's `FunctionFraming` is a separate interface with its own
+ * five fields, all of them rendered, so nothing here constrains it.
+ */
+export interface Framing {
+  title: string;
+}
+
+/**
+ * Screen 1's `gccStatus` branch. **It currently has no caller in `src/`.**
+ *
+ * The band's line is a constant from `HEADER_LINES` — the wording this produced stated a
+ * peer count the grid's own count line contradicted. So this is kept for the same reason
+ * `peerLead` and `LARGEST_LEAD` are: it is the sentence to restore rather than a sentence
+ * that was wrong, and the unit suite is the only place `gccStatus` can be varied at all.
+ *
+ * **`gccStatus` itself is very much alive, and it is rendered on Screen 2.**
+ * `functionFraming` in `screen2/copy.ts` branches on the same field and every one of its
+ * five strings reaches the page: the `h2`, the lead, and the closing CTA's heading, body
+ * and label. Do not read this function's lack of a caller as evidence the field is
+ * decoration — deleting `gccStatus` breaks Screen 2's heading and its call to action.
  */
 export function framing(view: PeerView): Framing {
   const industry = view.industry.industry;
@@ -200,68 +230,50 @@ export function framing(view: PeerView): Framing {
   const subjectPhrase = peerSubject(count);
 
   /**
-   * One sentence, and it says what the reader can do with the page.
+   * One sentence per status, sharing a subject and differing in predicate.
    *
-   * All three used to open with the same twenty-word list of the sections below —
-   * comparable companies, the wider industry picture, the scale of the India base
-   * — which is a table of contents written as prose, immediately above the
-   * headings it lists. The reader is about to scroll past all three.
+   * The finding is the same regardless of where the visitor already stands — this many
+   * India GCCs resemble their company — so the count leads all three. What `gccStatus`
+   * changes is what the reader is invited to DO with it. The zero case gets its own
+   * sentence in each branch, because "0 India GCCs match your profile" is a headline
+   * built out of an absence.
    *
-   * **The three titles now share a subject and differ in predicate.** The finding is
-   * the same regardless of where the visitor already stands — this many companies in
-   * their industry run a centre here — so the count leads all three. What `gccStatus`
-   * changes is what the reader is being invited to DO with the count, which is a verb
-   * rather than a headline, and the same distinction runs through the leads and the
-   * closes. The zero case gets its own sentence in each branch, because "0 relevant
-   * peers operate a GCC in India" is a headline built out of an absence, and the band
-   * below it says the honest version at reading size.
+   * **The three CTA fields and the lead are gone rather than left unrendered**, and
+   * neither was a casualty of this pass: `lead` was never rendered on this screen, and
+   * Screen 1 has no CTA at all by instruction. See `Framing`.
    */
   switch (view.input.gccStatus) {
     case "operating":
       return {
         title:
           count === 0
-            ? `No ${industry} peer in India is close enough to benchmark against`
-            : `${subjectPhrase} to benchmark your India GCC against`,
-        // "Everything below is drawn from…" was the tool describing its own
-        // sourcing. The reader wants to know what they are looking at, not where it
-        // came from — that is what the provenance lines are for.
-        lead: `Compare your centre with the ${industry} companies operating closest to your profile, and with the wider industry around them.`,
-        ctaHeading: "Read these benchmarks against what you run",
-        ctaBody:
-          "ANSR builds and runs India centres for global companies at every scale on this page. A conversation is the quickest way to find out what this benchmark means for yours.",
-        ctaLabel: "Talk to ANSR about your India GCC",
+            ? `No ${industry} GCC in India is close enough to benchmark against`
+            : `${subjectPhrase} to benchmark yours against`,
       };
     case "expanding":
       return {
         title:
           count === 0
-            ? `No ${industry} peer in India is close enough to compare with yet`
+            ? `No ${industry} GCC in India is close enough to compare with yet`
             : `${subjectPhrase} in the ground you are expanding into`,
-        lead: `See what the ${industry} companies closest to your profile have built here, and how far the industry goes beyond them.`,
-        ctaHeading: "Size the next phase against these findings",
-        ctaBody:
-          "ANSR has taken India centres from a first hire to several thousand people. A conversation is the quickest way to size the next phase and how fast it can stand up.",
-        ctaLabel: "Talk to ANSR about scaling your India GCC",
       };
     case "evaluating":
       return {
+        /**
+         * **The line names the match, not the fact that a GCC exists.** It read "5
+         * relevant peers operate a GCC in India", which spent its verb on something true
+         * of every company in the dataset by construction — the corpus holds nothing else
+         * — and graded its own output with "relevant" in the same breath.
+         *
+         * It is not what the band renders. That is a constant, because even this wording
+         * states a COUNT, and five is what the grid shows rather than how many matched.
+         * The branch is the shape to restore if the band's line is ever allowed to vary
+         * with what the visitor runs; the count would have to come out of it first.
+         */
         title:
           count === 0
-            ? `No ${industry} peer in India is close enough to name yet`
-            : `${subjectPhrase} ${count === 1 ? "operates" : "operate"} a GCC in India`,
-        // "— what they built, where, and when" was a table of contents in prose,
-        // immediately above the three headings it listed. What replaces it is a
-        // preview of the dimensions the page actually covers, in the order it covers
-        // them — which is the one thing the reader cannot get from the headline.
-        lead: `Explore where the ${industry} companies closest to your profile operate, how large their centres are, and what the wider industry has built.`,
-        // "What this would look like for you" promised a result the page does not
-        // produce and read as the moment the tool stopped analysing and started
-        // selling. This one is about the analysis the visitor has just read.
-        ctaHeading: "Put the landscape in your company's context",
-        ctaBody:
-          "ANSR has built India centres for global companies in every industry on this page. A conversation is the quickest way to read these findings against your own operating priorities.",
-        ctaLabel: "Talk to ANSR about building your India GCC",
+            ? `No ${industry} GCC in India is a close enough match yet`
+            : `${subjectPhrase} ${count === 1 ? "matches" : "match"} your ${industry} profile`,
       };
   }
 }
@@ -284,7 +296,9 @@ export function framing(view: PeerView): Framing {
    on and is rendered as the section's own lead. What replaces the second is that the
    comparison cards no longer draw bars at all — each card carries its employee band
    as a figure at 24px, which is the reading the bar was a second copy of. The
-   largest-centres block keeps its bars and therefore keeps `largestAxisNote`.
+   largest-centres block keeps its bars and has since dropped its own axis note too,
+   for a different reason: on a ranking sorted by the quantity the bars encode, the
+   first row is the axis. See below.
 
    The headquarters preference is no longer stated anywhere on the screen. With the
    column gone there is nothing visible for it to explain, but it is a real
@@ -304,9 +318,18 @@ export function framing(view: PeerView): Framing {
  * example — a US apparel visitor is shown H&M and Adidas, so "your own market first"
  * is not what happened.
  *
- * **It is now the one place the method is stated, because the footnote it used to
+ * **The fix only reached one of the two branches, and the other went on returning
+ * that exact sentence for a year.** Answering a sub-industry got a derived, accurate
+ * lead; leaving it blank — which is the path most visitors take, and the one every
+ * screenshot of this page was taken on — fell through to the same false string, under
+ * a comment asserting it was accurate again. It was not: headquarters is a tiebreak
+ * beneath the score and cannot put anything first, and the comparison card stopped
+ * showing headquarters at all. Both branches are now derived; see the second one.
+ *
+ * **It is also the one place the method is stated, because the footnote it used to
  * agree with is gone.** So the accuracy of this sentence carries alone, and the
- * unit test that pinned the two to each other pins this one to the peer set itself.
+ * unit test that pinned the two to each other pins each branch to the peer set it
+ * sits above.
  *
  * Derived rather than written, and it lives here because `copy.ts` holds every
  * visitor-facing sentence on this screen.
@@ -326,12 +349,70 @@ export function peerLead(view: PeerView): string {
      * The sub-industry is named because it is the one answer on the form a visitor
      * could reasonably wonder whether the tool used.
      */
-    return `Matched on your sub-industry, ${businessType.name.toLowerCase()}. Ranked by how close each business is to yours, then by size.`;
+    /**
+     * **"India GCCs" rather than "companies", and it is a clarity fix rather than a
+     * new claim.** Every card in this set runs a centre in India by construction — the
+     * dataset holds nothing else — but the lead never said so, and the section heading
+     * two hundred pixels up does not either now that the place phrase came off it. So a
+     * reader met five company names, a headcount and a city list, and had to infer that
+     * the subject was the centre rather than the company. Naming it once here is what
+     * the card labels then inherit.
+     */
+    /**
+     * **"then by revenue band", where this said "then by size".** The score's second
+     * term is band proximity, and "size" could be read as either that or the centre
+     * headcount every card carries as its own figure — which is NOT a key at all. A
+     * reader comparing two adjacent cards' figures would have found the claim broken.
+     * Naming the key removes the ambiguity without changing what is claimed.
+     */
+    return `India GCCs matched on your sub-industry, ${businessType.name.toLowerCase()}, ranked by how close each business is to yours, then by revenue band.`;
   }
 
-  // No sub-industry given: matching really is band-led, and the old sentence
-  // is accurate again.
-  return "Same industry, closest revenue band, and companies from your own market first.";
+  /**
+   * No sub-industry given, which is the path most visitors take.
+   *
+   * **The sentence here was the false one, and the comment above it said so while
+   * the code went on returning it.** It read "Same industry, closest revenue band,
+   * and companies from your own market first." — accurate under the old band ladder,
+   * and wrong twice over since:
+   *
+   *   - Headquarters is a TIEBREAK below the score, so it can never put a company
+   *     first. It reorders only companies the score has already tied.
+   *   - The comparison card no longer shows headquarters at all, so a visitor cannot
+   *     check the claim even where it happens to hold. No copy on this screen may
+   *     claim something a card cannot show.
+   *
+   * What IS true on this path: with no sub-industry every company's business
+   * similarity is zero, so the score reduces to band proximity alone — and that is a
+   * THREE-STEP function, not a distance: same band, then adjacent band, then everyone
+   * else equally. So the sentence says "closest first" and not "ranked by how close",
+   * which would claim a total ordering the engine does not compute. Two companies five
+   * bands apart and three bands apart are tied here, and a sentence promising a
+   * gradient would be describing an ordering that does not exist.
+   *
+   * **It deliberately claims no SECOND key, and the test is why.** The obvious longer
+   * sentence — "then the largest India centres" — was written first, on the reasoning
+   * that within a band tie the comparator falls through to centre size, and it is
+   * visible because each card carries its employee band as its own figure. It is also
+   * false: `matchPeers` puts the headquarters tiebreak BETWEEN the score and the size,
+   * and in Agribusiness & Food Processing that fires and lifts a 150-employee US
+   * company above a 650-employee one. A reader comparing the two figures on adjacent
+   * cards would see the claim break. Headquarters cannot be named in its place either
+   * — it is the one key the block does not show.
+   *
+   * So one key, stated exactly. `tests/unit/screen1.test.ts` pins the sentence to the
+   * ordering it describes over every industry, and separately pins the size ordering
+   * as NOT holding — so restoring the longer sentence fails a test that names the
+   * counter-example, rather than drifting quietly the way this branch did for a year.
+   */
+  /**
+   * **"India GCCs in your industry", for the same reason as the branch above**, and the
+   * ordering claim is unchanged: closest revenue band first, one key, no gradient
+   * promised. The word "companies" was doing double duty — it named the subject and
+   * implied the whole company — where the figure on every card is the centre's
+   * headcount.
+   */
+  return "India GCCs in your industry, closest to your revenue band first.";
 }
 
 
@@ -492,7 +573,34 @@ export function industryLine(view: PeerView): string {
  * space is a sentence written in a component.
  */
 export function industrySentence(view: PeerView): string {
-  return `${formatCount(view.industry.total)} ${industryLine(view)}`;
+  /**
+   * **The exhaustive branch keeps its figure and the ordinary branch drops it, and
+   * the split is about what each one has to CLAIM.** An exhausted industry needs the
+   * count in the sentence because the claim is about that count — that it is all of
+   * them — and the chart beside it is degenerate in exactly the case a reader is most
+   * likely to doubt.
+   *
+   * Everywhere else the figure was the fourth appearance of one number. The strip
+   * above said it, this sentence said it, the chart's own middle layer is labelled
+   * with it, and the peer count line divides by it — so a reader met "189" four
+   * times in four wordings and had to satisfy themselves the four agreed before
+   * trusting any of them, which is the exact cost the snapshot exists to remove. The
+   * chart is where it belongs, because the chart is the only place it has a
+   * denominator.
+   *
+   * **"other" went with it**, and it was a real defect rather than a spare word:
+   * "189 other BFSI companies" invites the question "other than which?" and nothing
+   * on the page answers it. `industry.total` does still exclude the visitor's own
+   * company where the data holds it — a difference of one on a figure in the
+   * hundreds — so the exclusion is now unstated rather than untrue.
+   *
+   * What is left describes the three layers the chart draws, in the order it draws
+   * them, and states no quantity at all.
+   */
+  if (view.industry.exhaustive) {
+    return `${formatCount(view.industry.total)} ${industryLine(view)}`;
+  }
+  return `Every GCC in India, with ${view.industry.industry} inside it, and the companies above inside that.`;
 }
 
 /** The largest-in-industry panel's framing, including its two degraded shapes. */
@@ -542,8 +650,38 @@ export function largestLine(view: PeerView): string {
  * the finding without overstating it: "closest" is exactly what the relevance
  * ordering produces and what the rank badge on each card shows, and "comparable" is
  * the word the count line and the section lead both already use.
+ *
+ * **The place phrase came off, and the reason is the six headings read together
+ * rather than anything wrong with this one.** Five of the surface's six section
+ * headings ended on the same prepositional phrase — "in India", "is in India", "in
+ * India", "from India", "in India" — all of them the same length and the same
+ * declarative construction. Each was defensible on its own and the set was one
+ * sentence six times, which is exactly the artefact a rule applied without a
+ * companion rule about variety produces. See the heading-cadence note below.
+ *
+ * The place phrase is back in a different form, as "India GCCs" rather than a trailing
+ * "in India" — so the cadence fix holds while the subject is named. See below.
+ *
+ * **"India GCCs", not "companies", and that word is the one thing the heading was
+ * missing.** Dropping the place phrase fixed the cadence and cost the subject: a reader
+ * met "The companies closest to yours" over five company names, a headcount and a city
+ * list, with nothing on the block saying that the subject is the CENTRE rather than the
+ * company. Naming it in the heading is what the lead and the card labels then inherit,
+ * and it is shorter than the phrase it replaced.
  */
-export const PEERS_TITLE = "The closest comparable companies in India";
+/**
+ * **"closest to your profile", not "closest to yours", and the old wording assumed
+ * the visitor has a GCC.** "Yours" has to refer to something, and the only candidate
+ * on the page was an India centre — which most readers of this screen do not have.
+ * `gccStatus` is a constant the form never asks for, so the tool cannot know either
+ * way, and a heading that presumes the answer is the one thing this surface may not
+ * do: it reads as a page written for somebody else.
+ *
+ * "Your profile" is exactly what the matching consumed — the four answers echoed on
+ * the band directly above — so the heading now names the real comparison and claims
+ * nothing about what the visitor runs.
+ */
+export const PEERS_TITLE = "India GCCs closest to your profile";
 
 /**
  * How many are shown, out of what.
@@ -565,15 +703,18 @@ export function peerCountLine(view: PeerView): string {
   const industry = view.industry.industry;
   const cohort = view.industry.businessType?.count ?? view.industry.total;
 
-  if (shown === 0) return `No comparable ${industry} companies to show.`;
+  // **"GCCs", not "companies", in all four branches.** The count is of centres in India,
+  // and the same word was carrying both meanings across this block — the lead, the card
+  // labels and this line. One subject, named the same way in every one of them.
+  if (shown === 0) return `No comparable ${industry} GCCs to show.`;
   // The cohort can equal or fall below what is shown when the peers exhausted it —
   // "5 of 5" is fine and "5 of 3" would be arithmetic nobody can follow.
   if (cohort <= shown) {
     return shown === 1
-      ? `The one comparable ${industry} company in our data.`
-      : `All ${formatCount(shown)} comparable ${industry} companies in our data.`;
+      ? `The one comparable ${industry} GCC in our data.`
+      : `All ${formatCount(shown)} comparable ${industry} GCCs in our data.`;
   }
-  return `Showing ${formatCount(shown)} of ${formatCount(cohort)} comparable ${industry} companies.`;
+  return `Showing ${formatCount(shown)} of ${formatCount(cohort)} comparable ${industry} GCCs.`;
 }
 
 /**
@@ -588,8 +729,33 @@ export function peerCountLine(view: PeerView): string {
  * Static, and it has to be: the containment chart under it is the same shape for
  * every result, and a heading that changed with the finding would have to be honest
  * about a thin industry in a place the chart already is.
+ *
+ * **Reworded for the cadence, and it describes the chart more exactly than the
+ * question did.** "How much of your industry is in India" was the second of five
+ * headings ending on the same phrase, and it also framed the block as a single
+ * quantity when what the chart draws is a nesting: the national base, the industry
+ * inside it, the companies above inside that. A noun phrase with an appositive says
+ * that; a "how much" question promises one number.
  */
-export const INDUSTRY_TITLE = "How much of your industry is in India";
+/**
+ * **"inside the national picture" was a figure of speech where the chart is exact.**
+ * A "picture" is not a quantity, the appositive construction read as a line of prose
+ * rather than as a card heading, and the block it sat over draws three counted
+ * populations nested inside one another. What the chart shows is an industry's share
+ * of India's GCC base, so that is what the heading names.
+ */
+/**
+ * **Short enough for ONE line in a two-fifths card, which is what decided the wording.**
+ * "Your industry within India's GCC base" is 37 characters and set on two lines at 20px
+ * Bold in a ~393px card — and a two-line heading over a three-layer chart pushes the
+ * chart down far enough that the card stops matching the ranking beside it. Thirty-seven
+ * characters is roughly four over what fits.
+ *
+ * What went is "your industry", and it costs nothing: the chart's own middle layer is
+ * labelled "in {industry}", so the reader is told whose industry inside the graphic. The
+ * heading only has to name the frame, which is India's whole GCC base.
+ */
+export const INDUSTRY_TITLE = "Inside India's GCC base";
 
 /**
  * The largest-centres section's lead.
@@ -608,9 +774,18 @@ export const INDUSTRY_TITLE = "How much of your industry is in India";
 export const LARGEST_LEAD =
   "Ranked by the size of the centre itself, never by revenue.";
 
-/** The largest-centres card's heading, which names the industry. */
+/**
+ * The largest-centres card's heading, which names the industry.
+ *
+ * **"GCCs", not "centres", and the heading was the one place on the block the subject
+ * went unnamed.** "The largest Software & Internet centres in India" could be read as
+ * the largest offices, plants or campuses an industry runs here; every row under it is
+ * a global capability centre, which is the word the rest of the surface uses. The body
+ * copy keeps "centre" where it is the plain-English noun inside a sentence — the
+ * heading is where the class of thing has to be stated.
+ */
 export function largestTitle(view: PeerView): string {
-  return `The largest ${view.industry.industry} centres in India`;
+  return `The largest ${view.industry.industry} GCCs in India`;
 }
 
 /**
@@ -622,13 +797,77 @@ export function largestTitle(view: PeerView): string {
  * nowhere would be worse than the sentence that makes it unnecessary, so the
  * sentence answers the question the link was there to raise.
  */
+/**
+ * **"we hold" is gone from both branches.** It is how the people maintaining the
+ * dataset talk about it, not how a reader would: a CIO is being told what the tool
+ * covers, and "we hold" makes the sentence about our filing rather than about India.
+ * "in our data" is the phrasing `peerCountLine` and `shortfallLine` already use for
+ * the same qualification, so all three now scope their counts the same way.
+ */
+/**
+ * The ranking ran out of companies before it ran out of slots.
+ *
+ * **It used to be a clause appended to `largestCountLine`**, on the reasoning that a
+ * shortfall is a property of the count rather than a caveat about the method. That line
+ * is no longer rendered — ANSR asked for it off, since the section heading already says
+ * what the block is and the column header now says what the figure is — so the clause
+ * needed somewhere to live rather than going with it. A ranking that is three short of
+ * its own limit has to say so; that is invariant 3 in the block's own terms.
+ *
+ * Null at a full ranking, so the component renders nothing rather than a line about an
+ * absence there is none of.
+ */
+export function largestShortfallLine(view: PeerView): string | null {
+  const { entries, shortfall } = view.largest;
+  if (shortfall === 0 || entries.length === 0) return null;
+  return `${formatCount(entries.length)} rather than ${formatCount(view.peers.limit)}: ${view.industry.industry} does not go deeper in India yet.`;
+}
+
 export function largestCountLine(view: PeerView): string {
   const shown = view.largest.entries.length;
   const industry = view.industry.industry;
+  /**
+   * **"GCCs", following the heading.** The heading names the subject as a GCC and these
+   * two lines sit four rows under it; with "centres" here the block named one thing two
+   * ways inside 400px, which on a page that also holds companies and people is the
+   * ambiguity every label on this surface was rewritten to remove.
+   */
   if (shown === 1) {
-    return `The largest ${industry} centre in India we hold.`;
+    return `The largest ${industry} GCC in our India data.`;
   }
-  return `The ${formatCount(shown)} largest ${industry} centres in India we hold.`;
+  return `The ${formatCount(shown)} largest ${industry} GCCs in our India data.`;
+}
+
+/**
+ * How much of the industry's upper end the visitor's own comparison set already is.
+ *
+ * **This is the sentence that turns the overlap between the two company blocks from a
+ * repetition into a finding.** At the top revenue band the largest centres in an
+ * industry are largely the same companies as the closest comparisons — three of five
+ * on the default path — and the previous shape marked each of those rows "Also in your
+ * peer set", which admits the repeat and resolves nothing. Stated as a proportion of
+ * the ranking it is new information, and it is information a CIO wants: their
+ * comparison set is not a sample from the middle of the industry, it is most of its
+ * top.
+ *
+ * Null at both ends of the range, and neither is a special case being papered over.
+ * Nothing overlapping means there is nothing to say. Everything overlapping never
+ * reaches here — `repeatsPeers` collapses the whole block to one line rather than
+ * redrawing the peer set under a second heading.
+ */
+export function largestOverlapLine(view: PeerView): string | null {
+  const entries = view.largest.entries;
+  const overlap = entries.filter((entry) => entry.alsoPeer).length;
+  if (overlap === 0 || overlap === entries.length) return null;
+
+  const industry = view.industry.industry;
+  // Exact both sides, like every other count on this screen. "Most of" would be a
+  // judgement where the two figures are available and say it themselves.
+  // "GCCs", as the heading and the count line above it both say. See `largestCountLine`.
+  const of = `${formatCount(overlap)} of the ${formatCount(entries.length)} largest ${industry} GCCs in India`;
+  return overlap === 1
+    ? `${of} is in your comparison set above.`
+    : `${of} are in your comparison set above.`;
 }
 
 /**
@@ -649,12 +888,44 @@ export function largestCountLine(view: PeerView): string {
  */
 export const FUNCTIONS_TITLE = "Functions most GCCs run from India";
 
-/** The ordering, said once, at reading size instead of in a footnote. */
-export const FUNCTIONS_LEAD = "Most to least common across India GCCs.";
+/**
+ * What the list is, and deliberately not what order it is in.
+ *
+ * **It claimed an ordering the page has no evidence for.** "Most to least common
+ * across India GCCs." — `COMMON_FUNCTIONS` is a hardcoded list, `COMMON_FUNCTIONS_BASIS`
+ * was deleted, and there is no per-company function record in this dataset and will
+ * not be. So the rank was an assertion with nothing behind it, and the block drew it
+ * as eight numbered tiles, which is what made an unevidenced claim look measured. The
+ * numbering went with the sentence; see `CommonFunctionsView`.
+ *
+ * What replaces it is the one thing about the list that is both true and worth
+ * knowing: it does not move with the visitor's answers. That is the property a reader
+ * needs in order not to mistake eight functions under a grid of five companies for
+ * those five companies' functions — which is the job the two removed caveat
+ * paragraphs used to do, and it is said here as a fact about the list rather than as
+ * a disclaimer about the tool.
+ */
+export const FUNCTIONS_LEAD = "Common across India GCCs, whatever the industry.";
 
-/** The locations card's heading, which names the industry. */
+/**
+ * The locations card's heading, which names the industry.
+ *
+ * **"India's leading GCC locations for {industry}" read as a database field.** It
+ * front-loaded the place, the category and the qualifier before arriving at the
+ * subject, and it was the longest heading in the zone. A "Where …" opening states the
+ * question the block answers in four words, and the block's own lead — `mapHeading` —
+ * gives the exact finding underneath it, with the leading city and its share.
+ */
 export function mapTitle(view: PeerView): string {
-  return `India's leading GCC locations for ${view.industry.industry}`;
+  /**
+   * **Not "Where …", because the LEAD already opens that way.** The first attempt at
+   * breaking the cadence was "Where {industry} centres cluster", which put "Where
+   * {industry} centres cluster" directly above `mapHeading`'s plain branch, "Where
+   * {industry} has built in India" — two consecutive lines opening on the same word,
+   * which is the same defect as the six headings, one card down. The interrogative
+   * noun phrase asks the block's question without taking the lead's opening.
+   */
+  return `Which cities ${view.industry.industry} has chosen`;
 }
 
 /* ==========================================================================
@@ -672,11 +943,67 @@ export function mapTitle(view: PeerView): string {
  * membership. Both index names are written out in full everywhere they appear, for
  * the same reason the counts are drawn against their real denominators.
  */
+/**
+ * **All three labels were fragments, and two of them said 500 twice.**
+ *
+ * The cell rendered a 36px "181", then a smaller "of 500" beside it, then
+ * "of the Fortune Global 500 companies have GCCs in India" underneath — so a reader
+ * met the denominator twice and then a line beginning with a preposition, which is
+ * not a sentence in any reading order. The Forbes cell had the same shape.
+ *
+ * Each label is now the predicate of a whole sentence whose subject is the figure
+ * above it: "181 / Fortune Global 500 companies run a GCC in India." The denominator
+ * appears once, inside the index name, where it belongs — the standalone "of 500" is
+ * gone from the component with it.
+ *
+ * **The share moved into the sentence and the two proportion bars went.** They were
+ * drawn on the first two cells and there is no denominator to draw on the third, so
+ * the row was two cells with a mark and a share caption beside one cell without
+ * either — visibly a figure that failed to load rather than a figure that has no
+ * fraction. Dropping the marks costs nothing the rule cares about: the project's
+ * chart rule is that every mark carries its figure in text, and here the text is all
+ * that is left, still stating the same rounded whole percentage.
+ *
+ * **"Fortune Global 500" and "Fortune 500" are different lists and are never
+ * interchanged.** The reference composition labels the third figure "people across
+ * Fortune 500 GCCs in India", which is wrong — the figure counts professionals inside
+ * Fortune GLOBAL 500 companies, and the two indices have different membership. Both
+ * index names are written out in full everywhere they appear.
+ */
 export const SCALE = {
-  title: "Leading global companies have established GCCs in India",
-  fortuneLabel: "of the Fortune Global 500 companies have GCCs in India",
-  forbesLabel: "of the Forbes Global 2000 companies have GCCs in India",
-  peopleLabel: "people across those Fortune Global 500 GCCs in India",
+  /**
+   * **The longest heading on the surface became the shortest, and the clause it lost
+   * was carrying nothing.** "Leading global companies have established GCCs in India"
+   * is nine words to say what a noun phrase says in six, it was the fifth heading in
+   * a row ending on "in India", and "have established" is the kind of verb a press
+   * release uses. The three figures under it are memberships of two largest-company
+   * indices plus the people inside them, so naming the subject and the place is the
+   * whole job.
+   */
+  title: "The world's largest companies, in India",
+  /**
+   * **The share clause is gone from both, at ANSR's request.** Each label read
+   * "…run a GCC in India, 36% of the list." — the share was moved INTO the sentence
+   * when the two proportion bars came off, on the argument that a figure with a
+   * denominator should state it. What is left is the count and the claim, and the
+   * denominator is still stated once, inside the index name: "Fortune Global 500" names
+   * its own 500. A reader who wants the fraction has both numbers on the line.
+   *
+   * They no longer take an argument. `formatShare` is still what `largestOverlapLine`
+   * and the snapshot use, so nothing about how a share is rounded changed — this strip
+   * simply states none.
+   */
+  fortuneLabel: "Fortune Global 500 companies run a GCC in India.",
+  forbesLabel: "Forbes Global 2000 companies run a GCC in India.",
+  /**
+   * **"those" now means BOTH indices, and the figure is their union.** It was the
+   * Fortune Global 500 subset alone, under two cells naming two different indices — so
+   * the narrower of the two memberships was reported as the total for both. The figure
+   * is `scale.indexedProfessionals`, deduplicated by construction rather than by
+   * subtraction; a company on both lists is counted once. See `indexedProfessionals`.
+   */
+  peopleLabel:
+    "people work in those Fortune Global 500 and Forbes Global 2000 GCCs in India.",
 } as const;
 
 /* The strip's source-and-method block is GONE, and so is `asOfLine`, which
@@ -732,17 +1059,43 @@ export const SCALE = {
    and the band below it says the honest version at reading size.
    ========================================================================== */
 
+/* `SnapshotIcon` and `Signal.icon` are GONE. They named which line glyph a cell drew,
+   back when each cell was a floating tile with a pale disc holding an icon. The tiles
+   were replaced by four typographic stat rows and the discs went with them — the icon
+   was the single most category-interchangeable element on the surface and it did no work
+   the label beside it was not already doing.
+
+   The field outlived the glyph by a pass and nothing read it. A value nothing renders is
+   how the next reader concludes the omission was an oversight and puts the icons back.
+   ========================================================================== */
+
 /**
- * Which line icon a cell draws.
+ * Whether the cell's value is a MAGNITUDE or an ANSWER.
  *
- * A key rather than a component, because this file holds language and holds no
- * JSX. `snapshot.tsx` owns the mapping to a glyph, which is also the only place
- * that has to change if the icon set does.
+ * **Three of the four cells hold a number and the fourth holds a city, and drawing
+ * them the same way was the single most damaging element on the surface.** The strip
+ * set every value in one treatment — 36px bold, the action orange, `tabular-nums`,
+ * `tracking-display` — which put the string "Bengaluru" in a numeral slot,
+ * letter-spaced for digits it does not contain, as the loudest thing on a 3,500px
+ * page. A place name rendered as a figure is the visible seam of a filled template,
+ * in front of an audience whose one reason to distrust the page is that it might be
+ * automated.
+ *
+ * So the cell states which kind of value it holds and `snapshot.tsx` draws it
+ * accordingly. `place` is not a quieter figure: it is a different thing, and it takes
+ * the ink and the size of a name rather than of a quantity. The cell count stays at
+ * four either way — that is the invariant — so this changes the treatment and never
+ * the shape of the strip.
  */
-export type SnapshotIcon = "companies" | "people" | "cities" | "location";
+export type SignalKind = "figure" | "place";
 
 export interface Signal {
-  icon: SnapshotIcon;
+  /**
+   * Which treatment the value takes. Defaulting is deliberately not offered: a new
+   * cell has to say what kind of value it is, or it inherits the bug this field
+   * exists to fix.
+   */
+  kind: SignalKind;
   /**
    * Already formatted, or null when the data cannot supply it.
    *
@@ -754,17 +1107,47 @@ export interface Signal {
    * cheapest possible way to lose that.
    */
   value: string | null;
-  /** What the figure is. Names the industry where the figure is industry-level. */
+  /**
+   * A unit that renders a step DOWN from the figure — the `%` on a share, and
+   * nothing else so far.
+   *
+   * It is a field rather than a regex over `value`, because the alternative is a
+   * component parsing its own data: `"<1%"` has a symbol at each end, and the first
+   * unit that is a word rather than a glyph would silently be split off too. The
+   * producer knows what the unit is, so the producer states it.
+   *
+   * Why it is separated at all: a `%` set at the figure's own size is 30% of the
+   * cell's optical weight for none of its information, and four of them across a row
+   * of four is the difference between a figure and a data field. Held at roughly
+   * three fifths, it reads as the unit it is.
+   */
+  suffix?: string;
+  /**
+   * What the figure is.
+   *
+   * **All four are three or four words and none of them names the industry any more.**
+   * The industry was interpolated into three of the four, which made one label 34
+   * characters against another's 24 and left the row visibly ragged under four figures
+   * that align perfectly — and it said the same word three times inside 900px. The
+   * section's own heading names the industry once, which is where a subject shared by
+   * every cell belongs.
+   */
   label: string;
   /**
-   * What it counts, or how it was arrived at, in one short line.
+   * **There is no `note`, and the four of them were removed at ANSR's request.**
    *
-   * Not decoration and not a caveat. A bare "656" beside "Companies in BFSI" leaves
-   * a reader unable to tell whether they are looking at companies, centres or
-   * people, and this page carries all three — so every cell says which. On the mean
-   * headcount it is also the method line the figure may not appear without.
+   * Each cell used to carry a second line under its label — "Of 1,834 GCCs in India",
+   * "Employees per GCC", "Hubs and emerging locations", "More BFSI GCCs than any other
+   * city". The argument for them was that a bare figure beside a short label leaves a
+   * reader unsure whether they are looking at companies, centres or people, and this
+   * page carries all three. What settled it against them is that the labels now name
+   * the GCC themselves, so the notes were restating the subject a third time and adding
+   * a fourth text row to a cell that has three.
+   *
+   * The one real cost is on the mean headcount, whose note was the last trace of a
+   * method line: the figure is a rounded mean of band midpoints and nothing on the strip
+   * says so. That is already on the blocked list with the two other provenance removals.
    */
-  note: string;
 }
 
 /**
@@ -783,66 +1166,139 @@ export interface Signal {
  * failed to load. What it must never do instead is invent the figure; see `value`.
  */
 export function signals(view: PeerView): Signal[] {
-  const industry = view.industry.industry;
   const leader = view.map.cities[0];
   const cityCount = view.map.cities.length;
   const average = view.industry.averageHeadcount;
 
+  const share = view.industry.shareOfIndia;
+
   return [
     {
-      icon: "companies",
-      value: view.industry.total > 0 ? formatCount(view.industry.total) : null,
-      // The label names the industry, because every figure on this strip is a
-      // property of the INDUSTRY rather than of the five-company set our own matching
-      // chose — and a reader who takes the first cell for a peer-set statistic
-      // misreads the other three the same way.
+      kind: "figure",
+      /**
+       * **A SHARE, where this was the industry count — and the swap is the
+       * de-duplication rather than a change of subject.** The count was the first of
+       * four appearances of one number: this cell, the industry card's lead, the
+       * containment chart's middle layer, and the denominator of the peer count line.
+       * A reader who meets "189" four times in four wordings has to satisfy
+       * themselves the four agree before trusting any of them, which is the exact
+       * cost this strip exists to remove.
+       *
+       * The share is the one thing the chart DRAWS and never states. Its middle layer
+       * is 10.3% of its own track by construction, and no label on it says so — so
+       * this cell adds a figure to the page instead of repeating one, and the chart
+       * below is where the count keeps its denominator.
+       *
+       * Guarded on the base rather than on the total: a zero base would make this a
+       * division by zero, and a zero total is a legitimate share of nought.
+       */
+      /**
+       * **`<1%` rather than `0%` for a thin industry, and that is not a rounding
+       * preference.** Electrical & Electronics holds two companies against a national
+       * base of 1,834, which `formatShare` rounds to "0%" — a figure that says the
+       * industry is not here at all, in the opening cell, for exactly the visitors the
+       * thin-set copy elsewhere is written to reassure. Nought is a claim; "under one
+       * percent" is the same measurement stated so it cannot be read as absence.
+       *
+       * Guarded on the total as well, so a genuinely empty industry still reads "0%"
+       * rather than being promoted to a population it does not have.
+       */
+      /**
+       * The numeral only. The `%` travels as `suffix` so the cell can set it a step
+       * smaller — see `Signal.suffix`. `<1` keeps its comparator here, because that
+       * belongs to the figure rather than to the unit.
+       *
+       * **The ratio is `industry.shareOfIndia`, derived in the view model, and it is NOT
+       * `industry.total / scale.companyCount` any more.** That was a ratio of two
+       * populations differing by one: `total` is the peer pool, which drops the visitor's
+       * own company where the dataset holds it, and the base does not. Both sides are now
+       * counted over the same population — see `shareOfIndia`.
+       */
+      value:
+        share !== null
+          ? share > 0 && share < 0.005
+            ? "<1"
+            : String(Math.round(share * 100))
+          : null,
+      suffix: share !== null ? "%" : undefined,
+      // **The industry is named by the SECTION now, not by each label.** Every figure
+      // on this strip is a property of the industry rather than of the five-company set
+      // our own matching chose, and a reader who takes the first cell for a peer-set
+      // statistic misreads the other three the same way — so the subject still has to
+      // be stated, once, where it governs all four cells. See `snapshotHeading`.
       //
       // **It cannot say "already", however well the word would work here.** Six uses
       // were removed across this file for leaning on the reader to feel late, and the
-      // rule is asserted rather than remembered — see the copy test. The note carries
-      // the "and they are operating" half instead, where it is a fact about the count
-      // rather than pressure on the reader.
+      // rule is asserted rather than remembered — see the copy test.
       //
       // **"other than your own" is gone**, at ANSR's request. `industry.total` does
       // still exclude the visitor's own company where the data holds it, so the
       // exclusion is now unstated rather than untrue — a difference of one on a figure
       // in the hundreds, against a clause that made the strip's opening cell read as a
       // footnote.
-      label: `${industry} companies in India`,
-      note: "Each running a GCC here",
+      // A noun phrase, as all four labels are — "Of India's GCCs are X" would read as
+      // the predicate of the figure above it, which is the shape the scale strip uses
+      // and this strip deliberately does not: there the label IS the sentence, here it
+      // names the metric and the note says what it counts.
+      /**
+       * **"Of every GCC in India", where this said "Share of India's GCCs".** The old
+       * label named the arithmetic and not the claim: "India's GCCs" reads as a possessive
+       * that could be India's share of something, and "Share of" is the one word a reader
+       * can infer from the `%` beside it. With the section heading now naming the subject
+       * — "Snapshot of {industry} GCCs in India" — the cell only has to say what the
+       * denominator is, which is every GCC in the country.
+       */
+      label: "Of every GCC in India",
     },
     {
-      icon: "people",
+      kind: "figure",
       value: average !== null ? formatCount(average) : null,
       // "Typical", not "average": the figure is a rounded mean of employee bands, and
       // "typical" is the honest word for a number arrived at that way — it claims a
       // central tendency rather than an arithmetic result. "GCCs" plural, never
       // "GCC's", which ANSR asked never to appear.
-      label: `Typical centre size in ${industry}`,
-      // **The method line is gone** — "Mean of reported employee bands, rounded" —
-      // at ANSR's request. It is the one removal on this strip with a cost worth
-      // recording: the figure IS a mean of band midpoints, so the page no longer says
-      // how it was arrived at. "Typical" and "people" are doing what they can.
-      note: "People, across every centre",
+      label: "Typical GCC headcount",
     },
     {
-      icon: "cities",
+      kind: "figure",
       value: cityCount > 0 ? formatCount(cityCount) : null,
-      // Was "Total Indian cities represented", which is a database field name read
-      // aloud. What the figure answers is whether the industry is concentrated or
-      // spread, so that is what the cell says.
-      label: "Indian cities in play",
-      note: "Hubs and emerging locations",
+      // Two versions before this one. "Total Indian cities represented" was a database
+      // field name read aloud; "Indian cities in play" was consultants' shorthand, and
+      // it made a plain count of cities sound like a shortlist somebody had drawn up.
+      // The figure is the number of Indian cities where this industry operates a
+      // centre, so that is what the label says.
+      label: "Indian cities with a GCC",
     },
     {
-      icon: "location",
+      /**
+       * **The one `place` on the strip, and the one element on the surface that most
+       * needed to stop being a figure.** A city name set in the figure treatment —
+       * 36px bold, the action orange, letter-spaced for digits, `tabular-nums` on
+       * letters — was the loudest thing on a 3,500px page and, worse, the visible
+       * seam of a filled template: the reader can see that a slot built for a number
+       * received a string. See `SignalKind`.
+       */
+      kind: "place",
       value: leader ? leader.city : null,
       // "Most common location" named the metric; this names the answer. The note
       // stops the reader wondering whether it leads on companies, centres or people.
-      label: "Where the industry concentrates",
-      note: `More ${industry} GCCs than any other city`,
+      label: "Leading GCC city",
     },
   ];
+}
+
+/**
+ * The snapshot section's own heading.
+ *
+ * **It names the industry, which is what let all four labels stop naming it.** The
+ * heading was "Your industry in India" — correct, and it left the subject unstated, so
+ * three of the four labels had to interpolate the industry themselves and the row read
+ * ragged under four aligned figures. A subject shared by every cell belongs in the
+ * section name, said once.
+ */
+export function snapshotHeading(view: PeerView): string {
+  // "GCCs", never "GCC's", which ANSR asked never to appear.
+  return `Snapshot of ${view.industry.industry} GCCs in India`;
 }
 
 /* ==========================================================================
@@ -862,11 +1318,17 @@ export function signals(view: PeerView): Signal[] {
 
 /* `peerAxisNote` is gone with the comparison bars it explained. Each card carries
    its employee band as a figure at 24px instead, which is the reading the bar was a
-   second copy of — so there is no axis left to name. Removed at ANSR's request. */
+   second copy of — so there is no axis left to name. Removed at ANSR's request.
 
-/** What full width means on the largest-in-industry ranking. */
-export function largestAxisNote(view: PeerView): string | null {
-  const first = view.largest.entries[0]?.company;
-  if (!first || view.largest.entries.length < 2) return null;
-  return `Full width is ${first.name}, at ${first.headcount}.`;
-}
+   **`largestAxisNote` is now gone too, and this is the one axis note whose absence
+   costs nothing.** It read "Full width is JPMorgan Chase, at 59,900–60,000." —
+   directly beneath a ranked stack whose FIRST ROW is JPMorgan Chase, drawing a
+   full-width bar, with 59,900–60,000 set beside it at 24px. The sentence restated a
+   company name and a figure the reader had passed four rows earlier, which is the
+   opposite of what an axis note is for: an unstated axis is a problem when nothing on
+   screen reveals it, and on a ranking sorted by the quantity the bars encode, row one
+   IS the axis.
+
+   The general rule it came from still holds and still applies to any bar set that is
+   not self-labelling this way. The two blocks that draw bars on this screen have both
+   now dealt with it by making the figure legible rather than by describing it. */

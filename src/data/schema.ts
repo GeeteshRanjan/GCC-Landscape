@@ -258,6 +258,48 @@ const metricObjectSchema = z.object({
    * ordinal has no "or more".
    */
   atLeast: z.boolean().optional(),
+  /**
+   * The parts are waypoints on ONE path, not a set of independent subjects.
+   *
+   * **Authored, for exactly the reason `indexBaseline` carries direction:** nothing
+   * in the data can tell the two apart. "To 50 FTEs / To 100 / To 300 / To 500" and
+   * "Same-city cloud region / Another India region / Europe / US East" are both a
+   * duration breakdown whose values rise from part to part — the first is one centre
+   * measured four times as it grows, the second is four destinations measured once
+   * each. Only the author of a metric knows which, and a rule that guessed from
+   * monotonicity would have drawn the latency metric as a journey.
+   *
+   * Deliberately not inferred from the LABELS either. Entry names are
+   * admin-editable, so a rule that read "To 500 FTEs" would change the chart the
+   * first time somebody renamed a part.
+   *
+   * Refused on anything but a breakdown of three or more parts: a progression of
+   * two points is a range, and it has one already.
+   */
+  progression: z.boolean().optional(),
+  /**
+   * The SECOND part is contained by the first. Drawn inside it, not beside it.
+   *
+   * **Authored for the same reason `progression` is, and it replaces a heuristic
+   * that could draw a falsehood.** Containment used to be inferred from two parts
+   * sharing a `unit` and the smaller being under half the larger — on the argument
+   * that a shared unit is the definition's own statement that two parts measure the
+   * same KIND of thing. That is a precondition for containment and never evidence of
+   * it. "Total Grade A stock" and "vacant and available now" are both million sq ft
+   * and the nesting is real; "Engineering, other disciplines" and "Management and
+   * MBA graduates" are both graduates a year and are disjoint populations, so
+   * nesting them asserts that every MBA graduate holds an engineering degree — a
+   * claim the source does not make and that no arithmetic here could check.
+   *
+   * So the shared unit stays a precondition and this flag is the claim. Two parts in
+   * one unit WITHOUT it are drawn adjacent, which states their sizes and asserts no
+   * relationship between them.
+   *
+   * Refused on anything but a breakdown of exactly two parts: with three or more,
+   * which one contains which is not expressible by a boolean, and the honest drawing
+   * is a set of bars.
+   */
+  subset: z.boolean().optional(),
   /** Free-text provenance shown to the visitor, e.g. "2026 Q1". */
   asOf: z.string().trim().min(1).max(40).optional(),
   /** Internal working note. Never served — see `publicMetric`. */
@@ -306,6 +348,45 @@ export const metricSchema = metricObjectSchema.superRefine((metric, ctx) => {
   if (metric.atLeast && metric.format === "rating") {
     issue("an ordinal step has no \"or more\" — atLeast only applies to a figure", [
       "atLeast",
+    ]);
+  }
+  if (
+    metric.progression &&
+    (metric.structure.kind !== "breakdown" || metric.structure.entries.length < 3)
+  ) {
+    issue(
+      "a progression is a breakdown of three or more waypoints — two points are a range",
+      ["progression"],
+    );
+  }
+  if (metric.progression && metric.atLeast) {
+    // A progression is drawn from the DIFFERENCES between its waypoints, and the
+    // difference between two floors is not itself a floor. Marking the intervals
+    // would claim more than the data does; leaving them unmarked beside marked
+    // waypoints would put two kinds of figure in one chart.
+    issue("a progression's intervals cannot carry a floor marker", ["atLeast"]);
+  }
+  if (
+    metric.subset &&
+    (metric.structure.kind !== "breakdown" || metric.structure.entries.length !== 2)
+  ) {
+    issue(
+      "containment is a claim about exactly two parts — with three or more, which one contains which is not expressible",
+      ["subset"],
+    );
+  }
+  if (metric.subset && metric.unit === undefined) {
+    // The unit is the definition's statement that the two parts measure the same
+    // kind of thing, which is a precondition for one being inside the other. A
+    // containment claim over two parts that do not declare a shared kind is the
+    // meetup-groups-and-conferences defect with a flag on it.
+    issue("a contained part needs a unit shared with its total", ["subset"]);
+  }
+  if (metric.subset && metric.progression) {
+    // Waypoints on one path are all contained by the last of them, so the flag
+    // would be either redundant or a second, contradictory reading of the parts.
+    issue("a progression's waypoints are already cumulative — subset says nothing", [
+      "subset",
     ]);
   }
 

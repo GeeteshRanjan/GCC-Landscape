@@ -1,7 +1,11 @@
 import { describe, expect, it } from "vitest";
 
+import { readFileSync } from "node:fs";
+import path from "node:path";
 import {
   SEED_REVENUE_BAND_ORDER,
+  canonicalCompanyName,
+  canonicalIndustry,
   cleanText,
   parseCities,
   parseFteRange,
@@ -11,7 +15,7 @@ import {
   uniqueSlug,
 } from "@/data/normalize";
 import { TIER1_CITIES, fteDisplay, fteMidpoint, hasTier2Presence, sumProfessionals } from "@/data/derive";
-import type { Company } from "@/data/schema";
+import { parseDataset, type Company } from "@/data/schema";
 
 /**
  * Every function here exists because of a measured defect in the source
@@ -194,5 +198,187 @@ describe("derived fields", () => {
       { fte: { min: 100, max: 300 } },
     ] as Company[];
     expect(sumProfessionals(companies)).toBe(250);
+  });
+});
+
+/**
+ * The two alias tables, and the constraint that makes them safe.
+ *
+ * Both are applied in ONE place — `readRows` in the importer — so a single spelling
+ * reaches the company record, the taxonomy, the slug and the business-type map's
+ * `industry||name` keys. Fixing a name further downstream instead is the bug this
+ * arrangement exists to prevent: the map folds case but not letters, so a corrected
+ * spelling that the map still holds in its old form silently drops the company's
+ * business type, and untagged is a safe state and therefore an invisible one.
+ */
+describe("canonicalIndustry", () => {
+  it("expands the one abbreviation the sheet supplies", () => {
+    expect(canonicalIndustry("CPG")).toBe("Consumer Packaged Goods");
+  });
+
+  it("is idempotent, so calling it twice is safe", () => {
+    expect(canonicalIndustry(canonicalIndustry("CPG"))).toBe("Consumer Packaged Goods");
+  });
+
+  it("passes an unlisted industry through, cleaned", () => {
+    expect(canonicalIndustry("  Software &  Internet ")).toBe("Software & Internet");
+  });
+});
+
+describe("canonicalCompanyName", () => {
+  /** Full capitals the company does not use. */
+  it.each([
+    ["DR. MARTENS", "Dr. Martens"],
+    ["KDDI CORPORATION", "KDDI Corporation"],
+    ["OIA GLOBAL", "OIA Global"],
+    ["ADVANZ PHARMA", "Advanz Pharma"],
+    ["GRUPO ANTOLIN", "Grupo Antolin"],
+  ])("un-shouts %s", (before, after) => {
+    expect(canonicalCompanyName(before)).toBe(after);
+  });
+
+  /**
+   * The other eighteen all-capital names are correct and must survive untouched.
+   * This is the assertion that would fail if somebody replaced the table with a
+   * title-case rule, which was the obvious move and damages eighteen marks to repair
+   * five.
+   */
+  it.each(["SABIC", "AECOM", "IQVIA", "ABBYY", "GEODIS", "MULTIVAC", "STRATACACHE", "IDEMIA"])(
+    "leaves %s alone",
+    (name) => {
+      expect(canonicalCompanyName(name)).toBe(name);
+    },
+  );
+
+  /** Lowercase openings, three wrong and the rest deliberate brand styling. */
+  it.each([
+    ["eurofins", "Eurofins"],
+    ["ilantus", "Ilantus"],
+    ["o9 solutions", "o9 Solutions"],
+  ])("capitalises %s", (before, after) => {
+    expect(canonicalCompanyName(before)).toBe(after);
+  });
+
+  it.each(["eBay", "iSolved", "pSemi Corporation", "smartShift Technologies", "d-Matrix", "ebm-papst Group", "lastminute.com", "blueBriX"])(
+    "leaves the brand styling of %s alone",
+    (name) => {
+      expect(canonicalCompanyName(name)).toBe(name);
+    },
+  );
+
+  it("capitalises an initialism after a hyphen", () => {
+    expect(canonicalCompanyName("Sanmina-sci")).toBe("Sanmina-SCI");
+    expect(canonicalCompanyName("Read-ink")).toBe("Read-Ink");
+    // And not a name whose second half is a word rather than an initialism.
+    expect(canonicalCompanyName("N-able")).toBe("N-able");
+    expect(canonicalCompanyName("e-con Systems")).toBe("e-con Systems");
+  });
+
+  /**
+   * The only spaced dash among 38 hyphenated names, moved to the parenthetical form
+   * the source already uses twenty times for the same job. The slug is unchanged
+   * either way, which is what makes it a display fix rather than an identity change.
+   */
+  it("writes a gloss in parentheses rather than after a spaced dash", () => {
+    expect(canonicalCompanyName("EA - Electronic Arts")).toBe("EA (Electronic Arts)");
+    expect(slugify(canonicalCompanyName("EA - Electronic Arts"))).toBe("ea-electronic-arts");
+  });
+
+  it("fixes a misspelled brand", () => {
+    expect(canonicalCompanyName("Victoria Secret")).toBe("Victoria's Secret");
+  });
+
+  /**
+   * Two rows carried the same company under two spellings, which hid a duplicate
+   * rather than recording one. They stay two companies — merging changes the count
+   * and every profile figure, and whether they are one entity is ANSR's call — but
+   * `uniqueSlug` now suffixes a visible collision instead of a hidden one.
+   */
+  it("gives the two IQ-EQ rows one spelling and two slugs", () => {
+    expect(canonicalCompanyName("Iq-eq")).toBe("IQ-EQ");
+    const taken = new Set<string>();
+    expect(uniqueSlug("IQ-EQ", taken)).toBe("iq-eq");
+    expect(uniqueSlug("IQ-EQ", taken)).toBe("iq-eq-2");
+  });
+
+  /**
+   * A legal-entity suffix is left exactly as supplied. Only 28 of 1,834 names carry
+   * one, so stripping them would look like tidying and would be rewriting a legal
+   * name on a judgement about house style.
+   */
+  it.each(["Azul Systems, Inc.", "Panamax Inc.", "PVH Corp.", "ICON Plc.", "KBR, Inc."])(
+    "does not strip the suffix from %s",
+    (name) => {
+      expect(canonicalCompanyName(name)).toBe(name);
+    },
+  );
+
+  it("is idempotent", () => {
+    for (const name of ["DR. MARTENS", "eurofins", "Victoria Secret", "EA - Electronic Arts"]) {
+      const once = canonicalCompanyName(name);
+      expect(canonicalCompanyName(once)).toBe(once);
+    }
+  });
+});
+
+/**
+ * The published dataset carries the corrections, and every corrected company still
+ * carries its business type.
+ *
+ * This is the assertion that catches the failure mode the table is designed around: a
+ * name changed here but not in `scripts/business-type-map.ts`, where the key is
+ * `industry||name`. The result would be an untagged company — a safe state, invisible
+ * in the UI, and a peer set quietly missing a member.
+ */
+describe("the corrections in the published dataset", () => {
+  const dataset = parseDataset(
+    JSON.parse(
+      readFileSync(path.join(process.cwd(), "data", "dataset.json"), "utf8"),
+    ),
+  );
+  const byName = new Map(dataset.companies.map((c) => [c.name, c]));
+
+  it.each([
+    "Dr. Martens",
+    "Grupo Antolin",
+    "KDDI Corporation",
+    "OIA Global",
+    "Advanz Pharma",
+    "Eurofins",
+    "Ilantus",
+    "o9 Solutions",
+    "Sanmina-SCI",
+    "Read-Ink",
+    "IQ-EQ",
+    "EA (Electronic Arts)",
+    "Victoria's Secret",
+  ])("%s is present and still tagged", (name) => {
+    const company = byName.get(name);
+    expect(company, name).toBeDefined();
+    expect(company!.businessTypes.length, name).toBeGreaterThan(0);
+  });
+
+  it("holds none of the old spellings", () => {
+    for (const stale of [
+      "DR. MARTENS",
+      "eurofins",
+      "Sanmina-sci",
+      "Iq-eq",
+      "EA - Electronic Arts",
+      "Victoria Secret",
+    ]) {
+      expect(byName.has(stale), stale).toBe(false);
+    }
+  });
+
+  /**
+   * No name arrives with the whitespace defects the audit found — a non-breaking space
+   * inside a value, or a double space. `cleanText` handles both, and this asserts it
+   * ran on every row rather than on the ones somebody remembered.
+   */
+  it("has no name carrying stray whitespace", () => {
+    for (const company of dataset.companies) {
+      expect(company.name, company.id).toBe(company.name.replace(/\s+/g, " ").trim());
+    }
   });
 });

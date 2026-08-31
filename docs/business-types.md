@@ -177,9 +177,9 @@ The live figures are pinned in `data/verify-baseline.json` and reproduced by
 | Business types defined | 158 |
 | Distinct tags in use | 137 |
 | Companies with a business type | 1768 |
-| Companies with two business types | 50 |
+| Companies with two business types | 68 |
 | Industries fully tagged | 18 |
-| Business types with no company | 6 |
+| Business types with no company | 1 |
 | **Peer sets the floor shortens** | **147 of 1064** |
 
 That last row is the one to watch. It is the price of the quality gain: 147 of the
@@ -217,13 +217,13 @@ Automotive components (Tier 1) (51) · Vehicle manufacturer (OEM) (13) · Electr
 Fabless chip design (41) · Semiconductor manufacturing & foundry (8) · Analog, power & mixed-signal semiconductors (8) · Semiconductor equipment & materials (7) · Semiconductor IP & design tools (5) · Electronic components & photonics (3)
 
 ### Retail — 60/60 tagged, 10 types
-Apparel & footwear brand (18) · Grocery & convenience retail (11) · Specialty retail (8) · Home improvement & furnishings retail (6) · Department store & general merchandise (6) · E-commerce & online retail (6) · Automotive parts retail & distribution (3) · Luxury & premium brand (2) · Sportswear & athletic brand (1) · Consumer products brand (0)
+Apparel & footwear brand (18) · Grocery & convenience retail (11) · Specialty retail (7) · Department store & general merchandise (6) · E-commerce & online retail (6) · Home improvement & furnishings retail (6) · Sportswear & athletic brand (6) · Automotive parts retail & distribution (3) · Consumer products brand (2) · Luxury & premium brand (2)
 
 ### Media & Entertainment — 56/58 tagged, 7 types
 Advertising & marketing services (15) · Broadcasting & studios (12) · Publishing & news (8) · Advertising technology & measurement (6) · Information & research services (6) · Gaming & esports (5) · Online gambling & betting (4)
 
 ### Professional Services — 45/45 tagged, 10 types
-Accounting, audit & tax (14) · Legal services (8) · Market research & consumer intelligence (7) · Engineering & technical consulting (4) · Advertising & marketing services (4) · Management & strategy consulting (3) · Facilities & real estate services (3) · Regulatory & compliance services (2) · Staffing & workforce services (0) · Business process outsourcing (0)
+Accounting, audit & tax (14) · Legal services (8) · Business process outsourcing (6) · Market research & consumer intelligence (5) · Advertising & marketing services (4) · Engineering & technical consulting (4) · Management & strategy consulting (4) · Facilities & real estate services (3) · Regulatory & compliance services (2) · Staffing & workforce services (1)
 
 ### Chemicals & Materials — 43/43 tagged, 7 types
 Specialty chemicals (26) · Commodity & petrochemicals (5) · Paints & coatings (4) · Agrochemicals & seeds (4) · Flavours, fragrances & ingredients (2) · Industrial packaging materials (2) · Industrial gases (1)
@@ -241,7 +241,7 @@ Consumer electronics & devices (19) · Computing hardware & servers (5) · Enter
 Freight forwarding & third-party logistics (12) · Shipping & maritime transport (10) · Express & parcel delivery (3) · Rail & surface transport (2) · Ports & terminal operations (1)
 
 ### Consumer Packaged Goods — 24/24 tagged, 5 types
-Diversified consumer goods (14) · Beverages & brewing (6) · Packaged food (2) · Personal care & beauty (2) · Household & home care products (0)
+Beverages & brewing (10) · Personal care & beauty (6) · Diversified consumer goods (5) · Packaged food (5) · Household & home care products (3)
 
 ### Aerospace & Defense — 18/18 tagged, 4 types
 Aerospace & defense primes (8) · Aerospace components & systems (7) · Aircraft engines & propulsion (2) · Defense electronics & systems (1)
@@ -259,7 +259,7 @@ Airline operations (7) · Aviation services & maintenance (0)
 Education & training provider (4) · Education technology & e-learning (2)
 
 ### Wholesale — 5/5 tagged, 2 types
-Industrial supplies distribution (5) · Building materials distribution (0)
+Building materials distribution (3) · Industrial supplies distribution (3)
 
 ### Restaurant & Food Service — 4/4 tagged, 2 types
 Quick service restaurants (3) · Restaurant chains & food service (1)
@@ -280,6 +280,28 @@ Electrical products & components (2)
   for adding `sw-martech`, since advertising is most of revenue; `sw-marketplace`
   already carries the `advertising-services` tag, so the scoring outcome is close to
   identical.
-- **Six business types have no company** and are reachable only if an admin assigns
-  one. They are kept because they are the correct home for values a future spreadsheet
-  batch may contain.
+- **Six business types had no company. Five were mapping errors and are fixed;** the
+  companies existed and were filed under a coarser bucket by the source Sub-Industry
+  string. Korn Ferry read "Research and Consulting" and Indecomm read "Information
+  Services", so both collapsed into market research, leaving Staffing and BPO
+  selectable with nobody behind them. Reckitt, Henkel and Kimberly-Clark read
+  "Personal & Home Care" and collapsed into `cpg-diversified`. Mattel read "Retail -
+  Toys & Games" and became a retailer rather than a brand. Ferguson and Winsupply read
+  "Industrial Supplies" and became industrial rather than building-materials
+  distributors. Each correction is recorded beside its entry in
+  `scripts/business-type-map.ts`, and `tests/unit/match-quality.test.ts` asserts all
+  five by name so a re-import cannot revert them quietly.
+- **One remains, and it is honest: `avi-services`.** All seven Aviation companies are
+  airlines, so there is no MRO or ground-handling business in the data to map. Removing
+  the row or sourcing companies for it is ANSR's decision.
+- **`cpg-diversified` was carrying twelve of the 24 CPG companies**, Nestlé, PepsiCo
+  and Coca-Cola among them, because the source writes "CPG - Food & Beverage" and
+  "CPG - Consumer Products" for businesses that are plainly food or beverage. P&G,
+  Unilever, Philip Morris, BAT and Herbalife are still diversified, and there the
+  source is reading them correctly.
+- **`ret-sportswear` was carrying one company.** Puma was the only row whose source
+  string happened to read "Retail - Sportswear", while Nike, Adidas, Under Armour,
+  Lululemon and Columbia Sportswear sat in generic apparel — so a sportswear brand who
+  picked the row named after their business got a set excluding the four companies they
+  most wanted to see. All five now carry BOTH types, because `tagsForCompany` takes the
+  union and they are credible apparel peers as well.

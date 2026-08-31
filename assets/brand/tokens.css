@@ -90,9 +90,49 @@
   --ansr-teal-50:  #F5FFFE; /* client-specified */
 
   /* ---- Orange ramp -----------------------------------------------------
-     Tints only. Orange stays restricted to CTAs and hover states — the comp
-     agrees with the docx here and goes further, using it exactly once per
-     band. These exist for motif falloff, not for surfaces and not for text. */
+     Tints, plus ONE dark step. The ramp was tints only for a long time, on the
+     rule that orange is for CTAs and hover states and therefore never needs to
+     be ink. That rule turned out to be enforcing something nobody chose: the
+     comp puts orange on display FIGURES and on small categorical EYEBROWS, and
+     `--ansr-orange` cannot carry either as text on a light ground — 3.35:1 on
+     white, 3.29:1 on the pale ground, 2.63:1 on the mint. A large figure clears
+     the 3:1 large-text floor and nothing smaller clears 4.5:1 anywhere. So the
+     tool had exactly one legal orange role, which is why both public screens
+     read as teal with a highlight rather than as this brand.
+
+     700 is what reopens the rest. It is `--ansr-orange` a quarter of the way to
+     black in Oklab — the exact mirror of 400, which is a quarter of the way to
+     white — so it is a derivation rather than a picked value, and
+     `brand_asset.py ramp` reproduces it. Hue holds at 36.3 degrees against the
+     anchor's 36.3, and Oklab lightness runs 0.666 -> 0.498, which keeps the
+     whole ramp monotonic.
+
+     Measured: 6.53:1 on white, 6.42:1 on the pale ground, 5.14:1 on the mint.
+     It clears AA for NORMAL text on all three light grounds, which is the
+     property the whole step exists for. It is 2.44:1 on the inverse ground and
+     therefore a light-ground ink only — the anchor is the better choice there at
+     4.77:1, which is the reverse of how the teal family works and worth knowing:
+     orange gets DARKER as the type gets smaller, and teal gets brighter as the
+     ground gets darker. */
+  /* 800 is the ramp's DARK end. It was derived for a graphic mark that ANSR wanted
+     brown rather than orange, and then the ask moved on to the bright anchor — so it
+     currently has NO consumer, and it is kept for two reasons rather than one: it
+     completes the ramp's dark end symmetrically, and the request it answers has
+     already been made once.
+     It is `--ansr-orange` 48% of the way to black in Oklab, which is the exact
+     mirror of 300 (48% to white) in the same way 700 mirrors 400. So it is a
+     derivation on the ramp's own stated construction rather than a picked brown,
+     and `brand_asset.py ramp` reproduces it. Oklab lightness continues down from
+     700's 0.498 to 0.398, so the ramp stays monotonic.
+     Measured: 12.02:1 on white, 11.80:1 on the pale ground, 9.46:1 on the mint,
+     7.29:1 on `teal-200` — the density map's land, which is the only ground its
+     one consumer draws on. It is 1.23:1 on the inverse ground and must never go
+     there; at that point it is darker than the ground itself.
+     It is NOT a second CTA colour and not a text ink — `--ansr-accent-warm` is
+     the orange for type on a light ground and that has not changed. This step is
+     for a mark. */
+  --ansr-orange-800: #681B03; /* derived: orange 48% -> black, Oklab */
+  --ansr-orange-700: #AC3208; /* derived: orange 25% -> black, Oklab */
   --ansr-orange-500: #FD4E11; /* = orange */
   --ansr-orange-400: #FF835F;
   --ansr-orange-300: #FFAB92;
@@ -176,6 +216,26 @@
      keys its whole dark-ground voice to this and the old palette had no
      equivalent, so every inverse band was carried by white alone. */
   --ansr-accent-inverse:     var(--ansr-teal-bright);
+  /* The WARM accent, as ink on a LIGHT ground. The third corner of a set that is
+     easier to hold in the head as a whole than as three separate rules:
+
+       --ansr-accent          teal, ink on a light ground
+       --ansr-accent-inverse  bright teal, ink on a dark ground
+       --ansr-accent-warm     deep orange, ink on a light ground
+       --ansr-action          the brand orange itself — fills, and figures large
+                              enough to clear the 3:1 large-text floor
+
+     It exists because the brand puts orange on small categorical eyebrows and
+     the anchor cannot do it: 3.35:1 on white against a 4.5:1 floor. This is
+     6.53:1 on white, 6.42:1 on the pale ground and 5.14:1 on the mint, so an
+     eyebrow may sit on any light ground the public screens use without a
+     per-placement measurement. Not for a dark ground — 2.44:1 there; use
+     `--ansr-action` itself, which is 4.77:1.
+
+     It is not a second CTA colour and must never fill a control. The
+     once-per-band rule now reads as one orange ROLE per band, which is what lets
+     four stat figures in one strip be one decision rather than four marks. */
+  --ansr-accent-warm:        var(--ansr-orange-700);
   --ansr-focus:              var(--ansr-orange);
 
   /* ---- Feedback / status -----------------------------------------------

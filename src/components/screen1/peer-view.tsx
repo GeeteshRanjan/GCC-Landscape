@@ -2,14 +2,15 @@
 
 
 
-import { BarChart3, Globe, Landmark, Users } from "lucide-react";
+import { Globe, Landmark, Users } from "lucide-react";
 
-import { Panel } from "@/components/public/primitives";
+import { Block, Panel, Zone } from "@/components/public/primitives";
 import {
   ContextPanels,
+  HEADER_LINES,
   HeaderFinding,
   ProductIdentity,
-  ScreenHeader,
+  ResultSurface,
   ViewPanel,
   ViewTabs,
   type ContextFact,
@@ -29,19 +30,14 @@ import {
 } from "./evidence";
 import {
   ASK,
-  framing,
-  FUNCTIONS_LEAD,
   FUNCTIONS_TITLE,
   INDUSTRY_TITLE,
-  industrySentence,
-  LARGEST_LEAD,
   largestTitle,
-  mapHeading,
   mapTitle,
   PEERS_TITLE,
-  peerLead,
   SCALE,
   signals,
+  snapshotHeading,
 } from "./copy";
 import { Snapshot } from "./snapshot";
 import { AskHero } from "./ask-hero";
@@ -147,7 +143,10 @@ export function PeerViewAsk({
   onSubmit: (input: PeerViewInput) => void;
 }) {
   return (
-    <div className="font-display">
+    // The display face is set once on the public root in `tool.tsx`, not per phase — it
+    // was on this wrapper and on the answer's, and missing from Screen 2, which is how
+    // one shared header came to render in two different typefaces.
+    <div>
       <AskHero headingRef={headingRef} copy={heroCopy} />
 
       <section
@@ -322,8 +321,8 @@ export function PeerViewAsk({
 }
 
 /**
- * The answer: a compact teal context area, then one white content surface holding
- * six cards.
+ * The answer: a compact teal context band, then ONE FLOATING CARD holding six zones
+ * to the end of the page.
  *
  * **This replaced seven full-bleed bands, and the change is structural.** The
  * previous shape was a landing page: a 200px display hero stating the finding, then
@@ -335,15 +334,16 @@ export function PeerViewAsk({
  *
  * What it is now, in order:
  *
- *   1. The teal context area — the product name, and the visitor's four answers as
- *      controls. No headline, no lead, no decorative map. See `ScreenHeader`.
- *   2. The tab strip at its foot, whose selected cell is the same white surface as
- *      the content below it, so the two are one layer.
+ *   1. The teal band — the product lockup, the finding, and the visitor's four
+ *      answers as quiet pills with one way back. Its ornament is the entry point's
+ *      own dotted map from `lg`. See `ResultSurface`.
+ *   2. The card's top row: the two views as equal halves, the selected one filled
+ *      with the mint zone that follows it, so the joint is invisible.
  *   3. SNAPSHOT — four industry-level figures, the index to everything under it.
- *   4. The comparison table, full width.
- *   5. Two analytical rows, each a third and two thirds: the industry context beside
- *      the largest centres, then the function list beside the locations map.
- *   6. The terminating dark evidence strip, which is where the page ends.
+ *   4. The packed grid of comparison cards, full width.
+ *   5. Two analytical rows, three fifths and two fifths: the containment chart beside
+ *      the function list, then the ranked centres and the locations map.
+ *   6. The terminating dark evidence strip, which is where the card ends.
  *
  * **The page ends at the strip.** There is no closing CTA card, no "Talk to ANSR"
  * panel, no footer and no methodology links. What the screen owes the reader is
@@ -351,11 +351,9 @@ export function PeerViewAsk({
  * needed it. `ctaHref` is therefore no longer threaded into this screen at all —
  * Screen 2 still carries the conversation.
  *
- * **Two thirds, not halves, on both analytical rows.** The industry context is one
- * figure and three stepped tracks; the largest centres are a four-column table. Half
- * each left the table cramped enough to scroll at 1440 while the card beside it was
- * two thirds empty. Same asymmetry on the row below, for the same reason: a ranked
- * list of eight functions is narrow and a map with a ranked list beside it is not.
+ * **Three fifths and two fifths, not halves, on the analytical row.** The containment
+ * chart is a wide chart; the function list is eight short lines that tile two to a
+ * row. Half each left one card two thirds empty beside the other.
  */
 export function PeerViewAnswer({
   panelRef,
@@ -376,7 +374,6 @@ export function PeerViewAnswer({
   onChangeDetails: () => void;
   onOpenFunctions: () => void;
 }) {
-  const copy = framing(view);
   const peerCount = view.peers.peers.length;
   const name = companyName(view.input);
 
@@ -412,13 +409,12 @@ export function PeerViewAnswer({
 
   return (
     /**
-     * The whole screen is on the display face, which is what makes it read as the
-     * same product as the entry point. It brings Light 300 body copy with it — the
-     * brand's single biggest typographic tell, and the reason this is worth a class
-     * rather than being left to `body`. Admin keeps Inter deliberately.
+     * The display face is set once on the public root in `tool.tsx`. It was on this
+     * wrapper and on the ask's, and on neither of Screen 2's — so the shared header
+     * band changed typeface across a tab switch. See `tool.tsx`.
      */
-    <div className="font-display">
-      <ScreenHeader
+    <div>
+      <ResultSurface
         motif={PEER_MOTIF}
         tabs={
           <ViewTabs
@@ -426,177 +422,279 @@ export function PeerViewAnswer({
             onSwitch={(next) => {
               if (next === "functions") onOpenFunctions();
             }}
-            icons={{
-              peers: <Users className="size-5" />,
-              functions: <BarChart3 className="size-5" />,
-            }}
+            // This screen's content opens on the near-white mint, so that is what the
+            // selected cell is filled with — the joint between the two is then the
+            // absence of an edge rather than two fills that nearly match.
+            //
+            // **`pale`, because the snapshot's zone is the near-white mint now.** It was
+            // plain `surface` — and a white zone at the top of a white card has no
+            // boundary at all, so the four figures read as a row floating in unbounded
+            // space rather than as the block the card opens with. The mint `tint` is not
+            // available to it: `--ansr-action` is 2.63:1 there against 3.29:1 on the pale,
+            // so the orange figures would fail the 3:1 large-text floor at any size.
+            //
+            // The bar has to follow the zone or the joint this component exists to hide
+            // reappears as an edge. See `Zone` for why the pale may only ever neighbour
+            // the mint.
+            ground="pale"
           />
+        }
+        card={
+          <ViewPanel view="peers" panelRef={panelRef}>
+            {/* A polite live region, because the answer replaced the form without a
+                navigation. Not assertive: the visitor asked for this.
+
+                **It announces the RESULT, and it is now the only place the count is
+                spoken on arrival.** It used to open with `framing().title` and then the
+                count, which a screen-reader user then met again on the way down — and the
+                tab panel takes focus on the phase change and announces its own name, so
+                the finding was the third thing said about one state change. The band's
+                line no longer states a count at all, so this region and the grid's own
+                count line are what carry it. */}
+            <p role="status" className="sr-only">
+              {peerCount === 0
+                ? `No comparable companies found in ${view.industry.industry}.`
+                : `Showing ${peerCount} comparable ${peerCount === 1 ? "company" : "companies"} in ${view.industry.industry}.`}
+            </p>
+
+            {/* ---- Zone 1: the industry at a glance, on the pale teal -------------
+                First inside the card, so the strip reads as what the card opens with
+                rather than as the first thing the content does. That is also what makes
+                it survive being four figures with no section around them. */}
+            <Zone ground="pale">
+              <Enter index={1}>
+                <Snapshot
+                  signals={signals(view)}
+                  heading={snapshotHeading(view)}
+                />
+              </Enter>
+            </Zone>
+
+            {/* ---- Zone 2: the comparison set, on white ---------------------------
+                The primary evidence, and the only section that gets a whole zone to
+                itself. The accent header strip is spent here rather than shared out —
+                one card on the surface announces itself in colour, and it is this
+                one. */}
+            <Zone ground="tint">
+              <Enter index={2}>
+                {/* **A `Block`, not a `Panel`, and the accent gradient strip went with
+                    the border.** Five floating company cards inside a sixth bordered
+                    box is a card inside a card — the one nesting the craft floor treats
+                    as always wrong — and the outer edge was adding nothing the cards
+                    did not already have. What the strip was buying was "one card on
+                    this surface announces itself in colour"; what it cost was that the
+                    primary evidence read as another panel in a stack of six.
+
+                    `weight="lead"` is what replaces it. The heading is a step above
+                    every other section's, so the hierarchy is carried by size rather
+                    than by a fill — which is also the honest version, since this block
+                    genuinely does outrank the five under it. */}
+                {/* **No lead, at ANSR's request.** It was `peerLead`, the block's only
+                    statement of method — which industry the set was matched on and what
+                    it was ordered by. The heading now names the subject ("The India GCCs
+                    closest to yours") and the count line under the grid names the
+                    denominator, so what is lost is specifically the ORDERING claim: a
+                    visitor can no longer see why this exact five, in this exact order.
+                    `peerLead` is kept in `copy.ts` and still unit-tested on both
+                    branches, because it is the sentence to restore rather than a sentence
+                    that was wrong. On the blocked list. */}
+                <Block id="peers" title={PEERS_TITLE} weight="lead">
+                  <PeerBlockView view={view} />
+                </Block>
+              </Enter>
+            </Zone>
+
+            {/* ---- Zone 3: the upper end, beside the industry it sits in --------
+                **The two blocks that answer "and how does that compare" are now one
+                row, directly under the comparison set, and the order came from the
+                reader's own question sequence.** Previously the containment chart shared
+                a row with the function list and the ranking was a zone further down, so
+                a reader who had just met five named companies was handed a scope
+                statement before being told where those five sit in their industry.
+
+                Ranking first at three fifths, containment beside it at two: the ranking
+                is the block a reader compares the five names against, so it is the one
+                that has to be adjacent to them. The containment chart answers the next
+                question — how much of the industry any of this represents — and it is
+                the narrower chart, three labelled layers on one axis rather than five
+                rows of name-and-figure.
+
+                `items-start` on the row. A grid child stretches to its row by default,
+                so the shorter card was padded out to its neighbour's height and rendered
+                with a band of empty white under its own content. */}
+            <Zone ground="surface">
+              <Enter
+                index={3}
+                className="grid items-start gap-6 lg:grid-cols-5 lg:gap-8"
+              >
+                {/* **`plain`, where this was `tint`.** The tone existed to make the card
+                    visibly a different kind of block from the white comparison cards —
+                    and it never did, because the pale fill differs from white by about
+                    4% lightness. What separates them now is that the comparison set has
+                    no card at all. Two of the four tones were doing one tone's work.
+
+                    It keeps its border because it draws MARKS: five bars on one shared
+                    axis, where the card's own edge is what full width means. The lead
+                    carries the ordering, which was a 12px note under the block — the one
+                    sentence that stops a reader taking "largest" for largest by revenue,
+                    in the place least likely to be read. */}
+                {/* **No lead, at ANSR's request, and this is the removal with the
+                    sharpest edge on it.** `LARGEST_LEAD` said "Ranked by the size of the
+                    centre itself, never by revenue." — the one sentence stopping a reader
+                    taking "largest" for largest by revenue, on a page that holds revenue
+                    BANDS and can never rank by them. Every row shows a headcount range
+                    and the bars encode that range, so the evidence is on screen; what is
+                    gone is the sentence that says which quantity "largest" means. On the
+                    blocked list beside the other provenance removals. */}
+                <Panel
+                  id="largest"
+                  title={largestTitle(view)}
+                  className="lg:col-span-3"
+                  motif={<PanelArc placement="top" />}
+                >
+                  <LargestBlockView view={view} />
+                </Panel>
+                {/* **No lead, at ANSR's request** — `industrySentence` described the
+                    three layers the chart draws, in the order it draws them, which the
+                    chart's own labels already say.
+
+                    **`lg:h-full` plus a centring body, because removing the lead made a
+                    short card shorter.** The ranking beside it runs about 480px and this
+                    card about 300, so the row left a band of empty zone under the narrower
+                    one — the gap was between the blocks rather than inside either, but it
+                    read as this card having failed to fill. Stretching the card and
+                    centring the chart in it spends that space on the chart instead of
+                    leaving it under the card. The row is still `items-start` for its other
+                    child; this one opts into the row's height explicitly. */}
+                {/* **`lg:justify-center` is what absorbs the ranking's new height.** That
+                    block now carries a tag line per row, so the row is taller than it was
+                    and this card stretches with it — and an unbounded stretch is worse
+                    than a short card, because the chart's three bands grow with it until
+                    each figure sits at the top of a region six times its own height.
+                    `.gcc-containment` caps its own stretch (see globals.css); the leftover
+                    room stays here and is split above and below the chart, which reads as
+                    padding where the same space collected underneath read as a card that
+                    failed to fill. */}
+                <Panel
+                  id="industry"
+                  title={INDUSTRY_TITLE}
+                  className="lg:col-span-2 lg:h-full"
+                  bodyClassName="flex flex-col lg:grow lg:justify-center [&>*]:lg:grow"
+                  motif={<PanelArc />}
+                >
+                  <IndustryCountView view={view} />
+                </Panel>
+              </Enter>
+            </Zone>
+
+            {/* ---- Zone 4: what they run from here, on the mint ------------------
+                **Moved below the two industry blocks and given the full width, which is
+                what made it compact rather than what made it bigger.** It was two fifths
+                of the row above, where eight items could only tile two to a column and
+                the block ran about 240px for eight strings — a lot of height for the
+                least information on the page. At full width the same eight items are
+                four columns and two rows.
+
+                It stays a `Block` rather than a `Panel`: no figure, no share, no order,
+                by design, so a bordered card around it would assert it is an object with
+                properties. */}
+            <Zone ground="tint">
+              <Enter index={4}>
+                {/* No lead, at ANSR's request. `FUNCTIONS_LEAD` said "Common across
+                    India GCCs, whatever the industry." — which the heading already says
+                    in "most GCCs", and that phrase is what `project.md` records as
+                    carrying the block's generality claim after two caveat paragraphs were
+                    removed. So the claim survives the sentence going. */}
+                <Block id="functions" title={FUNCTIONS_TITLE}>
+                  <CommonFunctionsView view={view} />
+                </Block>
+              </Enter>
+            </Zone>
+
+            {/* ---- Zone 5: where, on the pale teal -------------------------------- */}
+            <Zone ground="surface">
+              <Enter index={5}>
+                {/* The section's heading is fixed, so the DERIVED finding is its lead.
+                    `mapHeading` is exact where a fixed heading cannot be — "63% of the
+                    Retail footprint in India is in Bengaluru" when one city dominates,
+                    and the plain version when none does. */}
+                {/* **No lead, at ANSR's request**, and this one cost a derived figure.
+                    `mapHeading` was exact where the fixed heading cannot be — "63% of the
+                    Retail footprint in India is in Bengaluru" when one city dominates —
+                    so the block's one statement of concentration is gone and the ranked
+                    list beside the map is what carries it now. Kept in `copy.ts` and
+                    still unit-tested on both branches. On the blocked list. */}
+                <Panel id="map" title={mapTitle(view)}>
+                  <CityMap map={view.map} />
+                </Panel>
+              </Enter>
+            </Zone>
+
+            {/* ---- Zone 6: national scale, and the card ends here ----------------
+                An inverse CARD on a light zone rather than an inverse zone: a dark
+                block with its own corners, floating, is a harder stop than a dark band
+                that runs to the card's edge — and a hard stop is what the last thing in
+                the card wants. The ground under it is the mint rather than white now,
+                which the alternation decided; a dark card floats on either, and this is
+                the one zone whose own value the card does not depend on. Nothing below
+                it. */}
+            <Zone ground="tint" className="pb-10 md:pb-14">
+              <Enter index={6}>
+                <Panel
+                  id="scale"
+                  title={SCALE.title}
+                  tone="inverse"
+                  bodyClassName="py-6 md:py-8"
+                >
+                  <NationalScaleView
+                    view={view}
+                    icons={{
+                      fortune: <Globe className="size-5" />,
+                      forbes: <Landmark className="size-5" />,
+                      people: <Users className="size-5" />,
+                    }}
+                  />
+                </Panel>
+              </Enter>
+            </Zone>
+          </ViewPanel>
         }
       >
         <div className="flex flex-col gap-3 md:gap-4">
           <ProductIdentity id="product-identity" />
-          {/* **The finding, back on the band and not as a heading.** The pass that
-              cut the display hero left this band holding a lockup and a row of
-              answers — chrome and no content — so a visitor who had just submitted a
-              form was told which product they were in and what they had typed, and
-              nothing about the result. `copy.title` is the same sentence the old 72px
-              hero carried, at a third of the size. The `h1` stays the product; see
-              `HeaderFinding` for why this is deliberately not a second heading. */}
-          <HeaderFinding>{copy.title}</HeaderFinding>
+          {/* **The band's line comes from `HEADER_LINES` now, not from `framing()`.**
+              `copy.title` stated a COUNT — "5 India GCCs match your BFSI profile" — and
+              five is what the grid SHOWS, capped by the peer limit, not how many matched:
+              the count line under the grid says "Showing 5 of 189". The band understated
+              the evidence directly above a line that contradicted it, and read as "we
+              could only find five".
+
+              **`framing()` therefore has no caller in `src/` at all.** It is kept and
+              still unit-tested, like `peerLead` and `LARGEST_LEAD` before it, and reduced
+              to its `title` — the lead and the three CTA fields went, since this screen
+              renders no lead from it and has no CTA by instruction.
+
+              **That says nothing about `gccStatus`, which is rendered on Screen 2.**
+              `functionFraming` branches on the same field for its `h2`, its lead and all
+              three fields of the closing CTA. Do not read this function's deadness as the
+              field's.
+
+              The `h1` stays the product; see `HeaderFinding` for why this is not a second
+              heading. */}
+          <HeaderFinding>{HEADER_LINES.peers}</HeaderFinding>
         </div>
         <ContextPanels facts={facts} onEdit={onChangeDetails} />
-      </ScreenHeader>
-
-      <ViewPanel view="peers" panelRef={panelRef}>
-        {/* A polite live region, because the answer replaced the form without a
-            navigation. Not assertive: the visitor asked for this. `framing().title` is
-            also now on the band above as `HeaderFinding`, so this is a second reading
-            of a visible sentence rather than the only copy of it — which is the right
-            way round. */}
-        <p role="status" className="sr-only">
-          {peerCount === 0
-            ? `No comparable companies found in ${view.industry.industry}.`
-            : `${copy.title}. Showing ${peerCount} comparable ${peerCount === 1 ? "company" : "companies"} in ${view.industry.industry}.`}
-        </p>
-
-        {/* ---- Zone 1: the industry at a glance, on the pale teal -------------
-            Continuous with the band above it, so the strip reads as the last thing
-            the header says rather than the first thing the content does. That is
-            also what makes it survive being four figures with no section around
-            them. */}
-        <Zone ground="tint">
-          <Enter index={1}>
-            <Snapshot signals={signals(view)} />
-          </Enter>
-        </Zone>
-
-        {/* ---- Zone 2: the comparison set, on white ---------------------------
-            The primary evidence, and the only section that gets a whole zone to
-            itself. The accent header strip is spent here rather than shared out —
-            one card on the surface announces itself in colour, and it is this one. */}
-        <Zone ground="surface">
-          <Enter index={2}>
-            <Panel
-              id="peers"
-              title={PEERS_TITLE}
-              lead={peerLead(view)}
-              tone="accent"
-            >
-              <PeerBlockView view={view} />
-            </Panel>
-          </Enter>
-        </Zone>
-
-        {/* ---- Zone 3: the industry around them, on the near-white mint -------
-            Two sections that are both about the industry rather than about the five
-            companies, so they share a ground and a row.
-
-            `items-start` on the row. A grid child stretches to its row by default, so
-            the containment card was padded out to the height of the list beside it and
-            rendered with a band of empty white under its own content — the same
-            artefact Screen 2's metric grid has `items-start` for. */}
-        <Zone ground="pale">
-          <Enter index={3} className="grid items-start gap-4 lg:grid-cols-5 lg:gap-5">
-            {/* Three fifths and two fifths, and the split is decided by the two
-                cards' own shapes rather than by which matters more. The containment
-                chart is a wide chart — three labelled layers on one axis — and the
-                function list is eight short lines that tile two to a row. Eight tiles
-                in two columns is four rows, which comes out within about 20px of this
-                card's height, so the row has no visible shortfall on either side.
-
-                Eight in THREE columns was tried and is worse for a reason that has
-                nothing to do with width: 8 does not divide by 3, so the last row loses
-                a cell — and an empty cell in a grid of evidence reads as a tile that
-                failed to load. Two and four are the only column counts 8 tiles may
-                take, and four is too narrow for "Business operations and shared
-                services". */}
-            <Panel
-              id="industry"
-              title={INDUSTRY_TITLE}
-              lead={industrySentence(view)}
-              className="lg:col-span-3"
-              motif={<PanelArc />}
-            >
-              <IndustryCountView view={view} />
-            </Panel>
-            <Panel
-              id="functions"
-              title={FUNCTIONS_TITLE}
-              lead={FUNCTIONS_LEAD}
-              className="lg:col-span-2"
-            >
-              <CommonFunctionsView view={view} />
-            </Panel>
-          </Enter>
-        </Zone>
-
-        {/* ---- Zone 4: the upper end, on white -------------------------------
-            A ranking, and it gets the tinted card so it is visibly a different kind
-            of block from the white comparison cards two zones up. */}
-        <Zone ground="surface">
-          <Enter index={4}>
-            {/* **The ordering, as the section's lead rather than as a footnote.** It
-                was "Ranges reflect reported employee bands, so nothing here is ranked
-                by revenue." at 12px under the block — the one sentence that stops a
-                reader taking "largest" for largest by revenue, in the place least
-                likely to be read. We hold bands, never revenue, so it cannot simply be
-                dropped. */}
-            <Panel
-              id="largest"
-              title={largestTitle(view)}
-              lead={LARGEST_LEAD}
-              tone="tint"
-              motif={<PanelArc placement="top" />}
-            >
-              <LargestBlockView view={view} />
-            </Panel>
-          </Enter>
-        </Zone>
-
-        {/* ---- Zone 5: where, on the pale teal -------------------------------- */}
-        <Zone ground="tint">
-          <Enter index={5}>
-            {/* The section's heading is fixed, so the DERIVED finding is its lead.
-                `mapHeading` is exact where a fixed heading cannot be — "63% of the
-                Retail footprint in India is in Bengaluru" when one city dominates, and
-                the plain version when none does. */}
-            <Panel id="map" title={mapTitle(view)} lead={mapHeading(view)}>
-              <CityMap map={view.map} />
-            </Panel>
-          </Enter>
-        </Zone>
-
-        {/* ---- Zone 6: national scale, and the page ends here ----------------
-            The inverse card on white rather than an inverse zone: a dark block with
-            its own corners, floating on white, is a harder stop than a dark band that
-            runs to the frame's edge — and a hard stop is what the last thing on the
-            page wants. Nothing below it. */}
-        <Zone ground="surface" className="pb-10 md:pb-14">
-          <Enter index={6}>
-            <Panel
-              id="scale"
-              title={SCALE.title}
-              tone="inverse"
-              bodyClassName="py-6 md:py-8"
-            >
-              <NationalScaleView
-                view={view}
-                icons={{
-                  fortune: <Globe className="size-5" />,
-                  forbes: <Landmark className="size-5" />,
-                  people: <Users className="size-5" />,
-                }}
-              />
-            </Panel>
-          </Enter>
-        </Zone>
-      </ViewPanel>
+      </ResultSurface>
     </div>
   );
 }
 
 /**
- * One full-bleed ground, holding one or two sections.
+ * The zone sequence on this surface, and the reasoning that set it.
+ *
+ * `Zone` itself now lives in `components/public/primitives.tsx`, because the function
+ * view draws with it too and two copies would be two rhythms to keep in agreement.
+ * What is local to this screen is the SEQUENCE, which is recorded here.
  *
  * **The zones are what stopped the surface reading as one flat page**, and they are
  * deliberately not the seven bands they replaced. A band was one section with its own
@@ -604,47 +702,28 @@ export function PeerViewAnswer({
  * fold. A zone is a colour change at a boundary and nothing else: the sections inside
  * it keep card density and card headings, and two of them can still sit on one row.
  *
- * Four values in six zones — mint, white, near-white mint, white, mint, white — so
- * every boundary is visible and no two adjacent zones are the same. The near-white
- * (`surface-pale`) is what lets two mint zones appear on one page without reading as
- * stripes: it is a different step of the same hue, so the sequence has a rhythm
- * rather than an alternation.
+ * **The grounds strictly alternate — white and mint — and `surface-pale` is
+ * deliberately not part of the rhythm.**
  *
- * `overflow-hidden` via `.gcc-zone`, because a zone is where a full-bleed ornament
- * would be cropped. None is placed yet — the ornaments on this surface are inside
- * cards — and the class is there so adding one cannot silently widen the document,
- * which the iframe does not own the scroll of.
+ * The near-white was a third value, carrying the rhythm on the argument that two mint
+ * zones on one page would otherwise read as stripes. What settled it was a
+ * measurement: `--ansr-surface-pale` and `--ansr-surface` are about 2% apart in
+ * lightness, so a pale zone touching a white one is not a boundary at all. The
+ * sequence had two of those, and nothing looked wrong — the boundaries simply were
+ * not there.
+ *
+ * **The OPENING zone is the exception, and it is the near-white.** A white zone at the
+ * top of a white card has no boundary anywhere — not against the card, not against the
+ * tab bar above it — so the snapshot's four figures read as a row floating in unbounded
+ * space rather than as the block the card opens with. The mint is not available to it
+ * either: `--ansr-action` is 2.63:1 on the mint against 3.29:1 on the pale, so the
+ * orange figures would fail the 3:1 large-text floor at any size.
+ *
+ * So the sequence is pale, mint, white, mint, white, mint. Every one of the five
+ * boundaries is a real value change, and the pale still only ever neighbours the mint —
+ * which is the rule it broke twice in the version this replaced, where it sat against
+ * white and the boundary simply was not there.
  */
-function Zone({
-  ground,
-  className,
-  children,
-}: {
-  ground: "surface" | "tint" | "pale";
-  className?: string;
-  children: React.ReactNode;
-}) {
-  const GROUND = {
-    surface: "bg-surface",
-    tint: "bg-surface-tint",
-    pale: "bg-surface-pale",
-  } as const;
-  return (
-    <div className={cn("gcc-zone", GROUND[ground])}>
-      <div
-        className={cn(
-          // Tighter than the band system's rhythm, on purpose. This is an embedded
-          // tool inside a page with its own rhythm, and the complaint this pass is
-          // answering was that everything was too far apart.
-          "mx-auto max-w-content px-6 py-8 md:px-12 md:py-10",
-          className,
-        )}
-      >
-        {children}
-      </div>
-    </div>
-  );
-}
 
 /**
  * The brand's arc dome, cropped into a card's corner.

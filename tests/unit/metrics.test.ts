@@ -312,6 +312,21 @@ describe("publicMetric — the gate", () => {
     expect("asOf" in published).toBe(false);
   });
 
+  it("withholds the three markers that describe figures that are not there", () => {
+    // `atLeast` qualifies a figure; `progression` and `subset` each say how a set of
+    // them relate. None has anything to qualify once the values are gone, and a
+    // placeholder needs only cardinality to be the right size.
+    const marked = publicMetric({
+      ...gated,
+      atLeast: true,
+      progression: true,
+      subset: true,
+    } as unknown as Metric) as unknown as Record<string, unknown>;
+    expect("atLeast" in marked).toBe(false);
+    expect("progression" in marked).toBe(false);
+    expect("subset" in marked).toBe(false);
+  });
+
   it("never carries the internal lens or note, gated or not", () => {
     for (const source of [gated, metric({ lens: "cost", note: "Internal note" })]) {
       const published = publicMetric(source) as unknown as Record<string, unknown>;
@@ -569,9 +584,29 @@ describe("the seeded catalogue", () => {
     expect(serialized).not.toMatch(/\$\s?\d/);
   });
 
-  it("is fully populated, so every function area has something to render", () => {
+  it("is fully populated, and names every figure that is not a measurement", () => {
+    /**
+     * **Populated is not the same as measured, and this is where the difference is
+     * recorded.** Five figures in the catalogue are provisional: the two cost-durability
+     * placeholders at a round 10%, and the three cells filled from judgement (Vietnam's
+     * capability column, `hr-fully-loaded-cost`'s grid, the depth row in
+     * `fin-cost-vs-ecosystem-depth`). Each says so in its own note.
+     *
+     * Named rather than counted, for the same reason the gated set is recorded by id in
+     * `verify-baseline.json`: a figure quietly promoted from provisional to fact would
+     * otherwise read as a number going down by one, where here it reads as a change to
+     * this list and has to be explained.
+     */
     const seeded = seedMetricCatalogue();
     expect(seeded.filter((m) => !isMetricComplete(m))).toEqual([]);
+    expect(
+      seeded.filter((m) => /PLACEHOLDER/.test(m.note ?? "")).map((m) => m.id),
+    ).toEqual(["fin-operating-cost-growth", "fin-workplace-cost-growth"]);
+    // Every function area has something to render: an area with nothing at all is
+    // dropped and leaves a missing tab.
+    for (const area of METRIC_FUNCTIONS) {
+      expect(publicMetricsFor(seeded, area).length, area).toBeGreaterThan(0);
+    }
   });
 
   it("stamps nothing on the way out, so no caveat renders beside a figure", () => {
@@ -596,6 +631,12 @@ describe("the seeded catalogue", () => {
    * The four tabs are four views of one national picture, not four datasets. Six
    * titles appear on more than one tab, and each must carry an identical figure,
    * question and shape — which the seed guarantees by authoring each one once.
+   *
+   * **Graduate output is back among them.** It was on operations alone for a pass, after
+   * ANSR asked for the discipline split off the technology page and then off the HR page;
+   * the HR view is restored, so the title is policed by this invariant again rather than
+   * only by the next assertion. Technology still shows less than the shared metric
+   * through `tech-graduate-pipeline`, which carries a different title on purpose.
    */
   it("gives a metric shown on several tabs one set of figures", () => {
     const byTitle = new Map<string, Metric[]>();
@@ -621,6 +662,58 @@ describe("the seeded catalogue", () => {
       expect(new Set(content).size, title).toBe(1);
       // And they really are on different tabs, or the check above proves nothing.
       expect(new Set(group.map((m) => m.functionArea)).size, title).toBe(group.length);
+    }
+  });
+
+  /**
+   * **Graduate output is on two tabs and must stay one definition.**
+   *
+   * It was down to operations alone for a pass, and the note then was that inlining it as
+   * an ordinary entry would be wrong twice — two of its parts are quoted verbatim by
+   * `tech-graduate-pipeline`, and restoring a dropped view is one line while it is shared
+   * and a rewrite once it is not. Restoring the HR view is what that second half was
+   * protecting, and it cost one line.
+   *
+   * So this asserts the shape of the arrangement rather than a count: the ids are still
+   * the `{tab}-` prefixed form `onTab` produces, in catalogue order, and the two figures
+   * the technology pipeline reuses are still identical to the shared metric's own.
+   */
+  it("keeps graduate output authored once and shown on two tabs", () => {
+    const views = METRIC_CATALOGUE.filter(
+      (metric) => metric.title === "Graduate output by discipline",
+    );
+    expect(views.map((metric) => metric.id)).toEqual([
+      "ops-graduate-output",
+      "hr-graduate-output",
+    ]);
+
+    const shared = views[0];
+    const pipeline = METRIC_CATALOGUE.find((m) => m.id === "tech-graduate-pipeline");
+    expect(shared?.structure.kind).toBe("breakdown");
+    expect(pipeline?.structure.kind).toBe("breakdown");
+    if (
+      shared?.structure.kind !== "breakdown" ||
+      shared.value?.kind !== "breakdown" ||
+      pipeline?.structure.kind !== "breakdown" ||
+      pipeline.value?.kind !== "breakdown"
+    ) {
+      throw new Error("both metrics are breakdowns");
+    }
+
+    /**
+     * Every FIGURE the pipeline holds is one of the shared metric's own.
+     *
+     * By figure rather than by label, deliberately: the two carry the same numbers under
+     * slightly different names — "Management and MBA" against "Management and MBA
+     * graduates" — because one sits in a nine-part disciplinary list and the other in a
+     * two-part card that has to say what it is measuring on its own. The invariant is
+     * that no figure on the technology tab is new, and that is what this asserts. A
+     * label check would fail on a legitimate wording difference and pass on an edited
+     * number, which is exactly backwards.
+     */
+    for (const [index, figure] of pipeline.value.values.entries()) {
+      const label = pipeline.structure.entries[index] ?? String(index);
+      expect(shared.value.values, label).toContain(figure);
     }
   });
 
@@ -679,6 +772,69 @@ describe("the seeded catalogue", () => {
     const grid = METRIC_CATALOGUE.find((m) => m.id === "tech-capability-comparison");
     const parsed = metricSchema.safeParse({ ...grid, atLeast: true });
     expect(parsed.success).toBe(false);
+  });
+
+  it("only lets a progression sit on a breakdown of three or more waypoints", () => {
+    const scalar = METRIC_CATALOGUE.find((m) => m.id === "tech-bench-strength");
+    // A scalar has no parts to be a path through.
+    expect(
+      metricSchema.safeParse({ ...scalar, atLeast: undefined, progression: true })
+        .success,
+    ).toBe(false);
+    // A grid is a comparison, not a sequence.
+    const grid = METRIC_CATALOGUE.find((m) => m.id === "fin-tier-cost-spread");
+    expect(metricSchema.safeParse({ ...grid, progression: true }).success).toBe(false);
+    // Two points are a range, and there is a shape for that already.
+    const pair = METRIC_CATALOGUE.find((m) => m.id === "ops-grade-a-office-stock");
+    expect(metricSchema.safeParse({ ...pair, progression: true }).success).toBe(false);
+
+    const curve = METRIC_CATALOGUE.find((m) => m.id === "ops-scale-milestones");
+    expect(curve?.progression).toBe(true);
+    expect(metricSchema.safeParse(curve).success).toBe(true);
+  });
+
+  it("only lets containment sit on exactly two parts that share a unit", () => {
+    /**
+     * **The flag exists because a shared unit could never establish containment**, and
+     * the version that inferred it from one would have drawn a falsehood on the
+     * technology tab: total management and MBA output nested inside engineering
+     * graduates asserts that every MBA graduate holds an engineering degree.
+     *
+     * The unit is still required, as the precondition it always was — two quantities in
+     * different kinds cannot be one inside the other. What is refused beyond that is a
+     * claim a boolean cannot express: with three or more parts, which one contains which
+     * is unstated, and a progression's waypoints are cumulative already.
+     */
+    const pair = METRIC_CATALOGUE.find((m) => m.id === "ops-grade-a-office-stock");
+    expect(pair?.subset).toBe(true);
+    expect(metricSchema.safeParse(pair).success).toBe(true);
+
+    // Nine disciplines: which of them contains which is not expressible.
+    const nine = METRIC_CATALOGUE.find((m) => m.id === "ops-graduate-output");
+    expect(metricSchema.safeParse({ ...nine, subset: true }).success).toBe(false);
+    // A scalar and a grid have no parts to contain one another.
+    const scalar = METRIC_CATALOGUE.find((m) => m.id === "tech-bench-strength");
+    expect(
+      metricSchema.safeParse({ ...scalar, atLeast: undefined, subset: true }).success,
+    ).toBe(false);
+    const grid = METRIC_CATALOGUE.find((m) => m.id === "fin-tier-cost-spread");
+    expect(metricSchema.safeParse({ ...grid, subset: true }).success).toBe(false);
+    // Two parts with no shared unit: the meetup-groups-and-conferences case, which is
+    // the defect the unit requirement was written for in the first place.
+    expect(
+      metricSchema.safeParse({ ...pair, unit: undefined, subset: true }).success,
+    ).toBe(false);
+    // A progression is cumulative, so containment says nothing.
+    const curve = METRIC_CATALOGUE.find((m) => m.id === "ops-scale-milestones");
+    expect(metricSchema.safeParse({ ...curve, subset: true }).success).toBe(false);
+  });
+
+  it("refuses a floor marker on a progression, whose intervals are differences", () => {
+    // The difference between two floors is not itself a floor, so marking the
+    // intervals would claim more than the data does — and leaving them unmarked
+    // beside marked waypoints would put two kinds of figure in one chart.
+    const curve = METRIC_CATALOGUE.find((m) => m.id === "hr-scale-milestones");
+    expect(metricSchema.safeParse({ ...curve, atLeast: true }).success).toBe(false);
   });
 
   it("keeps every index readable by stating its base", () => {

@@ -4,21 +4,14 @@ import { useState } from "react";
 import { Tabs as TabsPrimitive } from "radix-ui";
 
 import { companyName, type PeerViewInput } from "@/data/screen1";
-import {
-  metricWidth,
-  type FunctionAreaView,
-  type FunctionView,
-  type MetricWidth,
-  type ShownMetric,
-} from "@/data/screen2";
-import { BarChart3, Users } from "lucide-react";
-
-import { ClosingCta } from "@/components/public/closing-cta";
-import { Provenance } from "@/components/public/primitives";
+import type { FunctionAreaView, FunctionView, LaidOutCard } from "@/data/screen2";
+import { Zone } from "@/components/public/primitives";
 import {
   ContextPanels,
+  HEADER_LINES,
+  HeaderFinding,
   ProductIdentity,
-  ScreenHeader,
+  ResultSurface,
   ViewPanel,
   ViewTabs,
   type ContextFact,
@@ -26,15 +19,17 @@ import {
 } from "@/components/public/screen-header";
 import { cn } from "@/lib/utils";
 import {
-  AREA_LEAD,
-  AREA_PROVENANCE,
-  functionFraming,
+  FIGURES_HEADING,
+  FLOOR_NOTE,
   heldHeading,
-  HELD_BODY,
-  SCREEN_PROVENANCE,
+  SOURCE_LINE,
   TABS_LABEL,
 } from "./copy";
 import { HeldMetricCard, MetricCard } from "./metric-card";
+import { scalarCells, SummaryFigures } from "./summary-figures";
+import { FinPanel } from "./fin-view";
+import { HrPanel } from "./hr-view";
+import { OpsPanel } from "./ops-view";
 
 /**
  * Screen 2 — the Function View.
@@ -90,11 +85,25 @@ const FUNCTION_MOTIF: HeaderMotif = {
   placement: "gcc-rings",
 };
 
+/**
+ * **`FUNCTION_ICONS` was here and the four tab glyphs are removed at ANSR's request.**
+ *
+ * The argument for having them is recorded because it was a real one and it is simply
+ * overruled: this strip is four cells of a flat list, scanned rather than toggled, and a
+ * line glyph shortens that scan — which is why the two-cell VIEW switch giving up its
+ * icons did not automatically decide this row. What the removal buys is that the two
+ * strips at the head of the card now carry the same amount of chrome as each other,
+ * which is none, and the tab labels are the only thing in either.
+ *
+ * Two things went with them. The `gap-2.5` on a trigger, which had nothing left to
+ * separate; and the `px-4` the triggers were narrowed to so four labelled tabs with
+ * glyphs still fit one line at 390 — back to `px-5`, which is what they were before.
+ */
+
 export interface FunctionViewScreenProps {
   view: FunctionView;
   /** Screen 1's answers, reused to frame this screen. Nothing new is asked. */
   input: PeerViewInput;
-  ctaHref: string;
   onBack: () => void;
   /**
    * Back to the form, with the answers intact.
@@ -112,12 +121,10 @@ export interface FunctionViewScreenProps {
 export function FunctionViewScreen({
   view,
   input,
-  ctaHref,
   onBack,
   onEditProfile,
   panelRef,
 }: FunctionViewScreenProps) {
-  const copy = functionFraming(input);
   const name = companyName(input);
   const first = view.areas[0]?.functionArea ?? "tech";
   const [active, setActive] = useState<string>(first);
@@ -146,267 +153,365 @@ export function FunctionViewScreen({
   ];
 
   return (
-    <>
-      <ScreenHeader
-        motif={FUNCTION_MOTIF}
-        tabs={
-          /* The same component Screen 1 renders, with `current` flipped — which is
-             what makes the treatment reverse rather than being two hand-built
-             strips that have to be kept in agreement. Function Opportunity is the
-             white cell here and connects to this screen's content surface; Peer
-             Landscape returns to the band's own teal. */
-          <ViewTabs
-            current="functions"
-            onSwitch={(next) => {
-              if (next === "peers") onBack();
-            }}
-            icons={{
-              peers: <Users className="size-5" />,
-              functions: <BarChart3 className="size-5" />,
-            }}
-          />
-        }
-      >
-        {/* **No `HeaderFinding` here, unlike Screen 1, and the asymmetry is the
-            correct one.** Screen 1's band gained the finding because its content
-            surface opens on a figure strip with no sentence in it — the band was
-            otherwise a lockup and a row of answers, which is chrome and no content.
-            This screen already opens on its finding as a real `h2`, two elements
-            below; putting the same sentence on the band would be saying it twice
-            inside one scroll, and the version in the band would be the one that is
-            not a heading. */}
-        <ProductIdentity id="product-identity" />
+    <ResultSurface
+      motif={FUNCTION_MOTIF}
+      tabs={
+        /* The same component Screen 1 renders, with `current` flipped — which is
+           what makes the treatment reverse rather than being two hand-built strips
+           that have to be kept in agreement. Function Metrics is the selected half
+           here, filled with this card's own white; Peer Landscape is the open cell
+           beside it, showing the bar's mint through. */
+        <ViewTabs
+          current="functions"
+          onSwitch={(next) => {
+            if (next === "peers") onBack();
+          }}
+        />
+      }
+      card={
+        <ViewPanel view="functions" panelRef={panelRef}>
+          <section
+            // Named `function-metrics` rather than `functions`, because Screen 1 has a
+            // `#functions` card and two ids that differ only by which phase is mounted are
+            // two ids a spec will eventually confuse. Located by id in the suite, never by
+            // any text in it.
+            id="function-metrics"
+            /**
+             * **Named directly, because the band no longer has a heading to point at.**
+             * Its `h2` was `functionFraming`'s title — "What an India GCC would give
+             * {name}" — a promise rather than a claim, and one the band above already
+             * covers in scope terms. A `<section>` with no accessible name is not a
+             * `region` and is invisible to a screen-reader user navigating by landmark,
+             * which is the failure `expectBand` exists to catch; it accepts either
+             * mechanism and Screen 1's snapshot strip already uses this one for the same
+             * reason. The cards inside are `h2` now, so the outline skips no level.
+             */
+            aria-label="India market metrics by function"
+            /**
+             * **White at the top, and alternating grounds below that.** The section
+             * itself is white because it is the surface the floating card opens on —
+             * the selected view tab is filled with this value, which is what makes the
+             * joint at the card's top edge the absence of anything rather than two
+             * edges lined up. What changed is everything under the function tab strip:
+             * it was one flat white band holding a grid of bordered cards, and it is
+             * now Screen 1's own zone system, so a boundary between two sections is a
+             * colour change and the cards inside them have given up their borders. See
+             * `AreaPanel`.
+             *
+             * The bottom padding is gone with it: a zone carries its own, and the last
+             * zone's ground now runs to the card's foot.
+             */
+            className="bg-surface pt-10 md:pt-12"
+          >
+            <TabsPrimitive.Root
+              value={active}
+              onValueChange={setActive}
+              // State lives in this component, like every other piece of screen
+              // state in the tool. There is no URL to reflect a tab into.
+              className="flex flex-col"
+            >
+              {/* `md:px-8`, matching the zones below: this content is inside the
+                  floating card, so the container's own `md:px-12` would be a third
+                  inset on top of the card's gutter and rim.
+
+                  **The tab strip is the first thing inside the band, and there is
+                  nothing above it.** There were three things: an `h2` stating what an
+                  India GCC would give the visitor, a lead stating that the figures are
+                  national, and — inside every tab — a third sentence describing the
+                  cards under it. The band above the card already carries the scope in
+                  six words, and the four tab labels already say what is on offer. What
+                  remains is the switch and the evidence.
+
+                  It sits OUTSIDE the zones rather than in the first one, because a zone
+                  is full-bleed inside the card and the strip is not: it is the panel's
+                  own navigation, and putting it on the first zone's ground would make
+                  the ground change land above the switch rather than under it. */}
+              <div className="mx-auto w-full max-w-content px-6 md:px-8">
+                <TabsPrimitive.List
+                  aria-label={TABS_LABEL}
+                  className="flex flex-wrap border-b border-border-tint"
+                >
+                  {view.areas.map((area) => (
+                    <TabsPrimitive.Trigger
+                      key={area.functionArea}
+                      value={area.functionArea}
+                      className={cn(
+                        // 44px, the public screens' control height, against the
+                        // registry wrapper's 36. A first-time visitor on a phone.
+                        "-mb-px inline-flex min-h-12 items-center border-b-2 border-transparent px-5",
+                        "text-base font-semibold text-text-muted",
+                        // Colour and border only, never `transition-all` — that was one
+                        // of the three reasons the registry's tab wrapper was removed.
+                        "transition-colors duration-fast ease-standard",
+                        "hover:text-text",
+                        // The active tab takes a tinted ground as well as the rule, so
+                        // it reads as a selected surface rather than as one word that
+                        // happens to be darker than the three beside it. It is the only
+                        // navigation on this screen and it was the faintest thing on it.
+                        "data-[state=active]:border-accent-teal data-[state=active]:bg-surface",
+                        "data-[state=active]:text-accent-teal",
+                      )}
+                    >
+                      {area.label}
+                    </TabsPrimitive.Trigger>
+                  ))}
+                </TabsPrimitive.List>
+              </div>
+
+              {view.areas.map((area) => (
+                <TabsPrimitive.Content
+                  key={area.functionArea}
+                  value={area.functionArea}
+                  className="outline-none"
+                >
+                  <AreaPanel area={area} />
+                </TabsPrimitive.Content>
+              ))}
+            </TabsPrimitive.Root>
+          </section>
+
+          {/* **`ClosingCta` was here and is removed at ANSR's request, so the tool now
+              has no call to action on either screen.** Screen 1's went first, on the
+              page-end instruction; this was the remaining one, and the argument for
+              keeping it — that the conversation has to be offered somewhere, and this is
+              the deeper of the two views — is unchanged and simply overruled. The page
+              ends at the capability matrix and the source line.
+
+              **Two consequences worth naming before anyone acts on them.**
+              `NEXT_PUBLIC_GCC_CTA_URL` now reaches nothing: `ctaHref` is still threaded
+              from `page.tsx` to `tool.tsx` and stops there, because a link out is a
+              decision to restore rather than a variable to delete. And `gccStatus` has
+              lost its ONLY renderer — `functionFraming`'s three CTA fields were the last
+              thing on either screen that branched on it, `framing()` on Screen 1 having
+              had no caller for some time. Both branches are still exported and
+              unit-tested on all three values. The field is the one piece of the input
+              contract that nothing now draws, and `project.md` records that as a state
+              to restore from rather than as dead weight to remove. */}
+        </ViewPanel>
+      }
+      footer={SOURCE_LINE}
+    >
+        {/* **This band has a line now, and it is a SCOPE statement rather than this
+            screen's finding.** It had none for one pass, on the argument that the
+            content surface already opens on the finding as a real `h2` — which is still
+            true, and is why the line here is not that sentence. What the argument missed
+            is that the band is shared with Screen 1, which does carry a line: crossing
+            between the two views in one state change dropped a whole row out of the band
+            and jumped the answer pills 60px up the page, so the header read as two
+            different headers rather than as one object with two views in it.
+
+            The two lines are a matched pair, held together in `HEADER_LINES` so neither
+            can drift out of construction with the other. Screen 1's states a count of
+            matching GCCs; this one states which market the figures below are about,
+            because they are national and do not move with the visitor's answers. */}
+        <div className="flex flex-col gap-3 md:gap-4">
+          <ProductIdentity id="product-identity" />
+          <HeaderFinding>{HEADER_LINES.functions}</HeaderFinding>
+        </div>
         {/* Straight to the form, not via the peer view. Same behaviour as Screen 1's
             row, which is the point: it is the same component in the same place on both
             screens, so the two cannot mean different things. */}
         <ContextPanels facts={facts} onEdit={onEditProfile} />
-      </ScreenHeader>
-
-      <ViewPanel view="functions" panelRef={panelRef}>
-      <section
-        // Named `function-metrics` rather than `functions`, because Screen 1 has a
-        // `#functions` card and two ids that differ only by which phase is mounted are
-        // two ids a spec will eventually confuse. Located by id in the suite, never by
-        // its heading — the heading is this screen's finding and is a copywriter's to
-        // change.
-        id="function-metrics"
-        aria-labelledby="functions-heading"
-        // White, not the pale teal it was. The selected tab above it is a white
-        // surface that has to read as continuous with this one — see `ViewTabs` — and
-        // a white tab meeting a teal band is two layers rather than one. The metric
-        // cards took a hairline border in the same change, since they used to borrow
-        // their edge from the tint. Nothing else about this screen moved.
-        className="bg-surface pt-10 pb-16 md:pt-12 md:pb-24"
-      >
-        <div className="mx-auto flex max-w-content flex-col gap-10 px-6 md:px-12">
-          <div className="flex max-w-measure flex-col gap-4">
-            {/* **This screen's finding, which used to be the display `h1` in a teal
-                hero.** The `h1` is the product name now and is shared with Screen 1,
-                so the sentence that says what THIS view is moved down to the head of
-                its own content — where it is still the first thing read, and where it
-                is no longer competing with a hero for the same 200px. */}
-            <h2
-              id="functions-heading"
-              className="text-2xl leading-tight font-bold tracking-display text-text md:text-3xl lg:text-4xl"
-            >
-              {copy.title}
-            </h2>
-            <p className="text-base text-pretty text-text-muted md:text-lg">
-              {copy.lead}
-            </p>
-          </div>
-
-          <TabsPrimitive.Root
-            value={active}
-            onValueChange={setActive}
-            // State lives in this component, like every other piece of screen
-            // state in the tool. There is no URL to reflect a tab into.
-            className="flex flex-col gap-8"
-          >
-            <TabsPrimitive.List
-              aria-label={TABS_LABEL}
-              className="flex flex-wrap border-b border-border-tint"
-            >
-              {view.areas.map((area) => (
-                <TabsPrimitive.Trigger
-                  key={area.functionArea}
-                  value={area.functionArea}
-                  className={cn(
-                    // 44px, the public screens' control height, against the
-                    // registry wrapper's 36. A first-time visitor on a phone.
-                    "-mb-px inline-flex min-h-12 items-center border-b-2 border-transparent px-5",
-                    "text-base font-semibold text-text-muted",
-                    // Colour and border only, never `transition-all` — that was one
-                    // of the three reasons the registry's tab wrapper was removed.
-                    "transition-colors duration-fast ease-standard",
-                    "hover:text-text",
-                    // The active tab takes a tinted ground as well as the rule, so
-                    // it reads as a selected surface rather than as one word that
-                    // happens to be darker than the three beside it. It is the only
-                    // navigation on this screen and it was the faintest thing on it.
-                    "data-[state=active]:border-accent-teal data-[state=active]:bg-surface",
-                    "data-[state=active]:text-accent-teal",
-                  )}
-                >
-                  {area.label}
-                </TabsPrimitive.Trigger>
-              ))}
-            </TabsPrimitive.List>
-
-            {view.areas.map((area) => (
-              <TabsPrimitive.Content
-                key={area.functionArea}
-                value={area.functionArea}
-                className="outline-none"
-              >
-                <AreaPanel area={area} />
-              </TabsPrimitive.Content>
-            ))}
-          </TabsPrimitive.Root>
-        </div>
-      </section>
-
-      {/* Screen 1's close was removed at ANSR's request — its page now ends at the
-          evidence strip. This one stays: the conversation still has to be offered
-          somewhere, and this is the deeper of the two views, reached by a visitor
-          who has already read the peer landscape. */}
-      <ClosingCta href={ctaHref} copy={copy} headingId="function-cta-heading" />
-      </ViewPanel>
-    </>
+    </ResultSurface>
   );
 }
 
 /**
- * One tab's contents.
+ * A card grid: twelve columns, `items-start`, widths already packed.
  *
- * There are no group headings inside a tab, and that is the deliberate part. The
- * catalogue files every metric under one of four lenses — talent supply, speed to
- * stand up, location, cost — and rendering those as four public subheadings would
- * have been a transcription of an internal filing system rather than a decision
- * about this screen. What each card leads with instead is its own question, in the
- * visitor's terms; the order is by how much of the eye a metric needs, decided in
- * `src/data/screen2.ts`.
+ * **A `div` rather than a `ul`.** Each card is a `<section>` with an accessible name —
+ * a real landmark, reachable by role — and a `<section>` is not valid inside a `<ul>`.
+ * The list semantics are no loss: these are independent readings of one market rather
+ * than an ordered set, which is exactly what Screen 1 does with its own grid.
  *
- * The staggered blocks are the screen's one motion moment. Three steps, so the
- * whole sequence lands well inside the flow threshold however many cards a tab has
- * — staggering twelve cards individually would have put the last one most of a
- * second behind the first.
+ * **`gap-6 lg:gap-8`, which is the peer view's own analytical row.** It was 32/40px,
+ * set when these cards had no borders and the space was the only thing separating two
+ * columns. The cards are bordered again — see `MetricCard` — so a hairline plus 40px of
+ * ground is more air than any boundary needs, and 40px between two cards inside a zone
+ * whose own padding is 40px left the grid reading as three separate objects. The peer
+ * view puts its two analytical cards 24/32px apart and they are the same kind of pair.
  */
-/**
- * Every card's width, packed so no row is left part-empty.
- *
- * `metricWidth` is a property of a single metric and stays that way — it is what
- * the ordering sorts by, and a width that changed with its neighbours would make
- * that sort circular. But a card's width is a bet about what sits BESIDE it, and
- * that is a row-level question, so the adjustment lives here in the component,
- * which is the only thing this file is allowed to have an opinion about.
- *
- * This replaces a narrower rule that promoted a LONE third to a half. That fixed
- * the one-scalar case on finance and left the commonest one untouched: technology
- * has five thirds, which drew three, then two beside a visible gap, and then a
- * lone half card with an empty half-row next to it. Two holes in a tab. An empty
- * cell in a grid of figures reads as a card that failed to load — which on a
- * screen whose whole argument is "these numbers are solid" is expensive.
- *
- * Widths only ever widen. Nothing is narrowed to make a row tile, because a
- * narrower card is the metric's own shape being misrepresented, and nothing is
- * reordered, because the order is by how much of the eye a metric needs.
- */
-function packWidths(shown: ShownMetric[]): MetricWidth[] {
-  const widths = shown.map(metricWidth);
-
-  // Thirds come first in the sort, so they are a leading run. Three fill a row; a
-  // remainder of two widens to two halves, which fills one exactly. A remainder of
-  // ONE cannot fill a row on its own, so it is widened to a half and left to pair
-  // with the halves run behind it.
-  const thirds = widths.filter((w) => w === "third").length;
-  const remainder = thirds % 3;
-  if (remainder > 0) {
-    for (let i = thirds - remainder; i < thirds; i++) widths[i] = "half";
-  }
-
-  // Halves — the promoted ones and the metrics that were always halves — tile two
-  // to a row. An odd one out goes full width, EXCEPT a single figure: a scalar
-  // across twelve columns is the four-fifths-empty card the weighting exists to
-  // prevent, and one part-empty row is the cheaper of the two.
-  const lastHalf = widths.lastIndexOf("half");
-  const odd = shown[lastHalf];
-  if (odd) {
-    const halves = widths.filter((w) => w === "half").length;
-    if (halves % 2 === 1 && odd.shape !== "scalar") {
-      widths[lastHalf] = "full";
-    }
-  }
-
-  return widths;
+function CardGrid({ cards }: { cards: readonly LaidOutCard[] }) {
+  return (
+    <div className="grid grid-cols-1 items-start gap-6 lg:grid-cols-12 lg:gap-8">
+      {cards.map(({ shown, width }) => (
+        <MetricCard key={shown.metric.id} shown={shown} width={width} />
+      ))}
+    </div>
+  );
 }
 
+/**
+ * One tab's contents, as a sequence of zones.
+ *
+ * **This was one flat white band holding a grid of bordered cards, and it is now
+ * Screen 1's zone system.** The complaint the change answers is the one the peer view
+ * already went through twice: a run of cards down a single ground is correct, dense and
+ * cognitively flat — nothing tells the eye that five national figures, a talent
+ * pipeline and an international comparison are different kinds of claim. A zone is a
+ * colour change at a boundary and nothing else, so the sections inside keep their
+ * density and the boundary costs no vertical room.
+ *
+ * **The grounds strictly alternate, and the sequence is derived rather than written
+ * out.** White beside white is not a boundary, so the sections a tab actually has
+ * decide the sequence: technology gets white for the figure row, mint for the talent
+ * pair, white for the capability matrix. A tab with no half-width cards does not
+ * therefore end up with two white zones in a row, which is what a hardcoded sequence
+ * would have produced. The case that forced the derivation was the operations tab, which
+ * is composed now — as are HR and finance — so the ONE tab still reaching this code is
+ * technology, and the rule is kept because it is the cheaper of the two ways to be right
+ * rather than because a second live tab depends on it.
+ *
+ * **The split is by WIDTH, which is what makes the two-column section fall out of the
+ * data rather than being composed by hand.** Half-width cards tile two to a row and are
+ * ordered before the full-measure ones by `compareByWidth`, so the leading run of
+ * halves IS the two-column composition and the rest is the full-width evidence under
+ * it. Nothing here chooses which metric goes where.
+ *
+ * There are still no group headings inside a tab. The catalogue files every metric
+ * under one of four lenses — talent supply, speed to stand up, location, cost — and
+ * rendering those as public subheadings would be a transcription of an internal filing
+ * system. The one heading a zone carries is the figure row's, which names the row's
+ * subject rather than its lens; see `FIGURES_HEADING`.
+ *
+ * The staggered zones are the screen's one motion moment. Three steps at most, so the
+ * whole sequence lands well inside the flow threshold however many cards a tab has —
+ * staggering twelve cards individually would have put the last one most of a second
+ * behind the first.
+ */
 function AreaPanel({ area }: { area: FunctionAreaView }) {
-  const provenance = AREA_PROVENANCE[area.functionArea];
-  let step = 0;
-  const enter = () =>
-    ({ "--gcc-enter-index": step++ }) as React.CSSProperties;
+  /**
+   * **HR is composed rather than derived, and this is the whole seam.** One tab, one
+   * branch, and everything below it is untouched — the technology and finance tabs still
+   * get their layout from `layoutArea` and their grounds from the sequence derived below.
+   *
+   * The reasoning, the cost and the reason it is scoped to one tab are in
+   * `hr-view.tsx`. What matters here is that the branch is a single early return rather
+   * than a set of conditionals threaded through the derivation: a half-composed tab
+   * would be the worst of both, and the next tab ANSR wants composed should be a
+   * decision about whether the derivation survives at all.
+   */
+  if (area.functionArea === "hr") return <HrPanel area={area} />;
+  /**
+   * **Operations is the second composed tab, and two of four is where this stops being
+   * an exception.** The seam is still one early return per tab and the derivation below
+   * is still untouched — but half the screen is now authored, so the next tab ANSR wants
+   * composed is the moment to decide whether the derivation survives at all rather than
+   * a third branch to add. `ops-view.tsx` records what it places and what it costs.
+   */
+  if (area.functionArea === "operations") return <OpsPanel area={area} />;
+  /**
+   * **Finance is the third, and this is the last early return that can be added without
+   * a decision about the derivation itself.** Three of the four tabs are authored, so
+   * everything below this line now renders exactly one tab — technology. It is not dead:
+   * it is what a metric added to a composed tab falls back to, and it is what technology
+   * draws. But a fourth composition request is a request to delete a derivation with one
+   * caller, which is a different change from this one. `fin-view.tsx` records what it
+   * places and, at more length than either of the others needed, what it refuses.
+   */
+  if (area.functionArea === "finance") return <FinPanel area={area} />;
+
+  /**
+   * Two filters, no arithmetic. `layoutArea` has already decided every width and
+   * packed the run so no row is part-empty; `compareByWidth` has already put the
+   * halves first. All that happens here is that one ordered list is cut in two at the
+   * point where the widths change, so each half can take its own ground.
+   */
+  const narrow = area.cards.filter((card) => card.width === "half");
+  const wide = area.cards.filter((card) => card.width === "full");
+
+  /**
+   * The zones this tab actually has, in order, each with the ground it takes.
+   *
+   * Built as a list so the alternation is a property of the list rather than four
+   * conditionals that each have to know what came before them. `surface` first,
+   * because the section's own ground is white and the switch above the first zone sits
+   * on it — a mint first zone would put a colour change immediately under the tab
+   * strip and read as though the strip belonged to the band above.
+   */
+  const sections: React.ReactNode[] = [];
+
+  if (area.figures.length > 0) {
+    sections.push(
+      /* **The figure row, first on every tab that has one.** Every bare scalar as one
+         object rather than as a card each — see `SummaryFigures`, which all four tabs
+         draw now. It leads because a single figure reads in one glance and a chart does
+         not, and it is the tab's one orange role.
+
+         The floor note is the ROW's here rather than each cell's: two of technology's
+         five figures declare a floor, so a per-cell note rendered the same sentence
+         twice inside one row, 400px apart, with nothing saying it referred to two
+         different figures. */
+      <SummaryFigures
+        key="figures"
+        cells={scalarCells(area.figures, { floor: "row" })}
+        heading={FIGURES_HEADING[area.functionArea]}
+        headingId={`figures-${area.functionArea}-heading`}
+        note={
+          area.figures.some((shown) => shown.metric.atLeast)
+            ? FLOOR_NOTE
+            : undefined
+        }
+      />,
+    );
+  }
+  if (narrow.length > 0) {
+    sections.push(<CardGrid key="narrow" cards={narrow} />);
+  }
+  if (wide.length > 0) {
+    sections.push(<CardGrid key="wide" cards={wide} />);
+  }
+  if (area.heldCards.length > 0) {
+    sections.push(
+      <section
+        key="held"
+        aria-labelledby={`held-${area.functionArea}-heading`}
+        className="flex flex-col gap-6"
+      >
+        {/* The heading is the whole framing now. `HELD_BODY` said the reason and then
+            said three more times, in prose, what the sealed card, its chip and its
+            cardinality note each already draw — so the reason moved into the heading
+            and the paragraph went. See `heldHeading`.
+
+            The rule that used to sit above this group is gone with the flat band: the
+            zone's own ground change is the separation now, and a hairline on top of it
+            would be two devices doing one job. */}
+        <h2
+          id={`held-${area.functionArea}-heading`}
+          className="text-xl leading-snug font-bold tracking-display text-text md:text-2xl"
+        >
+          {heldHeading(area.held.length)}
+        </h2>
+        {/* Packed too, which it never was: HR's pair is a half then a full, and a
+            full cannot fit beside a half, so it dropped a row and left six empty
+            columns beside the placeholder. Finance had the mirror of it. */}
+        <div className="grid grid-cols-1 items-start gap-6 lg:grid-cols-12 lg:gap-8">
+          {area.heldCards.map(({ held, width }) => (
+            <HeldMetricCard key={held.metric.id} held={held} width={width} />
+          ))}
+        </div>
+      </section>,
+    );
+  }
 
   return (
-    <div className="flex flex-col gap-8">
-      <p
-        className="gcc-enter max-w-measure text-base text-text-muted"
-        style={enter()}
-      >
-        {AREA_LEAD[area.functionArea]}
-      </p>
-
-      {area.shown.length > 0 ? (
-        // Twelve columns and `items-start`, which together are the fix for this
-        // screen's worst layout artefact. On a two-column grid every card
-        // stretched to its row's tallest neighbour, so a single figure sitting
-        // beside a nine-part breakdown rendered as a card four fifths full of
-        // nothing. Widths are now weighted by what a card draws — `metricWidth` —
-        // and height follows content.
-        <ul
-          className="gcc-enter grid grid-cols-1 items-start gap-4 sm:grid-cols-12"
-          style={enter()}
+    <>
+      {sections.map((section, index) => (
+        <Zone
+          // The key is the section's own, set above — index would be stable here but
+          // would tie the identity of a zone to its position, and a tab that gains a
+          // section would remount every zone after it.
+          key={(section as React.ReactElement).key ?? index}
+          ground={index % 2 === 0 ? "surface" : "tint"}
+          className="gcc-enter"
+          // Three steps at most, so the stagger is capped however many zones a tab
+          // has. `Zone` forwards the class to its inner container, which is where the
+          // animation and this custom property both apply.
+          style={{ "--gcc-enter-index": Math.min(index, 2) } as React.CSSProperties}
         >
-          {(() => {
-            const widths = packWidths(area.shown);
-            return area.shown.map((shown, i) => (
-              <MetricCard
-                key={shown.metric.id}
-                shown={shown}
-                width={widths[i] ?? metricWidth(shown)}
-              />
-            ));
-          })()}
-        </ul>
-      ) : null}
-
-      {area.held.length > 0 ? (
-        <section
-          aria-labelledby={`held-${area.functionArea}-heading`}
-          className="gcc-enter flex flex-col gap-6 border-t border-border-strong pt-8"
-          style={enter()}
-        >
-          <div className="flex flex-col gap-3">
-            <h3
-              id={`held-${area.functionArea}-heading`}
-              className="text-xl font-semibold tracking-heading text-text"
-            >
-              {heldHeading(area.held.length)}
-            </h3>
-            <p className="max-w-measure text-sm text-text-muted">{HELD_BODY}</p>
-          </div>
-          <ul className="grid grid-cols-1 items-start gap-4 sm:grid-cols-12">
-            {area.held.map((held) => (
-              <HeldMetricCard key={held.metric.id} held={held} />
-            ))}
-          </ul>
-        </section>
-      ) : null}
-
-      <div className="gcc-enter flex flex-col gap-3" style={enter()}>
-        {provenance ? <Provenance>{provenance}</Provenance> : null}
-        <Provenance>{SCREEN_PROVENANCE}</Provenance>
-      </div>
-    </div>
+          {section}
+        </Zone>
+      ))}
+    </>
   );
 }

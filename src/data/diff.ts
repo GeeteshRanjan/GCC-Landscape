@@ -169,6 +169,17 @@ const COMPANY_FIELDS: ReadonlyArray<keyof Company> = [
   "fte",
   "fortuneGlobal500",
   "forbesGlobal2000",
+  /**
+   * `businessTypes` was missing here, and it was the one omission that mattered.
+   *
+   * A company's sub-industry is the PRIMARY ordering signal in `similarity.ts`, so
+   * moving one changes which peers a real visitor is shown. Left out of this list, a
+   * re-tagging pass over the whole dataset printed "no company changes" and would
+   * have published as a silent no-op — which is the opposite of the reason there is no
+   * database. Six companies moving between sub-industries has to read as six changed
+   * companies.
+   */
+  "businessTypes",
 ];
 
 /**
@@ -187,6 +198,8 @@ const METRIC_FIELDS: ReadonlyArray<keyof Metric> = [
   "indexBaseline",
   "asOf",
   "atLeast",
+  "progression",
+  "subset",
   "note",
   "structure",
   "value",
@@ -522,6 +535,8 @@ export const METRIC_FIELD_LABELS: Record<keyof Metric, string> = {
   indexBaseline: "Index base",
   asOf: "As of",
   atLeast: "Shown as a floor",
+  progression: "Drawn as one progression",
+  subset: "Second part drawn inside the first",
   note: "Internal note",
   structure: "Shape",
   value: "Values",

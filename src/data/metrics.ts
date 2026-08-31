@@ -103,6 +103,10 @@ export interface OpenMetric {
   asOf?: string;
   /** The figures are a floor. Rendered as a trailing "+" on every one of them. */
   atLeast?: boolean;
+  /** The parts are waypoints on one path. Drawn as a progression, not as bars. */
+  progression?: boolean;
+  /** The second part is inside the first. Drawn nested; without it, adjacent. */
+  subset?: boolean;
   structure: MetricStructure;
   value: MetricValue | null;
 }
@@ -134,9 +138,11 @@ export type PublicMetric = OpenMetric | GatedMetric;
  *
  * Both branches drop `lens` (internal filing) and `note` (the admin's working
  * notes). The gated branch additionally drops the structure's labels, the unit,
- * the index base, the as-of date and `atLeast`: a row label plus a visible axis
- * can imply the answer, and the placeholder does not need any of them to be the
- * right size. `atLeast` in particular qualifies a figure that is not there.
+ * the index base, the as-of date, `atLeast`, `progression` and `subset`: a row label
+ * plus a visible axis can imply the answer, and the placeholder does not need any of
+ * them to be the right size. The last three in particular describe figures that are
+ * not there — `atLeast` qualifies one, `progression` and `subset` each say how a set
+ * of them relate.
  */
 export function publicMetric(metric: Metric): PublicMetric {
   if (metric.gated) {
@@ -164,6 +170,10 @@ export function publicMetric(metric: Metric): PublicMetric {
       : { indexBaseline: metric.indexBaseline }),
     ...(metric.asOf === undefined ? {} : { asOf: metric.asOf }),
     ...(metric.atLeast === undefined ? {} : { atLeast: metric.atLeast }),
+    ...(metric.progression === undefined
+      ? {}
+      : { progression: metric.progression }),
+    ...(metric.subset === undefined ? {} : { subset: metric.subset }),
     structure: metric.structure,
     value: metric.value,
   };

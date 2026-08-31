@@ -52,12 +52,12 @@ function withBrandMark(title: string): React.ReactNode {
  * The ask screen's hero: a centred title and one supporting line on the brand's
  * own display ground, and deliberately nothing else.
  *
- * **Why this is not `ScreenHeader`.** That component is shared by the answer
+ * **Why this is not `ResultSurface`'s band.** That band is shared by the answer
  * state and Screen 2, and both of them need something this band cannot give
  * them: a MUTED ink for a lead, a facts summary, and a way back. On
  * `--ansr-gradient-hero` a muted ink measures 2.23:1, so a shared header would
  * have had to either give up the reference's ground or ship an illegal pairing on
- * two screens. Those two screens keep `ScreenHeader` and its own gradient, which
+ * two screens. Those two screens keep `ResultSurface` and its own gradient, which
  * is capped dark enough for a muted ink; this band is the one place the brand's
  * real display ground is used, and it is white-only by construction.
  *

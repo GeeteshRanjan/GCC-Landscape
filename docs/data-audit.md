@@ -77,6 +77,61 @@ visitor who selects no line of business gets the band ladder's peers unchanged �
 invariant, not assumed. The design, the vetting and the coverage figures are in
 `docs/business-types.md`.
 
+### The measurement that says whether the collapse worked
+
+Sub-industry coverage was the wrong question. The right one is **peer-set coherence**: mean pairwise
+business similarity across the five companies actually returned, symmetrised, using the same weights
+the engine ranks by. It is implemented in `tests/unit/match-quality.test.ts` and it separates the
+two paths through the form by a factor of three to seven:
+
+| Industry | Companies | Visitor names a sub-industry | Visitor takes `All of {industry}` |
+| --- | --- | --- | --- |
+| Software & Internet | 656 | 0.93 | 0.23 |
+| Manufacturing | 207 | 0.94 | 0.13 |
+| BFSI | 189 | 0.96 | 0.31 |
+| Retail | 60 | 0.90 | 0.27 |
+| Healthcare & Lifescience | 135 | 0.96 | 0.30 |
+
+Two things follow, and both are why a reported "these peers are nothing like us" is usually not a
+scoring bug.
+
+**The degraded path cannot be improved from inside the engine.** With no sub-industry there is no
+business signal at all, so the score collapses to band proximity and the ordering is the old
+three-rung ladder's — provably, per `similarity.test.ts`. The 0.13 in Manufacturing is the honest
+value of "five companies that share a revenue band".
+
+**So the leverage is entirely in DISCOVERY.** Measured against 102 ordinary trade words a leader
+would type for their own business — `fintech`, `saas`, `3pl`, `bpo`, `insurtech`, `medtech`, `qsr`,
+`reinsurance`, `wafer` — **41 matched no row in the dropdown at all**, because the filter tested the
+row's printed label as a substring. `src/data/search-terms.ts` is the fix and
+`tests/unit/search-terms.test.ts` keeps all 41 as the regression list.
+
+### Six sub-industries had no companies; five were mapping errors
+
+A sub-industry a visitor can pick and nobody carries is the primary ordering question answered for
+nothing. Found by the same test file, and five of the six traced to the source Sub-Industry string
+being read too coarsely:
+
+| Sub-industry | Was | Because the source says |
+| --- | --- | --- |
+| Staffing & workforce services | Korn Ferry filed as market research | "Research and Consulting" |
+| Business process outsourcing | Indecomm filed as market research | "Information Services" |
+| Household & home care products | Reckitt, Henkel, Kimberly-Clark filed as diversified | "Personal & Home Care" |
+| Consumer products brand | Mattel filed as a retailer | "Retail - Toys & Games" |
+| Building materials distribution | Ferguson, Winsupply filed as industrial supplies | "Industrial Supplies" |
+
+The sixth, **Aviation services & maintenance, is honestly empty** — all seven Aviation entries are
+airlines, so there is no MRO or ground-handling company to map. Removing the row or sourcing
+companies for it is ANSR's call.
+
+Two further corrections came out of the same pass. **`cpg-diversified` held twelve of the 24 CPG
+companies**, including Nestlé, PepsiCo and Coca-Cola, because the source writes "CPG - Food &
+Beverage" and "CPG - Consumer Products" for companies that are plainly food or beverage businesses.
+And **`ret-sportswear` held one company** — Puma, the only row whose source string happened to read
+"Retail - Sportswear" — while Nike, Adidas, Under Armour, Lululemon and Columbia sat in generic
+apparel. All are recorded per company in `scripts/business-type-map.ts` with the reasoning beside
+them.
+
 ## Cell comments: three of them, dropped
 
 `xl/comments1.xml` holds source notes — LinkedIn pages, an MCA/ROC filing, a JLR press release.
@@ -161,6 +216,23 @@ is Screen 1 Part 3, a *sum* of professionals employed. Measured against range mi
 | Fortune Global 500 (181 companies) | 1,058,997 | 1,059,175 | +0.0% |
 | All 1834 companies | 2,607,569 | 2,610,500 | +0.1% |
 
+**The figure the strip publishes is now the UNION of the two indices, not the Fortune subset.** ANSR
+asked for both, and the deduplication is a property of how it is computed rather than a correction
+applied afterwards — the sum is taken over companies filtered on *either* index, so a company on both
+lists appears once. The overlap is large enough that the distinction is most of the figure:
+
+| Set | Companies | Professionals from midpoints |
+| --- | --- | --- |
+| Fortune Global 500 | 181 | 1,059,175 |
+| Forbes Global 2000 | 483 | 1,640,100 |
+| On both | 171 | — |
+| **Either index (published)** | **493** | **1,688,200** |
+| The two sums added, i.e. the double count | — | 2,699,275 |
+
+So a naive addition would overstate by 1,011,075 — 60% of the true figure. `indexedProfessionals` in
+`peers.ts` is the single definition; `data:verify` pins it as a profile figure under
+"professionals, either index (deduplicated)".
+
 The ranges are narrow enough (mostly 100-wide buckets) that midpoints reproduce the aggregate within
 a tenth of a percent. Reporting a rounded figure — "over a million professionals" — is unaffected.
 Per-peer display becomes a band rather than a precise number, which reads better anyway.
@@ -180,6 +252,51 @@ Every one of these is a real defect in the current file, not a hypothetical.
 7. Collapse Sub-Industry into a business type through `scripts/business-type-map.ts`. An
    unmapped value leaves the company untagged and is reported as a warning rather than failing
    the import — a future batch will contain strings nobody has seen, and untagged is safe.
+
+## Company-name shapes: 13 corrected, and the rest deliberately not
+
+Classified by shape rather than read one by one, because the useful question was which classes
+contain a defect and which contain brand styling. Corrections live in `COMPANY_NAME_FIXES` in
+`src/data/normalize.ts` and are applied in `readRows` beside `canonicalIndustry`.
+
+| Class | Count | Defects | Left alone |
+| --- | --- | --- | --- |
+| Full capitals, 5+ letters | 23 | 5 — DR. MARTENS, GRUPO ANTOLIN, KDDI CORPORATION, OIA GLOBAL, ADVANZ PHARMA | 18 are how the company writes itself: SABIC, AECOM, IQVIA, ABBYY, GEODIS, MULTIVAC, STRATACACHE, TEOCO, TOMIA, IDEMIA, CIRCOR, AMICORP, COMPLY, DAMAC, EVERSANA, FICOSA, INVECAS, SOBIS |
+| Starts lowercase | 20 | 3 — eurofins, ilantus, o9 solutions | 17 are brand styling: eBay, iSolved, pSemi, smartShift, d-Matrix, dSpace, eClinicalWorks, ePropelled, eRevMax, e-con, f5, iMedX, i-Merit, lastminute.com, blueBriX, ebm-papst, eSentire |
+| Spaced dash | 1 | 1 — `EA - Electronic Arts` → `EA (Electronic Arts)`, the parenthetical form the file already uses 20+ times | 37 unspaced hyphens are all correct (Coca-Cola, Rolls-Royce, T-Mobile) |
+| Lowercase after a hyphen or dot | 12 | 3 — Sanmina-sci, Read-ink, Iq-eq | 9 are genuine: N-able, Harrison.ai, Digital.ai, Kore.ai, Observe.ai, SiMa.ai, Musafir.com, CeX Webuy.com, Jiffy.ai |
+| Misspelled brand | — | 1 — `Victoria Secret` → `Victoria's Secret` | — |
+| Trailing `Inc.` / `Corp.` / `Plc.` | 28 | **0.** Left exactly as supplied | Stripping them would rewrite a legal name on a judgement about house style, and only 28 of 1,834 carry one |
+| Stray whitespace | 0 | 0 | `cleanText` already handles the non-breaking space below; a test asserts no name carries stray whitespace |
+
+**A case-only correction is free. Anything that changes a letter has to be edited in
+`scripts/business-type-map.ts` too**, which keys on `industry||name` and folds case but not letters —
+so a corrected spelling the map still holds in its old form silently drops the company's business
+type, and untagged is a safe state and therefore an invisible one. Two of the 13 change a letter and
+both are edited in both places; `tests/unit/normalize.test.ts` asserts every corrected company is
+still tagged.
+
+### Three duplicate-looking pairs, left as they are
+
+| Pair | Same | Different |
+| --- | --- | --- |
+| Astera Labs / Astera Labs | HQ, industry, founded 2024 | revenue band, cities, FTE |
+| IQ-EQ / IQ-EQ | HQ, industry, revenue band | founded 2022 vs 2026, cities, FTE |
+| STATS Perform / Stats Perform | HQ | industry, cities, FTE, year |
+
+Kept as separate rows with suffixed slugs. Merging any of them changes the company count and
+therefore every profile figure in `data/verify-baseline.json`, and whether each pair is one entity or
+two GCC entries for one entity is ANSR's call, not something the spreadsheet answers. The IQ-EQ pair
+previously differed only by casing, which hid the collision rather than recording it; both rows now
+read `IQ-EQ` and the duplicate is visible.
+
+### Two taxonomy values worth a decision, not corrected here
+
+- **`Scotland` is an HQ country.** It is part of the UK, and the UK is also in the list, so one
+  visitor's peers sort differently from another's for no reason. Renaming cascades into every company
+  that references it, which is the taxonomy editor's job and a publish of its own.
+- **`Vishakhapatnam`** is the source's spelling; `Visakhapatnam` is standard. It also has to agree
+  with `CITY_COORDINATES` in `geo.ts`, so the rename is two edits, not one.
 
 ## Two whitespace defects worth naming
 
@@ -252,16 +369,52 @@ Added 2026-08-27. Nothing in this section comes from the spreadsheet — this is
 and it has no spreadsheet behind it at all. It lives under `metrics` in the same `dataset.json`, and
 the figures are typed into admin.
 
-**35 metric definitions**, transcribed from `docs/brief.md` and seeded from
-`src/data/metric-catalogue.ts`. Revised 2026-08-28 against ANSR's review; the counts below are
-post-revision:
+**35 metric definitions, all with figures**, transcribed from `docs/brief.md` and seeded from
+`src/data/metric-catalogue.ts`. Revised 2026-08-28 against ANSR's review, then three times more; the
+counts below are current:
 
-| Function area | Metrics |
-| --- | --- |
-| Technology | 9 |
-| Operations | 9 |
-| HR | 11 |
-| Finance | 6 |
+| Function area | Metrics | A visitor receives |
+| --- | --- | --- |
+| Technology | 8 | 8 |
+| Operations | 9 | 9 |
+| HR | 10 | 10 |
+| Finance | 8 | 8 |
+
+Five movements behind those numbers:
+
+- **`tech-community-events` was removed** at ANSR's request, in the pass that rebuilt the technology
+  tab to the supplied composition. It held two parts — about 1,400 active technical meetup groups
+  across the top eight cities, and about 120 major conferences a year. Deleted rather than gated or
+  emptied, on the same reasoning as the diversity block below, and deliberately NOT folded into the
+  figure row at the head of the tab: the ask was for the community evidence off that page, not moved
+  up it. The figures are in git.
+- **`tech-graduate-output` was replaced by `tech-graduate-pipeline`**, which is a net zero on the
+  count and a real change to what the tab shows. The shared nine-discipline split is unchanged and
+  still on the operations and HR tabs; the technology tab now carries a two-part metric holding two of
+  that metric's OWN figures — 1.5M "Engineering, other disciplines" and 450K "Management and MBA
+  graduates". No figure is new, none is aggregated, and the two are drawn adjacent rather than nested.
+  See "The graduate pair" below.
+- **`hr-workforce-diversity` was removed** at ANSR's request, taking HR from 11 to 10. It held three
+  percentages — women across India GCCs, women in technology roles, women in engineering degree
+  enrolment. Deleted rather than gated or emptied: a gated card claims a figure is being withheld and
+  an empty definition can be half-filled into a live card, and the metric is out of scope rather than
+  either.
+- **`hr-graduate-output` was removed and is RESTORED**, both at ANSR's request, so HR went 10 → 9 → 10
+  and is back where it started. It was dropped on the argument that a nine-way disciplinary split is a
+  claim about national graduate supply while the decision on that page is about hiring an India team —
+  reach, speed to fill a seat, speed to scale, and what the same person costs next year. That is
+  overruled rather than disproved: the commerce, finance and human-resources streams are the ones a
+  CHRO recruits against, and no other tab shows them to that reader. `GRADUATE_OUTPUT` itself was never
+  touched through either pass, so no figure moved and nothing forked — which is exactly why restoring
+  it cost one line in the catalogue. Operations and HR now draw it through one component,
+  `GraduateOutput` in `src/components/screen2/graduate-card.tsx`, so the two views cannot diverge.
+- **Finance gained two, taking it from 6 to 8.** `fin-operating-cost-growth` and
+  `fin-workplace-cost-growth` are the other two thirds of the brief's "cost advantage durability →
+  growth YoY, split three ways: compensation, operating cost, workplace" — the compensation third
+  being `fin-cost-growth` at 9.8%. **Both figures are PLACEHOLDERS at a round 10%**, placed so the
+  cards can be demonstrated, flagged in their own notes and listed below with the other provisional
+  figures. Neither has ever been supplied and neither is derived from anything; replacing them is an
+  admin edit, not a code change.
 
 ### The tabs are four views of one national picture
 
@@ -273,16 +426,40 @@ measuring four separate Indias. It is not: it is showing each function's leaders
 are asked to justify, over one national picture.
 
 So a metric that appears on more than one tab is now **authored once** in
-`src/data/metric-catalogue.ts` and spread onto each tab with a different id. Six titles are shared:
+`src/data/metric-catalogue.ts` and spread onto each tab with a different id. Six titles are shared,
+and one of them has lost and regained a tab: graduate output was dropped from technology and then from
+HR, and the HR view is back at ANSR's request, so it is on operations and HR. Each of those passes was
+a change to where a metric APPEARS and not to what it says — the figure is untouched, and the
+technology tab's own two-part pipeline reuses two of its parts unchanged rather than restating them:
 
 | Metric | Tabs | Figure |
 | --- | --- | --- |
 | Bench strength | Technology, Operations, HR | 8.7M+ professionals |
-| Graduate output by discipline | Technology, Operations, HR | 9 disciplines, 3.9M a year |
+| Graduate output by discipline | Operations, HR | 9 disciplines, 3.9M a year |
 | Leadership depth | Technology, HR | 800,000 with 10+ years |
 | Time to backfill a role | Operations, HR | 35–75 days |
 | Time to first hire | Operations, HR | 7–70 days |
 | Time to reach each scale milestone | Operations, HR | 6 / 12 / 24 / 36 months |
+
+**Keeping it shared through the pass where only one tab drew it is what made restoring the HR view one
+line.** The tidy-up available then was to inline it as an ordinary operations metric; it would have been
+wrong twice, because two of its parts are quoted verbatim by `tech-graduate-pipeline` and because a
+dropped view came back. The technology view is still dropped and the same rule still applies to it.
+
+Four label changes landed in the HR pass and none of them touched a value:
+
+- **`hr-salary-growth` is "Where salary pressure is strongest"**, with "Base salary growth, year on
+  year" moved into its `unit`. Its five entries are reordered descending — 21.1, 20, 16.1, 9.8, 7.5 —
+  which is an authored order rather than a sort at render, and "All roles" is now "All roles
+  (reference)" so the comparator names itself in text as well as in colour.
+- **`hr-cost-per-employee-served` is "HR support ratio"**, shortened because "per employee served"
+  duplicated the unit — and on a gated card the title is one of only three fields that cross.
+- **`TIME_TO_FIRST_HIRE`'s end labels are whole clauses** — "Hiring through an employer of record"
+  and "Hiring directly into your own entity" — where they were fragments written to be prefixed with
+  their own endpoint figure. Affects the operations tab's rendering of the same metric, which now
+  reads the same way.
+- **`SCALE_MILESTONES`'s entries lost their "To " prefix**: "50 FTEs" rather than "To 50 FTEs". The HR
+  tab draws them as four positions on one line, where the first two land about 56px apart at 1024.
 
 Every shared figure is a technology-role figure, and the cards deliberately do not say so — the
 point is to let each leader read the India engineering market in the terms they answer for, not to
@@ -321,6 +498,34 @@ catches. There is no legitimate edit that makes two views of one number disagree
   comparison; the other three carry the same shape and are illustrative until real per-function
   figures arrive.
 
+### The graduate pair, and the two aggregations deliberately not made
+
+`tech-graduate-pipeline` holds exactly two figures, both of them `GRADUATE_OUTPUT`'s own parts,
+unchanged: **1,500,000 "Engineering, other disciplines"** and **450,000 "Management and MBA
+graduates"**. Two things it could have done and does not, each of which would have been a new claim
+rather than a new drawing.
+
+**It does not aggregate an engineering total.** Engineering, computer science and IT (300,000), and
+electronics and communication (250,000) are documented as disjoint, so 2.05M is arithmetically
+available. It is not authored, because "the annual engineering graduate output" is a claim about what
+counts as engineering, and that is ANSR's to approve rather than ours to derive. So the stored figure
+is preserved and the label says exactly what it measures — engineering disciplines OTHER than the two
+counted separately. If ANSR approves an aggregate, it is a catalogue edit and the label changes with
+it.
+
+**It does not nest the MBA block inside engineering.** 450,000 is TOTAL management and MBA output. It
+is not the number of MBA graduates who hold an engineering degree, and nothing supplied contains that
+number — the two statements are not equivalent, and drawing the smaller block inside the larger asserts
+an overlap nobody has measured. The two are drawn as adjacent proportional blocks, with no connector, no
+bracket and **no overlap percentage anywhere**: an earlier draft carried "~26% of MBA graduates have an
+engineering background", which had no source behind it and is not in this repository.
+
+That decision is enforced rather than remembered. Containment is now an authored field on the metric —
+`subset` in `src/data/schema.ts` — because it used to be INFERRED from two parts sharing a unit and the
+smaller being under half the larger, and this pair satisfies both conditions while being disjoint. The
+one real containment in the catalogue, `ops-grade-a-office-stock` (132 msf vacant of 854 total), now
+declares it. A shared unit remains a precondition and never evidence.
+
 ### Floors, marked as floors
 
 `atLeast` is new on the metric schema: a boolean on the DEFINITION, beside `format`, saying that this
@@ -334,13 +539,18 @@ gated metric, where it would qualify a figure that is not there. Five metrics ca
 
 Filed against four internal lenses — supply, speed, place, cost. The brief's author used six, adding
 Fit and Optional; both collapse into supply, because both were supply questions (Fit is comparative
-capability supply across delivery locations, and the Optional diversity block is the composition of
-the workforce on offer). Nothing from the brief lost a home. **The lens is never a public label** —
-`publicMetric` strips the field, and the admin surface labels the groupings as internal.
+capability supply across delivery locations). **The lens is never a public label** — `publicMetric`
+strips the field, and the admin surface labels the groupings as internal.
 
-**Values entered: all 35.** The figures supplied 2026-08-27 and revised 2026-08-28 came from ANSR
-rather than from a source this repository can cite, and three of them were filled from judgement
-(below). Rather than leave gaps that would read as bugs, every metric is populated.
+**One thing from the brief now has no home:** the Optional diversity block, whose only metric was
+`hr-workforce-diversity`, removed at ANSR's request. Everything else the brief asks for is either
+implemented or defined and awaiting a figure.
+
+**Values entered: all 35, of which five are provisional.** The figures supplied 2026-08-27 and revised
+2026-08-28 came from ANSR rather than from a source this repository can cite. Every metric is fully
+populated — a partly-filled one is dropped from the public screen rather than rendered with holes in
+it — but populated is not the same as measured, and the five exceptions are named rather than counted
+so that promoting one to fact reads as a change to a list rather than as a number moving by one.
 
 **The sample stamp is gone.** Every seeded metric used to carry `asOf: "Sample, not for publication"`,
 which is a **public** field and rendered beside every figure on Screen 2. ANSR asked for it removed, so
@@ -351,9 +561,13 @@ and nothing replaces it. `data:verify` still reports how many metrics state no p
 35 — so the number going down remains the visible milestone, but it is now a count in a script rather
 than a warning on the page.
 
-Three metrics were filled from judgement rather than from the supplied data, each recorded in its own
-note: Vietnam's column in the capability grid, the role-by-level grid in `hr-fully-loaded-cost`, and
-the depth row for Pune and tier 2 in `fin-cost-vs-ecosystem-depth`.
+Five figures are provisional, each recorded in its own note. Three were filled from judgement rather
+than from the supplied data: Vietnam's column in the capability grid, the role-by-level grid in
+`hr-fully-loaded-cost`, and the depth row for Pune and tier 2 in `fin-cost-vs-ecosystem-depth`. Two
+are placeholders at a round 10% rather than judgement at all: `fin-operating-cost-growth` and
+`fin-workplace-cost-growth`. `tests/unit/metrics.test.ts` asserts the `PLACEHOLDER` marker on the
+latter two, so the figure can be edited from admin — the intended path — while removing the marker
+fails the suite.
 
 **No absolute money survived the import, and that is enforced rather than trusted.** The supplied
 data contained per-head dollar amounts and per-square-foot rupee rents. Where the source also gave a
@@ -385,7 +599,7 @@ each became a single figure because the split they carried was narrower or noisi
 `fin-workplace-cost-gradient`.
 
 **What a visitor would receive today**, measured through `publicMetricsFor` — the same function the
-public screens call: `tech 9, operations 9, hr 11, finance 6` — the whole catalogue, since nothing is
+public screens call: `tech 8, operations 9, hr 10, finance 8` — the whole catalogue, since nothing is
 incomplete. Gated metrics count too, because they ship as a placeholder of the right shape rather
 than not at all.
 

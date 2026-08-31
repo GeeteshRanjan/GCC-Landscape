@@ -60,18 +60,106 @@ function Baseline() {
  * row is composed there and the MARK comes from here, which is the only part that
  * has to match.
  */
+/**
+ * What KIND of row a bar belongs to, where a set holds more than one kind.
+ *
+ * **Three values, and the two that are not `subject` exist for exactly one chart** —
+ * the HR tab's salary-pressure ranking, where four of the five rows are specialisms
+ * and the fifth is the all-roles comparator they are read against. Ordinal depth
+ * cannot say that: the ramp means "more" and this is a difference in kind, not in
+ * quantity.
+ *
+ *   - `subject` — the default, and every row on every other chart in this file.
+ *   - `reference` — the comparator the rest of the set is read against. Takes
+ *     `--ansr-action`, which is 3.35:1 on white and clears the 3:1 floor WCAG 1.4.11
+ *     asks of a non-text graphic. This is the one place a bar is warm, and it is
+ *     licensed by the row also carrying the word in its LABEL — see the entry name on
+ *     `hr-salary-growth`. A colour that is the only carrier of a distinction is not
+ *     available in this palette and is not being used as one here.
+ *   - `muted` — a row deliberately held back from the comparison. `--ansr-grey-500` at
+ *     3.28:1 on white, which is the only light neutral in the palette that clears the
+ *     floor. **Not `--ansr-teal-300`**, which is the blue-grey the composition asks for
+ *     and measures about 2.3:1 on white — under the floor, on a mark, which is not
+ *     available whatever it looks like.
+ */
+export type BarTone = "subject" | "reference" | "muted";
+
+/** The fill each tone takes on a BARE track, where the bar sits on the card's white. */
+const BARE_FILL: Record<BarTone, string> = {
+  subject: "bg-accent-teal",
+  reference: "bg-action",
+  muted: "bg-grey-500",
+};
+
+/** The fill each tone takes on the grey track. Measured against `--ansr-grey-100`. */
+const TRACKED_FILL: Record<BarTone, string> = {
+  subject: "bg-teal-500",
+  // 2.61:1 on the grey track against 3.35:1 on white, so a warm row is only offered
+  // where the track is gone. Kept in the map rather than refused, because the caller
+  // that would reach it is the one chart that is always bare — and a silently wrong
+  // colour is worse than a documented one.
+  reference: "bg-action",
+  muted: "bg-grey-500",
+};
+
 export function BarTrack({
   share,
   emphasis = false,
+  bare = false,
+  tone = "subject",
 }: {
   share: number;
   emphasis?: boolean;
+  /**
+   * Which kind of row this is. See `BarTone`.
+   *
+   * Separate from `emphasis`, which is about WHICH row matters most in a set of one
+   * kind — the visitor's own position, or the leader. A tone is about a row being a
+   * different kind of thing from its neighbours, and the two never co-occur.
+   */
+  tone?: BarTone;
+  /**
+   * No track behind the bar, and the bar in the deeper teal.
+   *
+   * **For a ranking that states its own axis, and only for one.** The grey track is
+   * what tells a reader where full width is, so dropping it is only safe where
+   * something else does — in a set sorted by the quantity its bars encode, the first
+   * row IS full width and carries its figure, which is the self-labelling exemption
+   * `project.md` grants. On an unsorted set, or a grid of bars, the track stays.
+   *
+   * The fill goes a step darker because it loses the track it was measured against:
+   * `teal-500` was chosen at 4.51:1 on `surface-sunken`, and with the track gone the
+   * bar sits on the card's own white, where the brand teal is 6.63:1 and reads as a
+   * mark rather than as a tint.
+   */
+  bare?: boolean;
 }) {
   return (
     // Hidden: the figure it restates is always in text beside it.
-    <div aria-hidden="true" className="h-2 w-full bg-surface-sunken">
+    <div
+      aria-hidden="true"
+      className={cn("w-full", bare ? "h-1.5" : "h-2 bg-surface-sunken")}
+    >
       <div
-        className={cn("h-full", emphasis ? "bg-accent-teal" : "bg-teal-400")}
+        /**
+         * **`teal-500`, where this was `teal-400`, and the old value was illegal
+         * against its own track.** `--ansr-teal-400` is `--ansr-teal-bright`, which
+         * `design-stack.md` states outright is not available inside a chart on a light
+         * ground: it measures 2.44:1 on white and **2.15:1 on this track's own
+         * `--ansr-grey-100`** — well under the 3:1 floor WCAG 1.4.11 asks of a non-text
+         * graphic, on the default fill of every bar on both public screens.
+         *
+         * `teal-500` is 4.51:1 against the same track and 5.14:1 on white, and it is
+         * still a clear step lighter than the `accent` the emphasis branch takes, so
+         * the ordinal relationship the ramp depends on is unchanged.
+         */
+        className={cn(
+          "h-full",
+          // The tone decides the hue; `emphasis` and `bare` decide the depth within
+          // the default tone. A toned row is already a different kind of thing, so it
+          // takes its own fill on both tracks rather than a darker step of the teal.
+          bare || emphasis ? BARE_FILL[tone] : TRACKED_FILL[tone],
+        )}
         // A floor, so a genuinely tiny share is a visible mark rather than an
         // apparently missing bar.
         style={{ width: `${Math.max(share * 100, 1.5)}%` }}
@@ -152,6 +240,16 @@ export interface BarRow {
   emphasis?: boolean;
   /** A short qualifier after the label — "emerging", "median". */
   qualifier?: string;
+  /**
+   * A row that is a different KIND of thing from its neighbours. See `BarTone`.
+   *
+   * Defaults to `subject`, so every existing chart is unchanged. The figure's ink
+   * follows it: a `reference` row's figure takes `--ansr-accent-warm`, which is the
+   * only orange legal at 14px (6.53:1 on white against `--ansr-action`'s 3.35:1), so
+   * the row's colour is consistent between its bar and its number without either
+   * being illegal at its own size.
+   */
+  tone?: BarTone;
 }
 
 export function RankedBars({
@@ -159,6 +257,8 @@ export function RankedBars({
   axisNote,
   reference,
   dense = false,
+  inline = false,
+  bareTrack = false,
 }: {
   rows: readonly BarRow[];
   /** What full width is. Omitted only when the section states it already. */
@@ -171,6 +271,35 @@ export function RankedBars({
   reference?: { share: number; label: string };
   /** Nine rows in a half-width card need the tighter step. */
   dense?: boolean;
+  /**
+   * Label, bar and figure on ONE line, with no track behind the bar.
+   *
+   * **The compact reading of a ranking, and it is a third of the height.** The
+   * default row is two lines — label and figure on the first, a full-width bar on the
+   * second — which is right for Screen 1's largest-centres block, where the bar is
+   * the block's whole argument and runs the measure of the card. A seven-row list of
+   * specialisms is a different job: the reader is scanning a ranked column, and a
+   * two-line row put 24px of bar between every pair of names and made the set as tall
+   * as the card beside it.
+   *
+   * On one line the bar becomes the middle column, so it is read between the name and
+   * the figure rather than under both, and the track goes with it — see `bare` on
+   * `BarTrack` for why that is only safe on a set sorted by its own quantity.
+   *
+   * It wraps rather than shrinks: below `sm` the bar drops to its own full-width line
+   * and the row is the two-line default again, which is the layout that already works
+   * at 390.
+   */
+  inline?: boolean;
+  /**
+   * Drop the grey track behind the bars.
+   *
+   * Separate from `inline` because they answer different questions: `inline` is how
+   * much vertical room a row takes, and this is whether the chart still tells the
+   * reader where full width is. Only a set ranked by the quantity its own bars encode
+   * does — see `selfLabelling` in `screen2.ts`, which is where that is decided.
+   */
+  bareTrack?: boolean;
 }) {
   return (
     <div className="flex flex-col gap-3">
@@ -182,11 +311,60 @@ export function RankedBars({
             style={{ insetInlineStart: `${reference.share * 100}%` }}
           />
         ) : null}
-        <dl className={cn("flex flex-col", dense ? "gap-2" : "gap-3")}>
-          {rows.map((row) => (
-            <div key={row.label} className="flex flex-col gap-1">
-              <div className="flex flex-wrap items-baseline justify-between gap-x-4">
-                <dt className="text-sm text-text">
+        <dl
+          className={cn(
+            "flex flex-col",
+            /**
+             * **An inline row needs a bigger gap BETWEEN rows below `sm`, and it is a
+             * disambiguation rather than breathing room.** Under `sm` the bar drops to
+             * its own line 8px under its label — so at a 10px row gap the bar sat 8px
+             * from the name above it and 10px from the name below it, and which row it
+             * belonged to was a two-pixel judgement. From `sm` the bar is back in its
+             * own column and the row gap can be tight again.
+             */
+            inline
+              ? dense
+                ? "gap-5 sm:gap-2.5"
+                : "gap-6 sm:gap-3"
+              : dense
+                ? "gap-2"
+                : "gap-3",
+          )}
+        >
+          {rows.map((row) =>
+            inline ? (
+              <div
+                key={row.label}
+                /**
+                 * **A grid rather than `flex-wrap`, because the wrap point has to be a
+                 * decision and not a consequence.** Flex-wrapped, the row broke wherever
+                 * the three items stopped fitting, which at 768 put the figure on its own
+                 * line under the label with the bar left floating beside them — a
+                 * layout nobody chose, arrived at by arithmetic between a `basis-40`
+                 * label and a percentage bar column. Two explicit shapes instead: name
+                 * and figure with the bar beneath, and from `sm` all three in one row.
+                 *
+                 * `gap-y-2` rather than 4px: where the bar sits under the label, a 6px
+                 * teal bar with no track behind it reads at 4px as an underline of the
+                 * text above rather than as a quantity.
+                 */
+                className={cn(
+                  "grid items-center gap-x-4 gap-y-2",
+                  "grid-cols-[minmax(0,1fr)_max-content]",
+                  "sm:grid-cols-[minmax(0,1fr)_30%_max-content]",
+                )}
+              >
+                <dt
+                  className={cn(
+                    "order-1 min-w-0 text-sm",
+                    // The comparator names itself in the label as well as in the
+                    // colour, so the ink follows the bar. `accent-warm` rather than
+                    // `action`, which is illegal at this size — see `BarRow.tone`.
+                    row.tone === "reference"
+                      ? "font-semibold text-accent-warm"
+                      : "text-text",
+                  )}
+                >
                   {row.label}
                   {row.qualifier ? (
                     <span className="ps-2 text-xs font-regular text-text-muted">
@@ -194,26 +372,78 @@ export function RankedBars({
                     </span>
                   ) : null}
                 </dt>
+                {/* Third in the flow below `sm`, spanning both columns on its own line;
+                    the middle column from `sm`, where it is read between the name and
+                    the figure rather than under both. */}
+                <div className="order-3 col-span-2 sm:order-2 sm:col-span-1">
+                  <BarTrack
+                    share={row.share}
+                    emphasis={row.emphasis}
+                    bare={bareTrack}
+                    tone={row.tone}
+                  />
+                </div>
                 <dd
                   className={cn(
-                    "text-sm tabular-nums",
-                    row.emphasis
-                      ? "font-bold text-accent-teal"
-                      : "font-semibold text-text",
+                    "order-2 text-sm tabular-nums sm:order-3 sm:text-end",
+                    row.tone === "reference"
+                      ? "font-bold text-accent-warm"
+                      : row.emphasis
+                        ? "font-bold text-accent-teal"
+                        : "font-semibold text-text",
                   )}
                 >
                   {row.figure}
                 </dd>
               </div>
-              {/* Taller than a hairline and on a visible track: a 6px bar on a
-                  near-white track reads as an underline rather than as a
-                  quantity, which is what it did before. */}
-              <BarTrack share={row.share} emphasis={row.emphasis} />
-            </div>
-          ))}
+            ) : (
+              <div key={row.label} className="flex flex-col gap-1">
+                <div className="flex flex-wrap items-baseline justify-between gap-x-4">
+                  <dt
+                    className={cn(
+                      "text-sm",
+                      row.tone === "reference"
+                        ? "font-semibold text-accent-warm"
+                        : "text-text",
+                    )}
+                  >
+                    {row.label}
+                    {row.qualifier ? (
+                      <span className="ps-2 text-xs font-regular text-text-muted">
+                        {row.qualifier}
+                      </span>
+                    ) : null}
+                  </dt>
+                  <dd
+                    className={cn(
+                      "text-sm tabular-nums",
+                      row.tone === "reference"
+                        ? "font-bold text-accent-warm"
+                        : row.emphasis
+                          ? "font-bold text-accent-teal"
+                          : "font-semibold text-text",
+                    )}
+                  >
+                    {row.figure}
+                  </dd>
+                </div>
+                {/* Taller than a hairline and on a visible track: a 6px bar on a
+                    near-white track reads as an underline rather than as a
+                    quantity, which is what it did before. */}
+                <BarTrack
+                  share={row.share}
+                  emphasis={row.emphasis}
+                  tone={row.tone}
+                />
+              </div>
+            ),
+          )}
         </dl>
       </div>
-      <Baseline />
+      {/* An inline row's bar is the middle column, so a rule under the list would sit
+          under the labels and the figures too and would not be an axis for anything.
+          The set states its own axis in row one instead. */}
+      {inline ? null : <Baseline />}
       {reference || axisNote ? (
         <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
           {axisNote ? <AxisNote>{axisNote}</AxisNote> : <span />}
@@ -347,20 +577,17 @@ export function RangeBar({
         // A pair, deliberately not a <ul>: list semantics inside a card that is
         // itself a list item made "count the cards on this tab" mean something
         // else.
+        /* **The figure prefix is gone and the labels are whole clauses now.** Each
+           read "7 on an employer of record" — the endpoint value, then a fragment
+           that only made sense after it. The display value above states both ends
+           already, so the prefix was the third appearance of the same number on one
+           card, and the fragment could not be reused by the HR tab's benchmark
+           drawing, where the figures sit on the rail itself. See `FIRST_HIRE_EOR` in
+           the catalogue: the labels carry their own verb now. */
         <div className="grid grid-cols-1 gap-2 text-xs text-text-muted sm:grid-cols-2">
-          {lowLabel !== null ? (
-            <p>
-              <span className="font-semibold text-text tabular-nums">{low}</span>{" "}
-              {lowLabel}
-            </p>
-          ) : (
-            <span />
-          )}
+          {lowLabel !== null ? <p>{lowLabel}</p> : <span />}
           {highLabel !== null ? (
-            <p className="sm:text-end">
-              <span className="font-semibold text-text tabular-nums">{high}</span>{" "}
-              {highLabel}
-            </p>
+            <p className="sm:text-end">{highLabel}</p>
           ) : null}
         </div>
       ) : null}
@@ -416,6 +643,248 @@ export function NestedBar({
           </p>
         </div>
       </div>
+      {axisNote ? <AxisNote>{axisNote}</AxisNote> : null}
+    </div>
+  );
+}
+
+/* ==========================================================================
+   AdjacentBlocks — two populations, sized against each other, and nothing else
+
+   The counterpart to `NestedBar`, and the reason both exist is that they make
+   different claims about the same two numbers. One bar inside another says "132 of
+   the 854". Two blocks side by side say "1.5M, and separately 450K" — their sizes are
+   comparable and their memberships are not.
+
+   **The distinction is load-bearing rather than stylistic, and the graduate pair is
+   why.** 450K is total management and MBA output; it is not the number of MBA
+   graduates who hold an engineering degree, and the source does not contain that
+   number. Nesting the smaller block would assert an overlap nobody has measured, in
+   front of a reader who is deciding whether to trust the rest of the page. So
+   containment is authored on the metric — see `subset` in `schema.ts` — and this is
+   what a two-part breakdown draws without it.
+
+   Three things it does, each closing off a way of implying the overlap anyway:
+
+     - **Areas are proportional to the figures, and the blocks are equal height**, so
+       the widths carry the ratio. Both are `span` from the view model, which is a
+       share of the SET rather than of the larger part.
+     - **A gap between them, and two different fills.** Touching blocks in one colour
+       read as one divided bar, which is a part-to-whole claim.
+     - **No connector, no bracket, no percentage.** There is nothing to state about how
+       the two relate, so nothing is drawn between them.
+
+   Labels sit BELOW their blocks rather than inside. Inside is better where it fits and
+   it does not fit here at every width: at 390 the narrower block is about 80px, and a
+   four-word label inside it wraps to six lines and sets the height of the whole
+   chart. Below, each label owns its block's full width, takes a rule in its block's
+   own colour as the connector, and reads the same at 390 as at 1440.
+   ========================================================================== */
+
+export function AdjacentBlocks({
+  blocks,
+  unit,
+}: {
+  blocks: ReadonlyArray<{
+    label: string;
+    figure: string;
+    /** 0 to 1 of the set's total. Widths, so equal heights give proportional areas. */
+    span: number;
+  }>;
+  /** What the figures count. Rendered above the blocks, under the card's heading. */
+  unit?: string;
+}) {
+  return (
+    <div className="flex flex-col gap-4">
+      {/* Above the blocks, so it reads as the heading's supporting line rather than as
+          an axis note for a chart that has no axis. */}
+      {unit ? <AxisNote>{unit}</AxisNote> : null}
+      {/* Not a `dl`: a figure sits inside its block and its label below it, so the two
+          belong to one column, and a `dd` preceding its own `dt` is not a description
+          list. The same call `RangeBar` makes about its own pair. */}
+      <div className="flex w-full items-stretch gap-1">
+        {blocks.map((block, index) => (
+          <div
+            key={block.label}
+            className="flex min-w-0 flex-col gap-2"
+            // The proportional width, and the one inline style on this surface that is
+            // genuinely data: a Tailwind class cannot express a fraction derived from
+            // two figures. `flex-basis` rather than `width` so the gap is taken out of
+            // the row rather than out of the proportions.
+            style={{ flexBasis: `${block.span * 100}%` }}
+          >
+            <p
+              // A stable hook for the spec that measures these two boxes against each
+              // other. Not a style: `.gcc-adjacent-block` has no rule behind it, and the
+              // alternative was a spec locating a proportional block by `tabular-nums`,
+              // which the axis note above it also carries.
+              className={cn(
+                "gcc-adjacent-block",
+                // One height for both, which is what makes width the only encoding.
+                // Shallow enough that a block is a band rather than a slab: at 144px
+                // the larger block was 400×144 of flat teal holding four characters,
+                // which spends more ink than the claim is worth.
+                "flex h-24 items-end px-2 py-3 md:h-28 md:px-4",
+                /**
+                 * **Three steps rather than two, and the narrow block sets all of them.**
+                 * At 390 the card's content is about 278px, so a block at 23% of the set
+                 * is 64px — and "450K" at 30px is 78px of glyph before any padding, so
+                 * the figure broke out of its own block and sat on the zone beside it.
+                 * The type steps down with the viewport until it fits the NARROWEST
+                 * block the proportions can produce, because that is the one that fails
+                 * first; the wide block is never the constraint.
+                 *
+                 * Shrinking the block instead was the alternative and is not available:
+                 * its width IS the figure, so widening it to fit its own label would
+                 * make the drawing disagree with the number inside it.
+                 */
+                "text-base leading-none font-bold tracking-display tabular-nums sm:text-2xl md:text-3xl",
+                index === 0
+                  ? // White on the brand teal: 5.86:1, and the only ink allowed on it.
+                    "bg-accent-teal text-text-inverse"
+                  : /**
+                     * **`teal-300` with a brand-teal outline, and the first version of
+                     * this was invisible.** It was `surface-tint`, which IS `teal-100` —
+                     * the mint the zone under it is filled with — so the smaller block
+                     * measured 1.00:1 against its own ground and the chart drew one
+                     * block and a gap. `teal-200` is 1.30:1 there and `teal-300` is
+                     * 1.82:1, a visible step and still under the 3:1 that 1.4.11 asks
+                     * of a graphic carrying information.
+                     *
+                     * So the block's EXTENT is carried by the outline rather than by the
+                     * fill: the brand teal is 7.72:1 on the mint, so where the block
+                     * ends is unambiguous, and the fill is left free to be the pale aqua
+                     * the composition asks for. Fill against outline is the device this
+                     * file already uses wherever a distinction must survive greyscale.
+                     *
+                     * The figure is the brand teal at 4.23:1 on `teal-300` — under AA
+                     * for body text and comfortably over the 3:1 large-text floor, which
+                     * is the threshold that applies at 24/30px Bold. Its LABEL sits
+                     * outside the block, on the zone, where the same ink is 7.72:1.
+                     */
+                    "border border-accent-teal bg-teal-300 text-accent-teal",
+              )}
+            >
+              {block.figure}
+            </p>
+            <p
+              className={cn(
+                "border-t-2 pt-2 text-xs text-text",
+                index === 0 ? "border-accent-teal" : "border-teal-300",
+              )}
+            >
+              {block.label}
+            </p>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+/* ==========================================================================
+   Journey — waypoints on one path
+
+   For a breakdown whose parts are one thing measured repeatedly as it goes, rather
+   than a set of subjects measured once each. The scale curve is the case: six months
+   to fifty FTEs, twelve to a hundred, twenty-four to three hundred, thirty-six to
+   five hundred.
+
+   **Why `RankedBars` was the wrong chart for it, which is the whole reason this
+   exists.** Four bars from a shared zero on a shared axis is the drawing of four
+   independent quantities — it is what graduate output by discipline is, and what
+   latency to four cloud regions is. Applied to a curve it said "here are four
+   separate durations" about one centre measured four times, and the reader had no way
+   to see that the twelve contains the six.
+
+   **A staircase says it instead.** Every leg begins where the previous one ended, so
+   the row for "To 300 FTEs" is visibly the row above it plus twelve more months, and
+   the accent segment on each row is that row's own contribution. The full extent of a
+   row is still its stored figure, so nothing is invented and no axis is moved: the
+   last row is full width because it is the whole journey, which is what makes the axis
+   readable without a note about it.
+
+   Two things it deliberately does not do. It does not re-sort — the order IS the path.
+   And it does not draw the first leg differently: its run-up is genuinely zero, so its
+   accent segment starts at the axis, and its interval is its cumulative figure and is
+   therefore printed once rather than twice.
+
+   **The two fills are `teal-500` and the accent, and both are floor-constrained.**
+   They sit on the `surface-sunken` track every bar here uses, where `teal-400` and
+   everything lighter measures under the 3:1 WCAG 1.4.11 asks of a non-text graphic —
+   the same measurement `BarTrack` records. So the pair is the same pair `BarTrack`
+   already uses for default against emphasis, and a hairline of the card's own ground
+   is drawn at the joint so the step is legible as a boundary even where two adjacent
+   teals are not separable by eye.
+   ========================================================================== */
+
+export interface JourneyLegRow {
+  label: string;
+  /** Cumulative, already formatted. The full extent of the row is a second reading. */
+  figure: string;
+  /** 0 to 1 — where this leg ends. */
+  share: number;
+  /** 0 to 1 — where this leg begins. Zero on the first. */
+  offset: number;
+  /** Signed and formatted by the caller. Absent on the first leg. */
+  interval?: string;
+}
+
+export function Journey({
+  legs,
+  axisNote,
+}: {
+  legs: readonly JourneyLegRow[];
+  axisNote?: string;
+}) {
+  return (
+    <div className="flex flex-col gap-3">
+      <dl className="flex flex-col gap-3">
+        {legs.map((leg) => (
+          <div key={leg.label} className="flex flex-col gap-1">
+            <div className="flex flex-wrap items-baseline justify-between gap-x-4">
+              <dt className="text-sm text-text">
+                {leg.label}
+                {leg.interval ? (
+                  // The leg's own contribution, in text beside the mark that draws
+                  // it — the accent segment is a second reading of this, exactly as
+                  // the row's full extent is a second reading of the figure.
+                  <span className="ps-2 text-xs font-regular text-text-muted tabular-nums">
+                    {leg.interval}
+                  </span>
+                ) : null}
+              </dt>
+              <dd className="text-sm font-semibold text-text tabular-nums">
+                {leg.figure}
+              </dd>
+            </div>
+            <div aria-hidden="true" className="relative h-2 w-full bg-surface-sunken">
+              {/* Everything already elapsed when this leg started. Context, so it
+                  takes the lighter of the two legal fills. */}
+              <div
+                className="absolute inset-y-0 start-0 bg-teal-500"
+                style={{ width: `${leg.offset * 100}%` }}
+              />
+              {/* This leg. The news, so it takes the accent — and it carries the
+                  ground hairline on its leading edge, which is what makes the joint
+                  visible where the two teals are one step apart. */}
+              <div
+                className={cn(
+                  "absolute inset-y-0 bg-accent-teal",
+                  leg.offset > 0 ? "border-s border-surface" : "",
+                )}
+                style={{
+                  insetInlineStart: `${leg.offset * 100}%`,
+                  // A floor, so a short leg is a visible mark rather than an
+                  // apparently missing one.
+                  inlineSize: `${Math.max((leg.share - leg.offset) * 100, 1.5)}%`,
+                }}
+              />
+            </div>
+          </div>
+        ))}
+      </dl>
+      <Baseline />
       {axisNote ? <AxisNote>{axisNote}</AxisNote> : null}
     </div>
   );
@@ -533,24 +1002,60 @@ export function NestedSteps({
    It is still not a divided bar, for the reason `NestedSteps` was not: these figures
    do not sum to anything. 314 is inside 656 which is inside 1,834.
 
-   Two rules the component enforces rather than trusts:
+   **Three orders of magnitude are not drawable as three lengths, and that is the
+   constraint that decided the rest of this component.** The real numbers on the
+   default path are 1,834, 189 and 5 — so the middle layer is 10.3% and the innermost
+   is 0.27%. Drawn as extents on one axis the third layer is a floored sliver a reader
+   cannot see and cannot measure, and no width fixes it: at 390 the industry layer is
+   about 32px, so there is nothing for a fifth of a percent to be inside. A log or a
+   square-root scale would make it visible by making the length a lie, which is the
+   same move as truncating an axis and is banned here for the same reason.
 
-     - **Each layer's figure is in text, on or beside its own bar.** Every mark in
+   So the innermost level is stated as a POSITION rather than as a quantity, via
+   `marker`. Its figure is in text exactly as every other layer's is — the mark was
+   always the second reading — and what the mark now says is "inside this population,
+   here, are the ones on this page" instead of "this many". It is the only element in
+   the chart in the accent fill, so it is visibly a different kind of mark rather than
+   a bar that came out short. Where the third level IS a real population — a
+   sub-industry cohort — it draws as a proportional bar and the marker never appears.
+
+   Three rules the component enforces rather than trusts:
+
+     - **Each layer's figure is in text, on or beside its own mark.** Every mark in
        this project carries its figure, and here the label is also what stops three
        nested rectangles being a decoration.
-     - **A bar too short to hold its label puts the label OUTSIDE it.** A thin
-       industry takes this branch every time — two companies against a national base
-       of 1,834 is a 0.1% bar — and the alternative is a figure clipped to nothing.
-       Outside, the label lands on the layer behind, which is a light step and takes
-       black ink at AA.
+     - **A label sits on whichever side of its own trailing edge has more room.** The
+       outermost layer is full width, so its label is inside it; every narrower layer
+       puts its label after its trailing edge, where the eye follows the mark to the
+       figure instead of reading a figure that overhangs the mark it belongs to. That
+       is also what fills the width the chart used to leave empty.
+     - **A marker never draws wider than the layer it is inside.** Its width is
+       `min(a fixed step, the parent's own extent)`, resolved in CSS, so a thin
+       industry — two companies against a national base of 1,834 — gets a marker
+       clipped to its parent rather than one sticking out of it.
    ========================================================================== */
 
 export interface ContainmentLayer {
   label: string;
   /** Already formatted. The bar is a second reading of this. */
   figure: string;
-  /** 0 to 1 against the outermost layer. */
+  /**
+   * 0 to 1 against the outermost layer.
+   *
+   * **For a `marker` layer this is the extent the marker must stay INSIDE — the
+   * parent population's share — not the marker's own quantity.** A marker draws no
+   * quantity, so it has no share of its own to draw; what it needs to know is how
+   * much room it has before it would be outside the population it is marking.
+   */
   share: number;
+  /**
+   * Draw a fixed-width position marker instead of a proportional extent.
+   *
+   * For a level that is a SELECTION rather than a population — the handful of
+   * companies named on the page. See the block comment: five of 1,834 is 0.27%, and
+   * a length is the one form that cannot carry it.
+   */
+  marker?: boolean;
 }
 
 /**
@@ -561,15 +1066,27 @@ export interface ContainmentLayer {
  * drawn as two adjacent steps a reader cannot separate. `teal-100` against
  * `teal-200` is a 1.2:1 difference; against `teal-300` it is worth looking at.
  *
- * Every fill is a LIGHT step because every one of them may end up under a label; see
- * the CSS block for the measurements and for why the accent teal is unavailable
- * here.
+ * Every BAR fill is a light step, because the outermost bar carries its own label and
+ * every other bar may have a narrower layer's label land on it; see the CSS block for
+ * the measurements. A `marker` is the exception and takes the accent teal — no label
+ * sits on it, because a label always starts at or after its own layer's extent and
+ * each label is confined to its own layer's band.
  */
 const CONTAINMENT_RAMP: Record<number, readonly string[]> = {
   1: ["bg-teal-100"],
   2: ["bg-teal-100", "bg-teal-300"],
   3: ["bg-teal-100", "bg-teal-200", "bg-teal-300"],
 };
+
+/**
+ * How wide a bar has to be, as a percentage of the chart, to hold its own label.
+ *
+ * At 50 the rule states itself: the label goes on whichever side of the bar's
+ * trailing edge has more room. The outermost layer is always full width and takes the
+ * inside branch; on the default path the industry layer is 10.3% and takes the
+ * outside one, where it has nine tenths of the width for a figure and four words.
+ */
+const LABEL_INSIDE_MIN = 50;
 
 export function Containment({
   layers,
@@ -608,7 +1125,35 @@ export function Containment({
         // A floor, so a genuinely tiny population is a visible sliver rather than an
         // apparently missing layer. A thin industry against the national base is
         // 0.1%, and that case is the reason the floor exists.
-        const width = Math.max(layer.share * 100, 1.5);
+        const extent = Math.max(layer.share * 100, 1.5);
+        /**
+         * **Where this layer's label goes, and it is one rule with two branches.** A
+         * marker has no extent to hold text, so its label is always after it. A bar
+         * keeps its label inside only while the inside is the roomier side; below
+         * half the chart the label goes after the trailing edge, which is what turns
+         * the width this chart used to leave empty into the place the figures are
+         * read.
+         */
+        /**
+         * **Every label starts at the chart's own leading edge now, so the three read as
+         * one column.** The rule was "inside its own mark while the inside is the roomier
+         * side, otherwise after the mark's trailing edge", which is defensible per label
+         * and rendered badly as a set: on the default path the outermost label sat at the
+         * leading edge, the industry label 10% in, and the marker's label after an 8px
+         * tick — three different indents, two of them floating in the middle of the pale
+         * parent field with a third of the card empty to their right.
+         *
+         * A common indent costs the property that a label never overhangs its own mark:
+         * "189 in BFSI" now crosses the trailing edge of the 189 bar. What replaces it as
+         * the association is the BAND — every layer owns an exposed horizontal strip of
+         * the stack and its label is confined to that strip, which is the same mechanism
+         * that already stops two labels colliding. Left-to-right reading then goes label,
+         * label, label down one edge instead of chasing three marks.
+         *
+         * `LABEL_INSIDE_MIN` is kept as the record of the measurement that decided the
+         * old rule; nothing reads it while every label is inside.
+         */
+        const inside = true;
         return (
           /* A real fragment rather than a `display: contents` wrapper. Both flatten
              the box tree, but `contents` leaves the wrapper in the DOM — which puts
@@ -621,28 +1166,82 @@ export function Containment({
               aria-hidden="true"
               className={cn(
                 "gcc-containment__bar",
-                ramp[Math.min(index, ramp.length - 1)],
+                /* An explicit modifier rather than `:first-of-type`. That selector
+                   matched on ELEMENT type, so it depended on the outermost bar
+                   happening to be the first `div` among its siblings — which any
+                   wrapper, and any future layer drawn as something other than a bar,
+                   would have quietly broken. */
+                index === 0 ? "gcc-containment__bar--back" : "",
+                layer.marker ? "gcc-containment__bar--marker" : "",
+                layer.marker
+                  ? // The one non-light fill in the chart, and it is available for the
+                    // reason the bars' fills are not: no label ever lands on a marker.
+                    // It is also what says "a different kind of mark" — this level is a
+                    // position, not a quantity.
+                    "bg-accent-teal"
+                  : ramp[Math.min(index, ramp.length - 1)],
               )}
               style={
                 {
                   insetBlockStart: `${index * band}%`,
-                  blockSize: `${100 - index * band}%`,
-                  inlineSize: `${width}%`,
+                  /* A marker occupies only its own band. A bar runs to the shared
+                     bottom edge, so every layer behind it stays visible above it —
+                     which is the part of the geometry that says "inside". */
+                  blockSize: layer.marker
+                    ? `${band}%`
+                    : `${100 - index * band}%`,
+                  /* The extent, consumed differently by the two shapes: a bar's own
+                     width, or the room a marker may not draw past. See the CSS. */
+                  "--gcc-extent": `${extent}%`,
                   "--gcc-layer-index": index,
                 } as React.CSSProperties
               }
             />
-            {/* The figure and its label, in their own layer above every bar, inside
-                their own layer's exposed band and aligned to the shared leading edge.
-                A label on a narrow layer overflows onto the lighter fills behind it,
-                which is safe: every fill this chart uses takes black ink at AA, and
-                no other label is in this band. */}
+            {/* The figure and its label, in their own layer above every bar and
+                confined to their own layer's exposed band, so two labels can never
+                meet. It starts at the leading edge for the outermost layer and after
+                its own mark for every narrower one — where it lands on the lighter
+                fills behind, which take black ink at AA. */}
             <div
-              className="gcc-containment__label"
+              className={cn(
+                "gcc-containment__label",
+                /**
+                 * **A marker's label starts from the MARKER, not from `--gcc-extent`.**
+                 * This was the one real rendering defect in the chart. For a marker
+                 * layer `extent` is the PARENT's share — the room the mark may not draw
+                 * past — while the mark itself is a fixed step of about 8px. Feeding
+                 * that same `extent` to the label put the figure at the parent
+                 * population's trailing edge, roughly 90px away from the 8px tick it
+                 * belongs to, with pale fill between them: a figure attached to
+                 * nothing, on the one element ANSR is being asked to accept as a
+                 * departure from their three-bar request.
+                 *
+                 * The offset is resolved in CSS rather than here because that is where
+                 * the marker's own width is resolved, and the two must be the same
+                 * expression or they drift apart the first time one of them changes.
+                 * See `.gcc-containment__label--marker`.
+                 */
+                /* The marker's own offset is no longer needed: with every label at the
+                   chart's leading edge, the marker's label already sits against the
+                   marker, which is itself at that edge. The class stays defined in the
+                   stylesheet for the day a label goes back to trailing its mark. */
+                "",
+              )}
               style={
                 {
                   insetBlockStart: `${index * band}%`,
                   blockSize: `${band}%`,
+                  "--gcc-label-start": inside ? "0%" : `${extent}%`,
+                  /* **Also on the label, not only on the bar**, because the marker
+                     variant needs it to resolve the same `min()` the mark's own width
+                     uses. Left off, `min(var(--ansr-space-2), var(--gcc-extent))`
+                     substitutes an undefined operand, the declaration is invalid at
+                     computed-value time, `inset-inline-start` falls back to `auto`, and
+                     the label shrink-wraps against the chart's trailing edge — which
+                     renders as the figure sitting even further from its mark than the
+                     bug this fixes. A silent fallback, so it looked like the override
+                     had not been written. */
+                  "--gcc-extent": `${extent}%`,
                   "--gcc-layer-index": index,
                 } as React.CSSProperties
               }
@@ -785,7 +1384,7 @@ export function IndexLollipop({
                   // Fill against outline, so the anchor survives greyscale.
                   cell.anchor
                     ? "bg-accent-teal"
-                    : "border-2 border-teal-400 bg-surface",
+                    : "border-2 border-teal-500 bg-surface",
                 )}
                 style={{ insetInlineStart: `${cell.share * 100}%` }}
               />
@@ -806,7 +1405,7 @@ export function IndexLollipop({
           <span className="inline-flex items-center gap-2">
             <span
               aria-hidden="true"
-              className="inline-block size-3 rounded-full border-2 border-teal-400 bg-surface"
+              className="inline-block size-3 rounded-full border-2 border-teal-500 bg-surface"
             />
             Comparator
           </span>
@@ -897,7 +1496,7 @@ export function Dumbbells({
                 }}
               />
               <span
-                className="absolute top-1/2 size-3 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-teal-400 bg-surface"
+                className="absolute top-1/2 size-3 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-teal-500 bg-surface"
                 style={{ insetInlineStart: `${row.from.share * 100}%` }}
               />
               <span
@@ -915,7 +1514,7 @@ export function Dumbbells({
             <span className="inline-flex items-center gap-2">
               <span
                 aria-hidden="true"
-                className="inline-block size-3 rounded-full border-2 border-teal-400 bg-surface"
+                className="inline-block size-3 rounded-full border-2 border-teal-500 bg-surface"
               />
               {first.from.column}
             </span>
@@ -944,6 +1543,36 @@ export function Dumbbells({
    Kept as a real table with `scope` on both axes, because a row and a column
    header is exactly what this is and a screen-reader user should hear "Data and
    AI, Poland, Strong" rather than a bare word.
+
+   **The rating word is now `sr-only` and the segments carry it on screen, which
+   inverts which of the two is the visible reading.** Every cell used to draw both —
+   "Very strong" in text AND four filled segments — twenty times over on one card,
+   under a key at the foot naming the same four words again. That is the same figure
+   said three ways in one grid, and it is what made the widest card on the screen
+   wider than a phone: twenty rating words at `text-sm` are what the horizontal
+   scroller exists to hold.
+
+   **Doing it needs a precedent, and there is exactly one.** This project's rule is
+   that a mark is a SECOND reading of a figure already in text, which is why every
+   mark here is `aria-hidden`. The density map on Screen 1 is the one block allowed to
+   break that — its orange city marks sit under the non-text contrast floor and are
+   permitted because "every mark on that map is a second reading of a figure already
+   in text", the ranked list beside it. The same argument licenses this and nothing
+   wider: the four ordinal words are still present in text, in the KEY, which is why
+   the key moved from the foot of the grid to above it. A reader meets the scale before
+   the segments they have to count with it, rather than after; and the words are in the
+   document, so the segments are redundant to text rather than the sole carrier of it.
+
+   What does NOT come with that licence: the segments still clear 3:1 against their own
+   track, because they are now the only visible encoding and the map's contrast
+   exemption is scoped to the map. And the accessible reading is unchanged — the rating
+   word is hidden from the eye, never from the accessibility tree, so a screen-reader
+   user still hears "Data and AI, Poland, Strong".
+
+   The key itself is `RatingKey`, below the grid at the trailing end and DRAWN rather
+   than listed — see its own comment for why four words separated by middots were not a
+   key at all, and why the "before the thing it decodes" argument does not survive the
+   key becoming legible.
    ========================================================================== */
 
 export function OrdinalGrid({
@@ -960,6 +1589,18 @@ export function OrdinalGrid({
   rows: ReadonlyArray<{
     label: string;
     cells: ReadonlyArray<{ rating: string; step: number }>;
+    /**
+     * A restrained outline glyph beside the row's name. Decorative and
+     * `aria-hidden` — the row header already names the capability.
+     *
+     * Supplied by the caller rather than derived here, and keyed there off the row
+     * LABEL, which is admin-editable. That is a deliberate exception to the rule
+     * that nothing may read a label, and it is safe for one reason: the worst case
+     * is a renamed row losing its glyph. Nothing about the rating, the scale or the
+     * grid's reading depends on it, and the caller drops the whole column rather
+     * than render a ragged one — see `CAPABILITY_ICONS` in `metric-card.tsx`.
+     */
+    icon?: React.ReactNode;
   }>;
   labelledBy: string;
   /** The column the visitor is deciding about. Emphasised, never re-ordered. */
@@ -976,7 +1617,10 @@ export function OrdinalGrid({
         role="group"
         aria-labelledby={labelledBy}
       >
-        <table className="w-full min-w-md border-collapse text-sm">
+        {/* `min-w-2xl` rather than `min-w-md`: a cell's marker group is 76px now, so
+            four columns plus their padding and the row header need about 610px before
+            anything wraps. Below that the scroller does its job. */}
+        <table className="w-full min-w-2xl border-collapse text-sm">
           <thead>
             <tr>
               <th scope="col" className="pb-2 text-start">
@@ -987,9 +1631,17 @@ export function OrdinalGrid({
                   key={column}
                   scope="col"
                   className={cn(
-                    "pb-2 ps-4 text-start text-xs font-semibold tracking-caps uppercase",
+                    // **Centred over its own marker group, not leading-aligned.** A
+                    // cell's four segments are 76px of mark in a column two or three
+                    // times that wide, so a leading-aligned heading sat over the first
+                    // segment rather than over the group and read as a label for it.
+                    "px-4 pb-2 text-center text-xs font-semibold tracking-caps uppercase",
                     column === anchorColumn
-                      ? "text-accent-teal"
+                      ? // The subject column, tinted the whole height of the grid. The
+                        // pale mint is about 2% off white, so it reads as a band rather
+                        // than as a fill — which is what an emphasis on the column a
+                        // visitor is deciding about should do beside four comparators.
+                        "bg-surface-pale text-accent-teal"
                       : "text-text-muted",
                   )}
                 >
@@ -1003,43 +1655,58 @@ export function OrdinalGrid({
               <tr key={row.label} className="border-t border-border-subtle">
                 <th
                   scope="row"
-                  className="py-3 pe-4 text-start align-top text-sm font-medium text-text"
+                  className="py-3 pe-4 text-start align-middle text-sm font-medium text-text"
                 >
-                  {row.label}
+                  <span className="flex items-center gap-2.5">
+                    {row.icon ? (
+                      <span
+                        aria-hidden="true"
+                        className="shrink-0 text-accent-teal"
+                      >
+                        {row.icon}
+                      </span>
+                    ) : null}
+                    {row.label}
+                  </span>
                 </th>
                 {row.cells.map((cell, index) => {
                   const anchored = columns[index] === anchorColumn;
                   return (
-                    <td key={columns[index]} className="py-3 ps-4 align-top">
-                      <div className="flex flex-col gap-2">
-                        <span
-                          className={cn(
-                            "text-sm",
-                            anchored
-                              ? "font-bold text-accent-teal"
-                              : "font-medium text-text",
-                          )}
-                        >
-                          {cell.rating}
-                        </span>
-                        {/* The label above is the whole reading. These are a
-                            second, positional one — countable now. */}
-                        <span aria-hidden="true" className="flex gap-1">
-                          {steps.map((step, stepIndex) => (
-                            <span
-                              key={step}
-                              className={cn(
-                                "h-2 w-4",
-                                stepIndex < cell.step
-                                  ? anchored
-                                    ? "bg-accent-teal"
-                                    : "bg-teal-400"
-                                  : "bg-surface-sunken",
-                              )}
-                            />
-                          ))}
-                        </span>
-                      </div>
+                    <td
+                      key={columns[index]}
+                      className={cn(
+                        "px-4 py-3 align-middle",
+                        anchored ? "bg-surface-pale" : "",
+                      )}
+                    >
+                      {/* The accessible reading, and the only one that is not
+                          positional. Hidden from the eye rather than from the
+                          accessibility tree: the cell still reads "Data and AI,
+                          Poland, Strong". */}
+                      <span className="sr-only">{cell.rating}</span>
+                      {/* The visible reading, decoded against the key above, and
+                          centred under its own column heading. */}
+                      <span
+                        aria-hidden="true"
+                        className="flex justify-center gap-1"
+                      >
+                        {steps.map((step, stepIndex) => (
+                          <span
+                            key={step}
+                            className={cn(
+                              RATING_MARK,
+                              // `teal-500` for the same measured reason as
+                              // `BarTrack`: `teal-400` is 2.15:1 against this
+                              // `surface-sunken` track, under the 3:1 non-text floor.
+                              stepIndex < cell.step
+                                ? anchored
+                                  ? "bg-accent-teal"
+                                  : "bg-teal-500"
+                                : "bg-surface-sunken",
+                            )}
+                          />
+                        ))}
+                      </span>
                     </td>
                   );
                 })}
@@ -1048,10 +1715,87 @@ export function OrdinalGrid({
           </tbody>
         </table>
       </div>
-      <AxisNote>
-        {keyLabel}: {steps.join(" · ")}
-      </AxisNote>
+      <RatingKey steps={steps} keyLabel={keyLabel} />
     </div>
+  );
+}
+
+/**
+ * The rating grid's mark. **A landscape rectangle, not a square**, and the shape is
+ * the whole reason it works: four squares in a row read as four separate objects a
+ * reader has to count one at a time, where four rectangles read as one segmented
+ * bar that happens to be part-filled. It was 10×10 for a pass and the grid lost the
+ * at-a-glance comparison down a column that is the only thing a rated matrix is for.
+ * 16×10 also restores the 76px marker group the column headings are centred over.
+ */
+const RATING_MARK = "h-2.5 w-4";
+
+/**
+ * The same mark in the KEY, at about half the area. Same landscape ratio, because the
+ * ratio is what makes four of them read as one part-filled bar rather than four
+ * objects; the smaller size is what keeps the key from reading as another grid row.
+ */
+const RATING_KEY_MARK = "h-1.5 w-2.5";
+
+/**
+ * The scale, drawn as what it decodes rather than listed as four words.
+ *
+ * **It was "Developing · Moderate · Strong · Very strong" and that is not a key.**
+ * The cells carry a COUNT — one filled segment of four, two, three, four — and a run
+ * of four words separated by middots states the ORDER of the steps while saying
+ * nothing about which count is which. A reader met a cell with two filled marks and
+ * had to infer from position in a list that two means Moderate. So each step is now
+ * drawn at its own fill against the same four-segment track the cells use.
+ *
+ * **At `RATING_KEY_MARK`, deliberately smaller than the cells' own mark.** Drawn at
+ * the cell size the key was sixteen marks of exactly the weight of the eighty above
+ * it, sitting one gap under the last row — so it read as a fifth data row for
+ * whichever location the eye happened to land on, which is the interference ANSR
+ * reported. The obvious argument says a key should match what it decodes, and it is
+ * beaten here by the fact that the words are ON the key: a reader pairing "two filled"
+ * with "Moderate" needs the pattern, not the scale, and the same aspect ratio carries
+ * the pattern at any size. The size is what says this is chrome rather than evidence.
+ *
+ * **Below the grid and at the trailing end, at ANSR's request.** It was above, on the
+ * argument that the segments are the only visible reading so a reader needs the scale
+ * before the thing it decodes. What survives of that argument is what actually
+ * licenses the `sr-only` rating in the cells — the four ordinal words are still
+ * present in TEXT, somewhere in this card — and that is a property of the document
+ * rather than of the order. Drawn rather than listed, it is also now legible on the
+ * way back: a reader who meets an unfamiliar cell looks down, not up.
+ *
+ * The framing stays `sr-only` for the reason it always was: weakest-first is useful
+ * to someone meeting four words with no left-to-right to read them in, and is a third
+ * of the visible line explaining an order the words already have.
+ */
+function RatingKey({
+  steps,
+  keyLabel,
+}: {
+  steps: readonly string[];
+  keyLabel: string;
+}) {
+  return (
+    <p className="flex flex-wrap items-center justify-end gap-x-4 gap-y-1.5 text-xs text-text-muted">
+      <span className="sr-only">{keyLabel}: </span>
+      {steps.map((step, stepIndex) => (
+        <span key={step} className="inline-flex items-center gap-1.5">
+          {/* The mark is the second reading; the word beside it is the figure. */}
+          <span aria-hidden="true" className="flex gap-0.5">
+            {steps.map((track, trackIndex) => (
+              <span
+                key={track}
+                className={cn(
+                  RATING_KEY_MARK,
+                  trackIndex <= stepIndex ? "bg-teal-500" : "bg-surface-sunken",
+                )}
+              />
+            ))}
+          </span>
+          {step}
+        </span>
+      ))}
+    </p>
   );
 }
 
@@ -1118,8 +1862,10 @@ export function NumberGridChart({
                       aria-hidden="true"
                       className="block h-2 w-full bg-surface-sunken"
                     >
+                      {/* `teal-500`, as in `BarTrack` — `teal-400` is 2.15:1 against
+                          this track and cannot carry a mark. */}
                       <span
-                        className="block h-full bg-teal-400"
+                        className="block h-full bg-teal-500"
                         style={{ width: `${Math.max(cell.share * 100, 1.5)}%` }}
                       />
                     </span>
@@ -1317,6 +2063,523 @@ export function ProportionSplit({
           </div>
         ))}
       </dl>
+    </div>
+  );
+}
+
+/* ==========================================================================
+   RangeBenchmark — a spread read as two named operating models
+
+   `RangeBar` above is the general reading of a low end and a high end: the figures
+   at display size, a band on a zeroed track, and the end labels underneath. This is
+   the same claim drawn as a BENCHMARK, which is what the HR tab's two hiring
+   timings are — a reader is not asking "what is the spread", they are asking "what
+   does each end cost me", and the two ends are different operating decisions rather
+   than two samples of one thing.
+
+   Three differences from `RangeBar`, each of which is the reason this is a separate
+   component rather than a flag on that one:
+
+     - **The endpoints are POINTS, not the ends of a band.** A hollow ring at the low
+       end and a filled dot at the high end, because each one is a real, chooseable
+       position — hire on an employer of record and it is seven days, hire into your
+       own entity and it is seventy. A filled band says "somewhere in here", which is
+       the right drawing for a backfill spread and the wrong one for a choice.
+     - **Each endpoint carries its own figure directly beneath its mark**, so the
+       number is read at the position it belongs to rather than in a caption pair
+       below. That is the same rule every chart here follows — the mark is a second
+       reading of a figure in text — applied at the endpoint instead of at the row.
+     - **The origin is labelled.** `RangeBar`'s own comment records why: a spread
+       drawn with no visible zero reads as "a value near the maximum". A `0` at the
+       start of the rail is the cheapest way to say the rail starts there, and it is
+       what makes the run-up before the low endpoint legible as elapsed time.
+
+   The rail is grey up to the low endpoint and teal from there to the high one, which
+   is the same language `Journey` uses for a leg's run-up against the leg itself.
+
+   **`px-7` on the wrapper is measured, not decorative.** The endpoint figures are
+   centred on their own marks, so the outermost one overhangs the rail by half its own
+   width — about 26px for "70 days" at this size. 28px of slack absorbs it at every
+   width the card is drawn at, including a 222px rail at 390. Without it the figure
+   either clips or widens the framed document, and the iframe does not own its own
+   horizontal scroll.
+   ========================================================================== */
+
+export function RangeBenchmark({
+  low,
+  high,
+  lowLabel,
+  highLabel,
+  offset,
+  unit,
+  originLabel = "0",
+}: {
+  low: string;
+  high: string;
+  /** What the low end IS — an operating model, not a caveat. */
+  lowLabel: string | null;
+  highLabel: string | null;
+  /** Where the low endpoint sits on a 0-to-high rail, 0 to 1. */
+  offset: number;
+  unit?: string;
+  /** The origin tick. A string so a caller can suppress it with an empty one. */
+  originLabel?: string;
+}) {
+  return (
+    <div className="flex flex-col gap-6">
+      {/* **The primary value, in the heading teal rather than the action orange.**
+          The orange roles on this screen are the figure row and the salary
+          comparator; a card's own value is evidence inside a section, and two orange
+          roles in one band is what the brand rule forbids. `--ansr-accent` is 6.63:1
+          on white, so it is legal at any size — unlike the orange, which is only
+          legal above the large-text floor. */}
+      <p className="flex flex-wrap items-baseline gap-x-3 text-3xl leading-tight font-bold tracking-display text-accent-teal tabular-nums md:text-4xl">
+        {low}
+        {/* An en dash, not a hyphen: this is a range between two values. Spaced,
+            because both operands are numerals and an unspaced dash between digits
+            reads as a minus. */}
+        <span aria-hidden="true">{"\u2013"}</span>
+        {high}
+        {unit ? (
+          <span className="text-base font-medium text-text-muted">{unit}</span>
+        ) : null}
+      </p>
+
+      {/* Everything below is a second reading of the sentence above, so the whole
+          block is hidden: a screen reader has already been given "7 – 70 days". */}
+      <div aria-hidden="true" className="px-7">
+        <div className="relative">
+          {/* The rail. Grey for the run-up, teal for the span between the two
+              choosable positions. */}
+          <div className="relative h-4">
+            <div className="absolute inset-x-0 top-1/2 h-0.5 -translate-y-1/2 bg-border-strong" />
+            <div
+              className="absolute top-1/2 end-0 h-0.5 -translate-y-1/2 bg-accent-teal"
+              style={{ insetInlineStart: `${offset * 100}%` }}
+            />
+            {/* The origin, as a tick on the rail rather than a dot: it is where the
+                measurement starts, not a position anybody hires at. */}
+            <div className="absolute inset-y-1 start-0 w-0.5 bg-border-strong" />
+            {/* Low: hollow, because it is the cheaper route and the ring reads as
+                "start here". Filled would make the two ends look ordered by value. */}
+            <span
+              className="absolute top-1/2 size-3.5 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-accent-teal bg-surface"
+              style={{ insetInlineStart: `${offset * 100}%` }}
+            />
+            {/* High: solid, and flush inside the rail's end rather than centred on
+                it, so it cannot overhang a card that has no horizontal slack. */}
+            <span className="absolute top-1/2 end-0 size-3.5 -translate-y-1/2 rounded-full bg-accent-teal" />
+          </div>
+
+          {/* The figures, each under its own mark. `whitespace-nowrap` because a
+              wrapped endpoint figure would put its unit under its own number and
+              read as two lines of a caption. */}
+          <div className="relative mt-2 h-6">
+            {originLabel ? (
+              // Flush to the rail's start rather than centred on it. Centred, it
+              // straddles the origin and eats into the low figure's clearance below —
+              // and there is nothing to the left of zero for it to be centred over.
+              <span className="absolute start-0 text-xs text-text-muted tabular-nums">
+                {originLabel}
+              </span>
+            ) : null}
+            <span
+              /**
+               * **Centred on its own mark, except where that would collide with the
+               * origin.** A low endpoint at 10% of a 222px rail — the first-hire card at
+               * 390 — puts this label's leading edge behind the `0`, and two numerals
+               * overlapping is the one failure that makes a chart unreadable rather than
+               * merely tight. `max()` floors the centre at 3rem, so the label shifts a
+               * few pixels off its dot in exactly the case where it had to move and sits
+               * on it everywhere else. A small misalignment against an illegible
+               * overlap.
+               */
+              className="absolute -translate-x-1/2 text-sm font-bold whitespace-nowrap text-text tabular-nums"
+              style={{ insetInlineStart: `max(${offset * 100}%, 3rem)` }}
+            >
+              {low}
+              {unit ? (
+                <span className="ps-1 font-regular text-text-muted">{unit}</span>
+              ) : null}
+            </span>
+            <span className="absolute end-0 translate-x-1/2 text-sm font-bold whitespace-nowrap text-text tabular-nums">
+              {high}
+              {unit ? (
+                <span className="ps-1 font-regular text-text-muted">{unit}</span>
+              ) : null}
+            </span>
+          </div>
+        </div>
+      </div>
+
+      {lowLabel !== null || highLabel !== null ? (
+        /* A pair, deliberately not a `<ul>`: a card is already a landmark, and list
+           semantics inside it would make "count the items on this tab" mean
+           something else. Same reasoning as `RangeBar`'s own label pair. */
+        <div className="grid grid-cols-1 gap-3 text-xs text-text-muted sm:grid-cols-2">
+          {lowLabel !== null ? <p>{lowLabel}</p> : <span />}
+          {highLabel !== null ? <p className="sm:text-end">{highLabel}</p> : null}
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+/* ==========================================================================
+   MilestoneTrack — one cumulative progression, drawn as one line
+
+   `Journey` above draws the same data as a staircase of rows: one row per waypoint,
+   each leg starting where the last ended. That is the right reading inside a stack of
+   other bar charts, because it shares their row rhythm. This is the reading the HR
+   composition asks for and it says one more thing: there is a SINGLE line, and the
+   four milestones are positions on it.
+
+   **The positions are proportional to the stored figures, not evenly spaced.** Six,
+   twelve, twenty-four and thirty-six months land at 17%, 33%, 67% and 100% of the
+   rail, so the drawing shows what the numbers say — the first two milestones are close
+   together and the last is a long way out. Evenly spaced circles would be a lie about
+   the one thing this chart exists to show, and it is the same lie a truncated axis
+   tells: the labels would be right and the picture wrong.
+
+   **Nothing here parses a label.** The milestone names arrive verbatim from the
+   catalogue ("To 50 FTEs"), and the durations arrive already formatted. Splitting "To
+   50 FTEs" into a numeral and a unit to match the reference render would mean reading
+   an admin-editable string, which is banned outright on this screen — a renamed entry
+   would silently redraw the chart. The unit belongs once, as the card's subtitle.
+
+   **The layout is a CSS class, not two DOM trees.** Below `sm` a 246px rail puts the first two
+   circles 41px apart, which no label fits between; the honest fallback is a vertical
+   list. Rendering both and hiding one would put every milestone in the accessibility
+   tree twice, so instead the items carry a `--gcc-at` custom property and
+   `.gcc-milestones` positions them absolutely only where there is room. One tree, one
+   reading, and the rail is `aria-hidden` decoration that simply does not exist below
+   the breakpoint.
+   ========================================================================== */
+
+export interface MilestonePoint {
+  /** The waypoint, verbatim from the catalogue. */
+  label: string;
+  /** The elapsed figure at that waypoint, already formatted. */
+  figure: string;
+  /** 0 to 1 against the last waypoint, which is the whole progression. */
+  share: number;
+}
+
+export function MilestoneTrack({ points }: { points: readonly MilestonePoint[] }) {
+  return (
+    <div className="px-7">
+      <dl className="gcc-milestones">
+        {/* The line itself. One element, drawn behind the items, so there is exactly
+            one rail however many milestones a progression has. */}
+        <div aria-hidden="true" className="gcc-milestones__rail" />
+        {points.map((point) => (
+          <div
+            key={point.label}
+            className="gcc-milestones__item"
+            style={{ "--gcc-at": `${point.share * 100}%` } as React.CSSProperties}
+          >
+            {/* **The milestone above the line and its duration below**, which is the
+                composition's own instruction and is also the right way round: the
+                milestone is what the reader is aiming at and the duration is the
+                answer. In the DOM the term precedes its definition regardless, so a
+                screen reader reads "To 50 FTEs, 6". */}
+            <dt className="gcc-milestones__label text-xs font-semibold text-text">
+              {point.label}
+            </dt>
+            <span aria-hidden="true" className="gcc-milestones__dot" />
+            <dd className="gcc-milestones__figure text-lg font-bold tracking-display text-text tabular-nums">
+              {point.figure}
+            </dd>
+          </div>
+        ))}
+      </dl>
+    </div>
+  );
+}
+
+/* ==========================================================================
+   IndexSpread — one row of a two-column index, as its own card
+
+   `Dumbbells` above draws the same data as a stack of rows sharing one axis, which is
+   the right reading inside a grid of other charts. This is the reading the finance
+   composition asks for: one card per measure, the two indices at the display step, and
+   a rail underneath that is a second reading of them rather than the primary one.
+
+   **The rail still starts at zero, and that is a deliberate departure from the supplied
+   render.** The reference draws a 50-to-125 axis with ticks at 50, 75, 100 and 125,
+   which puts 75 against 100 a third of the way along a track rather than three quarters
+   — a 25% difference magnified into a 2:1 picture. `project.md` bans exactly that for a
+   cost index ("a truncated axis is exactly how one would be faked"), and `Dumbbells`
+   carries the same argument in its own comment because both marks on a cost index sit
+   near the top of the scale. So the axis is the one the view model already shares
+   across the whole metric, with its zero drawn, and the magnification is refused. The
+   difference the reference was trying to make visible is stated exactly instead — as
+   the delta, in text, beside the card's own heading.
+
+   **Which marker is which is form, not hue.** The composition asks for dark teal
+   against turquoise; `--ansr-teal-bright` is 2.44:1 on white and is not available for a
+   mark on a light ground at any size, so the pair is a filled disc against a ring — the
+   same fill-against-outline device every other chart here uses, and the one that
+   survives greyscale. The base takes the fill because it is the reference point the
+   card is read against.
+
+   **The key is on each figure's own label rather than in a legend for the set, and that
+   replaces the shared legend the composition asks for.** A legend is what a chart needs
+   when its marks are unlabelled; here every card already names both of its columns above
+   its own two figures, so a legend beneath the set made each column name appear four
+   times in one section — three cards plus the key. Putting the disc and the ring beside
+   the names that are already there says the same thing in the place the reader is
+   looking, and removes two of the four repeats.
+   ========================================================================== */
+
+export interface IndexSpreadPoint {
+  /** The column this figure came from. Drawn as its label. */
+  column: string;
+  /** Already formatted. */
+  figure: string;
+  /** 0 to 1 against the axis shared by the whole metric. */
+  share: number;
+}
+
+export function IndexSpread({
+  base,
+  comparator,
+}: {
+  base: IndexSpreadPoint;
+  comparator: IndexSpreadPoint;
+}) {
+  const start = Math.min(base.share, comparator.share);
+  const end = Math.max(base.share, comparator.share);
+  return (
+    <div className="flex flex-col gap-5">
+      {/* The two figures, in text, base first. This is the reading; the rail below is
+          the second one, which is why the rail is hidden wholesale. */}
+      <dl className="grid grid-cols-2 gap-x-4">
+        {[base, comparator].map((point, index) => (
+          <div key={point.column} className="flex min-w-0 flex-col gap-1">
+            <dt className="flex items-center gap-2 text-xs text-text-muted">
+              {/* The marker this column takes on the rail, beside the name it belongs
+                  to. Decorative: the name is right next to it. */}
+              <span
+                aria-hidden="true"
+                className={cn(
+                  "inline-block size-2.5 shrink-0 rounded-full",
+                  index === 0
+                    ? "bg-accent-teal"
+                    : "border-2 border-teal-500 bg-surface",
+                )}
+              />
+              <span className="min-w-0">{point.column}</span>
+            </dt>
+            {/* **The heading teal, never the orange.** A card's own value is evidence
+                inside a section; the tab's one orange role is the figure row at the
+                head of it, and two orange roles in one band is what the brand rule
+                forbids. `--ansr-accent` is 6.63:1 on white and legal at any size. */}
+            <dd className="text-3xl leading-tight font-bold tracking-display text-accent-teal tabular-nums">
+              {point.figure}
+            </dd>
+          </div>
+        ))}
+      </dl>
+
+      {/* Hidden wholesale: both figures are in text directly above, and the axis's own
+          two ends are labelled below for the eye rather than for the reading. */}
+      <div aria-hidden="true" className="flex flex-col gap-1.5">
+        <div className="relative h-4 w-full">
+          <div className="absolute inset-x-0 top-1/2 h-px -translate-y-1/2 bg-border-subtle" />
+          {/* Zero, drawn, so the axis is visibly not truncated. See the block comment. */}
+          <div className="absolute inset-y-0 start-0 w-px bg-border-strong" />
+          <div
+            className="absolute top-1/2 h-1 -translate-y-1/2 bg-teal-200"
+            style={{
+              insetInlineStart: `${start * 100}%`,
+              inlineSize: `${Math.max(end - start, 0) * 100}%`,
+            }}
+          />
+          {/* The comparator first in the DOM so the base's disc paints over it where the
+              two coincide — a ring drawn on top of a filled disc reads as neither. */}
+          <span
+            className="absolute top-1/2 size-3.5 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-teal-500 bg-surface"
+            style={{ insetInlineStart: `${comparator.share * 100}%` }}
+          />
+          <span
+            className="absolute top-1/2 size-3.5 -translate-x-1/2 -translate-y-1/2 rounded-full bg-accent-teal"
+            style={{ insetInlineStart: `${base.share * 100}%` }}
+          />
+        </div>
+        {/* **Both ends of the axis, labelled, and without them the rail is unreadable.**
+            Two marks near the top of a zero-based track render as a short segment
+            floating at the right — the same defect `RangeBar` was rebuilt to fix, where a
+            band with no stated axis read as "a value near the maximum". The ticks are what
+            say the track starts at zero and ends at the base, which is the whole reason
+            the truncated domain the reference asks for could be refused. */}
+        <div className="relative h-4 text-xs text-text-muted tabular-nums">
+          <span className="absolute start-0">0</span>
+          <span className="absolute end-0">{base.figure}</span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ==========================================================================
+   IndexTable — an index grid read as a table
+
+   `IndexLollipop` above draws the same data as one plotted row per measure, which is
+   what a derived tab gets. This is the reading the finance composition asks for, and
+   the argument for it is about what the reader is doing: four functions against five
+   locations is twenty figures that are compared DOWN a column as much as along a row,
+   and a plot per row cannot be read down. A table can.
+
+   Four things make it a table rather than a grid of boxes:
+
+     - **Every cell states its exact index**, so nothing is encoded only by length.
+     - **The bar beside a figure is bare and every cell's is the same length available
+       at the same inset**, which is what makes "one shared maximum" legible. The
+       longest bar in the grid IS the maximum and carries its own figure, which is the
+       self-labelling exemption `project.md` grants — the same one that licenses a
+       ranked list dropping its track.
+     - **The base column carries no bar at all.** It is the same figure in every row by
+       definition, so a bar on it would be four identical marks encoding the axis rather
+       than a value.
+     - **Row separators and nothing else.** No boxed cells: a border around every cell
+       would draw twenty rectangles over twenty numbers.
+   ========================================================================== */
+
+export interface IndexTableRow {
+  label: string;
+  /**
+   * The row the reader is on, filled a step.
+   *
+   * The caller decides which, and gets it wrong safely: nothing about the figures or
+   * the axis depends on it, so an unmatched row simply leaves the table unemphasised.
+   */
+  emphasis?: boolean;
+  cells: ReadonlyArray<{
+    column: string;
+    figure: string;
+    /** 0 to 1 against the axis shared by the whole grid. */
+    share: number;
+    /** The index base column. Exactly one per row. */
+    anchor: boolean;
+  }>;
+}
+
+export function IndexTable({
+  columns,
+  rows,
+  rowHeader,
+  labelledBy,
+}: {
+  columns: readonly string[];
+  rows: readonly IndexTableRow[];
+  /** What the row labels are, for the corner cell. */
+  rowHeader: string;
+  labelledBy: string;
+}) {
+  return (
+    /* Focusable and named, because a table wider than its card scrolls INSIDE its own
+       container — the tool is framed and does not own the document's horizontal scroll.
+       Same contract as `NumberGridChart` and `OrdinalGrid`. */
+    <div
+      className="min-w-0 overflow-x-auto"
+      tabIndex={0}
+      role="group"
+      aria-labelledby={labelledBy}
+    >
+      <table className="w-full min-w-2xl border-collapse text-sm">
+        <thead>
+          <tr>
+            <th
+              scope="col"
+              className="pb-3 pe-4 text-start text-xs font-semibold tracking-caps text-text-muted uppercase"
+            >
+              {rowHeader}
+            </th>
+            {columns.map((column) => (
+              <th
+                key={column}
+                scope="col"
+                className="pb-3 pe-4 ps-4 text-start text-xs font-semibold tracking-caps text-text-muted uppercase"
+              >
+                {column}
+              </th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map((row) => (
+            <tr
+              key={row.label}
+              className={cn(
+                "border-t border-border-subtle",
+                // The reader's own function. Tint plus weight, because this palette
+                // cannot separate two categories by hue and a fill alone is a weak
+                // signal on a light ground — see the row header below.
+                row.emphasis ? "bg-surface-tint" : undefined,
+              )}
+            >
+              <th
+                scope="row"
+                className={cn(
+                  "py-3 pe-4 text-start align-middle text-sm whitespace-nowrap text-text",
+                  row.emphasis ? "font-bold" : "font-medium",
+                )}
+              >
+                {row.label}
+              </th>
+              {row.cells.map((cell) => (
+                <td
+                  key={cell.column}
+                  className={cn(
+                    "py-3 pe-4 ps-4 align-middle",
+                    /**
+                     * **The base column, filled — except where the emphasised row
+                     * crosses it.** Two tints of the same value would draw an L that
+                     * breaks in one cell, and the row is the more important of the two
+                     * readings: it is the reader's own function, and a row whose fill
+                     * stops in the middle reads as a rendering fault. So the column
+                     * yields, and its header still marks it.
+                     */
+                    cell.anchor && !row.emphasis ? "bg-surface-tint" : undefined,
+                  )}
+                >
+                  <div className="flex items-center gap-3">
+                    <span
+                      className={cn(
+                        "shrink-0 tabular-nums",
+                        cell.anchor
+                          ? "font-bold text-accent-teal"
+                          : row.emphasis
+                            ? "font-semibold text-text"
+                            : "text-text",
+                      )}
+                    >
+                      {cell.figure}
+                    </span>
+                    {/* The base carries no bar. See the block comment. */}
+                    {cell.anchor ? null : (
+                      <span
+                        aria-hidden="true"
+                        className="hidden h-1 min-w-0 flex-1 sm:block"
+                      >
+                        {/* `teal-500`: 5.14:1 on white and 4.04:1 on the emphasised
+                            row's own tint, both clear of the 3:1 floor WCAG 1.4.11 asks
+                            of a non-text graphic. No track behind it — the shared inset
+                            and the shared available width ARE the axis. */}
+                        <span
+                          className="block h-full bg-teal-500"
+                          style={{ width: `${Math.max(cell.share * 100, 2)}%` }}
+                        />
+                      </span>
+                    )}
+                  </div>
+                </td>
+              ))}
+            </tr>
+          ))}
+        </tbody>
+      </table>
     </div>
   );
 }

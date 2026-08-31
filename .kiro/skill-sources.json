@@ -60,6 +60,16 @@
       ]
     },
     {
+      "repo": "pbakaus/impeccable",
+      "url": "https://github.com/pbakaus/impeccable",
+      "source_path": ".kiro/skills/impeccable",
+      "commit": "b0594c72d18006b5865c70eb3a97e8b04064e600",
+      "note": "Ships a native .kiro tree. Copy the whole folder, including scripts/ and reference/. Node >=22. LICENSE copied in beside SKILL.md (Apache-2.0).",
+      "skills": [
+        "impeccable"
+      ]
+    },
+    {
       "repo": "ConardLi/garden-skills",
       "url": "https://github.com/ConardLi/garden-skills",
       "source_path": "garden/skills/web-design-engineer",

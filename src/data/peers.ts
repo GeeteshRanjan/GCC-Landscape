@@ -391,8 +391,22 @@ export interface NationalScale {
   forbesGlobal2000Count: number;
   /** Sum of FTE band midpoints. Round before display. */
   professionals: number;
-  /** Professionals inside Fortune Global 500 companies only. */
-  fortuneGlobal500Professionals: number;
+  /**
+   * Professionals inside companies on EITHER index — Fortune Global 500 or Forbes
+   * Global 2000 — counted once each.
+   *
+   * **The union, and the deduplication is a property of how it is computed rather than
+   * a correction applied afterwards.** The two indices overlap heavily: a company large
+   * enough for the Fortune Global 500 is almost always in the Forbes Global 2000 as
+   * well, so summing the two memberships separately and adding them would count most of
+   * these companies' people twice. Filtering the COMPANY LIST on `either index` and
+   * summing that once cannot double-count, because a company appears in the list once.
+   *
+   * It replaced a Fortune-Global-500-only sum, which was the narrower of the two
+   * memberships stated beside a figure the strip's third cell labels as "those" GCCs —
+   * where "those" now means both.
+   */
+  indexedProfessionals: number;
 }
 
 /**
@@ -401,13 +415,18 @@ export interface NationalScale {
  */
 export function nationalScale(dataset: Dataset): NationalScale {
   const fortune = dataset.companies.filter((c) => c.fortuneGlobal500);
+  // One pass over the companies with an OR, which is what makes the union
+  // self-deduplicating — see `indexedProfessionals`.
+  const indexed = dataset.companies.filter(
+    (c) => c.fortuneGlobal500 || c.forbesGlobal2000,
+  );
   return {
     companyCount: dataset.companies.length,
     fortuneGlobal500Count: fortune.length,
     forbesGlobal2000Count: dataset.companies.filter((c) => c.forbesGlobal2000)
       .length,
     professionals: sumProfessionals(dataset.companies),
-    fortuneGlobal500Professionals: sumProfessionals(fortune),
+    indexedProfessionals: sumProfessionals(indexed),
   };
 }
 

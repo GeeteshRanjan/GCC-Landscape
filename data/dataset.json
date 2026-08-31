@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generatedAt": "2026-08-28T14:25:05.300Z",
+  "generatedAt": "2026-08-31T07:21:17.327Z",
   "source": "Consolidated_GCC_India_Database_2026_New.xlsx",
   "taxonomy": {
     "industries": [
@@ -524,6 +524,7 @@
       "fortuneGlobal500": false,
       "forbesGlobal2000": true,
       "businessTypes": [
+        "ret-sportswear",
         "ret-apparel"
       ]
     },
@@ -7040,7 +7041,7 @@
       "fortuneGlobal500": true,
       "forbesGlobal2000": true,
       "businessTypes": [
-        "cpg-diversified"
+        "cpg-beverages"
       ]
     },
     {
@@ -7288,6 +7289,7 @@
       "fortuneGlobal500": false,
       "forbesGlobal2000": false,
       "businessTypes": [
+        "ret-sportswear",
         "ret-apparel"
       ]
     },
@@ -7476,7 +7478,8 @@
       "fortuneGlobal500": false,
       "forbesGlobal2000": false,
       "businessTypes": [
-        "prof-legal"
+        "prof-legal",
+        "prof-bpo"
       ]
     },
     {
@@ -9471,7 +9474,7 @@
     },
     {
       "id": "dr-martens",
-      "name": "DR. MARTENS",
+      "name": "Dr. Martens",
       "hqCountry": "UK",
       "industry": "Retail",
       "revenueBand": "$1 Bn – $5 Bn",
@@ -9757,7 +9760,7 @@
     },
     {
       "id": "ea-electronic-arts",
-      "name": "EA - Electronic Arts",
+      "name": "EA (Electronic Arts)",
       "hqCountry": "USA",
       "industry": "Media & Entertainment",
       "revenueBand": "$5 Bn – $10 Bn",
@@ -10341,7 +10344,8 @@
       "fortuneGlobal500": false,
       "forbesGlobal2000": false,
       "businessTypes": [
-        "prof-legal"
+        "prof-legal",
+        "prof-bpo"
       ]
     },
     {
@@ -11139,7 +11143,7 @@
     },
     {
       "id": "eurofins",
-      "name": "eurofins",
+      "name": "Eurofins",
       "hqCountry": "Luxembourg",
       "industry": "Healthcare & Lifescience",
       "revenueBand": "$5 Bn – $10 Bn",
@@ -11866,7 +11870,7 @@
       "fortuneGlobal500": false,
       "forbesGlobal2000": true,
       "businessTypes": [
-        "whl-industrial-supplies"
+        "whl-building-materials"
       ]
     },
     {
@@ -13822,7 +13826,7 @@
     },
     {
       "id": "grupo-antolin",
-      "name": "GRUPO ANTOLIN",
+      "name": "Grupo Antolin",
       "hqCountry": "Spain",
       "industry": "Automotive",
       "revenueBand": "$1 Bn – $5 Bn",
@@ -14264,7 +14268,8 @@
       "fortuneGlobal500": false,
       "forbesGlobal2000": false,
       "businessTypes": [
-        "whl-industrial-supplies"
+        "whl-industrial-supplies",
+        "whl-building-materials"
       ]
     },
     {
@@ -14366,7 +14371,8 @@
       "fortuneGlobal500": false,
       "forbesGlobal2000": true,
       "businessTypes": [
-        "cpg-diversified"
+        "cpg-home-care",
+        "cpg-personal-care"
       ]
     },
     {
@@ -15167,7 +15173,7 @@
     },
     {
       "id": "ilantus",
-      "name": "ilantus",
+      "name": "Ilantus",
       "hqCountry": "USA",
       "industry": "Software & Internet",
       "revenueBand": "< $100 Mn",
@@ -16892,7 +16898,7 @@
     },
     {
       "id": "kddi-corporation",
-      "name": "KDDI CORPORATION",
+      "name": "KDDI Corporation",
       "hqCountry": "Japan",
       "industry": "Telecom",
       "revenueBand": "Above $20 Bn",
@@ -17051,7 +17057,8 @@
       "fortuneGlobal500": false,
       "forbesGlobal2000": true,
       "businessTypes": [
-        "cpg-diversified"
+        "cpg-personal-care",
+        "cpg-home-care"
       ]
     },
     {
@@ -18133,7 +18140,7 @@
       "fortuneGlobal500": true,
       "forbesGlobal2000": true,
       "businessTypes": [
-        "cpg-diversified"
+        "cpg-personal-care"
       ]
     },
     {
@@ -18254,6 +18261,7 @@
       "fortuneGlobal500": false,
       "forbesGlobal2000": true,
       "businessTypes": [
+        "ret-sportswear",
         "ret-apparel"
       ]
     },
@@ -18883,7 +18891,7 @@
       "fortuneGlobal500": false,
       "forbesGlobal2000": false,
       "businessTypes": [
-        "ret-specialty"
+        "ret-consumer-brand"
       ]
     },
     {
@@ -20130,7 +20138,7 @@
       "fortuneGlobal500": true,
       "forbesGlobal2000": true,
       "businessTypes": [
-        "cpg-diversified"
+        "cpg-food"
       ]
     },
     {
@@ -20920,7 +20928,8 @@
       "fortuneGlobal500": true,
       "forbesGlobal2000": true,
       "businessTypes": [
-        "cpg-diversified"
+        "cpg-food",
+        "cpg-beverages"
       ]
     },
     {
@@ -21235,6 +21244,7 @@
       "fortuneGlobal500": true,
       "forbesGlobal2000": true,
       "businessTypes": [
+        "ret-sportswear",
         "ret-apparel"
       ]
     },
@@ -21619,7 +21629,7 @@
     },
     {
       "id": "o9-solutions",
-      "name": "o9 solutions",
+      "name": "o9 Solutions",
       "hqCountry": "USA",
       "industry": "Software & Internet",
       "revenueBand": "$100 Mn – $500 Mn",
@@ -21822,7 +21832,7 @@
     },
     {
       "id": "oia-global",
-      "name": "OIA GLOBAL",
+      "name": "OIA Global",
       "hqCountry": "USA",
       "industry": "Logistics & Transportation",
       "revenueBand": "$100 Mn – $500 Mn",
@@ -22916,7 +22926,8 @@
       "fortuneGlobal500": false,
       "forbesGlobal2000": false,
       "businessTypes": [
-        "ret-apparel"
+        "ret-apparel",
+        "ret-consumer-brand"
       ]
     },
     {
@@ -22936,7 +22947,8 @@
       "fortuneGlobal500": true,
       "forbesGlobal2000": true,
       "businessTypes": [
-        "cpg-diversified"
+        "cpg-beverages",
+        "cpg-food"
       ]
     },
     {
@@ -24409,7 +24421,7 @@
     },
     {
       "id": "read-ink",
-      "name": "Read-ink",
+      "name": "Read-Ink",
       "hqCountry": "USA",
       "industry": "Software & Internet",
       "revenueBand": "< $100 Mn",
@@ -24486,7 +24498,8 @@
       "fortuneGlobal500": false,
       "forbesGlobal2000": true,
       "businessTypes": [
-        "cpg-diversified"
+        "cpg-home-care",
+        "cpg-personal-care"
       ]
     },
     {
@@ -25864,7 +25877,7 @@
     },
     {
       "id": "sanmina-sci",
-      "name": "Sanmina-sci",
+      "name": "Sanmina-SCI",
       "hqCountry": "USA",
       "industry": "Manufacturing",
       "revenueBand": "$5 Bn – $10 Bn",
@@ -31209,6 +31222,7 @@
       "fortuneGlobal500": false,
       "forbesGlobal2000": false,
       "businessTypes": [
+        "ret-sportswear",
         "ret-apparel"
       ]
     },
@@ -31969,8 +31983,8 @@
       ]
     },
     {
-      "id": "victoria-secret",
-      "name": "Victoria Secret",
+      "id": "victoria-s-secret",
+      "name": "Victoria's Secret",
       "hqCountry": "USA",
       "industry": "Retail",
       "revenueBand": "$5 Bn – $10 Bn",
@@ -32770,7 +32784,7 @@
       "fortuneGlobal500": false,
       "forbesGlobal2000": false,
       "businessTypes": [
-        "whl-industrial-supplies"
+        "whl-building-materials"
       ]
     },
     {
@@ -34486,7 +34500,7 @@
     },
     {
       "id": "advanz-pharma",
-      "name": "ADVANZ PHARMA",
+      "name": "Advanz Pharma",
       "hqCountry": "UK",
       "industry": "Healthcare & Lifescience",
       "revenueBand": "$500 Mn – $1 Bn",
@@ -34704,7 +34718,7 @@
       "fortuneGlobal500": false,
       "forbesGlobal2000": false,
       "businessTypes": [
-        "cpg-diversified"
+        "cpg-beverages"
       ]
     },
     {
@@ -34749,7 +34763,7 @@
     },
     {
       "id": "iq-eq",
-      "name": "Iq-eq",
+      "name": "IQ-EQ",
       "hqCountry": "Luxembourg",
       "industry": "BFSI",
       "revenueBand": "$500 Mn – $1 Bn",
@@ -35049,7 +35063,8 @@
       "fortuneGlobal500": false,
       "forbesGlobal2000": false,
       "businessTypes": [
-        "prof-market-research"
+        "prof-staffing",
+        "prof-consulting"
       ]
     },
     {
@@ -36287,7 +36302,7 @@
       "fortuneGlobal500": false,
       "forbesGlobal2000": false,
       "businessTypes": [
-        "prof-market-research"
+        "prof-bpo"
       ]
     },
     {
@@ -37678,7 +37693,8 @@
       "fortuneGlobal500": false,
       "forbesGlobal2000": false,
       "businessTypes": [
-        "prof-legal"
+        "prof-legal",
+        "prof-bpo"
       ]
     },
     {
@@ -37698,7 +37714,8 @@
       "fortuneGlobal500": false,
       "forbesGlobal2000": false,
       "businessTypes": [
-        "prof-legal"
+        "prof-legal",
+        "prof-bpo"
       ]
     },
     {
@@ -37719,7 +37736,8 @@
       "fortuneGlobal500": false,
       "forbesGlobal2000": false,
       "businessTypes": [
-        "prof-legal"
+        "prof-legal",
+        "prof-bpo"
       ]
     },
     {
@@ -39918,40 +39936,26 @@
       "gated": false
     },
     {
-      "id": "tech-graduate-output",
+      "id": "tech-graduate-pipeline",
       "functionArea": "tech",
       "lens": "supply",
-      "title": "Graduate output by discipline",
+      "title": "Graduate talent relevant to technology",
       "question": "Will the talent pool still be deep enough tomorrow, as we grow?",
       "unit": "graduates a year",
       "format": "number",
-      "note": "Roughly 2.55M STEM graduates a year against roughly 4.5M general graduates. The parts are disjoint. Human resources is postgraduate output from MBA and MSW programmes, which is why it is an order of magnitude below the rest.",
+      "note": "Both figures are GRADUATE_OUTPUT's own parts, unchanged. Deliberately NOT aggregated with computer science and IT (300K) or electronics and communication (250K): those are counted separately in the shared metric and an aggregate engineering total needs ANSR's approval of what counts as engineering. Deliberately NOT nested: 450K is total management and MBA output, not MBA graduates with an engineering background, so no containment and no overlap percentage. The full nine-discipline split is still on the operations and HR tabs.",
       "structure": {
         "kind": "breakdown",
         "entries": [
           "Engineering, other disciplines",
-          "Computer science and IT",
-          "Electronics and communication",
-          "Mathematics and statistics",
-          "Other sciences",
-          "Commerce",
-          "Management and MBA",
-          "Finance and accounting",
-          "Human resources"
+          "Management and MBA graduates"
         ]
       },
       "value": {
         "kind": "breakdown",
         "values": [
           1500000,
-          300000,
-          250000,
-          200000,
-          350000,
-          600000,
-          450000,
-          250000,
-          45000
+          450000
         ]
       },
       "gated": false
@@ -40025,30 +40029,6 @@
       "value": {
         "kind": "scalar",
         "value": 17000000
-      },
-      "gated": false
-    },
-    {
-      "id": "tech-community-events",
-      "functionArea": "tech",
-      "lens": "supply",
-      "title": "Technical community activity",
-      "question": "Is there a working community around our stack, or would we be starting one?",
-      "format": "number",
-      "note": "Groups counted across the top eight cities; Bengaluru alone has about 450. Largest chapters are Python, Kubernetes, AWS and PyTorch. No unit is set because the two parts count different things.",
-      "structure": {
-        "kind": "breakdown",
-        "entries": [
-          "Active technical meetup groups",
-          "Major conferences a year"
-        ]
-      },
-      "value": {
-        "kind": "breakdown",
-        "values": [
-          1400,
-          120
-        ]
       },
       "gated": false
     },
@@ -40207,8 +40187,8 @@
       "note": "A week on an employer of record, up to ten weeks hiring direct into your own entity. The split that matters is the operating model, which is why the ends are labelled with it — the operations tab used to carry an unlabelled 42–70 instead, which hid the fastest route entirely.",
       "structure": {
         "kind": "range",
-        "minLabel": "on an employer of record",
-        "maxLabel": "hiring directly into your own entity"
+        "minLabel": "Hiring through an employer of record",
+        "maxLabel": "Hiring directly into your own entity"
       },
       "value": {
         "kind": "range",
@@ -40225,14 +40205,15 @@
       "question": "Once the first team proves out, how quickly do centres here add the next hundred?",
       "unit": "months, median",
       "format": "duration",
+      "progression": true,
       "note": "Months rather than days, as supplied — converting would invent precision. The 100 FTE milestone was given as 9–12 months and the 500 as 500–600 FTEs in 36; the conservative end of each is stored. The HR tab used to omit the 50 FTE step, which made the curve look slower off the line than it is.",
       "structure": {
         "kind": "breakdown",
         "entries": [
-          "To 50 FTEs",
-          "To 100 FTEs",
-          "To 300 FTEs",
-          "To 500 FTEs"
+          "50 FTEs",
+          "100 FTEs",
+          "300 FTEs",
+          "500 FTEs"
         ]
       },
       "value": {
@@ -40254,7 +40235,8 @@
       "question": "Is there space we could move into at the quality our people expect?",
       "unit": "million sq ft",
       "format": "number",
-      "note": "Both figures rather than a choice between them: total stock answers whether the market is deep, and vacant answers whether we could move in now. Across the top seven cities at 15.5% vacancy; Bengaluru alone holds 241 msf of the total.",
+      "subset": true,
+      "note": "Both figures rather than a choice between them: total stock answers whether the market is deep, and vacant answers whether we could move in now. Across the top seven cities at 15.5% vacancy; Bengaluru alone holds 241 msf of the total. `subset` is authored because vacant stock is genuinely part of total stock — the shared unit alone never established that.",
       "structure": {
         "kind": "breakdown",
         "entries": [
@@ -40459,8 +40441,8 @@
       "note": "A week on an employer of record, up to ten weeks hiring direct into your own entity. The split that matters is the operating model, which is why the ends are labelled with it — the operations tab used to carry an unlabelled 42–70 instead, which hid the fastest route entirely.",
       "structure": {
         "kind": "range",
-        "minLabel": "on an employer of record",
-        "maxLabel": "hiring directly into your own entity"
+        "minLabel": "Hiring through an employer of record",
+        "maxLabel": "Hiring directly into your own entity"
       },
       "value": {
         "kind": "range",
@@ -40477,14 +40459,15 @@
       "question": "Once the first team proves out, how quickly do centres here add the next hundred?",
       "unit": "months, median",
       "format": "duration",
+      "progression": true,
       "note": "Months rather than days, as supplied — converting would invent precision. The 100 FTE milestone was given as 9–12 months and the 500 as 500–600 FTEs in 36; the conservative end of each is stored. The HR tab used to omit the 50 FTE step, which made the curve look slower off the line than it is.",
       "structure": {
         "kind": "breakdown",
         "entries": [
-          "To 50 FTEs",
-          "To 100 FTEs",
-          "To 300 FTEs",
-          "To 500 FTEs"
+          "50 FTEs",
+          "100 FTEs",
+          "300 FTEs",
+          "500 FTEs"
         ]
       },
       "value": {
@@ -40494,32 +40477,6 @@
           12,
           24,
           36
-        ]
-      },
-      "gated": false
-    },
-    {
-      "id": "hr-workforce-diversity",
-      "functionArea": "hr",
-      "lens": "supply",
-      "title": "Workforce diversity",
-      "question": "Would a centre here look like the workforce we are trying to build?",
-      "format": "percent",
-      "note": "Women in technology roles is projected to reach 35% by 2027; the current figure is stored, not the projection. Women in leadership, first-generation graduates and return-to-work were seeded parts with no figures and were removed.",
-      "structure": {
-        "kind": "breakdown",
-        "entries": [
-          "Women across India GCCs",
-          "Women in technology roles",
-          "Women in engineering degree enrolment"
-        ]
-      },
-      "value": {
-        "kind": "breakdown",
-        "values": [
-          35,
-          25,
-          28.8
         ]
       },
       "gated": false
@@ -40545,27 +40502,28 @@
       "id": "hr-salary-growth",
       "functionArea": "hr",
       "lens": "cost",
-      "title": "Base salary growth year on year",
+      "title": "Where salary pressure is strongest",
       "question": "How fast is the cost of the same person rising?",
+      "unit": "Base salary growth, year on year",
       "format": "percent",
-      "note": "Split by specialism because a single average hides the scarce skills, which is where a plan actually gets repriced.",
+      "note": "Split by specialism because a single average hides the scarce skills, which is where a plan actually gets repriced. Ordered descending so the ranking states its own axis in row one; 'All roles' carries '(reference)' because it is the comparator the other four are read against, and the label rather than the colour is what says so.",
       "structure": {
         "kind": "breakdown",
         "entries": [
-          "All roles",
           "AI and machine learning",
           "Cybersecurity",
           "Cloud",
+          "All roles (reference)",
           "Non-ER&D roles"
         ]
       },
       "value": {
         "kind": "breakdown",
         "values": [
-          9.8,
           21.1,
           20,
           16.1,
+          9.8,
           7.5
         ]
       },
@@ -40575,11 +40533,11 @@
       "id": "hr-cost-per-employee-served",
       "functionArea": "hr",
       "lens": "cost",
-      "title": "HR support ratio per employee served",
+      "title": "HR support ratio",
       "question": "How many employees does each HR person support once the centre is running, against while it is still being built?",
       "unit": "employees per HR person",
       "format": "number",
-      "note": "Retitled from 'HR cost per employee served'. The supplied cost figure was an absolute annual amount per employee, which this schema cannot hold and the brief forbids showing; the staffing ratio is the part of the brief's own definition that survives. To restore the cost view, supply it as an index against the sending country.",
+      "note": "Retitled from 'HR cost per employee served', then shortened from 'HR support ratio per employee served' — the trailing clause duplicated the unit. The supplied cost figure was an absolute annual amount per employee, which this schema cannot hold and the brief forbids showing; the staffing ratio is the part of the brief's own definition that survives. To restore the cost view, supply it as an index against the sending country.",
       "structure": {
         "kind": "breakdown",
         "entries": [
@@ -40678,6 +40636,40 @@
       "value": {
         "kind": "scalar",
         "value": 9.8
+      },
+      "gated": false
+    },
+    {
+      "id": "fin-operating-cost-growth",
+      "functionArea": "finance",
+      "lens": "cost",
+      "title": "Operating cost growth year on year",
+      "question": "Is the cost of running the centre — utilities, transport, facilities management, local support — rising faster than the wage bill?",
+      "format": "percent",
+      "note": "PLACEHOLDER at 10% — a demo figure, not a measurement. The operating-cost third of the brief's cost-durability metric; the compensation third is fin-cost-growth at 9.8%. Nothing supplied covers this one: the tier spread is a LEVEL difference between tier 1 and tier 2 rather than a movement over time, and no year-on-year operating figure exists in the supplied data. Deliberately not derived from the wage figure — the two move on different drivers, which is why the brief asks for them separately. Replace with a real rate before publication.",
+      "structure": {
+        "kind": "scalar"
+      },
+      "value": {
+        "kind": "scalar",
+        "value": 10
+      },
+      "gated": false
+    },
+    {
+      "id": "fin-workplace-cost-growth",
+      "functionArea": "finance",
+      "lens": "cost",
+      "title": "Workplace cost growth year on year",
+      "question": "Is the cost of the space itself rising, and by enough to change a five-year plan?",
+      "format": "percent",
+      "note": "PLACEHOLDER at 10% — a demo figure, not a measurement. The workplace third of the brief's cost-durability metric. The nearest supplied figures are a 15.5% vacancy rate across the top seven cities and the Bengaluru sub-market rent card behind fin-workplace-cost-gradient — both a position at one moment, neither a rate of change, and a gradient across sub-markets is not a movement over time. Rent growth is the figure to ask for, national or Bengaluru, stated as a percentage. Replace before publication.",
+      "structure": {
+        "kind": "scalar"
+      },
+      "value": {
+        "kind": "scalar",
+        "value": 10
       },
       "gated": false
     },
@@ -40881,5 +40873,38 @@
       },
       "gated": true
     }
-  ]
+  ],
+  "siteContent": {
+    "hero": {
+      "title": "ANSR GCC Intelligence",
+      "lead": "A tool to evaluate your GCC opportunity using competitor data and benchmarks from 1,800+ global companies operating centres in India."
+    },
+    "impactStats": [
+      {
+        "id": "professionals-hired",
+        "value": "225K+",
+        "label": "Professionals hired"
+      },
+      {
+        "id": "centers-established",
+        "value": "210+",
+        "label": "Global centres established"
+      },
+      {
+        "id": "workspace-managed",
+        "value": "14M+",
+        "label": "Sq ft of workspace under management"
+      },
+      {
+        "id": "years-experience",
+        "value": "20+",
+        "label": "Years of experience"
+      },
+      {
+        "id": "capital-created",
+        "value": "$2.5B+",
+        "label": "Capital investment created"
+      }
+    ]
+  }
 }

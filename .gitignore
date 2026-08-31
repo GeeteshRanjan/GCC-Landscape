@@ -26,6 +26,11 @@ data/*.report.json
 # permanent history buying nothing.
 .cache/
 
+# Impeccable's own working directory. Critique snapshots are a local backlog
+# `/impeccable polish` reads; the skill itself lives under .kiro/skills, which is
+# already untracked. Nothing here is a source of truth.
+.impeccable/
+
 # test fixtures and reports
 tests/browser/.tmp/
 playwright-report/

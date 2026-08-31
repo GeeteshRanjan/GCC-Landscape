@@ -467,7 +467,7 @@ export const SUB_INDUSTRY_TO_TYPE: Readonly<Record<string, string>> = {
   "Retail||Retail - Pet Foods": "ret-specialty",
   "Retail||Retail - Sportswear": "ret-sportswear",
   "Retail||Retail - Stationary": "ret-specialty",
-  "Retail||Retail - Toys & Games": "ret-specialty",
+  "Retail||Retail - Toys & Games": "ret-consumer-brand",
   "Retail||Travel Retail": "ret-specialty",
   "Retail||e-Commerce": "ret-ecommerce",
   "Retail||eCommerce": "ret-ecommerce",
@@ -596,18 +596,18 @@ export const SUB_INDUSTRY_TO_TYPE: Readonly<Record<string, string>> = {
 
   /* ---- Consumer Packaged Goods — 24 companies, 15 source values ---- */
   "Consumer Packaged Goods||Brewing & Beverages": "cpg-beverages",
-  "Consumer Packaged Goods||Personal & Home Care": "cpg-diversified",
+  "Consumer Packaged Goods||Personal & Home Care": "cpg-home-care",
   "Consumer Packaged Goods||CPG - Consumer Products": "cpg-diversified",
   "Consumer Packaged Goods||CPG - Diversified": "cpg-diversified",
   "Consumer Packaged Goods||Consumer Products": "cpg-diversified",
   "Consumer Packaged Goods||Beverages - Tea": "cpg-beverages",
   "Consumer Packaged Goods||CPG": "cpg-diversified",
-  "Consumer Packaged Goods||CPG - Beverages & Snacks": "cpg-diversified",
-  "Consumer Packaged Goods||CPG - Food & Beverage": "cpg-diversified",
+  "Consumer Packaged Goods||CPG - Beverages & Snacks": "cpg-beverages",
+  "Consumer Packaged Goods||CPG - Food & Beverage": "cpg-food",
   "Consumer Packaged Goods||CPG - Ice Cream": "cpg-food",
   "Consumer Packaged Goods||CPG - Personal Care": "cpg-personal-care",
   "Consumer Packaged Goods||CPG - Tobacco": "cpg-diversified",
-  "Consumer Packaged Goods||Food and Beverages": "cpg-diversified",
+  "Consumer Packaged Goods||Food and Beverages": "cpg-beverages",
   "Consumer Packaged Goods||Packaged Food": "cpg-food",
   "Consumer Packaged Goods||Personal Care": "cpg-personal-care",
 
@@ -1324,7 +1324,7 @@ export const COMPANY_TO_TYPES: Readonly<Record<string, readonly string[]>> = {
   "Media & Entertainment||Crunchyroll": ["med-broadcast"],
   "Media & Entertainment||DAZN": ["med-broadcast"],
   "Media & Entertainment||Dentsu Aegis Network": ["med-advertising"],
-  "Media & Entertainment||EA - Electronic Arts": ["med-gaming"],
+  "Media & Entertainment||EA (Electronic Arts)": ["med-gaming"],
   "Media & Entertainment||ESPN": ["med-broadcast"],
   "Media & Entertainment||Flutter Entertainment": ["med-gambling"],
   "Media & Entertainment||Fox Corporation": ["med-broadcast"],
@@ -1352,7 +1352,7 @@ export const COMPANY_TO_TYPES: Readonly<Record<string, readonly string[]>> = {
   "Logistics & Transportation||Unipart": ["log-freight"],
   "Logistics & Transportation||Wabtec (GE)": ["log-rail"],
 
-  /* ---- Retail — 11 companies ---- */
+  /* ---- Retail — 17 companies ---- */
   "Retail||Alshaya Group": ["ret-specialty"],
   "Retail||Catalyst Brands (JCPenney)": ["ret-general-merchandise"],
   "Retail||CeX Webuy.com": ["ret-specialty"],
@@ -1364,15 +1364,52 @@ export const COMPANY_TO_TYPES: Readonly<Record<string, readonly string[]>> = {
   "Retail||Metro": ["ret-grocery"],
   "Retail||Sears": ["ret-general-merchandise"],
   "Retail||Williams-Sonoma": ["ret-home-improvement"],
+  /**
+   * The five athletic brands the source files as plain apparel.
+   *
+   * Left alone, `ret-sportswear` held ONE company — Puma, the only row whose source
+   * Sub-Industry happened to read "Retail - Sportswear" — while Nike, Adidas and
+   * Under Armour sat in the generic apparel bucket. A visitor who is a sportswear
+   * brand chose the row named after their business and got a set that excluded the
+   * four companies they most wanted to see.
+   *
+   * Both types, not a swap. `tagsForCompany` takes the UNION, so these stay credible
+   * peers for an apparel visitor as well — which they are.
+   */
+  "Retail||Nike": ["ret-sportswear", "ret-apparel"],
+  "Retail||Adidas": ["ret-sportswear", "ret-apparel"],
+  "Retail||Under Armour": ["ret-sportswear", "ret-apparel"],
+  "Retail||Lululemon Athletica": ["ret-sportswear", "ret-apparel"],
+  "Retail||Columbia Sportswear": ["ret-sportswear", "ret-apparel"],
+  /** A brand owner (Speedo, Berghaus, Canterbury) rather than a retailer. */
+  "Retail||Pentland": ["ret-apparel", "ret-consumer-brand"],
 
-  /* ---- Professional Services — 7 companies ---- */
+  /* ---- Professional Services — 13 companies ---- */
   "Professional Services||Citrin Cooperman": ["prof-accounting"],
-  "Professional Services||Consilio (Taara)": ["prof-legal"],
   "Professional Services||Dunnhumby": ["prof-market-research"],
   "Professional Services||H&R Block": ["prof-accounting"],
   "Professional Services||Hatch": ["prof-engineering-consulting"],
   "Professional Services||P3 Group": ["prof-engineering-consulting"],
   "Professional Services||Worley": ["prof-engineering-consulting"],
+  /**
+   * The two rows that made `prof-staffing` and `prof-bpo` selectable with nobody in
+   * them, and the four legal-process outsourcers that belong in both of their types.
+   *
+   * The source Sub-Industry for Korn Ferry is "Research and Consulting" and for
+   * Indecomm is "Information Services", so both collapsed into market research — a
+   * bucket describing neither an executive search firm nor a mortgage BPO. That left
+   * two sub-industries a visitor could pick and get a peer set no better than picking
+   * nothing at all: staffing scored 0.14 to 0.33 on coherence, against 0.9-plus
+   * everywhere the mapping was right. `tests/unit/match-quality.test.ts` is where that
+   * showed up.
+   */
+  "Professional Services||Korn Ferry": ["prof-staffing", "prof-consulting"],
+  "Professional Services||Indecomm": ["prof-bpo"],
+  "Professional Services||Consilio (Taara)": ["prof-legal", "prof-bpo"],
+  "Professional Services||Epiq": ["prof-legal", "prof-bpo"],
+  "Professional Services||QuisLex": ["prof-legal", "prof-bpo"],
+  "Professional Services||UnitedLex": ["prof-legal", "prof-bpo"],
+  "Professional Services||Elevate": ["prof-legal", "prof-bpo"],
 
   /* ---- Chemicals & Materials — 4 companies ---- */
   "Chemicals & Materials||Albemarle Corporation": ["chem-specialty"],
@@ -1395,6 +1432,39 @@ export const COMPANY_TO_TYPES: Readonly<Record<string, readonly string[]>> = {
 
   /* ---- Education — 1 companies ---- */
   "Education||EF Education First": ["edu-institution"],
+
+  /* ---- Consumer Packaged Goods — 8 companies ---- */
+  /**
+   * The catch-all this industry was collapsing into.
+   *
+   * Twelve of 24 CPG companies carried `cpg-diversified`, because the source writes
+   * "CPG - Consumer Products", "CPG", "CPG - Food & Beverage" and "CPG - Beverages &
+   * Snacks" for companies that are nothing of the kind. Half an industry in one bucket
+   * is not a taxonomy, and it left `cpg-home-care` with no members while Reckitt and
+   * Henkel — home care companies by the source's own words — sat in "diversified".
+   *
+   * P&G, Unilever, Philip Morris, BAT and Herbalife are still diversified, and that is
+   * the source reading them correctly rather than a residue.
+   */
+  "Consumer Packaged Goods||Nestlé": ["cpg-food", "cpg-beverages"],
+  "Consumer Packaged Goods||PepsiCo": ["cpg-beverages", "cpg-food"],
+  "Consumer Packaged Goods||Coca-Cola": ["cpg-beverages"],
+  "Consumer Packaged Goods||Mondelez International": ["cpg-food"],
+  "Consumer Packaged Goods||L'Oréal": ["cpg-personal-care"],
+  "Consumer Packaged Goods||Reckitt Benckiser": ["cpg-home-care", "cpg-personal-care"],
+  "Consumer Packaged Goods||Henkel": ["cpg-home-care", "cpg-personal-care"],
+  "Consumer Packaged Goods||Kimberly-Clark": ["cpg-personal-care", "cpg-home-care"],
+
+  /* ---- Wholesale — 3 companies ---- */
+  /**
+   * All five wholesalers arrive as "Industrial Supplies", which is right for Fastenal
+   * and TVH and wrong for the three that distribute to construction sites. It is also
+   * the whole reason `whl-building-materials` was a selectable row with nobody behind
+   * it.
+   */
+  "Wholesale||Ferguson": ["whl-building-materials"],
+  "Wholesale||Winsupply": ["whl-building-materials"],
+  "Wholesale||HD Supply (Home Depot)": ["whl-industrial-supplies", "whl-building-materials"],
 
 };
 

@@ -61,7 +61,16 @@ export interface GccLandscapeToolProps {
    */
   heroCopy: HeroCopy;
   impactStats: readonly ImpactStat[];
-  /** Where both screens' closing CTAs send the visitor. There is no form. */
+  /**
+   * Where a closing CTA would send the visitor. **Nothing reads it.**
+   *
+   * Both screens' closes are removed at ANSR's request — Screen 1's on the page-end
+   * instruction, Screen 2's in the pass that rebuilt its zones — so the tool has no
+   * call to action and no outbound link. Kept threaded from `page.tsx` because
+   * restoring one is a component and a prop rather than an environment variable and a
+   * redeploy, and `NEXT_PUBLIC_GCC_CTA_URL` is unset in production anyway. Deleting it
+   * is a decision to take with ANSR, not a tidy-up.
+   */
   ctaHref: string;
 }
 
@@ -141,8 +150,8 @@ export function GccLandscapeTool({
    */
   const previousPhase = useRef<Phase["kind"] | null>(null);
   useEffect(() => {
-    const changed =
-      previousPhase.current !== null && previousPhase.current !== phase.kind;
+    const from = previousPhase.current;
+    const changed = from !== null && from !== phase.kind;
     previousPhase.current = phase.kind;
     if (!changed) return;
 
@@ -152,7 +161,54 @@ export function GccLandscapeTool({
         : phase.kind === "peers"
           ? peersPanelRef.current
           : functionsPanelRef.current;
-    target?.focus();
+    /**
+     * **Focus never scrolls. The tool states the position instead, and there are two
+     * answers depending on which pair of phases is involved.**
+     *
+     * `focus()` scrolls its target into view, and letting it do so was wrong for BOTH
+     * kinds of transition, in opposite directions.
+     *
+     * On the two result phases it moved the page when nothing had moved: they share an
+     * identical header band and an identical card top edge, so the switch changes only
+     * what is inside the card, and scrolling to the top of it dragged a visitor three
+     * sections down back to a band that had not changed. The card is deliberately not
+     * sticky, so nothing on screen explained the jump.
+     *
+     * **Entering the result was worse, and it looked like the page had loaded already
+     * scrolled.** The focus target on a result screen is the TAB PANEL rather than the
+     * `h1` — see the note above for why — and the panel begins BELOW the tab bar, 323px
+     * into the document at 1440. So submitting the form landed the visitor inside the
+     * card's first section with the whole teal band, the finding, their four answers and
+     * the view switch itself scrolled off above them, having to scroll UP to find the
+     * header of a screen they had just asked for. Focusing the `h1` used to hide this,
+     * which is why moving the focus target introduced it silently.
+     *
+     * So `preventScroll` on every transition, and the position is set explicitly:
+     *
+     *   - between the two result views, the offset the visitor was already at;
+     *   - anything involving the ask, the top — a surface they have not seen, met at its
+     *     own beginning. The result screen's first element is the teal band and the ask's
+     *     is the hero, so document top IS the top of the new surface in both directions.
+     *
+     * Keeping the focus MOVE is not optional either way: no navigation happens between
+     * phases, so it is the only thing telling a screen reader the screen changed. The
+     * panel is named by its own tab, so it still announces "Peer landscape, tab panel"
+     * wherever the page happens to be standing.
+     *
+     * Both writes are inert in the embed, where a frame sized to its own content has no
+     * scroll of its own — which is also true of the `focus()` scroll they replace, so
+     * nothing about the framed case changed.
+     */
+    const betweenViews =
+      (from === "peers" || from === "functions") &&
+      (phase.kind === "peers" || phase.kind === "functions");
+    target?.focus({ preventScroll: true });
+
+    // Read and clear together, so an ask transition cannot inherit a position from a
+    // view swap two states ago.
+    const restore = restoreScroll.current;
+    restoreScroll.current = null;
+    window.scrollTo({ top: betweenViews && restore !== null ? restore : 0 });
   }, [phase.kind]);
 
   const submit = useCallback(
@@ -183,20 +239,63 @@ export function GccLandscapeTool({
     setError(null);
   }, []);
 
+  /**
+   * Where the visitor was standing when they pressed a view tab, so the switch can put
+   * them back.
+   *
+   * **`preventScroll` on the focus move was necessary and not sufficient.** With the
+   * focus scroll suppressed the page still jumped to the top, because the two views are
+   * not the same length — the peer landscape measures about 2,900px against the function
+   * view's 1,650px at 1440 — and replacing a tall document with a short one in one commit
+   * puts the browser's own scroll restoration in charge, which drops to 0. So the tool
+   * has to state the position it wants rather than hope the browser keeps it.
+   *
+   * **Reading `scrollY` here is not the scroll-position logic the public screens ban.**
+   * That ban is on scroll-DRIVEN behaviour — listeners and `IntersectionObserver` against
+   * our own viewport — because the tool is framed and the parent decides what is on
+   * screen, so such a thing fires for content nobody is looking at. This reads the offset
+   * once, in direct response to a press, and writes it back once. It is also inert in the
+   * embed for the same reason the dropdown's reveal is: a frame sized to its own content
+   * has no scroll of its own, so `scrollY` is 0 and the restore is a no-op.
+   *
+   * `scrollTo` clamps to the new document, so a position past the shorter view's end
+   * lands at its end rather than out of bounds. In the ordinary flow that never fires —
+   * the tab bar is the card's top row and is not sticky, so a visitor has to have it on
+   * screen to press it, which means the offset they are restored to is one the shorter
+   * view can hold.
+   */
+  const restoreScroll = useRef<number | null>(null);
+
   const openFunctions = useCallback(() => {
+    restoreScroll.current = window.scrollY;
     setPhase((current) =>
       current.kind === "ask" ? current : { kind: "functions", view: current.view },
     );
   }, []);
 
   const backToPeers = useCallback(() => {
+    restoreScroll.current = window.scrollY;
     setPhase((current) =>
       current.kind === "ask" ? current : { kind: "peers", view: current.view },
     );
   }, []);
 
   return (
-    <main className="bg-surface">
+    /**
+     * **`font-display` is on the public root, and it was on two of the three phases.**
+     * The ask and the peer view each set it on their own wrapper; the function view set
+     * it nowhere, so Screen 2 rendered in Inter — including the `h1` lockup line and the
+     * answer pills, which are the SAME components Screen 1 draws in the display face.
+     * Switching tabs changed the typeface of the header without changing the header,
+     * which is the one thing the shared band exists to prevent.
+     *
+     * Scoped here rather than on `body` for the reason it always was: this is the public
+     * surface, and admin is a dense internal tool that keeps Inter. One class on the one
+     * element every public phase mounts under, so a fourth phase cannot be added without
+     * it. It brings Light 300 body copy with it, which is the brand's single biggest
+     * typographic tell.
+     */
+    <main className="bg-surface font-display">
       {phase.kind === "ask" ? (
         <PeerViewAsk
           headingRef={askHeadingRef}
@@ -229,7 +328,6 @@ export function GccLandscapeTool({
         <FunctionViewScreen
           view={functionView}
           input={phase.view.input}
-          ctaHref={ctaHref}
           onBack={backToPeers}
           onEditProfile={backToAsk}
           panelRef={functionsPanelRef}

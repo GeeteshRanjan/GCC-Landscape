@@ -2,7 +2,7 @@
 
 import { Pencil } from "lucide-react";
 
-import { AnsrWordmark } from "@/components/screen1/ansr-wordmark";
+import { DottedWorldMap } from "@/components/screen1/dotted-world-map";
 import { cn } from "@/lib/utils";
 
 /**
@@ -53,62 +53,137 @@ export interface HeaderMotif {
 }
 
 /**
- * The teal band: identity, context panels, then the tab strip flush at its foot.
+ * The whole result surface: the teal header band, then ONE floating card carrying
+ * every zone to the end of the page, with the view switch as the card's own top row.
  *
- * `children` is the identity and the panels; `tabs` is the strip. They are separate
- * props rather than one children list because the strip is the only thing in here
- * that must sit outside the band's vertical padding, and a caller that put it in
- * the wrong order would break the connection to the content surface silently.
+ * **This replaced two full-bleed stacks, and the card is the point.** The header
+ * band and the content surface both ran edge to edge, so the answer was a sequence
+ * of grounds rather than one object — nothing on the page said that all of this is
+ * one result, produced by one act, distinct from the ansr.com page the tool is
+ * framed inside. The zones still carry which KIND of claim a reader is on; the card
+ * carries that they are all the same answer.
+ *
+ * Three props rather than one children list, because the order of the three is not
+ * a caller's decision: the tab bar is the card's first row and the panel is the
+ * rest of it, and a caller that got that order wrong would break the one joint
+ * that has to be invisible.
+ *
+ *   - `children` — the identity, the finding and the answer pills, on the band.
+ *   - `tabs` — the view switch, rendered as the card's top row.
+ *   - `card` — the `ViewPanel` and everything in it, clipped by the card.
+ *
+ * **The card overlaps the band's bottom edge, and the pull and the band's own
+ * bottom padding are one decision in two numbers.** The band is padded out far
+ * enough that the card's top row lands on the gradient rather than on the flat
+ * ground below it; the container's negative top margin is what lifts it there.
+ * Raising one without the other either walks the card up into the answer pills or
+ * drops it onto the flat ground, where the overlap that makes it read as lifted is
+ * gone. Same relationship as the entry point's form card over its hero.
+ *
+ * **The band's ornament is swapped at `lg`, not layered.** The dotted world map is
+ * the entry point's own graphic and is what this band carries on a desktop; below
+ * `lg` the finding runs most of the band's width and the frame is too narrow for the
+ * dots to resolve, so the screen's motif takes over there. One ornament at every
+ * width, never two — the pair used to render together and the band read as a
+ * coloured strip with two unrelated graphics parked on it.
  */
-export function ScreenHeader({
+export function ResultSurface({
   motif,
   tabs,
+  card,
+  footer,
   children,
 }: {
   motif: HeaderMotif;
   tabs: React.ReactNode;
+  card: React.ReactNode;
+  /**
+   * One caption line UNDER the card, on the page ground.
+   *
+   * Outside the card deliberately: it is an attribution for the whole surface rather
+   * than a note on any section of it, and inside the card it would have to belong to
+   * whichever zone happened to be last. Screen 1 passes none — its page ends at the
+   * evidence strip by instruction — so the slot is empty there rather than holding an
+   * element nobody asked for.
+   */
+  footer?: React.ReactNode;
   children: React.ReactNode;
 }) {
   return (
-    // The brand's own teal gradient — a fitted token (radial teal over teal-deep),
-    // so this is the brand's actual display ground rather than a colour picked to
-    // look rich. Its contrast contract holds without a per-placement measurement:
-    // the brightest point is `--ansr-teal-700`, and every ink allowed on an inverse
-    // ground clears AA across the whole band.
-    //
-    // `pb-0` is load-bearing. See the file comment.
-    <div className="gcc-ground-gradient relative overflow-hidden pt-10 pb-0 md:pt-14">
-      {/* Decorative and redundant: everything it could convey is in the text
-          beside it. Out of the tab order and out of the accessibility tree. */}
-      <div
-        className={cn(
-          "ansr-motif gcc-motif-inverse hidden md:block",
-          motif.placement,
-        )}
-        aria-hidden="true"
-      >
-        {/* eslint-disable-next-line @next/next/no-img-element -- decorative,
-            fixed intrinsic ratio, and not worth an optimiser round trip. */}
-        <img
-          src={motif.src}
-          alt=""
-          width={motif.width}
-          height={motif.height}
-          className="block h-auto w-full"
-        />
+    // The page ground: the flat inverse teal, which is what the card is lifted off.
+    // Deliberately not the gradient — see `.gcc-result-page` for why a fitted radial
+    // cannot be stretched over a 3,500px document.
+    <div className="gcc-result-page">
+      {/* The band keeps the brand's own teal gradient at the size it was fitted
+          for — a radial teal over teal-deep, so this is the brand's actual display
+          ground rather than a colour picked to look rich. Its contrast contract
+          holds without a per-placement measurement: the brightest point is
+          `--ansr-teal-700`, and every ink allowed on an inverse ground clears AA
+          across the whole band. `.gcc-result-band` adds the fade that keeps its
+          bottom edge from seaming against the page ground. */}
+      <div className="gcc-result-band pt-10 pb-28 md:pt-14 md:pb-32">
+        {/* The screen's own motif, and it is the TABLET-and-below ornament now: the
+            dotted map below takes the band from `lg`, and the two used to draw over
+            each other on the same trailing edge. Decorative and redundant either
+            way — everything it could convey is in the text beside it, so it is out
+            of the tab order and out of the accessibility tree. */}
+        <div
+          className={cn(
+            "ansr-motif gcc-motif-inverse hidden md:block lg:hidden",
+            motif.placement,
+          )}
+          aria-hidden="true"
+        >
+          {/* eslint-disable-next-line @next/next/no-img-element -- decorative,
+              fixed intrinsic ratio, and not worth an optimiser round trip. */}
+          <img
+            src={motif.src}
+            alt=""
+            width={motif.width}
+            height={motif.height}
+            className="block h-auto w-full"
+          />
+        </div>
+        {/* **The entry point's own hero graphic, on the result band.** Same
+            component and the same two child classes, so this is one graphic used
+            twice rather than a second copy of one — what differs is only the
+            placement: held further back by opacity, masked away from the copy, and
+            faded to nothing well before the card's top edge, because here the band
+            already carries a finding and a switch and the map is depth rather than
+            subject. It is NOT blurred — that was tried and read as a
+            low-resolution copy of the entry point's map rather than as depth. Every
+            value and the reasoning is in `.gcc-header-map`. */}
+        <div className="gcc-header-map hidden lg:flex" aria-hidden="true">
+          <DottedWorldMap />
+        </div>
+        {/* **A second, much fainter ornament layer, generated rather than placed.**
+            The brand's pin field as a fine dot lattice along the leading edge —
+            behind the copy, at a strength measured so it cannot lift the local ground
+            under white text, which is what lets it coexist with the map on the
+            opposite edge. See `.gcc-header-lattice`. */}
+        <div aria-hidden="true" className="gcc-header-lattice" />
+        <div className="relative mx-auto max-w-content px-6 md:px-12">
+          <div className="flex flex-col gap-6 md:gap-7">{children}</div>
+        </div>
       </div>
-      {/* **A second ornament layer, and it is generated rather than placed.** The
-          band carried exactly one motif and a flat gradient, which is why it read as
-          a coloured strip with a logo on it. This adds the brand's own pin field as a
-          fine dot lattice along the leading edge — behind the copy, at a strength
-          measured so it cannot lift the local ground under white text. See
-          `.gcc-header-lattice`. */}
-      <div aria-hidden="true" className="gcc-header-lattice" />
-      <div className="relative mx-auto max-w-content px-6 md:px-12">
-        <div className="flex flex-col gap-6 md:gap-7">{children}</div>
-        {/* Outside the gap stack and hard against the band's bottom edge, so the
-            selected tab's white fill is continuous with the content surface. */}
-        <div className="mt-7 md:mt-9">{tabs}</div>
+
+      {/* The card, pulled up onto the band. The bottom padding is the page ground
+          showing under the card, which is what makes it float rather than sit on a
+          shelf — and it is where the document ends. */}
+      <div className="relative mx-auto -mt-20 max-w-content px-6 pb-10 md:-mt-24 md:px-12 md:pb-16">
+        <div className="gcc-result-card">
+          {/* The card's first row and the rest of it. No wrapper between them and
+              nothing positioned: the bar is in the flow, so its corners are the
+              card's corners and the joint under the selected cell is the absence of
+              anything rather than two edges lined up. */}
+          {tabs}
+          {card}
+        </div>
+        {/* Muted inverse ink on the page ground, at caption size. It is the last thing
+            in the document, so nothing is pinned or positioned to make it so. */}
+        {footer ? (
+          <p className="mt-5 text-xs text-text-inverse-muted md:mt-6">{footer}</p>
+        ) : null}
       </div>
     </div>
   );
@@ -135,30 +210,134 @@ export function ScreenHeader({
  * line is the band's subject and a muted subject under a coloured lockup inverts
  * the hierarchy.
  */
+/**
+ * The two band lines, written as a PAIR and held in one place.
+ *
+ * **Only Screen 1 used to have one, and that is what made the header read as two
+ * different headers.** Its band carried a lockup, a display line and four answer
+ * pills; the function view's carried a lockup and four answer pills, so crossing
+ * between the two in one state change dropped a whole row out of the band and the
+ * pills jumped 60px up the page. The line was Screen 1's on the argument that Screen
+ * 2's content already opens on a finding as a real `h2` — which is true, and is why
+ * this is not that finding.
+ *
+ * So each screen's line says what that VIEW is over, in the same construction: a
+ * count or a scope, then the visitor's own industry. Screen 2's h2 ("What an India GCC
+ * would give you") is a different sentence about a different thing, so nothing is said
+ * twice inside one scroll.
+ *
+ * Held here rather than in either screen's `copy.ts` for the same reason `VIEW_LABELS`
+ * is: they are a pair, and the failure mode is one drifting out of construction with
+ * the other. The peer line is composed in `screen1/copy.ts` because it depends on the
+ * result rather than on the input, and it is the one thing on this band that does.
+ */
+export const HEADER_LINES = {
+  /**
+   * The peer view's line.
+   *
+   * **It states no COUNT, and that is the correction rather than a simplification.** It
+   * read "5 India GCCs match your BFSI profile", which is false in the one direction that
+   * matters: five is what the block SHOWS, capped by `DEFAULT_PEER_LIMIT`, not how many
+   * matched — the count line under the grid says "Showing 5 of 189". So the band's own
+   * sentence understated the evidence directly above a line that contradicted it, and it
+   * read as "we could only find five".
+   *
+   * It does not say the opposite either. "…and more" would be a second claim about a
+   * denominator the band has no room to state, and the grid's count line already states
+   * it exactly. What is left is what the whole screen is: how this industry operates
+   * here, which every band under it evidences.
+   */
+  peers: "How your industry operates in India",
+  /**
+   * The function view's line. A scope statement, because that screen's figures are
+   * national and do not move with the visitor's answers.
+   *
+   * **"beyond your industry", at ANSR's wording.** It said "The India market behind
+   * {industry} GCCs", which was right about the subject and wrong about the relationship:
+   * these figures are not the market behind one industry, they are the market that
+   * extends past it. "Beyond" says that in one word.
+   */
+  functions: "The India market beyond your industry",
+  /**
+   * **NEITHER LINE INTERPOLATES THE INDUSTRY, and that is a hard constraint rather than a
+   * style choice.** `HeaderFinding` is capped at `--ansr-container-lead` (800px) and sets
+   * at 48px, so anything past roughly 36 characters wraps — and a two-line band beside a
+   * one-line band puts back the 50px jump across the tab switch that this pair exists to
+   * remove. Industry names run from "BFSI" to "Agribusiness & Food Processing", so any
+   * interpolated line is one line for some visitors and two for others. The previous
+   * function line held `{industry}` and was verified on BFSI only; at "Software &
+   * Internet" it wrapped.
+   *
+   * The band is not left impersonal by it: the four answer pills directly beneath carry
+   * the company, the industry, the headquarters and the revenue band.
+   *
+   * Sentence case with a capital first letter, both of them. The peer line used to open
+   * on a digit.
+   */
+} as const;
+
 export function HeaderFinding({ children }: { children: React.ReactNode }) {
   return (
-    <p className="max-w-lead text-2xl leading-tight font-light tracking-body text-balance text-text-inverse md:text-3xl lg:text-4xl">
+    // **Up one step at every breakpoint, to 30/38/48px, and 48 is where the display
+    // leading token becomes legal.** At 24/30/38 this was the same size as the card
+    // headings under it, which left the band's only sentence competing with six
+    // labels; the entry point states its claim at 80px, and a result screen whose
+    // finding is smaller than that by a factor of three reads as a different product.
+    //
+    // `tracking-display` comes with the size — the negative tracking is what stops a
+    // 48px line looking loose — and Light 300 stays, because that is the brand's
+    // display voice and the ask hero's supporting line uses it too. There is no drawn
+    // mark on this line, so nothing here takes the mark-bearing exception.
+    // `id` so a spec can assert the finding where it actually renders. It used to be
+    // asserted through the live region, which restated it — and once the live region
+    // stopped restating it, two specs were checking the finding in the one place it is
+    // deliberately no longer said. A structural hook is the contract; the wording is a
+    // copywriter's to change.
+    <p
+      id="header-finding"
+      className="max-w-lead text-3xl leading-tight font-light tracking-display text-balance text-text-inverse md:text-4xl lg:text-5xl lg:leading-display"
+    >
       {children}
     </p>
   );
 }
 
 /**
- * `ANSR. GCC Intelligence` — the product lockup, and the `h1` of both result
+ * `ANSR GCC Intelligence` — the product lockup, and the `h1` of both result
  * screens.
  *
- * **The wordmark is drawn, the rest is typed, and the weight is measured off the
- * mark rather than chosen.** `AnsrWordmark`'s stem is 0.137 of its cap height,
- * which is the display face's Medium 500, and its sidebearings are normal rather
- * than `tracking-display`'s -0.02em — so a Bold heading beside it is two fonts on
- * one line. Same rule as the entry point's headline and the impact band's, and the
- * only three places a drawn mark sits in a line of type.
+ * **The full lockup, mark and wordmark together, and the typed period is gone.**
+ * It was the wordmark alone with a period typed after it in the action orange,
+ * because the wordmark's artboard has no punctuation in it — which meant the one
+ * place ANSR's own mark belongs was the one place it was absent, and the product's
+ * name ended in a full stop nothing else on either screen uses. The period went
+ * with the change: it was punctuation invented to make a lockup out of half a
+ * lockup, and with the mark present there is nothing to make.
  *
- * The period after the mark is TYPED, in the action orange, because the lockup's
- * artboard has no punctuation in it. It is inside the accessible name deliberately:
- * the heading reads "ANSR. GCC Intelligence", which is the product's name, and a
- * mark whose `sr-only` text said only "ANSR" would leave the heading reading
- * "ANSR GCC Intelligence" — a different string from the one on the page.
+ * `ansr-logo-on-dark.svg` is used LITERALLY — the mark in the action orange, the
+ * wordmark in white, which is the brand's own on-dark relationship rather than one
+ * assembled here out of two files. Logos are the single exception the
+ * adapt-never-paste rule grants, and composing the mark and the name by hand would
+ * have meant inventing the gap between them.
+ *
+ * **It is sized off the WORDMARK's cap height, not off the artboard.** The lockup
+ * is 253 × 91 and the letters occupy 37.9 of those 91 units, so a height of 1.7em
+ * puts the wordmark's caps at 0.71em — the display face's cap height, and the same
+ * measurement `AnsrWordmark` makes for the same reason. Matching the artboard to
+ * the font size instead would set the name at roughly two fifths of the type
+ * beside it. The mark then runs about half an em above the caps and half below the
+ * baseline, which is what a mark is supposed to do in a lockup.
+ *
+ * `items-center` rather than `items-baseline`: the wordmark's own vertical centre
+ * sits within half a unit of the artboard's, so centring the lockup against the
+ * line aligns the name with the type beside it without a baseline shift to tune.
+ *
+ * **The weight is still measured off the mark rather than chosen.** The wordmark's
+ * stem is 0.137 of its cap height, which is the display face's Medium 500, and its
+ * sidebearings are normal rather than `tracking-display`'s -0.02em — so a Bold
+ * heading beside it is two fonts on one line. Same rule as the entry point's
+ * headline and the impact band's, and the only three places a drawn mark sits in a
+ * line of type.
  */
 export function ProductIdentity({ id }: { id: string }) {
   return (
@@ -171,25 +350,39 @@ export function ProductIdentity({ id }: { id: string }) {
       // scale is the right register for a product label above a claim — the reference
       // does the same thing, and it is why the lockup reads as a mark rather than as
       // a headline.
-      className="flex items-baseline text-xl leading-tight font-medium tracking-body text-text-inverse md:text-2xl"
+      // **24/30px, up from 20/24, and it moves with the finding rather than against
+      // it.** The lockup was taken down a step when the finding arrived, on the
+      // argument that the band now has a subject and the product label is not it —
+      // which is still true and is why this stays a step UNDER the finding at every
+      // breakpoint (24 against 30, 30 against 38, 30 against 48). What changed is the
+      // finding's size, so holding the lockup at 20px would have left the `h1` at a
+      // quarter of the line beneath it and reading as a caption on its own page.
+      //
+      // Medium 500 and `tracking-body`, unchanged and not a candidate for the Bold +
+      // `tracking-display` rule the other display headings take: this line contains
+      // the drawn wordmark, whose stem is 0.137 of its cap height — the display face's
+      // Medium — and whose sidebearings are normal rather than tight. Bold beside it is
+      // two fonts on one line.
+      className="flex items-center text-2xl leading-tight font-medium tracking-body text-text-inverse md:text-3xl"
     >
-      {/* Orange on the gradient's darker half, where the copy sits. The wordmark
-          inherits the ink of the span it is in, which is what makes it one decision
-          with the period rather than two. */}
-      {/**
-       * **The period is part of the product's name and travels inside the wordmark's
-       * label, not as a text node beside it.** Name-from-content inserts whitespace at
-       * element boundaries, so a typed period after the mark computed the heading's
-       * accessible name as "ANSR . GCC Intelligence" — correct on screen, wrong read
-       * aloud. The visible period is therefore `aria-hidden` and the mark's own hidden
-       * label carries "ANSR.". Verified with an aria snapshot rather than reasoned
-       * about.
-       */}
-      <span className="text-action">
-        <AnsrWordmark label="ANSR." />
-        <span aria-hidden="true">.</span>
-      </span>
-      <span className="ps-2">GCC Intelligence</span>
+      {/* The lockup carries the heading's first word. `alt="ANSR"` rather than an
+          empty alt with an `sr-only` node beside it: this is a real image with real
+          text in it, so the accessible name belongs on the element, and the heading
+          computes to "ANSR GCC Intelligence" — the product's name, unchanged in
+          meaning from the version that typed the word. */}
+      {/* eslint-disable-next-line @next/next/no-img-element -- a fixed-ratio SVG
+          lockup, which the optimiser cannot improve on. */}
+      <img
+        src="/brand/ansr-logo-on-dark.svg"
+        alt="ANSR"
+        width={253}
+        height={91}
+        // 1.7em off the artboard puts the wordmark's caps at 0.71em, which is the
+        // display face's cap height. See the block comment for the arithmetic — it
+        // is the reason this is not `h-[1em]`.
+        className="h-[1.7em] w-auto shrink-0"
+      />
+      <span className="ps-3">GCC Intelligence</span>
     </h1>
   );
 }
@@ -269,28 +462,57 @@ export function ContextPanels({
   onEdit: () => void;
 }) {
   return (
+    /**
+     * **One wrapping row, with the control immediately after the last pill.** It
+     * used to be two groups pushed to opposite ends of the container — the answers
+     * leading, the button trailing, with up to 700px of empty band between them at
+     * desktop. A control that acts on a specific set of things has to look like it
+     * belongs to them, and at that distance it read as a second, unrelated piece of
+     * header chrome; a visitor who spotted a wrong revenue band in the third pill
+     * had to cross the band to find the way to fix it.
+     *
+     * In the same flow rather than in a second box, so it wraps with the pills
+     * instead of dropping to its own line: on a phone it follows the last pill, and
+     * where the pills fill a line it starts the next one.
+     */
     <div
       role="group"
       aria-label="Your profile, as you entered it"
-      className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between md:gap-6"
+      className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-3"
     >
-      <div className="flex min-w-0 flex-wrap items-center gap-2">
-        {facts.map((fact) => (
-          <ContextPill key={fact.label} label={fact.label} value={fact.value} />
-        ))}
-      </div>
-      {/* **"Change my answers", and the wording is the point of the control.** It
-          names the thing the visitor typed rather than the tool's word for it —
-          "Edit profile" implied a stored account, which this tool does not have and
-          must not imply. `shrink-0` so a long industry name never squeezes the label
-          onto two lines. */}
+      {facts.map((fact) => (
+        <ContextPill key={fact.label} label={fact.label} value={fact.value} />
+      ))}
+      {/* **"Edit answers", shortened from "Change my answers".** Both name the thing
+          the visitor typed rather than the tool's word for it — "Edit profile" implied
+          a stored account, which this tool does not have and must not imply — but the
+          possessive was doing no work now the control sits against the pills it acts
+          on, and at four syllables it was the longest label in the band. `ms-1` is the
+          one piece of spacing that is not the row's own gap: the control is a
+          different kind of thing from the tags before it, and a step of separation is
+          what says so without a divider. */}
       <button
         type="button"
         onClick={onEdit}
-        className="gcc-context-edit group inline-flex shrink-0 items-center gap-2 self-start px-4 py-2 text-sm font-semibold text-text-inverse md:self-auto"
+        /* **It is the size of a pill again, and the 44px target is kept off-screen.**
+           `min-h-11` was added because the control measured 38px on one axis, under the
+           minimum — and it bought that by making the only button in the band 44px tall
+           beside four 30px tags, so the loudest object in the header was the one piece
+           of chrome rather than any of the four answers it acts on. A control that
+           outsizes its own subject is the same defect as pushing it to the far end of
+           the row, which the previous pass fixed.
+
+           So the visible pill matches the tags — same vertical padding, same type size,
+           one step more horizontal padding for the glyph — and the target is expanded by
+           a transparent pseudo-element that overhangs the box top and bottom. See
+           `.gcc-context-edit::after`. The hit area is 44px; the ink is 30px. The row's
+           `gap-y-3` is 12px, so two wrapped rows of pills cannot bring one target within
+           overlapping distance of another — and there is exactly one of these per
+           screen. */
+        className="gcc-context-edit group relative inline-flex shrink-0 items-center gap-1.5 px-3 py-1.5 text-sm font-semibold text-text-inverse md:ms-1"
       >
         <Pencil aria-hidden="true" className="size-3.5 shrink-0" />
-        Change my answers
+        Edit answers
       </button>
     </div>
   );
@@ -309,9 +531,21 @@ export function ContextPanels({
  * disagreeing with itself about what the visitor is looking at. Deliberately not
  * "Screen 1" and "Screen 2", which are our words for them and not anyone else's.
  */
+/**
+ * **"Function Metrics", where this said "Function Opportunity".** "Opportunity" was
+ * doing two things a switch label must not: it sold the view before the visitor
+ * reached it, and it named nothing that is on it. The screen holds thirty-five
+ * measured figures grouped by the four functions a GCC runs — talent depth, time to
+ * stand up, what the location gives you, how cost moves — so "metrics" is what the
+ * label owes the reader, and it is the word the section's own id already uses
+ * (`function-metrics`).
+ *
+ * It also pairs. "Peer Landscape" and "Function Metrics" are both {qualifier + what
+ * you get}; "Peer Landscape" and "Function Opportunity" were a noun and a promise.
+ */
 const VIEW_LABELS = {
   peers: "Peer Landscape",
-  functions: "Function Opportunity",
+  functions: "Function Metrics",
 } as const;
 
 export type ViewKind = keyof typeof VIEW_LABELS;
@@ -323,15 +557,27 @@ export const viewTabId = (view: ViewKind) => `view-tab-${view}`;
 export const viewPanelId = (view: ViewKind) => `view-panel-${view}`;
 
 /**
- * The two result views, as one connected tab strip at the foot of the teal band.
+ * The two result views, as the card's own top row: full width, two equal halves.
  *
- * **This was a pill-shaped segmented control and the change is structural rather
- * than decorative.** A floating pill said "here is a small setting"; the tool has
- * exactly two analytical views and choosing between them is the primary act on the
- * page. So the tabs are full-height, they divide the whole container width, and the
- * selected one is the same white surface as the content under it — the tab and the
- * page are one layer, which is what makes the content read as belonging to the tab
- * rather than as a section that happens to follow it.
+ * **Two earlier shapes, each rejected for a different reason.** It began as a strip
+ * dividing the header BAND's foot, whose selected half was white and continued into
+ * a full-bleed white page — right for a full-bleed page, orphaned the moment the
+ * content moved inside a card, because a strip spanning the frame is wider than the
+ * thing it selects. It then became a content-sized notch sticking up out of the
+ * card's top edge, and that is where the bends came from: a rounded tab meeting a
+ * rounded card is two curves that have to agree and cannot, plus a step where the
+ * notch ends and the card carries on.
+ *
+ * Neither problem exists here, because the bar is not attached to the card — it is
+ * the card's first row. The corners are the card's own radius under its own
+ * `overflow: hidden`, so there is one curve in the composition and nothing to align.
+ *
+ * **`ground` is what makes the selected cell continuous rather than merely light.**
+ * Screen 1's content opens on the mint zone and Screen 2's on white, so a cell
+ * claiming to be the surface you are on has to be filled with that surface. Passing
+ * it is the caller's one job here; the alternative — hard-coding white — was tried
+ * and put a white cell above a mint zone, which is a visible edge across the joint
+ * this shape exists to remove.
  *
  * **Real tab semantics, with MANUAL activation.** `role="tablist"` with a roving
  * tabindex, arrow keys plus Home/End to move focus, Enter or Space to activate.
@@ -342,9 +588,13 @@ export const viewPanelId = (view: ViewKind) => `view-panel-${view}`;
  * the page at a time, and pointing at an absent id would be a broken reference
  * rather than a hidden panel.
  *
- * **Selected state is never carried by colour alone.** `aria-selected` is the
- * machine reading; the white surface, the weight change and the orange rule are
- * three redundant visual ones.
+ * **Selected state is never carried by colour alone, and there is no drawn line
+ * anywhere in the bar now.** `aria-selected` is the machine reading. The visual ones
+ * are the selected cell being filled with the ground of the content beneath it where the
+ * other shows the bar's own pale mint through, the ink moving from muted to the heading
+ * teal, and the weight. Two earlier indicators are gone: an orange rule over the
+ * selected cell, which was the most reproduced tab device there is, and then a teal edge
+ * under the UNSELECTED one, which ANSR rejected — see `.gcc-result-tab--off`.
  *
  * Deliberately NOT sticky, and that is an iframe constraint rather than a
  * preference: the tool negotiates its height with the parent and never owns a
@@ -354,13 +604,24 @@ export const viewPanelId = (view: ViewKind) => `view-panel-${view}`;
 export function ViewTabs({
   current,
   onSwitch,
-  icons,
+  ground = "surface",
 }: {
   current: ViewKind;
   /** Called with the view being moved to. The tool owns the phase. */
   onSwitch: (view: ViewKind) => void;
-  /** One line icon per view, supplied by the caller so this file draws no glyphs. */
-  icons: Record<ViewKind, React.ReactNode>;
+  /**
+   * The ground the caller's content surface opens on, which is what the selected
+   * cell is filled with. Screen 1 opens on the near-white mint; Screen 2 on white.
+   *
+   * **`pale` exists because the snapshot's figures needed a legal ground.** Screen 1's
+   * first zone was the mint `tint`, and `--ansr-action` is 2.63:1 on it — under the
+   * 3:1 large-text floor at any size — which was survivable only while every figure
+   * sat on a white card's own fill inside that zone. With the snapshot's cards gone
+   * the figures sit on the zone itself, so the zone moved to `--ansr-surface-pale`,
+   * where the same orange measures 3.29:1 and clears the floor. The bar has to follow
+   * it or the joint this component exists to hide reappears as an edge.
+   */
+  ground?: "surface" | "tint" | "pale";
 }) {
   const move = (from: number, to: number) => {
     const next = VIEW_ORDER[(to + VIEW_ORDER.length) % VIEW_ORDER.length];
@@ -392,7 +653,7 @@ export function ViewTabs({
   };
 
   return (
-    <div role="tablist" aria-label="Result view" className="flex">
+    <div role="tablist" aria-label="Result view" className="gcc-result-tabs">
       {VIEW_ORDER.map((view, index) => {
         const selected = view === current;
         return (
@@ -409,43 +670,46 @@ export function ViewTabs({
             onClick={() => onSwitch(view)}
             onKeyDown={(event) => onKeyDown(event, index)}
             className={cn(
-              // Equal halves, full height, hard-edged at the bottom. The top
-              // corners take the smallest radius in the scale so the strip reads as
-              // a pair of tabs rather than as two rectangles; the bottom stays
-              // square because it has to meet the content surface flush.
-              "flex flex-1 items-end justify-center gap-2.5 rounded-t-md pt-4 pb-3",
-              "px-3 text-sm font-semibold md:gap-3 md:px-6 md:text-base",
+              // Two equal halves of the card, each 56px of target at every width.
+              // `min-w-0` so a long label wraps inside its own half rather than
+              // widening the bar past the card, which the iframe does not own the
+              // scroll of.
+              // **No glyph, at ANSR's request, and the switch loses nothing by it.**
+              // Each cell carried a 20px line icon before its label — a person for the
+              // peer view, a bar chart for the function view — both already
+              // `aria-hidden`, both category-interchangeable, and neither able to say
+              // anything the label beside it did not. On a two-cell switch where exactly
+              // one is always selected, an icon is the third redundant signal after the
+              // fill and the ink, and it was the one that made the row read as an app
+              // toolbar rather than as the card's own top edge. It also removes the
+              // breakpoint rule that had to drop them below `sm` to keep the labels on
+              // one line at 320.
+              "gcc-result-tab flex min-w-0 items-center justify-center",
+              "px-3 py-4 text-sm font-semibold sm:px-5 md:text-base",
               // Colour only. `transition-all` on a control that changes surface,
-              // ink and border at once is what makes a tab strip feel loose.
+              // ink and border at once is what makes a switch feel loose.
               "transition-colors duration-fast ease-standard",
               selected
-                ? // The white surface that continues into the page.
-                  "bg-surface text-accent-teal"
-                : // Transparent, so the band's own gradient shows through — which is
-                  // what "the same deep teal as the section above" means when the
-                  // section above is a gradient rather than a flat fill. The hairline
-                  // is the only structure it needs.
-                  "border-t border-border-inverse bg-transparent text-text-inverse hover:bg-surface-inverse-soft",
-              // The divider between the two cells, drawn by the trailing one so it
-              // is never doubled.
-              index > 0 && !selected ? "border-s border-border-inverse" : "",
+                ? cn(
+                    // The ground of the content below it, so the cell and the surface
+                    // are one fill with no edge between them, plus the orange rule on
+                    // the cell's top edge.
+                    "gcc-result-tab--on text-accent-teal",
+                    ground === "tint"
+                      ? "gcc-result-tab--on-tint"
+                      : ground === "pale"
+                        ? "gcc-result-tab--on-pale"
+                        : "gcc-result-tab--on-surface",
+                  )
+                : // A step back on the bar's own ground, which is darker than either
+                  // content ground so the selected cell is the lightest thing in the
+                  // row. Muted rather than a lighter weight of the same ink: the two
+                  // cells are the same size and the same type, so ink value is what
+                  // separates them. 5.2:1 there — measured, see `.gcc-result-tabs`.
+                  "gcc-result-tab--off text-text-muted hover:text-text",
             )}
           >
-            <span
-              className={cn(
-                // The active indicator: an orange rule under the LABEL, with white
-                // still running beneath it into the content. Put on the tab's own
-                // bottom edge it would sit between the tab and the page and break
-                // the continuous surface that is the whole point of the shape.
-                "flex items-center gap-2.5 border-b-2 pb-2.5 md:gap-3",
-                selected ? "border-action" : "border-transparent",
-              )}
-            >
-              <span aria-hidden="true" className="shrink-0">
-                {icons[view]}
-              </span>
-              {VIEW_LABELS[view]}
-            </span>
+            {VIEW_LABELS[view]}
           </button>
         );
       })}

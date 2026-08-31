@@ -1,0 +1,259 @@
+import { figureParts, type ShownMetric } from "@/data/screen2";
+import { cn } from "@/lib/utils";
+import { FLOOR_NOTE } from "./copy";
+
+/**
+ * The row of national figures every function tab opens on.
+ *
+ * **One component for all four tabs, where there were four, and that is the whole
+ * point of this file.** Each tab had grown its own opening section: technology drew a
+ * borderless row with a line glyph over every figure and CSS hairlines between the
+ * cells; HR drew three bordered cards each with a 64px filled teal disc; operations
+ * drew four bordered cards with no glyph; finance drew three with a qualifier beside
+ * the heading. Four tabs of one screen, four different answers to one question — and a
+ * visitor crossing between them in a single click saw the page's opening object change
+ * shape three times.
+ *
+ * **The shape is Screen 1's SNAPSHOT, copied deliberately rather than approximated.**
+ * That strip is the peer view's opening object and it has been through three
+ * iterations, each recorded on `screen1/snapshot.tsx`: a bordered container divided by
+ * grid-gap rules, then four tiles with icon discs, then what is here. What survived is
+ * the figure with its label directly beneath it and nothing drawn between them — no
+ * card, no border, no fill, no shadow, no icon and no hairline. Two of the shapes this
+ * file replaces are the two that strip already rejected, for reasons that hold equally
+ * here: a bordered box on a tint reads as a table, and a pale disc holding a line icon
+ * is the stats block every generated dashboard ships with.
+ *
+ * Three details from it are load-bearing rather than cosmetic:
+ *
+ *   - **The unit is a step down and baseline-aligned.** A `%` or an `M+` at the
+ *     figure's own size is a third of the cell's optical weight carrying none of its
+ *     information. Two real scale steps, never a fraction of an em — `0.55em` renders
+ *     26.4px and 20.9px, and the surface then has two sizes nothing else uses. The
+ *     split is done by `figureParts` in the view model, which is the module that
+ *     produced the string; see the rule there.
+ *   - **A FIXED height on the figure box, bottom-aligned.** So every label in the row
+ *     sits on one line whatever its own figure is — a "2 – 6" and an "8.7M+" have
+ *     different glyph extents, and a row whose labels do not align is the ragged card
+ *     row again with the borders taken off.
+ *   - **No rule and no divider between cells.** The gap is the only separation, which
+ *     is what stops the row reading as a table. The `.gcc-figure-row` hairlines went
+ *     with the four shapes; they were the one device Screen 1's strip had explicitly
+ *     ruled out.
+ *
+ * **It is the tab's one orange role.** `--ansr-action` at 36/48px Bold is 3.35:1 on
+ * white, which clears the 3:1 large-text floor and is illegal below it — so the title
+ * under it is ink, the unit beneath that is muted, and the eyebrow above is
+ * `--ansr-accent-warm`, the only orange legal at 12px. Heading and figures are one
+ * orange act, exactly as they are on the snapshot.
+ */
+
+export interface SummaryFigure {
+  /** The metric this figure came from. The key, and the heading id. */
+  id: string;
+  /** Already formatted by the view model. Split into numeral and unit here. */
+  figure: string;
+  /**
+   * The upper end, where a cell states an extent rather than a point.
+   *
+   * One cell uses it — the operations tab's disruption days, which states both ends of
+   * the real set because there is no single figure in the data. See `ops-view.tsx`.
+   */
+  high?: string;
+  title: string;
+  unit?: string;
+  /** What population the figure was measured over, or how to read its `+`. */
+  note?: string;
+}
+
+/**
+ * The row's column count, by how many figures it holds.
+ *
+ * A static map because a Tailwind class cannot be interpolated — `lg:grid-cols-${n}`
+ * generates no CSS at all, which renders as a single column and looks deliberate. It
+ * has to vary, because a fixed five leaves finance's three figures with two empty
+ * columns after them.
+ *
+ * **One column below `sm`, which is the snapshot's own breakpoint rather than the
+ * row's previous two.** At 36px a figure and its unit are most of a 171px half-cell
+ * on a 390 phone, and "99.95%" does not fit one; a phone reads this row as a list.
+ */
+const COLUMNS = {
+  1: "grid-cols-1",
+  2: "grid-cols-1 sm:grid-cols-2",
+  3: "grid-cols-1 sm:grid-cols-3",
+  4: "grid-cols-1 sm:grid-cols-2 lg:grid-cols-4",
+  5: "grid-cols-1 sm:grid-cols-3 lg:grid-cols-5",
+} as const;
+
+type ColumnKey = keyof typeof COLUMNS;
+
+function columnKey(count: number): ColumnKey {
+  if (count <= 1) return 1;
+  if (count >= 5) return 5;
+  return count as ColumnKey;
+}
+
+export function SummaryFigures({
+  heading,
+  headingId,
+  cells,
+  note,
+}: {
+  /** What the figures are properties OF. See `FIGURES_HEADING`. */
+  heading: string;
+  headingId: string;
+  cells: readonly SummaryFigure[];
+  /**
+   * A note for the whole row, where one applies to more than one cell.
+   *
+   * Technology is the case: two of its five figures carry a floor, so a per-cell note
+   * rendered the same sentence twice inside one row. Everywhere else the note is the
+   * cell's own and travels on `SummaryFigure.note`.
+   */
+  note?: string;
+}) {
+  if (cells.length === 0) return null;
+
+  return (
+    <section aria-labelledby={headingId} className="flex flex-col gap-5 md:gap-6">
+      {/* **An eyebrow, not a section heading, and that is the hierarchy fix.** All
+          four tabs set this at the size and weight of every analytical section heading
+          below it, so the tab's opening object announced itself as loudly as the
+          charts it introduces — and nothing distinguished a row of national context
+          from a section of evidence. Screen 1 sets the same kind of line as a 12px
+          caps eyebrow above its snapshot, on the reasoning that on that surface the
+          FIGURES are the subject and the heading names the class they belong to. The
+          semantic level and the visual weight are allowed to disagree.
+
+          `text-accent-warm` rather than `text-action`: the brand orange is 2.63:1 on
+          the mint ground a zone may put this on and 3.35:1 on white, neither of which
+          is legible at 12px; `--ansr-accent-warm` is 6.53:1 on white and 5.14:1 on the
+          mint. Orange gets darker as the type gets smaller. */}
+      <h2
+        id={headingId}
+        className="text-xs font-semibold tracking-caps text-accent-warm uppercase"
+      >
+        {heading}
+      </h2>
+      {/* A `ul` of `li`s, which is the counting contract the whole browser suite
+          rests on: `#function-metrics ul > li` means "a figure-row cell" on every tab.
+          Wider gaps than a bordered grid needs, because with no edge between two cells
+          the space is the only thing separating them. */}
+      <ul className={cn("grid gap-6 lg:gap-8", COLUMNS[columnKey(cells.length)])}>
+        {cells.map((cell) => {
+          const value = figureParts(cell.figure);
+          const high = cell.high ? figureParts(cell.high) : undefined;
+          return (
+            <li key={cell.id} className="flex min-w-0 flex-col gap-2">
+              {/* The fixed box, bottom-aligned. `items-end` on the outer element and
+                  `items-baseline` on the inner one: the outer alignment is what lands
+                  every label on one line, and the baseline is the relationship the
+                  unit needs to its own numeral. */}
+              <p className="flex h-9 min-w-0 items-end text-4xl leading-none font-bold tracking-display text-action tabular-nums md:h-12 md:text-5xl">
+                <span className="flex min-w-0 items-baseline truncate">
+                  {value.value}
+                  {value.suffix ? <Unit>{value.suffix}</Unit> : null}
+                  {high ? (
+                    <>
+                      {/* An en dash, spaced, because both operands are numerals and an
+                          unspaced dash between digits reads as a minus. Hidden with the
+                          word beside it, so the cell is announced as "2 to 6" rather
+                          than as one run of digits. */}
+                      <span aria-hidden="true" className="mx-1.5 shrink-0">
+                        {"\u2013"}
+                      </span>
+                      <span className="sr-only"> to </span>
+                      {high.value}
+                      {high.suffix ? <Unit>{high.suffix}</Unit> : null}
+                    </>
+                  ) : null}
+                </span>
+              </p>
+              {/* **The snapshot's size and weight, and its one deviation is the ink.**
+                  That strip sets its label muted, because a snapshot cell has exactly
+                  one line under its figure and nothing for it to outrank. These have up
+                  to three — the title, the unit and a note — so the title takes
+                  `--ansr-text` and the two under it stay muted, which is this screen's
+                  standing rule: muted grey-teal is for units and qualifiers, and the
+                  title is the reading of the figure above it.
+
+                  **No reserved height on the group, which reverses what the row it
+                  replaces did.** It carried `min-h-16` so every cell's bottom edge
+                  landed on one line whatever its title's length. On a bordered grid that
+                  is worth paying for; on bare cells it buys alignment nobody can see —
+                  there is no edge to be out of line with — at the cost of up to 24px of
+                  declared empty space in three cells out of five, to tidy the one whose
+                  title wraps. The fixed FIGURE box above is kept, because that one lands
+                  every label on one line, which is the alignment a reader does see.
+
+                  `h3`, under this section's own `h2`. A level is an outline rather than
+                  a size, and skipping one leaves a screen-reader user with a broken
+                  structure. */}
+              <h3
+                id={`metric-${cell.id}-heading`}
+                className="min-w-0 text-sm font-medium tracking-body text-pretty text-text"
+              >
+                {cell.title}
+              </h3>
+              {cell.unit ? (
+                <p className="text-xs text-text-muted">{cell.unit}</p>
+              ) : null}
+              {cell.note ? (
+                <p className="text-xs text-text-muted">{cell.note}</p>
+              ) : null}
+            </li>
+          );
+        })}
+      </ul>
+      {note ? <p className="text-xs text-text-muted">{note}</p> : null}
+    </section>
+  );
+}
+
+/**
+ * The unit, two scale steps under the figure.
+ *
+ * 20 against 36 and 24 against 48 — both real steps on the scale, and both near half
+ * the figure, which is where a unit belongs. `tracking-normal` because
+ * `tracking-display` is fitted to digits and closes the gap a glyph this size needs.
+ */
+function Unit({ children }: { children: React.ReactNode }) {
+  return (
+    <span className="ms-0.5 shrink-0 text-xl font-semibold tracking-normal md:text-2xl">
+      {children}
+    </span>
+  );
+}
+
+/**
+ * Every bare scalar on a tab, as cells.
+ *
+ * Shared by the three tabs whose summary row is exactly its scalars — technology, HR
+ * and finance. The operations tab builds its own cells, because three of its four are
+ * one PART of a breakdown rather than a metric of their own, and which part is a
+ * decision that belongs in one readable place; see `summaryCells` there.
+ *
+ * `floor` is where the plus is explained. `cell` puts it on the figure that declares
+ * one, which is right where a tab has exactly one; `row` hands it back to the caller
+ * for the whole row, which is what technology needs with two.
+ */
+export function scalarCells(
+  figures: readonly ShownMetric[],
+  { floor = "cell" }: { floor?: "cell" | "row" } = {},
+): SummaryFigure[] {
+  return figures.flatMap((shown) =>
+    shown.shape === "scalar"
+      ? [
+          {
+            id: shown.metric.id,
+            figure: shown.figure,
+            title: shown.metric.title,
+            unit: shown.metric.unit,
+            note:
+              floor === "cell" && shown.metric.atLeast ? FLOOR_NOTE : undefined,
+          },
+        ]
+      : [],
+  );
+}
