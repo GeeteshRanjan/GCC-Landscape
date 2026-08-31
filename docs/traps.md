@@ -37,6 +37,22 @@ session. Read on demand, and add to it whenever something costs more than one at
   top-level `await` — **and `page.evaluate` must take a STRING, not a closure**: `tsx` rewrites arrow
   functions and the injected code throws `__name is not defined`. Plain `.mjs` under `node` sidesteps
   both.
+- **A new admin label that CONTAINS an existing one breaks every spec locating the shorter one.**
+  `getByLabel` matches on a substring, so a checkbox labelled "Figures are a floor" resolved to two
+  elements beside the scalar control's "Figure" and took four `4-metrics.spec.ts` locators down with it.
+  The checkbox is "Shown as a floor" for that reason. Before adding a control to an admin form, check the
+  new label is not a superstring of one already on that surface — and give an advisory region no
+  `aria-label`, since a named region is one more thing `getByLabel` can reach. The metric editor's
+  coupling notices are a bare `role="status"` on those grounds.
+- **A leak canary must not also be a customer-logo name.** `LEAK_CANARY` in `tests/browser/helpers.ts` is
+  the company name both public specs assert is absent from the HTML, and it only works if its ONLY route
+  into the document is the failure it is looking for. It was "Walmart", which was distinctive, in the
+  dataset and in neither industry the specs drive — and then the logo strip's list moved out of a client
+  module constant into `siteContent.logos`, so the ten marks now cross at the client boundary and sit in
+  the RSC payload of every phase. A dataset company name was in the document legitimately and the canary
+  tripped on both result screens for a reason that had nothing to do with the dataset. Four properties
+  now, the last one being the one that bit: distinctive, in the dataset, off the specs' industries, and
+  not a logo.
 - **`getComputedStyle().transitionProperty` is `all` by default**, so a "no `transition-all`" check must
   also require `transitionDuration > 0` or it flags several hundred innocent elements.
 - **`detect.mjs src` times out at 120s.** Pass the two or three component directories instead. And

@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 
 import { MetricEditor } from "@/components/admin/metric-editor";
 import { useDraft } from "@/components/admin/draft-provider";
+import { AdminPageHeader, AdminSection } from "@/components/admin/page-header";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -42,18 +43,11 @@ export function MetricsManager() {
     : null;
 
   return (
-    <div className="flex flex-col gap-8">
-      <div>
-        <h1 className="text-xl font-semibold tracking-heading text-text">
-          Function metrics
-        </h1>
-        <p className="mt-1 max-w-measure text-sm text-text-muted">
-          The figures behind the second screen. These have no spreadsheet behind
-          them, so they are typed in here and published with everything else —
-          nothing is live until you publish. A metric with empty slots is left off
-          the public screen rather than shown half-filled.
-        </p>
-      </div>
+    <div className="flex flex-col gap-6">
+      <AdminPageHeader
+        title="Function metrics"
+        lead="The figures behind the second screen, typed in here and published with everything else."
+      />
 
       {draft.metrics.length === 0 ? (
         <p className="border border-border-subtle bg-surface px-6 py-12 text-center text-sm text-text-muted">
@@ -70,25 +64,18 @@ export function MetricsManager() {
           </dl>
 
           {grouped.map((entry) => (
-            <section
+            <AdminSection
               key={entry.functionArea}
-              aria-labelledby={`metrics-${entry.functionArea}`}
-              className="border border-border-subtle bg-surface"
-            >
-              <div className="border-b border-border-subtle px-5 py-4">
-                <h2
-                  id={`metrics-${entry.functionArea}`}
-                  className="text-base font-semibold text-text"
-                >
-                  {METRIC_FUNCTION_LABELS[entry.functionArea]}
-                </h2>
-                <p className="mt-1 max-w-measure text-sm text-text-muted">
+              id={`metrics-${entry.functionArea}`}
+              title={METRIC_FUNCTION_LABELS[entry.functionArea]}
+              description={
+                <p>
                   {entry.groups.reduce((n, g) => n + g.metrics.length, 0)} metrics.
                   The groupings below are how this data is filed internally; they
                   are not what a visitor sees.
                 </p>
-              </div>
-
+              }
+            >
               {entry.groups.map((group) => (
                 <div key={group.lens}>
                   <h3 className="border-b border-border-subtle bg-surface-subtle px-5 py-2 text-xs font-medium uppercase tracking-caps text-text-muted">
@@ -105,7 +92,7 @@ export function MetricsManager() {
                   </ul>
                 </div>
               ))}
-            </section>
+            </AdminSection>
           ))}
         </>
       )}

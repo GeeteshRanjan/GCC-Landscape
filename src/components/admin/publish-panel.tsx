@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 
 import { useDraft } from "@/components/admin/draft-provider";
+import { AdminPageHeader, AdminSection } from "@/components/admin/page-header";
 import { Button } from "@/components/ui/button";
 import {
   METRIC_FIELD_LABELS,
@@ -137,15 +138,10 @@ export function PublishPanel() {
 
   return (
     <div className="flex flex-col gap-6">
-      <div>
-        <h1 className="text-xl font-semibold tracking-heading text-text">
-          Publish
-        </h1>
-        <p className="mt-1 max-w-measure text-sm text-text-muted">
-          Everything you have edited is checked before anything goes live. If a
-          check fails, nothing is published.
-        </p>
-      </div>
+      <AdminPageHeader
+        title="Publish"
+        lead="Everything is checked before anything goes live, and a failed check publishes nothing."
+      />
 
       {conflict ? (
         <p role="alert" className="ansr-field-error text-sm">
@@ -462,16 +458,9 @@ function DiffView({ diff }: { diff: DatasetDiff }) {
       ) : null}
 
       {diff.taxonomy.length > 0 ? (
-        <section
-          aria-labelledby="diff-taxonomy"
-          className="border border-border-subtle bg-surface"
-        >
-          <h2
-            id="diff-taxonomy"
-            className="border-b border-border-subtle px-5 py-3 text-sm font-semibold text-text"
-          >
-            Taxonomy
-          </h2>
+        /* `DiffSection` derives the same `diff-taxonomy` heading id this section
+           used to spell out, so the landmark's name and id are unchanged. */
+        <DiffSection title="Taxonomy">
           <ul className="divide-y divide-border-subtle">
             {diff.taxonomy.map((entry) => (
               <li key={entry.key} className="px-5 py-3 text-sm">
@@ -495,7 +484,7 @@ function DiffView({ diff }: { diff: DatasetDiff }) {
               </li>
             ))}
           </ul>
-        </section>
+        </DiffSection>
       ) : null}
 
       {/*
@@ -667,15 +656,9 @@ function DiffSection({
 }) {
   const headingId = `diff-${title.replace(/[^a-z]+/gi, "-").toLowerCase()}`;
   return (
-    <section aria-labelledby={headingId} className="border border-border-subtle bg-surface">
-      <h2
-        id={headingId}
-        className="border-b border-border-subtle px-5 py-3 text-sm font-semibold text-text"
-      >
-        {title}
-      </h2>
+    <AdminSection id={headingId} title={title}>
       {children}
-    </section>
+    </AdminSection>
   );
 }
 

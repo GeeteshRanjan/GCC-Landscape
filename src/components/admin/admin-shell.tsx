@@ -7,7 +7,8 @@ import { useDraft } from "@/components/admin/draft-provider";
 import { Button } from "@/components/ui/button";
 
 /**
- * App-shell chrome: a skip link, the section tabs, and one honest status line.
+ * App-shell chrome: a skip link, the grouped section nav, and one honest status
+ * line.
  *
  * Deliberately not a marketing surface, so the tastemaker asset and
  * scroll-motion defaults do not apply here — this is the app-shell track. No
@@ -20,16 +21,43 @@ import { Button } from "@/components/ui/button";
  * admin who edited for an hour and closed the tab.
  */
 
-const TABS = [
-  { href: "/admin", label: "Companies" },
-  { href: "/admin/taxonomy", label: "Taxonomy" },
-  { href: "/admin/business-types", label: "Business types" },
-  { href: "/admin/metrics", label: "Metrics" },
-  // The hero copy and the impact figures. Named for the surface it edits rather
-  // than for the dataset key behind it — an admin is looking for "the headline on
-  // the first page", not for `siteContent`.
-  { href: "/admin/entry-point", label: "Site copy" },
-  { href: "/admin/publish", label: "Publish" },
+/**
+ * The six sections, grouped the way the product is.
+ *
+ * Flat, the list said nothing about what a tab reaches: "Site copy" and "Function
+ * metrics" edit what a visitor is SHOWN, "Companies" and "Taxonomy" edit what that
+ * is drawn FROM, and "Publish" is the one act that makes either live. Three groups
+ * in that order, so a change request about a public screen maps to one place.
+ *
+ * Every label uses the product's own vocabulary, which is why `/admin/business-types`
+ * reads "Sub-industries": that is the word on the public dropdown and in the company
+ * table. **Only the LABEL moves** — the route, the dataset key and the component all
+ * keep their names, and the route is what the browser specs navigate by.
+ *
+ * "Site copy" is likewise named for the surface it edits rather than for the
+ * `siteContent` key behind it: an admin is looking for the headline on the first
+ * page, not for a schema field.
+ */
+const NAV_GROUPS = [
+  {
+    label: "Public screens",
+    tabs: [
+      { href: "/admin/entry-point", label: "Site copy" },
+      { href: "/admin/metrics", label: "Function metrics" },
+    ],
+  },
+  {
+    label: "Data",
+    tabs: [
+      { href: "/admin", label: "Companies" },
+      { href: "/admin/taxonomy", label: "Taxonomy" },
+      { href: "/admin/business-types", label: "Sub-industries" },
+    ],
+  },
+  {
+    label: "Release",
+    tabs: [{ href: "/admin/publish", label: "Publish" }],
+  },
 ] as const;
 
 export function AdminShell({
@@ -60,35 +88,13 @@ export function AdminShell({
         Skip to content
       </a>
 
+      {/* Two rows, because the group labels need the width. The identity and the
+          save status are the persistent state; the nav is the choice. */}
       <header className="sticky top-0 z-30 border-b border-border-subtle bg-surface">
-        <div className="mx-auto flex max-w-wide flex-wrap items-center gap-x-6 gap-y-3 px-6 py-3">
+        <div className="mx-auto flex max-w-wide flex-wrap items-center gap-x-6 gap-y-3 px-6 pt-3 pb-1">
           <p className="text-sm font-semibold tracking-heading text-text">
             GCC data
           </p>
-
-          <nav aria-label="Sections" className="flex items-center gap-1">
-            {TABS.map((tab) => {
-              const active =
-                tab.href === "/admin"
-                  ? pathname === "/admin"
-                  : pathname.startsWith(tab.href);
-              return (
-                <Link
-                  key={tab.href}
-                  href={tab.href}
-                  aria-current={active ? "page" : undefined}
-                  className={[
-                    "px-3 py-1.5 text-sm transition-colors duration-fast",
-                    active
-                      ? "bg-surface-sunken font-medium text-text"
-                      : "text-text-muted hover:text-text",
-                  ].join(" ")}
-                >
-                  {tab.label}
-                </Link>
-              );
-            })}
-          </nav>
 
           <div className="ms-auto flex items-center gap-4">
             <SaveStatus dirty={dirty} saveState={saveState} />
@@ -97,6 +103,58 @@ export function AdminShell({
             </Button>
           </div>
         </div>
+
+        {/*
+          A group per band rather than a list of lists, and that is a hard
+          constraint rather than a preference: `listitem` is counted PAGE-WIDE by
+          `4-entry-point.spec.ts`, where it means "an impact figure". Six links in a
+          `<ul>` would make that count read the nav. `role="group"` carries the same
+          grouping to a screen reader and adds no list role.
+        */}
+        <nav
+          aria-label="Sections"
+          className="mx-auto flex max-w-wide flex-wrap items-center gap-x-6 gap-y-1 px-6 pb-3"
+        >
+          {NAV_GROUPS.map((group) => {
+            const labelId = `admin-nav-${group.label.toLowerCase().replace(/\W+/g, "-")}`;
+            return (
+              <div
+                key={group.label}
+                role="group"
+                aria-labelledby={labelId}
+                className="flex flex-wrap items-center gap-x-2"
+              >
+                <span
+                  id={labelId}
+                  className="text-xs font-medium uppercase tracking-caps text-text-muted"
+                >
+                  {group.label}
+                </span>
+                {group.tabs.map((tab) => {
+                  const active =
+                    tab.href === "/admin"
+                      ? pathname === "/admin"
+                      : pathname.startsWith(tab.href);
+                  return (
+                    <Link
+                      key={tab.href}
+                      href={tab.href}
+                      aria-current={active ? "page" : undefined}
+                      className={[
+                        "px-3 py-1.5 text-sm transition-colors duration-fast",
+                        active
+                          ? "bg-surface-sunken font-medium text-text"
+                          : "text-text-muted hover:text-text",
+                      ].join(" ")}
+                    >
+                      {tab.label}
+                    </Link>
+                  );
+                })}
+              </div>
+            );
+          })}
+        </nav>
       </header>
 
       {/* Two banners, in severity order. The conflict one is a blocker in

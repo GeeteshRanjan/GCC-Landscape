@@ -141,6 +141,123 @@ function parseNumber(text: string): number | null | "invalid" {
   return Number.isFinite(n) ? n : "invalid";
 }
 
+/* --------------------------------------------------------------------------
+   Three couplings the admin cannot otherwise see
+
+   Three places on the public screens read an admin-editable STRING and degrade
+   quietly when it changes. Each degradation is documented where it lives and each
+   is an accepted trade — the figure, the order and the words are all unaffected, so
+   nothing the screen CLAIMS can move. What was missing is that the person renaming
+   the string had no way to know. These notices are that, and nothing more: they are
+   advisory, they never block a save, and they never mark a field invalid.
+
+   **The three key lists below are MIRRORS, copied rather than imported, and they can
+   drift.** Neither source is importable here: `metric-card.tsx` and `hr-view.tsx` are
+   public components — importing either would pull the public screen's React tree into
+   the admin bundle, and this editor must not depend on a public component — and
+   `SUBJECT_COLUMN` lives in `screen2.ts` beside the dataset-shaped code the admin
+   surface deliberately keeps at arm's length. So the copies are the cheap option and
+   the drift is the cost. What catches the drift is `tests/unit/charts-data.test.ts`,
+   which asserts the consequence rather than the constant — that renaming the subject
+   column loses a grid's emphasis without throwing — plus these notices being read by
+   whoever next renames a row. If a source list gains an entry, add it here too.
+   -------------------------------------------------------------------------- */
+
+/**
+ * Mirror of `CAPABILITY_ICONS` in `src/components/screen2/metric-card.tsx`.
+ *
+ * Keyed by matrix ROW label, and all-or-nothing: the public grid draws a glyph beside
+ * every row or beside none, because four rows of five carrying one reads as a row that
+ * failed to load. So renaming ONE row takes the glyphs off ALL of them.
+ */
+const GLYPH_ROWS: readonly string[] = [
+  "Product engineering",
+  "Data and AI",
+  "Cloud and platform",
+  "Cybersecurity",
+  "Enterprise technology",
+  "Shared services",
+  "Engineering",
+];
+
+/**
+ * Mirror of `SALARY_TONES` in `src/components/screen2/hr-view.tsx`.
+ *
+ * Keyed by breakdown ENTRY label. These two rows of the salary ranking draw in their
+ * own tone so the comparator reads as the comparator; every other row takes the
+ * subject tone.
+ */
+const TONED_ENTRIES: readonly string[] = ["All roles (reference)", "Non-ER&D roles"];
+
+/** Mirror of `SUBJECT_COLUMN` in `src/data/screen2.ts`. */
+const SUBJECT_COLUMN = "India";
+
+interface Coupling {
+  id: string;
+  text: string;
+}
+
+/**
+ * What the public screen would stop drawing if this form were saved as it stands.
+ *
+ * Every rule compares the SAVED metric with the form, so a notice only ever appears
+ * where something real is about to be lost — a metric that never had a glyph column
+ * cannot be warned about losing one. Nothing here is a validation: the word "loses"
+ * is doing the work, and the save button is unaffected.
+ */
+function couplings(metric: Metric, form: Form): Coupling[] {
+  const notices: Coupling[] = [];
+  const structure = metric.structure;
+  const trimmed = (values: readonly string[]) => values.map((value) => value.trim());
+
+  if (structure.kind === "matrix") {
+    const saved = trimmed(structure.rows);
+    const rows = trimmed(form.rows);
+    /**
+     * Rating format only, because the glyph column is drawn by the ordinal grid and
+     * nothing else reads the row names.
+     */
+    if (
+      metric.format === "rating" &&
+      saved.length > 0 &&
+      saved.every((row) => GLYPH_ROWS.includes(row)) &&
+      !rows.every((row) => GLYPH_ROWS.includes(row))
+    ) {
+      notices.push({
+        id: "rows",
+        text:
+          "The small mark beside each row comes off the whole grid, not just the row you changed — the visitor sees every row without one. The names the public screen recognises are: " +
+          `${GLYPH_ROWS.join(", ")}.`,
+      });
+    }
+
+    if (
+      trimmed(structure.columns).includes(SUBJECT_COLUMN) &&
+      !trimmed(form.columns).includes(SUBJECT_COLUMN)
+    ) {
+      notices.push({
+        id: "columns",
+        text: `Without a column called “${SUBJECT_COLUMN}” the grid stops tinting and colouring the column the visitor is deciding about, so their eye no longer lands on it first. Every cell still states its own value.`,
+      });
+    }
+  }
+
+  if (structure.kind === "breakdown") {
+    const entries = trimmed(form.entries);
+    const lost = TONED_ENTRIES.filter(
+      (entry) => trimmed(structure.entries).includes(entry) && !entries.includes(entry),
+    );
+    if (lost.length > 0) {
+      notices.push({
+        id: "entries",
+        text: `${lost.join(" and ")} draws in its own tone on the public ranking, so a reader can see at a glance which row is the comparison. Renamed, it draws like every other row — the words in the name are what actually tell them, so nothing is stated any less clearly.`,
+      });
+    }
+  }
+
+  return notices;
+}
+
 export function MetricEditor({
   metric,
   open,
@@ -157,6 +274,11 @@ export function MetricEditor({
   const kind = metric.structure.kind;
   const isRating = metric.format === "rating";
   const scale = metric.ratingScale ?? [];
+  /**
+   * Recomputed on every keystroke rather than held in state: it is a pure function of
+   * the metric and the form, so a second copy of it could only ever be a stale one.
+   */
+  const lost = couplings(metric, form);
 
   function set<K extends keyof Form>(key: K, value: Form[K]) {
     setForm((current) => ({ ...current, [key]: value }));
@@ -449,6 +571,39 @@ export function MetricEditor({
                 onChange={(value) => set("maxLabel", value)}
               />
             </fieldset>
+          ) : null}
+
+          {/*
+            **Advisory, and `role="status"` rather than `role="alert"` says so.** An
+            alert interrupts, which is right for something the admin has to fix and
+            wrong for three cosmetic degradations they may well intend. Nothing here
+            reaches `errors`, nothing here disables the save, and no field is marked
+            invalid — the whole point is that these are decisions rather than mistakes.
+
+            It sits directly above the row, column and part editors, because that is
+            where the strings it is about are typed.
+
+            **No new label contains the word "figure".** `getByLabel` matches on a
+            SUBSTRING and the scalar control above is labelled "Figure"; a new label
+            containing it resolves to two elements and breaks every spec locating the
+            shorter one. That has already cost four specs once. See docs/traps.md.
+          */}
+          {lost.length > 0 ? (
+            <div
+              role="status"
+              className="flex flex-col gap-2 border border-border-subtle bg-surface-subtle px-4 py-3"
+            >
+              <p className="text-xs font-semibold uppercase tracking-caps text-text-muted">
+                Saving this changes how the public screen draws
+              </p>
+              <ul className="flex max-w-measure flex-col gap-1.5">
+                {lost.map((notice) => (
+                  <li key={notice.id} className="text-xs text-text">
+                    {notice.text}
+                  </li>
+                ))}
+              </ul>
+            </div>
           ) : null}
 
           {kind === "breakdown" ? (

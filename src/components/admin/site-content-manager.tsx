@@ -2,6 +2,7 @@
 
 import { useDraft } from "@/components/admin/draft-provider";
 import { SelectField, TextField } from "@/components/admin/fields";
+import { AdminPageHeader, AdminSection } from "@/components/admin/page-header";
 import { Button } from "@/components/ui/button";
 import { PUBLIC_COPY_LABELS } from "@/data/diff";
 import {
@@ -129,19 +130,11 @@ export function SiteContentManager() {
   const blocked = !siteContentSchema.safeParse(draft.siteContent).success;
 
   return (
-    <div className="flex flex-col gap-8">
-      <div>
-        <h1 className="text-xl font-semibold tracking-heading text-text">
-          Site copy
-        </h1>
-        <p className="mt-1 max-w-measure text-sm text-text-muted">
-          The headline on the first screen, the impact figures at the bottom of it,
-          and the closing call to action on both result screens. These are the only
-          words and numbers on the public pages that are not drawn from the company
-          data, which is why they are editable here — nothing is live until you
-          publish.
-        </p>
-      </div>
+    <div className="flex flex-col gap-6">
+      <AdminPageHeader
+        title="Site copy"
+        lead="The words and figures on the public pages that are not drawn from the company data."
+      />
 
       {blocked ? (
         /* Form and words, never colour alone: this palette carries no danger hue.
@@ -156,26 +149,19 @@ export function SiteContentManager() {
 
       <CloseEditor close={close} onChange={updateCloseCopy} />
 
-      <section
-        aria-labelledby="impact-figures"
-        className="border border-border-subtle bg-surface"
-      >
-        <div className="border-b border-border-subtle px-5 py-4">
-          <h2
-            id="impact-figures"
-            className="text-base font-semibold text-text"
-          >
-            Impact figures
-          </h2>
-          <p className="mt-1 max-w-measure text-sm text-text-muted">
+      <AdminSection
+        id="impact-figures"
+        title="Impact figures"
+        description={
+          <p>
             ANSR&rsquo;s own numbers, shown as one row on the dark band. The order
             here is the order a visitor reads them in, left to right. Type the figure
             exactly as it should appear, including any suffix — &ldquo;225K+&rdquo;,
             &ldquo;$2.5B+&rdquo;. Nothing here is calculated from the company data or
             checked against it.
           </p>
-        </div>
-
+        }
+      >
         {impactStats.length === 0 ? (
           <p className="px-5 py-10 text-center text-sm text-text-muted">
             No figures. The impact band is hidden on the public page until there is
@@ -214,7 +200,7 @@ export function SiteContentManager() {
             </p>
           ) : null}
         </div>
-      </section>
+      </AdminSection>
 
       <FunctionsEditor values={commonFunctions} onChange={setCommonFunctions} />
 
@@ -239,20 +225,16 @@ function HeroEditor({
   onChange: (patch: Partial<HeroCopy>) => void;
 }) {
   return (
-    <section
-      aria-labelledby="hero-copy"
-      className="border border-border-subtle bg-surface"
-    >
-      <div className="border-b border-border-subtle px-5 py-4">
-        <h2 id="hero-copy" className="text-base font-semibold text-text">
-          Hero
-        </h2>
-        <p className="mt-1 max-w-measure text-sm text-text-muted">
+    <AdminSection
+      id="hero-copy"
+      title="Hero"
+      description={
+        <p>
           Two elements, and there is no third — no eyebrow, no button, no proof line.
           The title is the product label and the page&rsquo;s only <code>h1</code>.
         </p>
-      </div>
-
+      }
+    >
       <div className="flex flex-col gap-5 px-5 py-5">
         <TextField
           label="Title"
@@ -269,7 +251,7 @@ function HeroEditor({
           onChange={(value) => onChange({ lead: value })}
         />
       </div>
-    </section>
+    </AdminSection>
   );
 }
 
@@ -294,21 +276,17 @@ function CloseEditor({
   onChange: (patch: Partial<CloseCopy>) => void;
 }) {
   return (
-    <section
-      aria-labelledby="close-copy"
-      className="border border-border-subtle bg-surface"
-    >
-      <div className="border-b border-border-subtle px-5 py-4">
-        <h2 id="close-copy" className="text-base font-semibold text-text">
-          Closing call to action
-        </h2>
-        <p className="mt-1 max-w-measure text-sm text-text-muted">
+    <AdminSection
+      id="close-copy"
+      title="Closing call to action"
+      description={
+        <p>
           The last band on both result screens — the peer landscape and the function
           metrics — over the blurred panel of withheld detail. It is the only link out
           of the tool. There is no heading: these two elements are the whole band.
         </p>
-      </div>
-
+      }
+    >
       <div className="flex flex-col gap-5 px-5 py-5">
         <TextField
           label="Supporting line"
@@ -325,7 +303,7 @@ function CloseEditor({
           onChange={(value) => onChange({ ctaLabel: value })}
         />
       </div>
-    </section>
+    </AdminSection>
   );
 }
 
@@ -443,15 +421,11 @@ function FunctionsEditor({
   }
 
   return (
-    <section
-      aria-labelledby="common-functions"
-      className="border border-border-subtle bg-surface"
-    >
-      <div className="border-b border-border-subtle px-5 py-4">
-        <h2 id="common-functions" className="text-base font-semibold text-text">
-          Function list
-        </h2>
-        <p className="mt-1 max-w-measure text-sm text-text-muted">
+    <AdminSection
+      id="common-functions"
+      title="Function list"
+      description={
+        <p>
           The tags under &ldquo;Functions most GCCs run from India&rdquo; on the peer
           landscape. They are a claim about GCCs in general, not about the companies
           above them, so keep each one a function rather than a company&rsquo;s
@@ -459,8 +433,8 @@ function FunctionsEditor({
           than the rest is the one that decides the layout — the shipped eight sit
           between 16 and 28 characters.
         </p>
-      </div>
-
+      }
+    >
       <div className="divide-y divide-border-subtle">
         {values.map((value, index) => {
           const which = value.trim() || `function ${index + 1}`;
@@ -531,7 +505,7 @@ function FunctionsEditor({
           </p>
         ) : null}
       </div>
-    </section>
+    </AdminSection>
   );
 }
 
@@ -562,22 +536,18 @@ function LogoEditor({
   );
 
   return (
-    <section
-      aria-labelledby="customer-logos"
-      className="border border-border-subtle bg-surface"
-    >
-      <div className="border-b border-border-subtle px-5 py-4">
-        <h2 id="customer-logos" className="text-base font-semibold text-text">
-          Customer logo strip
-        </h2>
-        <p className="mt-1 max-w-measure text-sm text-text-muted">
+    <AdminSection
+      id="customer-logos"
+      title="Customer logo strip"
+      description={
+        <p>
           The scrolling band of marks under the form. It is evidence about ANSR, not
           about this tool, so nothing here may imply these companies used it. Files
           are chosen from what is already served — adding a new mark is a developer
           step, because each one is an adapted copy committed to the repo.
         </p>
-      </div>
-
+      }
+    >
       {logos.length === 0 ? (
         <p className="px-5 py-10 text-center text-sm text-text-muted">
           No marks. The strip is hidden on the public page until there is at least
@@ -629,7 +599,7 @@ function LogoEditor({
           </p>
         ) : null}
       </div>
-    </section>
+    </AdminSection>
   );
 }
 
@@ -877,20 +847,12 @@ function CopyEditor({
   return (
     <>
       {COPY_GROUPS.map((group) => (
-        <section
+        <AdminSection
           key={group.id}
-          aria-labelledby={group.id}
-          className="border border-border-subtle bg-surface"
+          id={group.id}
+          title={group.heading}
+          description={<p>{group.description}</p>}
         >
-          <div className="border-b border-border-subtle px-5 py-4">
-            <h2 id={group.id} className="text-base font-semibold text-text">
-              {group.heading}
-            </h2>
-            <p className="mt-1 max-w-measure text-sm text-text-muted">
-              {group.description}
-            </p>
-          </div>
-
           <div className="grid gap-5 px-5 py-5 lg:grid-cols-2">
             {group.fields.map((field) => {
               // Every key in the schema carries a cap, so this is a bound rather than
@@ -913,7 +875,7 @@ function CopyEditor({
               );
             })}
           </div>
-        </section>
+        </AdminSection>
       ))}
     </>
   );

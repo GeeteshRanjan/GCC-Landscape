@@ -2,6 +2,8 @@
 
 import { useMemo, useState } from "react";
 
+import { AdminPageHeader } from "@/components/admin/page-header";
+import { Button } from "@/components/ui/button";
 import { BUSINESS_TAG_AXES, type BusinessTag } from "@/data/business-tags";
 import type { BusinessType } from "@/data/schema";
 import { slugify } from "@/data/normalize";
@@ -64,20 +66,18 @@ export function BusinessTypeManager() {
 
   return (
     <div className="flex flex-col gap-6">
-      <div>
-        <h1 className="text-xl font-semibold tracking-heading text-text">
-          Business types
-        </h1>
-        <p className="mt-1 max-w-measure text-sm text-text-muted">
-          What a visitor picks as their sub-industry, and what drives peer
-          similarity. Tags are the signal; their weighting is automatic. Editing a
-          type&apos;s tags changes which companies appear as peers across its whole
-          industry, so the publish diff reports it as a real change.
-        </p>
-      </div>
+      {/* The `h1` stays "Business types" — it names the DATA, and it is what the
+          business-types spec locates this page by. The nav says "Sub-industries",
+          which is the word a visitor reads. */}
+      <AdminPageHeader
+        title="Business types"
+        lead="What a visitor picks as their sub-industry, and what drives peer similarity."
+      >
+        <Button onClick={() => setAdding(true)}>Add a business type</Button>
+      </AdminPageHeader>
 
-      <div className="flex flex-col gap-2">
-        <label className="flex flex-col gap-1.5">
+      <div className="flex flex-wrap items-end justify-between gap-x-6 gap-y-3">
+        <label className="flex w-64 flex-col gap-1.5">
           {/* "Filter by industry", not "Industry": the edit form below has its own
               Industry select, and two controls with the same accessible name make
               both unaddressable by name. */}
@@ -95,20 +95,10 @@ export function BusinessTypeManager() {
             ))}
           </select>
         </label>
-      </div>
-
-      <div className="flex items-center justify-between gap-4">
         <p className="text-sm text-text-muted">
           {visible.length} business {visible.length === 1 ? "type" : "types"}. Editing tags
           re-scores every peer set in that industry.
         </p>
-        <button
-          type="button"
-          onClick={() => setAdding(true)}
-          className="min-h-11 rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground"
-        >
-          Add a business type
-        </button>
       </div>
 
       {adding ? (

@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 
 import { useDraft, type TaxonomyKey } from "@/components/admin/draft-provider";
+import { AdminPageHeader, AdminSection } from "@/components/admin/page-header";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -112,17 +113,11 @@ export function TaxonomyManager() {
   }, [draft.companies]);
 
   return (
-    <div className="flex flex-col gap-8">
-      <div>
-        <h1 className="text-xl font-semibold tracking-heading text-text">
-          Taxonomy
-        </h1>
-        <p className="mt-1 max-w-measure text-sm text-text-muted">
-          These four lists are what the public dropdowns offer. A value added
-          here appears there as soon as you publish — nothing needs to be
-          changed in code.
-        </p>
-      </div>
+    <div className="flex flex-col gap-6">
+      <AdminPageHeader
+        title="Taxonomy"
+        lead="What the public dropdowns offer, live on the next publish."
+      />
 
       {LISTS.map((config) => (
         <TaxonomyList
@@ -251,49 +246,44 @@ function TaxonomyList({
   }
 
   return (
-    <section
-      aria-labelledby={`taxonomy-${config.key}`}
-      className="border border-border-subtle bg-surface"
-    >
-      <div className="border-b border-border-subtle px-5 py-4">
-        <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
-          <h2
-            id={`taxonomy-${config.key}`}
-            className="text-base font-semibold text-text"
-          >
-            {config.title}
-          </h2>
+    <AdminSection
+      id={`taxonomy-${config.key}`}
+      title={config.title}
+      meta={
+        <>
           <p className="text-sm text-text-muted">{values.length} values</p>
           {config.ordered ? (
             <p className="text-xs font-medium uppercase tracking-caps text-action">
               Order is meaningful
             </p>
           ) : null}
-        </div>
-        <p className="mt-1 max-w-measure text-sm text-text-muted">
-          {config.description}
-        </p>
-        {/* One hint for the whole list, referenced by every row's control rather than
-            repeated on each of them: the explanation is about the column, not about
-            the row, and twenty-four copies of it is what a screen reader would read
-            out twenty-four times. */}
-        {config.rowExtra === "pin" ? (
-          <p id={extraHintId} className="mt-1 max-w-measure text-sm text-text-muted">
-            A pinned industry sits in the dropdown&rsquo;s leading tier however few
-            companies it has. Position inside the tier is still by company count, so
-            this decides membership only. Keep the set short — everything pinned makes
-            nothing prominent.
-          </p>
-        ) : null}
-        {config.rowExtra === "coordinate" ? (
-          <p id={extraHintId} className="mt-1 max-w-measure text-sm text-text-muted">
-            Only needed for a city the code does not already know. A city with no
-            coordinate is still counted, ranked and listed — it simply carries no dot
-            on the map, and nothing on the public page says so.
-          </p>
-        ) : null}
-      </div>
-
+        </>
+      }
+      description={
+        <>
+          <p>{config.description}</p>
+          {/* One hint for the whole list, referenced by every row's control rather
+              than repeated on each of them: the explanation is about the column, not
+              about the row, and twenty-four copies of it is what a screen reader
+              would read out twenty-four times. */}
+          {config.rowExtra === "pin" ? (
+            <p id={extraHintId}>
+              A pinned industry sits in the dropdown&rsquo;s leading tier however few
+              companies it has. Position inside the tier is still by company count,
+              so this decides membership only. Keep the set short — everything pinned
+              makes nothing prominent.
+            </p>
+          ) : null}
+          {config.rowExtra === "coordinate" ? (
+            <p id={extraHintId}>
+              Only needed for a city the code does not already know. A city with no
+              coordinate is still counted, ranked and listed — it simply carries no
+              dot on the map, and nothing on the public page says so.
+            </p>
+          ) : null}
+        </>
+      }
+    >
       <ul className="divide-y divide-border-subtle">
         {values.map((value, index) => {
           const count = usage.get(value) ?? 0;
@@ -592,6 +582,6 @@ function TaxonomyList({
           </p>
         ) : null}
       </form>
-    </section>
+    </AdminSection>
   );
 }

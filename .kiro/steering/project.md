@@ -141,10 +141,13 @@ one honest empty: the dataset holds seven airlines and no MRO. **`businessTypes`
 `COMPANY_FIELDS` in `diff.ts`** — left out, a whole re-tagging pass reported "no company changes" and
 would have published as a silent no-op.
 
-**Dropdown order is derived from company counts**, with one exception: `PINNED_INDUSTRIES` — Retail and
-Consumer Packaged Goods sit in the leading tier regardless of count, because ANSR expects enquiries out
-of proportion to dataset composition. Pinned entries still sort by count inside the tier. Keep the list
-short. Industry leads with the largest by count, HQ with the twelve largest, then alphabetical, as two
+**Dropdown order is derived from company counts**, with one exception: **`taxonomy.pinnedIndustries`**,
+edited by a per-row toggle in the taxonomy editor — Retail and Consumer Packaged Goods sit in the leading
+tier regardless of count, because ANSR expects enquiries out of proportion to dataset composition. Pinned
+entries still sort by count inside the tier, so the list decides MEMBERSHIP and never position, and a
+reorder of it is deliberately not reported by the diff. **A parallel list of names rather than a flag on a
+restructured `industries`**: that list is a `string[]` companies, business types and the public dropdowns
+all key on by value, so the schema checks the copy referentially instead. Keep the set short. Industry leads with the largest by count, HQ with the twelve largest, then alphabetical, as two
 groups. **`revenueBands` is never tiered or sorted** — its order is the matching contract.
 
 **A company NAME is corrected in the same one place, by the same kind of table.**
@@ -324,8 +327,10 @@ its meaning.
 **The function list is a WRAPPING SET OF TAGS** with no column count at all. **The tags claim nothing:**
 no numeral, no bar, no leading mark, no hover state, no order, and it stays a `<ul>` — there is no
 per-company function record in this dataset. `whitespace-nowrap` guarantees nothing wraps internally.
-Fill is `--ansr-surface` on the mint zone, no border. **`COMMON_FUNCTIONS` is written to a 16-to-28
-character range so no item decides the layout.** The section heading carries the basis: "Functions most
+Fill is `--ansr-surface` on the mint zone, no border. **The shipped set is written to a 16-to-28
+character range so no item decides the layout**, and the schema caps an item at 32 and the list at 12 —
+the set wraps as one row with no column count, so an item much longer than the rest is the one that
+decides the layout. The section heading carries the basis: "Functions most
 GCCs run from India" is a claim about GCCs in general and cannot be read as one about the companies
 above it.
 
@@ -635,7 +640,11 @@ Violating any of these breaks the product, not just the build.
    one paints a disputed strip two ways, and drawing two different Indias on one page is the hardest thing
    here to defend. Both cache the same geojson under `.cache/` and commit only derived path strings.
    Positions come from `CITY_COORDINATES` in `geo.ts` — geographic fact, in code, so the taxonomy editor
-   cannot plot a city somewhere invented. **The frame is fixed, may never be fitted to whichever cities an
+   cannot plot a city somewhere invented. **`taxonomy.cityCoordinates` is an OVERLAY on it, never a
+   replacement**, read first by `projectCity` and bounded to India's own extent by the schema: it supplies
+   the one thing the code cannot, which is where a city added after the seed actually is. **A city with no
+   coordinate on either side is counted, ranked and listed and simply carries no dot, and nothing on the
+   public screen says so** — the gap is surfaced in the taxonomy editor, where it can be fixed. **The frame is fixed, may never be fitted to whichever cities an
    industry occupies, and must contain the whole of India.** `MAP_FRAME` and `INDIA_OUTLINE_FRAME` are the
    same numbers written twice and a unit test asserts they agree. **The visible attribution caption is
    gone at ANSR's request and a spec asserts its absence** — the open conflict is that the page no longer
@@ -722,18 +731,41 @@ against its own copy in `tests/browser/.tmp`.
 **The dataset is read server-side and held in memory. It is never shipped whole to the browser** —
 Screen 1 sends five peers and a few counts.
 
-**Three editable collections, one file.** Companies, metrics, and `siteContent` (the entry point's hero
-copy, ANSR's impact figures, and the result screens' CLOSE) all live in `dataset.json`. A second file would mean a second write
+**Three editable collections, one file.** Companies, metrics, and `siteContent` — the entry point's hero
+copy, ANSR's impact figures, the result screens' CLOSE, the peer view's `commonFunctions` tags, the
+entry point's `logos`, and `copy`, the 29 static visitor-facing strings — all live in `dataset.json`. A second file would mean a second write
 target, a second diff, a second cache and a publish that could half-succeed. `metrics` is **defaulted to
 `[]` rather than required**, so a dataset written before it existed still reads — the fs store refuses an
 unrecognised version, so bumping `DATASET_VERSION` would have turned a compatible addition into a broken
 read.
 
+**THE LINE BETWEEN AN EDITABLE STRING AND A CODE ONE IS WHETHER IT STATES A CLAIM ABOUT THE DATASET.**
+A heading, a label or an attribution names what a reader is looking at and asserts nothing about it, so it
+is `siteContent.copy` — 29 flat keys, each capped at a render limit measured on the real layout, grouped by
+screen in the editor. A sentence that states a count, a share or an ordering has to move when the thing it
+describes moves, so it stays a function in `copy.ts`: `peerCountLine`, `shortfallLine`, `largestLine`,
+`industrySentence`, `largestOverlapLine` and their siblings are derived and have no fixed wording to edit.
+
+**Three strings clear the first test and still stay in code, and each is worth keeping.**
+`FUNCTIONS_TITLE` — "Functions most GCCs run from India" — is what stops eight function tags being read as
+a claim about the five companies above them, and there is no per-company function record to support
+anything narrower; as free text it could be reworded into a falsehood nothing catches. The snapshot's
+opening label is COMPOSED over the visitor's scope, so a flat field could hold only one of its two
+branches. And `ASK.submitPending` is a transient machine state whose length is load-bearing.
+**A fourth key existed briefly and was removed rather than left unread**: `snapshotShareLabel` rendered
+nowhere, and an editable field nothing draws is a change an admin makes and cannot see.
+
+**Each constant in both `copy.ts` files READS its `DEFAULT_PUBLIC_COPY` key rather than restating the
+string**, so there is one shipped value per string and the wording cannot drift between the code default
+and the schema default. The reasoning for every wording decision stays in `copy.ts`; only the value moved.
+`PublicCopyProvider` in `copy-context.tsx` supplies the published block, and **its context DEFAULT is the
+shipped block** — so a component with no provider above it renders the real wording rather than nothing,
+which is what keeps the provider optional instead of load-bearing.
+
 **Why the hero copy and the close are data when no other public string is:** everything else is an argument
 about the dataset and lives beside the logic making the argument. The hero is positioning, the impact figures
 are corporate facts on their own schedule, and the close is an offer — none of the three makes a claim about
-the data. **That is the test any addition here has to pass**, and it is why no heading, label or finding on
-either result screen is editable. This category changes what every visitor is shown regardless of what they
+the data. This category changes what every visitor is shown regardless of what they
 answered, so it gets its own diff and leads the preview. Its default is real content rather than `[]`, and
 `close` is `.default()`-ed for the reason `metrics` is `[]`-defaulted: a required new key would make every
 dataset written before it a broken read. **The hero's company count is deliberately "1,800+" and not 1,834** — editable text, not
@@ -842,9 +874,20 @@ value still in use is refused in the editor, where the reason can be explained, 
 gate. **`taxonomy.revenueBands` is ordered ascending and that order is the contract**; the editor appends
 and offers Move up / Move down, and the diff reports a reorder as a real change.
 
+**Two PARALLEL keys sit beside the four lists and are not lists themselves** — `pinnedIndustries` holds
+copies of strings from `industries`, `cityCoordinates` is keyed by a string from `cities`. Both are
+edited on the row that owns the string rather than in an editor of their own, both are checked
+referentially by the schema, and **both are carried by the rename cascade and the remove sweep** — a pin
+or a coordinate left under a name that no longer exists is a publish that fails on an edit the UI
+reported as successful. `TAXONOMY_LIST_KEYS` in `schema.ts` names the four flat lists, because
+`keyof Taxonomy` used to mean exactly that and stopped the moment these two arrived.
+
 **The four function areas and four lenses are enums, not taxonomy.** The metric editor can rename a
 metric, rewrite its question, and add, rename or remove the parts and axes of its shape — but not add or
-delete a whole metric, and not change its format, function area, lens, gating or `atLeast` marker. A
+delete a whole metric, and not change its format, function area, lens or gating. **`atLeast` IS editable**,
+and the line between it and those is worth keeping: it is a claim about how the figures in front of the
+admin were arrived at, which only whoever entered them knows, so `replaceMetric` takes it from the form
+while it re-pins the rest. `progression` and `subset` stay out because both change which chart is drawn. A
 genuinely new metric is a code change to the catalogue, deliberately. Because six titles appear on more
 than one tab, admin's Edit button names the function area alongside the title.
 
@@ -860,8 +903,9 @@ rather than counted**, so a metric losing its gate reads as a named change. **Do
 back into one list of hardcoded numbers** — a check that must be edited or ignored after every legitimate
 change has stopped being a check.
 
-**Known gap:** no per-company function list, and there will not be one. `COMMON_FUNCTIONS` is the
-hardcoded set the brief permits.
+**Known gap:** no per-company function list, and there will not be one. The set the brief permits is
+`siteContent.commonFunctions`, admin-editable — it can be data BECAUSE the block claims nothing: no
+numeral, no bar, no order. `DEFAULT_COMMON_FUNCTIONS` in `schema.ts` is the seed.
 
 ## Architecture map
 
@@ -871,12 +915,12 @@ What lives where. Never a file listing — the tree is supplied each session.
 | --- | --- |
 | `src/app/` | App Router. `layout.tsx` self-hosts the display face via `next/font` and exposes it as `--gcc-font-display-loaded`, which `tokens.css` reads — the generated family name is hashed, so naming the face literally would fall through to the sans stack and lose Light 300. **`font-display` is set ONCE, on the public root in `tool.tsx`**, never per surface. `body` stays on `--ansr-font-sans` so admin keeps Inter. `page.tsx` is the only public route, serves both screens, and is `force-dynamic`. `actions.ts` is the public surface's single server action — one seam, so there is one place to check the dataset does not cross. Screen 2 needs none: its payload does not depend on the visitor. `globals.css` is the Tailwind theme aliased onto brand tokens; it restates no values and clears Tailwind's palette. **`--ansr-gradient-teal` and `--ansr-gradient-orange` are `background` SHORTHAND values, not images** — a colour is not a valid `<image>`, so aliasing them into `--background-image-*` emits an invalid `background-image` that paints nothing silently while still generating a class that looks correct. Both go through `.gcc-ground-gradient`; only `--ansr-gradient-conic` stays aliased. |
 | `src/data/` | The whole data layer, and the only place that knows the dataset shape. `schema.ts` (zod contract), `normalize.ts` (cleaning primitives, shared by importer and admin upload so one format never gets two parsers), `derive.ts`, `peers.ts` (scored engine + Screen 1 counts + the ladder oracle), `similarity.ts` (IDF weighting, band steps, `SIMILARITY_FLOOR`), `search.ts` + `search-terms.ts` (the dropdown filter's matcher and its vocabulary — the two modules in here a CLIENT component imports, which is why neither may ever take `server-only` and why they hold no dataset), `business-tags.ts`, `business-type-catalogue.ts`, `diff.ts` (one computation, two renderers), `metrics.ts` (`publicMetric`, the gate), `metric-catalogue.ts`, `store.ts` + `store/{fs,github}-store.ts`, `publish-store.ts` (selects the write target, refuses to guess), `dataset.ts` (cached read, mtime+size invalidation, `server-only` — which is what makes "never ship the dataset" a build error). `screen1.ts` is Screen 1's view model; two fields carry their own justification — `industry.averageHeadcount` is a mean of FTE BAND MIDPOINTS, industry-level, rounded coarser than the narrowest band, and never renderable without a method line; `scale.asOf` is the dataset's `generatedAt`, the only date here that is a machine fact, and `dataset.source` is deliberately not carried across. `screen2.ts` is Screen 2's view model and holds `figureParts`, `layoutArea`, `metricWidth`, `packWidths`, `breakdownDisplay`, `gridDisplay`, `breakdownScale`, `selfLabelling`, `journeyLegs`; it imports the gate rather than `dataset.metrics`, so there is no path around it, and resolves every metric to pre-formatted figures with no nullable value left in the type. `geo.ts` (city coordinates, `MAP_FRAME`), `india-outline.ts` and `dot-world-map.ts` (both GENERATED, never hand-edited), `countries.ts`. |
-| `src/app/admin/` | Six tabs: Companies, Taxonomy, Business types, Metrics, Entry point, Publish. `login/` sits outside the `(authed)` route group; the group's layout is the guard and hosts the draft provider. A route group rather than middleware — middleware would be a second runtime to keep Node-only for no gain. |
+| `src/app/admin/` | Six routes, and the NAV groups them the way the product is: *Public screens* (Site copy, Function metrics), *Data* (Companies, Taxonomy, Sub-industries), *Release* (Publish). **The labels use the product's own vocabulary and the ROUTES never move** — `/admin/business-types` reads "Sub-industries" because that is the word a visitor sees, while the route, the dataset key and the component keep their names. The nav is `role="group"` rather than a list, because `listitem` is counted page-wide by a spec where it means an impact figure. `page-header.tsx` holds `AdminPageHeader` and `AdminSection`, the two idioms every page is built from — they were hand-rolled at fifteen call sites, which is how the pages drifted to two different outer gaps and three heading densities. `login/` sits outside the `(authed)` route group; the group's layout is the guard and hosts the draft provider. A route group rather than middleware — middleware would be a second runtime to keep Node-only for no gain. |
 | `src/app/api/admin/` | Login, logout, diff preview, publish. Each **re-checks the session itself** — a layout cannot guard a route handler, and a route that forgot would be silently public. |
 | `src/lib/admin/` | `password.ts` (scrypt), `session.ts` (signed cookie, `server-only`), `rate-limit.ts` (two budgets), `totp.ts` (RFC 6238 on `node:crypto`, no dependency), `guard.ts` (redirect for pages, bare 401 for APIs), `publish.ts` (validate → read → diff, shared by preview and commit), `constants.ts` (exists because `server-only` throws under `tsx`). |
-| `src/components/admin/` | Client-side admin UI. `draft-provider.tsx` autosaves locally and pins the baseline it started from; its `STORAGE_KEY` is versioned and **must be bumped whenever the editable shape changes**, because restoring a draft missing a key produces a schema error the admin cannot fix from the UI. `site-content-manager.tsx` is the one editor with no local form state and no Save button — nothing in it has a cross-field rule, so there is no second copy of the truth. Plus the app shell, company table and editor, taxonomy editor, metric catalogue and editor, publish view. |
+| `src/components/admin/` | Client-side admin UI. `draft-provider.tsx` autosaves locally and pins the baseline it started from; its `STORAGE_KEY` is versioned and **must be bumped whenever the editable shape changes**, because restoring a draft missing a key produces a schema error the admin cannot fix from the UI — and `tests/browser/helpers.ts` owns `DRAFT_STORAGE_KEY` and must move with it. **A DEFAULTED key is the quieter and worse case, and the restore guard is what catches it**: a draft written before one still parses on the way out, so publishing it would silently RESET that collection to the shipped values and report it as an ordinary edit. So the restore checks the keys it is about to trust by shape and drops a draft that predates them. `site-content-manager.tsx` is the one editor with no local form state and no Save button — nothing in it has a cross-field rule, so there is no second copy of the truth. Plus the app shell, company table and editor, taxonomy editor, metric catalogue and editor, publish view. |
 | `src/components/public/` | What both screens use. `tool.tsx` owns the phase machine — ask, Peer View, Function View — as component state, and moves focus to the new phase's landmark on every transition. **On the result screens that landmark is the tab panel, not the `h1`**, which is identical on both. **The focus move is an effect keyed on the phase, never a call beside `setPhase`** — the `requestAnimationFrame` version assumed React commits before the next frame, and when it did not the ref was null and the only announcement was silently dropped; it passed locally and failed on the deployed build. The effect must skip its first run. **It always takes `preventScroll`, and `tool.tsx` states the position itself**: the visitor's own offset between the two views, document top for anything involving the ask. The offset is read on the press and written back after the commit, because `preventScroll` alone still dropped to 0 when a ~2,900px document was replaced by a ~1,650px one. None of this is the banned scroll logic and every write is inert in the embed. `primitives.tsx` holds `Section`, `Stat`, chip, fact-list and provenance shapes, the number formatters, `Panel` (bordered card, radius `none`, no shadow, `PanelTone` = `plain | inverse | sealed`, plus `chip` and `headingLevel`), `Block` (same landmark contract, no container, `weight="lead"`) and `Zone` (the alternating full-bleed grounds; each screen owns its own SEQUENCE — plus `inverse-soft`, the one ground EXEMPT from the alternation, and `behind`, a full-bleed layer under the padded container, both of which exist for the close). `screen-header.tsx` owns the whole result SURFACE: `ResultSurface` (ornamented band + floating card, taking the tab bar and the panel as separate props because their order is not a caller's decision, plus a `footer` for the caption under the card), `ProductIdentity`, `HeaderFinding`, `ContextPanels`, `ViewTabs`. `charts.tsx` is the shared vocabulary, including `Containment`, `RangeBenchmark`, `MilestoneTrack`, `IndexSpread`, `IndexTable`, `BarTone`, and the five renderers with no live caller. `closing-cta.tsx` is the shared close — `ClosingCta`, `PrimaryCta`, `CloseBackdrop`, the `TILES` field and the one `CLOSE_COPY`; both result screens render it, and neither decides anything about the backdrop or supplies a word of the copy. This folder exists because Screen 2 wanted most of `screen1/primitives.tsx`. |
-| `src/components/screen1/` | The public Peer View. `peer-view.tsx` (ask and answer states), `ask-hero.tsx` (the one band using the brand's real display ground, which **admits white ink only** — every muted token measures under 3:1 on it), `customer-logos.tsx`, `impact-band.tsx`, `ansr-wordmark.tsx` (drawn lockup, sized off cap height, word carried in `sr-only` so the accessible name is unchanged), `dotted-world-map.tsx` (layout only — two `<path>` elements over generated geometry; all ink, opacity, radius and edge fade in `.gcc-hero-map` and `.gcc-header-map`, so the two placements cannot diverge), `input-panel.tsx` (four controls over six fields, its own field primitives because a public form and a dense internal tool want different densities), `select-field.tsx` (the widget all four use, and the one place an option carrying children turns the popup into a tree; `.gcc-select-*` in globals.css carries both shapes and the measured room table), `evidence.tsx` (comparison grid, containment layers, largest-centres chart, function tags, scale strip; `CityCells` has two consumers), `city-map.tsx`, `snapshot.tsx`, `copy.ts` (**every visitor-facing sentence**, because which lines exist is a statement about what may honestly be claimed), `use-frame-height.ts`. **Both ranked TABLES are gone, and with them the focusable horizontal scroller.** |
+| `src/components/screen1/` | The public Peer View. `peer-view.tsx` (ask and answer states), `ask-hero.tsx` (the one band using the brand's real display ground, which **admits white ink only** — every muted token measures under 3:1 on it), `customer-logos.tsx`, `impact-band.tsx`, `ansr-wordmark.tsx` (drawn lockup, sized off cap height, word carried in `sr-only` so the accessible name is unchanged), `dotted-world-map.tsx` (layout only — two `<path>` elements over generated geometry; all ink, opacity, radius and edge fade in `.gcc-hero-map` and `.gcc-header-map`, so the two placements cannot diverge), `input-panel.tsx` (four controls over six fields, its own field primitives because a public form and a dense internal tool want different densities), `select-field.tsx` (the widget all four use, and the one place an option carrying children turns the popup into a tree; `.gcc-select-*` in globals.css carries both shapes and the measured room table), `evidence.tsx` (comparison grid, containment layers, largest-centres chart, function tags, scale strip; `CityCells` has two consumers), `city-map.tsx`, `snapshot.tsx`, `copy.ts` (**every DERIVED visitor-facing sentence, and the reasoning behind every wording** — the static strings are `siteContent.copy` now and each constant here reads its key, so there is one shipped value per string), `use-frame-height.ts`. **Both ranked TABLES are gone, and with them the focusable horizontal scroller.** |
 | `src/components/screen2/` | The public Function View. `function-view.tsx` (screen + four tabs, on the Radix Tabs primitive rather than the registry wrapper — 44px triggers, no `transition-all`, no shadow; cuts the already-packed card list where widths change). `metric-card.tsx` is layout only — selects no chart and does no arithmetic; owns the shape-only placeholder (static, hatched, uniform, so it reads as sealed rather than loading), `CardMeta`, and the capability grid's row glyphs keyed by LABEL, the single place this screen reads an admin-editable string, guarded all-or-nothing. `summary-figures.tsx` (`SummaryFigures` + `scalarCells`), `zones.tsx` (`TabZones`), `graduate-card.tsx` (`GraduateOutput`, drawn by operations AND HR, here rather than in either file because two views of one shared metric must not be two pieces of markup), `hr-view.tsx`, `ops-view.tsx`, `fin-view.tsx` (the three composed tabs; `OpsPanel` has no gated metric and owns `summaryCells`, which selects rather than computes; `FinPanel` refuses most of its own reference and owns the tier spread and location grid). `copy.ts` holds `FIGURES_HEADING`, `SOURCE_LINE`, `VELOCITY_HEADING` (one heading shared by two tabs, a constant rather than the same words typed twice), `heldHeading`, `indexedNote`, `METRIC_NOTES`, each composition's own strings, and six sentences exported, unit-tested and rendered nowhere. |
 | `src/components/ui/` | shadcn/ui, unmodified from the registry. On-brand because `globals.css` maps the contract variables onto brand tokens. |
 | `data/` | `dataset.json`, pretty-printed on purpose — a reviewable diff is the reason there is no database. `verify-baseline.json`, updated only by `data:verify -- --accept`. Both tracked. |

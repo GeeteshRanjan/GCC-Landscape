@@ -4,6 +4,7 @@ import { useEffect, useId, useMemo, useState } from "react";
 
 import { CompanyEditor } from "@/components/admin/company-editor";
 import { useDraft } from "@/components/admin/draft-provider";
+import { AdminPageHeader } from "@/components/admin/page-header";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -88,17 +89,12 @@ export function CompanyManager() {
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="flex flex-wrap items-end justify-between gap-4">
-        <div>
-          <h1 className="text-xl font-semibold tracking-heading text-text">
-            Companies
-          </h1>
-          <p className="text-sm text-text-muted">
-            {draft.companies.length.toLocaleString()} rows in the draft.
-          </p>
-        </div>
+      <AdminPageHeader
+        title="Companies"
+        lead={`${draft.companies.length.toLocaleString()} rows in the draft.`}
+      >
         <Button onClick={() => setEditing({ company: null })}>Add a company</Button>
-      </div>
+      </AdminPageHeader>
 
       <div className="flex flex-wrap items-end gap-4 border border-border-subtle bg-surface p-4">
         <div className="flex min-w-64 flex-1 flex-col gap-1.5">
