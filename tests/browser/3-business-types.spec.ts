@@ -18,7 +18,7 @@ test("lists the catalogue and filters it by industry", async ({ page }) => {
   await page.goto("/admin/business-types");
 
   await expect(page.getByRole("heading", { name: "Business types", level: 1 })).toBeVisible();
-  await expect(page.getByText(/158 business types/)).toBeVisible();
+  await expect(page.getByText(/161 business types/)).toBeVisible();
 
   await page.getByLabel("Filter by industry").selectOption("Retail");
   await expect(page.getByText(/10 business types/)).toBeVisible();

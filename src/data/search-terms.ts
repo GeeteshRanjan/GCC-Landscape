@@ -159,10 +159,27 @@ export const SUB_INDUSTRY_TERMS: Readonly<Record<string, readonly string[]>> = {
   "fin-insurance-pc": ["p and c", "property and casualty", "general insurance", "reinsurance", "commercial lines", "motor insurance", "specialty insurance", "lloyds"],
   "fin-insurance-life": ["life insurance", "health insurance", "annuities", "pensions", "retirement", "protection", "life insurer"],
   "fin-asset-management": ["asset management", "investment management", "wealth management", "mutual funds", "etf", "private banking", "pension fund", "custody"],
+  // Payments was one row and is now four. `fin-payments` keeps the general payment
+  // words so it still pairs with `sw-payments` across the industry boundary (the
+  // assertion in search-terms.test.ts); the three siblings carry only the words that
+  // point at THEM, so a query narrows to the right corner.
   "fin-payments": [
-    "payments", "card network", "payment gateway", "payment processing", "psp", "acquirer",
-    "merchant acquiring", "issuer processing", "fintech", "money transfer", "remittance",
-    "wallet", "prepaid", "atm", "pos acquiring", "interchange", "checkout",
+    "payments", "payment gateway", "payment processing", "psp", "payment service provider",
+    "acquirer", "merchant acquiring", "issuer processing", "pos acquiring", "checkout",
+    "payment infrastructure", "fintech",
+  ],
+  "fin-card-network": [
+    "card network", "card scheme", "payment network", "payment rails", "interchange",
+    "card association", "credit card network", "debit network",
+  ],
+  "fin-money-transfer": [
+    "money transfer", "remittance", "cross border payments", "wallet", "digital wallet",
+    "prepaid", "foreign exchange", "fx", "money movement", "payouts", "atm",
+  ],
+  "fin-expense-cards": [
+    "corporate cards", "commercial cards", "expense management", "spend management",
+    "fuel cards", "fleet cards", "gift cards", "prepaid cards", "procurement cards",
+    "corporate payments",
   ],
   "fin-fintech-lending": ["fintech", "digital lending", "neobank", "challenger bank", "bnpl", "buy now pay later", "consumer credit", "peer to peer lending", "credit platform", "digital bank"],
   "fin-market-data": ["market data", "credit bureau", "credit information", "ratings", "financial data", "reference data", "index provider", "credit scoring"],

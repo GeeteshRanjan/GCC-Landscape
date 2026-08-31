@@ -71,7 +71,7 @@ bucket would not have fixed it either: Retail has 60 companies and five slots, s
 exhausted the next peer is whoever is biggest in the industry, which is exactly how Lowe's got
 there.
 
-**Resolution: the 620 values are collapsed into 158 business types carrying a 137-tag vocabulary,
+**Resolution: the 620 values are collapsed into 161 business types carrying a 137-tag vocabulary,
 and similarity is scored continuously rather than filtered.** Coverage does not move, because a
 visitor who selects no line of business gets the band ladder's peers unchanged — asserted as an
 invariant, not assumed. The design, the vetting and the coverage figures are in

@@ -1028,11 +1028,11 @@ export const COMPANY_TO_TYPES: Readonly<Record<string, readonly string[]>> = {
   "BFSI||AON": ["fin-insurance-broker"],
   "BFSI||AXA Group": ["fin-insurance-pc", "fin-insurance-life"],
   "BFSI||Admiral PLC": ["fin-insurance-pc"],
-  "BFSI||Adyen": ["fin-payments"],
+  "BFSI||Adyen": ["fin-payments"], // merchant acquirer/gateway — processing
   "BFSI||Allianz SE": ["fin-insurance-pc", "fin-insurance-life"],
   "BFSI||Allstate": ["fin-insurance-pc"],
   "BFSI||Alter Domus": ["fin-asset-management"],
-  "BFSI||American Express": ["fin-payments"],
+  "BFSI||American Express": ["fin-card-network"],
   "BFSI||American International Group (AIG)": ["fin-insurance-pc"],
   "BFSI||Ameriprise Financial": ["fin-asset-management"],
   "BFSI||Apex Group Ltd": ["fin-asset-management"],
@@ -1046,7 +1046,7 @@ export const COMPANY_TO_TYPES: Readonly<Record<string, readonly string[]>> = {
   "BFSI||Bank of New York (BNY)": ["fin-asset-management"],
   "BFSI||Barclays": ["fin-retail-bank", "fin-investment-bank"],
   "BFSI||Berkadia": ["fin-retail-bank"],
-  "BFSI||Blackhawk Network": ["fin-payments"],
+  "BFSI||Blackhawk Network": ["fin-expense-cards"], // gift/incentive card programmes
   "BFSI||Bluevine": ["fin-fintech-lending"],
   "BFSI||Broadridge Financial": ["fin-software-services"],
   "BFSI||CIMB": ["fin-retail-bank"],
@@ -1060,7 +1060,7 @@ export const COMPANY_TO_TYPES: Readonly<Record<string, readonly string[]>> = {
   "BFSI||Citigroup": ["fin-retail-bank", "fin-investment-bank"],
   "BFSI||Citizens Bank (Citizens Financial Group)": ["fin-retail-bank"],
   "BFSI||Commonwealth Bank of Australia": ["fin-retail-bank"],
-  "BFSI||Corpay": ["fin-payments"],
+  "BFSI||Corpay": ["fin-expense-cards"], // corporate spend & fuel cards
   "BFSI||DBS Bank": ["fin-retail-bank"],
   "BFSI||Dai-Ichi Life": ["fin-insurance-life"],
   "BFSI||Deutsche Bank": ["fin-investment-bank", "fin-retail-bank"],
@@ -1068,7 +1068,7 @@ export const COMPANY_TO_TYPES: Readonly<Record<string, readonly string[]>> = {
   "BFSI||Dinan & Company": ["fin-investment-bank"],
   "BFSI||EarnIn": ["fin-fintech-lending"],
   "BFSI||Equifax": ["fin-market-data"],
-  "BFSI||Euronet": ["fin-payments"],
+  "BFSI||Euronet": ["fin-money-transfer"], // Ria money transfer + epay
   "BFSI||FAB (First Abu Dhabi Bank)": ["fin-retail-bank"],
   "BFSI||FM Global": ["fin-insurance-pc"],
   "BFSI||Factset Research Systems": ["fin-market-data"],
@@ -1102,7 +1102,7 @@ export const COMPANY_TO_TYPES: Readonly<Record<string, readonly string[]>> = {
   "BFSI||Marsh & McLennan": ["fin-insurance-broker"],
   "BFSI||Mashreq Bank": ["fin-retail-bank"],
   "BFSI||Massachusetts Mutual (MassMutual)": ["fin-insurance-life"],
-  "BFSI||Mastercard": ["fin-payments"],
+  "BFSI||Mastercard": ["fin-card-network"],
   "BFSI||Maybank": ["fin-retail-bank"],
   "BFSI||Mbanq": ["fin-software-services"],
   "BFSI||MetLife": ["fin-insurance-life"],
@@ -1114,17 +1114,17 @@ export const COMPANY_TO_TYPES: Readonly<Record<string, readonly string[]>> = {
   "BFSI||NAB (National Australia Bank)": ["fin-retail-bank"],
   "BFSI||NatWest Group": ["fin-retail-bank"],
   "BFSI||Nationwide": ["fin-insurance-pc", "fin-insurance-life"],
-  "BFSI||Network International": ["fin-payments"],
+  "BFSI||Network International": ["fin-payments"], // merchant acquirer — processing
   "BFSI||OakNorth": ["fin-fintech-lending"],
   "BFSI||OneSavings Bank": ["fin-retail-bank"],
   "BFSI||Onity Group Inc. (Ocwen Financials)": ["fin-retail-bank"],
   "BFSI||Oportun": ["fin-fintech-lending"],
   "BFSI||PNC Bank": ["fin-retail-bank"],
-  "BFSI||Partior": ["fin-payments"],
-  "BFSI||PayPal": ["fin-payments"],
-  "BFSI||Payoneer": ["fin-payments"],
-  "BFSI||Peach Payments": ["fin-payments"],
-  "BFSI||Pleo": ["fin-payments"],
+  "BFSI||Partior": ["fin-payments"], // interbank settlement infrastructure — processing
+  "BFSI||PayPal": ["fin-payments"], // merchant processing + wallet — processing
+  "BFSI||Payoneer": ["fin-money-transfer"], // cross-border payouts
+  "BFSI||Peach Payments": ["fin-payments"], // merchant gateway — processing
+  "BFSI||Pleo": ["fin-expense-cards"], // corporate spend management
   "BFSI||Principal Financial Group": ["fin-insurance-life", "fin-asset-management"],
   "BFSI||Prudential Financial (Gibraltar)": ["fin-insurance-life"],
   "BFSI||Prudential Plc": ["fin-insurance-life"],
@@ -1144,25 +1144,25 @@ export const COMPANY_TO_TYPES: Readonly<Record<string, readonly string[]>> = {
   "BFSI||Swiss Re": ["fin-insurance-pc"],
   "BFSI||Synchrony Financial": ["fin-retail-bank"],
   "BFSI||TIAA": ["fin-insurance-life", "fin-asset-management"],
-  "BFSI||TSYS": ["fin-payments"],
+  "BFSI||TSYS": ["fin-payments"], // card processor — processing
   "BFSI||The Hartford": ["fin-insurance-pc"],
   "BFSI||The Standard": ["fin-insurance-life"],
   "BFSI||Toronto-Dominion Bank (TD Bank)": ["fin-retail-bank"],
   "BFSI||Tower Research": ["fin-exchange"],
-  "BFSI||Travelex": ["fin-payments"],
+  "BFSI||Travelex": ["fin-money-transfer"], // FX & cross-border cash
   "BFSI||Truist Financial": ["fin-retail-bank"],
   "BFSI||UBS Bank": ["fin-asset-management", "fin-investment-bank"],
   "BFSI||US Bancorp (US Bank)": ["fin-retail-bank"],
-  "BFSI||Verifone": ["fin-payments"],
-  "BFSI||Visa": ["fin-payments"],
+  "BFSI||Verifone": ["fin-payments"], // merchant POS/acquiring — processing
+  "BFSI||Visa": ["fin-card-network"],
   "BFSI||Voya Financial": ["fin-insurance-life", "fin-asset-management"],
-  "BFSI||WEX": ["fin-payments"],
+  "BFSI||WEX": ["fin-expense-cards"], // fleet & corporate cards
   "BFSI||WTW": ["fin-insurance-broker"],
   "BFSI||Wells Fargo": ["fin-retail-bank"],
-  "BFSI||Western Union": ["fin-payments"],
+  "BFSI||Western Union": ["fin-money-transfer"],
   "BFSI||Willis Towers Watson": ["fin-insurance-broker"],
-  "BFSI||Wise Group plc": ["fin-payments"],
-  "BFSI||Worldline": ["fin-payments"],
+  "BFSI||Wise Group plc": ["fin-money-transfer"], // cross-border transfers
+  "BFSI||Worldline": ["fin-payments"], // merchant acquiring — processing
   "BFSI||Zurich Insurance": ["fin-insurance-pc", "fin-insurance-life"],
 
   /* ---- Manufacturing — 110 companies ---- */

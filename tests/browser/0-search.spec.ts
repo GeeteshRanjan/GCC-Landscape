@@ -44,7 +44,7 @@ test.describe("finding a sub-industry by the words a visitor uses", () => {
   /**
    * The reported case. A payments platform is one business this taxonomy holds on both
    * sides of a hard industry boundary — `Payments & financial infrastructure` under
-   * Software & Internet and `Payments & card networks` under BFSI — and matching never
+   * Software & Internet and `Payment processing & gateways` under BFSI — and matching never
    * crosses that boundary. So the one thing the form can do is refuse to hide the
    * choice: `payments` has to surface both industries, and the visitor picks.
    */
@@ -62,7 +62,9 @@ test.describe("finding a sub-industry by the words a visitor uses", () => {
 
   /**
    * `fintech` appears in neither industry's name and in neither payments row's label.
-   * It reaching both is the whole mechanism working end to end.
+   * It reaching a payments row in both industries is the mechanism working end to end.
+   * (`fin-payments` was renamed "Payment processing & gateways" when payments was split
+   * into four BFSI rows; it keeps `fintech` among its search terms.)
    */
   /**
    * Two page loads rather than one, because below 1440 the cascade pane is a DRILL-IN
@@ -72,7 +74,7 @@ test.describe("finding a sub-industry by the words a visitor uses", () => {
    */
   for (const [industry, subIndustry] of [
     ["Software & Internet", "Payments & financial infrastructure"],
-    ["BFSI", "Payments & card networks"],
+    ["BFSI", "Payment processing & gateways"],
   ] as const) {
     test(`\`fintech\` reaches ${subIndustry}`, async ({ page }) => {
       await openIndustryAndFilter(page, "fintech");
@@ -150,7 +152,7 @@ test.describe("finding a sub-industry by the words a visitor uses", () => {
     // Named EXACTLY its label, with no trace of the term that found it. The only row
     // in the pane whose name contains "fintech" is the one whose printed label does.
     await expect(
-      page.getByRole("treeitem", { name: "Payments & card networks", exact: true }),
+      page.getByRole("treeitem", { name: "Payment processing & gateways", exact: true }),
     ).toBeVisible();
     const named = await page
       .getByRole("treeitem", { name: /fintech/i })

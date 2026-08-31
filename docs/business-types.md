@@ -39,14 +39,14 @@ bucket fixes the head of the list and leaves the tail as it was.
 business type with three members still produces a full, sensibly-ordered peer set
 through tag adjacency, and the thin-bucket failure that killed sub-industry cannot
 recur. The number of business types is therefore not bounded from below by peer-set
-size, which is why there are 158 of them and not 65.
+size, which is why there are 161 of them and not 65.
 
 ## The two vocabularies, and why they differ in kind
 
 | | Count | Editable | Why |
 | --- | --- | --- | --- |
 | **Tags** (`src/data/business-tags.ts`) | 137 | Code only | The substrate every peer score is computed against. A tag nobody else carries matches nothing; deleting one silently re-scores every peer set in the product. |
-| **Business types** (`src/data/business-type-catalogue.ts`) | 158 | Admin | What a visitor picks and a company is assigned. ANSR must be able to add "Quick commerce" without a developer. |
+| **Business types** (`src/data/business-type-catalogue.ts`) | 161 | Admin | What a visitor picks and a company is assigned. ANSR must be able to add "Quick commerce" without a developer. |
 
 Tags are grouped on six axes — form, buyer, vertical served, product domain,
 operating character, sector specifics. The axes are an authoring aid; the scorer
@@ -174,7 +174,7 @@ The live figures are pinned in `data/verify-baseline.json` and reproduced by
 
 | Figure | Value |
 | --- | --- |
-| Business types defined | 158 |
+| Business types defined | 161 |
 | Distinct tags in use | 137 |
 | Companies with a business type | 1768 |
 | Companies with two business types | 68 |
@@ -198,8 +198,8 @@ vocabulary matches how ANSR thinks about these markets.
 ### Software & Internet — 624/656 tagged, 30 types
 Cybersecurity (72) · Data & analytics platform (41) · Developer tools & DevOps (39) · Healthcare software (34) · Cloud & infrastructure software (33) · Banking & financial software (32) · Telecom software & network systems (32) · IT & digital engineering services (30) · CRM & customer experience software (26) · Marketing technology (26) · Design & engineering software (21) · Legal, contract & compliance software (21) · AI & machine learning platform (19) · Finance, accounting & tax software (19) · Supply chain & procurement software (18) · Travel & hospitality software (17) · Consumer internet & marketplace (17) · Media & content technology (17) · Retail & commerce software (15) · HR & workforce software (14) · Automotive & mobility software (14) · ERP & core business systems (13) · Collaboration & productivity software (13) · Public sector software (13) · Construction & real estate software (13) · Education technology (11) · Insurance software (10) · Logistics & mobility software (7) · Payments & financial infrastructure (5) · Gaming & interactive entertainment (2)
 
-### BFSI — 181/189 tagged, 11 types
-Asset & investment management (40) · Retail & commercial banking (38) · Life & health insurance (20) · Payments & card networks (20) · Property & casualty insurance (17) · Investment banking & capital markets (16) · Fintech & digital lending (14) · Exchanges & trading venues (14) · Financial technology & processing services (10) · Financial data & credit information (9) · Insurance broking & claims services (7)
+### BFSI — 181/189 tagged, 14 types
+Asset & investment management (40) · Retail & commercial banking (38) · Life & health insurance (20) · Property & casualty insurance (17) · Investment banking & capital markets (16) · Fintech & digital lending (14) · Exchanges & trading venues (14) · Financial technology & processing services (10) · Financial data & credit information (9) · Payment processing & gateways (8) · Insurance broking & claims services (7) · Money transfer & remittance (5) · Commercial & expense cards (4) · Card networks & schemes (3)
 
 ### Manufacturing — 187/207 tagged, 14 types
 Electrical equipment & power systems (32) · Motion, flow & control components (24) · Industrial machinery & equipment (21) · HVAC & building systems (20) · Industrial automation & controls (15) · Test & measurement instruments (13) · Agricultural, construction & mining equipment (13) · Electronics & components manufacturing (11) · Tools & hardware (8) · Printing, imaging & document systems (8) · Diversified industrial conglomerate (7) · Steel, metals & mining (7) · Building products & materials (6) · Packaging manufacturing (4)
@@ -305,3 +305,40 @@ Electrical products & components (2)
   picked the row named after their business got a set excluding the four companies they
   most wanted to see. All five now carry BOTH types, because `tagsForCompany` takes the
   union and they are credible apparel peers as well.
+
+## Splitting a bucket that conflated distinct businesses
+
+`ret-sportswear` above fixed a row named after a business it did not contain. The
+converse defect is a row that contains SEVERAL businesses, all tagged identically, so
+the engine cannot order within it and falls back to band and size. The reported case
+was a payments visitor (a Stripe) shown card networks and money-transfer firms ahead of
+its true merchant-acquirer peers.
+
+The source Sub-Industry does not help here: all 20 payments companies read the catch-all
+"Financial Services", so the finer split is world knowledge, like the original
+`COMPANY_TO_TYPES` pass. `fin-payments` (was "Payments & card networks") became four:
+
+| Type | Distinguishing atom | Companies |
+| --- | --- | --- |
+| **Payment processing & gateways** (`fin-payments`, id kept) | `serves-retail` (merchants) | Adyen, Worldline, Verifone, Network International, TSYS, PayPal, Peach Payments, Partior |
+| **Card networks & schemes** (`fin-card-network`) | `network-operator` | Visa, Mastercard, American Express |
+| **Money transfer & remittance** (`fin-money-transfer`) | `b2c` | Western Union, Wise, Payoneer, Euronet, Travelex |
+| **Commercial & expense cards** (`fin-expense-cards`) | `finance-systems` | Corpay, WEX, Pleo, Blackhawk Network |
+
+Two design rules made this safe, and both generalise to the other conflated buckets:
+
+1. **Each finer type carries one atom the siblings lack.** `businessSimilarity` is the
+   share of the VISITOR's tag mass a company shares, so a company only ranks below a
+   peer when the visitor carries a tag that company does not. No new tag was needed —
+   the four distinguishers are existing atoms, reused elsewhere, so the ">= 2 types per
+   tag" rule still holds. Pick a distinguisher that is RARE in the industry (`serves-retail`,
+   `finance-systems`, `network-operator` are); a common one like `b2c` still orders correctly
+   at the finer type's own band but is too weak to beat a large sibling two bands away.
+
+2. **All four keep the shared payments core** (`payments-processing`, `fintech`,
+   `regulated`, `transaction-revenue`), so a sibling stays above the 0.20 floor as a
+   SECONDARY peer and no set gets shorter. Measured: floor-shortened sets held at 147,
+   coherence held (0.921 → 0.918), and a $1–5 Bn processing visitor now sees Adyen at
+   rank 3 where it was 16th. `tests/unit/peer-resolution.test.ts` guards all of this;
+   `scripts/analyze-conflation.ts` and `scripts/measure-peers.ts` are the tools that
+   find the next such bucket and prove the before/after.

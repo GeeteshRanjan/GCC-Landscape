@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generatedAt": "2026-08-31T07:21:17.327Z",
+  "generatedAt": "2026-08-31T09:51:40.138Z",
   "source": "Consolidated_GCC_India_Database_2026_New.xlsx",
   "taxonomy": {
     "industries": [
@@ -4411,7 +4411,7 @@
       "fortuneGlobal500": false,
       "forbesGlobal2000": false,
       "businessTypes": [
-        "fin-payments"
+        "fin-expense-cards"
       ]
     },
     {
@@ -7682,7 +7682,7 @@
       "fortuneGlobal500": false,
       "forbesGlobal2000": true,
       "businessTypes": [
-        "fin-payments"
+        "fin-expense-cards"
       ]
     },
     {
@@ -8008,7 +8008,7 @@
       "fortuneGlobal500": true,
       "forbesGlobal2000": true,
       "businessTypes": [
-        "fin-payments"
+        "fin-card-network"
       ]
     },
     {
@@ -11180,7 +11180,7 @@
       "fortuneGlobal500": false,
       "forbesGlobal2000": false,
       "businessTypes": [
-        "fin-payments"
+        "fin-money-transfer"
       ]
     },
     {
@@ -20223,7 +20223,7 @@
       "fortuneGlobal500": true,
       "forbesGlobal2000": true,
       "businessTypes": [
-        "fin-payments"
+        "fin-card-network"
       ]
     },
     {
@@ -30562,7 +30562,7 @@
       "fortuneGlobal500": false,
       "forbesGlobal2000": false,
       "businessTypes": [
-        "fin-payments"
+        "fin-money-transfer"
       ]
     },
     {
@@ -32083,7 +32083,7 @@
       "fortuneGlobal500": false,
       "forbesGlobal2000": true,
       "businessTypes": [
-        "fin-payments"
+        "fin-card-network"
       ]
     },
     {
@@ -32620,7 +32620,7 @@
       "fortuneGlobal500": false,
       "forbesGlobal2000": false,
       "businessTypes": [
-        "fin-payments"
+        "fin-money-transfer"
       ]
     },
     {
@@ -36502,7 +36502,7 @@
       "fortuneGlobal500": false,
       "forbesGlobal2000": false,
       "businessTypes": [
-        "fin-payments"
+        "fin-expense-cards"
       ]
     },
     {
@@ -37031,7 +37031,7 @@
       "fortuneGlobal500": false,
       "forbesGlobal2000": false,
       "businessTypes": [
-        "fin-payments"
+        "fin-expense-cards"
       ]
     },
     {
@@ -37051,7 +37051,7 @@
       "fortuneGlobal500": false,
       "forbesGlobal2000": false,
       "businessTypes": [
-        "fin-payments"
+        "fin-money-transfer"
       ]
     },
     {
@@ -37593,7 +37593,7 @@
       "fortuneGlobal500": false,
       "forbesGlobal2000": false,
       "businessTypes": [
-        "fin-payments"
+        "fin-money-transfer"
       ]
     },
     {
@@ -38437,15 +38437,54 @@
     },
     {
       "id": "fin-payments",
-      "name": "Payments & card networks",
+      "name": "Payment processing & gateways",
+      "industry": "BFSI",
+      "tags": [
+        "payments-processing",
+        "fintech",
+        "serves-retail",
+        "regulated",
+        "transaction-revenue",
+        "b2b"
+      ]
+    },
+    {
+      "id": "fin-card-network",
+      "name": "Card networks & schemes",
+      "industry": "BFSI",
+      "tags": [
+        "payments-processing",
+        "fintech",
+        "network-operator",
+        "regulated",
+        "transaction-revenue",
+        "b2b"
+      ]
+    },
+    {
+      "id": "fin-money-transfer",
+      "name": "Money transfer & remittance",
       "industry": "BFSI",
       "tags": [
         "payments-processing",
         "fintech",
         "regulated",
         "transaction-revenue",
-        "b2b",
-        "b2c"
+        "b2c",
+        "b2b"
+      ]
+    },
+    {
+      "id": "fin-expense-cards",
+      "name": "Commercial & expense cards",
+      "industry": "BFSI",
+      "tags": [
+        "payments-processing",
+        "fintech",
+        "finance-systems",
+        "regulated",
+        "transaction-revenue",
+        "b2b"
       ]
     },
     {

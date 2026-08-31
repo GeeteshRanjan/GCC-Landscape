@@ -371,10 +371,46 @@ const BFSI: BusinessTypeSeed[] = [
     tags: ["asset-management", "capital-markets", "regulated", "b2b", "b2c", "asset-light"],
   },
   {
+    // Split from a single "Payments & card networks" bucket that ranked within
+    // itself by band and size alone: every payments company carried an identical
+    // tag set, so a merchant-acquirer visitor (a Stripe) saw card networks and
+    // money-transfer firms ahead of its true peers. The four types below each
+    // carry one atom the other three lack — the only way businessSimilarity, which
+    // scores the share of the VISITOR's tags a company shares, can rank a true peer
+    // first. All four keep the shared payments core, so a sibling stays above the
+    // 0.20 floor as a secondary peer rather than dropping out. No new tag was
+    // needed; the distinguishers are existing atoms. See docs/business-types.md.
     id: "fin-payments",
-    name: "Payments & card networks",
+    // Merchant acquiring and gateways — the Adyen/Worldline/Stripe cluster.
+    // `serves-retail` (merchants) is the atom card networks and remittance lack.
+    name: "Payment processing & gateways",
     industry: "BFSI",
-    tags: ["payments-processing", "fintech", "regulated", "transaction-revenue", "b2b", "b2c"],
+    tags: ["payments-processing", "fintech", "serves-retail", "regulated", "transaction-revenue", "b2b"],
+  },
+  {
+    // `network-operator` (the scheme itself) is what a card network has and an
+    // acquirer, a remittance firm and a card programme do not.
+    id: "fin-card-network",
+    name: "Card networks & schemes",
+    industry: "BFSI",
+    tags: ["payments-processing", "fintech", "network-operator", "regulated", "transaction-revenue", "b2b"],
+  },
+  {
+    // `b2c` is the distinguisher: consumer cross-border money movement. The other
+    // three payments types are b2b-only, so a remittance visitor ranks remittance
+    // firms first.
+    id: "fin-money-transfer",
+    name: "Money transfer & remittance",
+    industry: "BFSI",
+    tags: ["payments-processing", "fintech", "regulated", "transaction-revenue", "b2c", "b2b"],
+  },
+  {
+    // Spend and expense management IS a finance system; `finance-systems` is the
+    // atom that separates Corpay/WEX/Pleo from acquirers and networks.
+    id: "fin-expense-cards",
+    name: "Commercial & expense cards",
+    industry: "BFSI",
+    tags: ["payments-processing", "fintech", "finance-systems", "regulated", "transaction-revenue", "b2b"],
   },
   {
     id: "fin-fintech-lending",

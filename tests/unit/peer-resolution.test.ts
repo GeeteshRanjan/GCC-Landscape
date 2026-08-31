@@ -8,33 +8,34 @@ import { buildSimilarityModel, businessSimilarity, tagsForCompany } from "@/data
 
 /**
  * WITHIN-SUB-INDUSTRY RESOLUTION — can the engine rank a truer peer above a
- * weaker one when both are the same sub-industry?
+ * weaker one when both sit in the same corner of an industry?
  *
- * `match-quality.test.ts` proves the returned set is COHERENT: the five companies
- * belong together. This file asks the next question a reported complaint raised —
- * a payments visitor (think Stripe) was shown card networks and money-transfer
- * firms ahead of Adyen, a much closer peer. Adyen is tagged correctly and
- * IDENTICALLY to its true peers, so coherence is high and every existing test
- * passes. The defect is invisible to coherence because it is not about the set
- * being wrong — it is about the engine having no way to order WITHIN it.
+ * `match-quality.test.ts` proves the returned set is COHERENT. This file guards
+ * the finer question behind a reported complaint: a payments visitor (think
+ * Stripe) was shown card networks and money-transfer firms ahead of its true
+ * merchant-acquirer peers. The cause was structural, not a bug — every payments
+ * company carried an identical single tag set, so `businessSimilarity` (the share
+ * of the VISITOR's IDF-weighted tag mass a company shares) was 1.0 for all of
+ * them and had no power to order within the group. Ranking collapsed onto the 0.3
+ * band term and the size tiebreak, and a small, new-to-India acquirer like Adyen
+ * lost to the big networks every time.
  *
- * ── The mechanism ────────────────────────────────────────────────────────────
+ * ── The fix these tests now guard ────────────────────────────────────────────
  *
- * `businessSimilarity` is the share of the visitor's IDF-weighted tag mass a
- * company shares. When two companies carry the identical tag set it is exactly
- * 1.0, and when EVERY member of a sub-industry carries the identical tag set,
- * businessSimilarity is 1.0 for all of them and carries ZERO ordering
- * information. Ranking then collapses onto the 0.3 band term and the GCC-size
- * tiebreak. A small, new-to-India but strategically close peer (Adyen: $1–5 Bn,
- * a 50–100 GCC, established 2024) is then indistinguishable on business from a
- * card network (Visa) or a remittance firm (Western Union) and loses on band and
- * on size every time.
+ * `fin-payments` was split into four types — payment processing & gateways
+ * (kept the id), card networks, money transfer & remittance, and commercial &
+ * expense cards. The key move: each finer type carries ONE atom the other three
+ * lack (processing→serves-retail, card-network→network-operator, money-transfer→
+ * b2c, expense→finance-systems), because businessSimilarity is asymmetric — a
+ * company only ranks below a peer if the VISITOR carries a tag that company does
+ * not. All four keep the shared payments core, so a sibling stays above the 0.20
+ * floor as a secondary peer and no set gets shorter. See docs/business-types.md
+ * and scripts/business-type-map.ts for the per-company assignment.
  *
- * These tests document that reality so a re-classification (finer payments tags,
- * or splitting `fin-payments` into acquirers / card-networks / money-transfer /
- * expense-cards) shows up here as an intended improvement rather than a silent
- * change. They assert the CURRENT behaviour on purpose — when the bucket is split
- * the named-list and the resolution bound both flip, forcing acknowledgement.
+ * The general lesson is asserted at the bottom: within any single-type corner the
+ * engine still cannot order (resolution is saturated by design, tags live on the
+ * type). That is why a type that CONFLATES distinct businesses must be split —
+ * this file is the template and the payments split is the worked example.
  */
 
 const dataset: Dataset = parseDataset(
@@ -57,7 +58,7 @@ function membersOf(typeId: string): Company[] {
 /**
  * Mean pairwise symmetric businessSimilarity among the companies carrying one
  * business type, using that industry's own IDF weights. 1.0 means the engine sees
- * every member as identical — it has no power to rank one above another.
+ * every member as identical — it can rank them only by band and size.
  */
 function internalResolution(typeId: string): number {
   const type = typeById.get(typeId)!;
@@ -80,38 +81,52 @@ function internalResolution(typeId: string): number {
 }
 
 /* ────────────────────────────────────────────────────────────────────────────
- * The payments bucket is undifferentiated
+ * The payments split exists and is shaped correctly
  * ──────────────────────────────────────────────────────────────────────────── */
 
-describe("fin-payments is a coarse bucket the engine cannot rank within", () => {
-  it("holds many companies from genuinely different payments businesses", () => {
-    // Card networks, acquirers/gateways, money transfer, expense/fuel cards and a
-    // blockchain settlement venture, all under one id. Bound, not exact, so a real
-    // roster change reads as a change rather than a number to update.
-    expect(membersOf("fin-payments").length).toBeGreaterThanOrEqual(12);
+describe("the payments bucket is split into four distinguishable types", () => {
+  const PAYMENTS = ["fin-payments", "fin-card-network", "fin-money-transfer", "fin-expense-cards"];
+
+  it("defines all four types in BFSI", () => {
+    for (const id of PAYMENTS) {
+      const type = typeById.get(id);
+      expect(type, id).toBeDefined();
+      expect(type!.industry).toBe("BFSI");
+    }
   });
 
-  it("gives every member the identical tag set, so businessSimilarity is saturated", () => {
-    // This is the whole finding: with identical tags, businessSimilarity is 1.0
-    // for every pair and the 0.7 business weight does nothing. If a re-tag ever
-    // adds resolution, this drops below 1.0 and the test must be updated to match.
-    expect(internalResolution("fin-payments")).toBeGreaterThan(0.999);
+  it("gives each finer type one atom the other three lack", () => {
+    const tags = new Map(PAYMENTS.map((id) => [id, new Set<string>(typeById.get(id)!.tags)]));
+    const distinguisher: Record<string, string> = {
+      "fin-payments": "serves-retail",
+      "fin-card-network": "network-operator",
+      "fin-money-transfer": "b2c",
+      "fin-expense-cards": "finance-systems",
+    };
+    for (const [id, atom] of Object.entries(distinguisher)) {
+      expect(tags.get(id)!.has(atom), `${id} must carry ${atom}`).toBe(true);
+      for (const other of PAYMENTS) {
+        if (other === id) continue;
+        expect(tags.get(other)!.has(atom), `${other} must NOT carry ${atom}`).toBe(false);
+      }
+    }
+  });
+
+  it("keeps the shared payments core on all four, so siblings stay above the floor", () => {
+    for (const id of PAYMENTS) {
+      const tags = new Set<string>(typeById.get(id)!.tags);
+      for (const core of ["payments-processing", "fintech", "regulated", "transaction-revenue"]) {
+        expect(tags.has(core), `${id} must keep ${core}`).toBe(true);
+      }
+    }
   });
 });
 
 /* ────────────────────────────────────────────────────────────────────────────
- * The consequence: a strong peer is ordered by band and size, not by business
+ * The behaviour the complaint was about: a processing visitor sees processors
  * ──────────────────────────────────────────────────────────────────────────── */
 
-describe("a Stripe-like payments visitor cannot see Adyen on business grounds", () => {
-  const adyen = dataset.companies.find((c) => c.name === "Adyen");
-
-  it("has Adyen present, in BFSI, tagged only fin-payments", () => {
-    expect(adyen, "Adyen must be in the dataset for this diagnosis to hold").toBeDefined();
-    expect(adyen!.industry).toBe("BFSI");
-    expect(adyen!.businessTypes).toEqual(["fin-payments"]);
-  });
-
+describe("a Stripe-like payment-processing visitor now sees its true peers", () => {
   const stripe = (band: string): VisitorInput => ({
     companyName: "Stripe",
     industry: "BFSI",
@@ -120,81 +135,78 @@ describe("a Stripe-like payments visitor cannot see Adyen on business grounds", 
     businessTypeId: "fin-payments",
   });
 
-  it("drops Adyen out of the top five when its revenue band is far from the visitor's", () => {
-    // Stripe's revenue puts it near $10–20 Bn; Adyen is $1–5 Bn. Same business
-    // (bizSim 1.0), but two band steps away scores band-proximity 0, and the top
-    // five fill with same/adjacent-band payment companies instead.
+  it("returns processing/gateway companies, not card networks, at Stripe's band", () => {
     const peers = matchPeers(dataset, stripe("$10 Bn – $20 Bn")).peers;
     expect(peers).toHaveLength(DEFAULT_PEER_LIMIT);
-    expect(peers.map((p) => p.name)).not.toContain("Adyen");
+    const names = peers.map((p) => p.name);
+    // The old top five were TSYS, American Express, Mastercard, PayPal, Visa.
+    // The networks must now be gone from a processing visitor's set.
+    expect(names).not.toContain("Visa");
+    expect(names).not.toContain("Mastercard");
+    expect(names).not.toContain("American Express");
+    // Every returned peer is a processing/gateway company.
+    for (const peer of peers) {
+      expect(peer.businessTypes, `${peer.name} should be a processing peer`).toContain("fin-payments");
+    }
   });
 
-  it("admits Adyen only once the visitor shares its band — proving band, not business, is the gate", () => {
-    // Move the visitor into Adyen's own band and it becomes eligible. Nothing
-    // about the business match changed; only the band did.
-    const sameBand = matchPeers(dataset, stripe("$1 Bn – $5 Bn"));
-    const inBand = dataset.companies.filter(
-      (c) =>
-        c.industry === "BFSI" &&
-        c.businessTypes.includes("fin-payments") &&
-        c.revenueBand === "$1 Bn – $5 Bn",
-    );
-    // There are more same-band payment companies than slots, and Adyen has the
-    // smallest India GCC of them, so the size tiebreak still ranks it out even
-    // here — which is the second half of the finding.
-    expect(inBand.length).toBeGreaterThan(DEFAULT_PEER_LIMIT);
-    expect(sameBand.peers.map((p) => p.name)).not.toContain("Adyen");
-    // But it is now eligible (above the floor and in-band), where before it could
-    // not compete at all.
-    const eligibleNames = inBand.map((c) => c.name);
-    expect(eligibleNames).toContain("Adyen");
+  it("puts Adyen in the top five for a same-band processing visitor", () => {
+    // Before the split Adyen ranked 16th of 189 for any payments visitor. Sharing
+    // Adyen's band, a processing visitor now sees it among fellow acquirers.
+    const peers = matchPeers(dataset, stripe("$1 Bn – $5 Bn")).peers.map((p) => p.name);
+    expect(peers).toContain("Adyen");
   });
 });
 
 /* ────────────────────────────────────────────────────────────────────────────
- * Census: which sub-industries are coarse buckets, so the class can't grow unseen
+ * Every finer type leads with its own members at its own band
  * ──────────────────────────────────────────────────────────────────────────── */
 
-describe("within a sub-industry, ranking is band-then-size by design", () => {
+describe("each payments type leads with its own members where they exist", () => {
+  // At the band its members actually occupy, a finer-type visitor's set is
+  // dominated by that finer type — the ordering signal the split created.
+  const cases: Array<{ id: string; band: string; want: number }> = [
+    { id: "fin-payments", band: "$1 Bn – $5 Bn", want: 3 },
+    { id: "fin-card-network", band: "$1 Bn – $5 Bn", want: 3 },
+    { id: "fin-money-transfer", band: "$1 Bn – $5 Bn", want: 4 },
+    { id: "fin-expense-cards", band: "$1 Bn – $5 Bn", want: 4 },
+  ];
+
+  for (const { id, band, want } of cases) {
+    it(`${id} leads with at least ${want} of its own at ${band}`, () => {
+      const peers = matchPeers(dataset, {
+        industry: "BFSI",
+        revenueBand: band,
+        businessTypeId: id,
+        hqCountry: "USA",
+      }).peers;
+      const own = peers.filter((p) => p.businessTypes.includes(id)).length;
+      expect(own).toBeGreaterThanOrEqual(want);
+    });
+  }
+});
+
+/* ────────────────────────────────────────────────────────────────────────────
+ * The general design fact that makes conflation matter
+ * ──────────────────────────────────────────────────────────────────────────── */
+
+describe("within a single-type corner, ranking is band-then-size by design", () => {
   /**
-   * The finest grain the engine has is the business type: tags live on the type,
-   * not the company, so any two companies carrying the same single type are
-   * identical to it. This is NOT a defect — it is why the sub-industry is the
-   * primary ordering signal. Asserted so the design fact is visible: peer quality
-   * inside a sub-industry rests entirely on the sub-industry cleanly grouping true
-   * peers, because business similarity cannot separate its members.
+   * Tags live on the business type, not the company, so any two companies carrying
+   * the same single type are identical to the engine. This is correct when the
+   * members are genuine peers and wrong when the type conflates distinct
+   * businesses — which is why the fix is to split the type, as payments was. The
+   * fact itself is asserted, not alarmed at: it is the reason the whole exercise
+   * exists.
    */
-  it("gives saturated resolution to nearly every single-type sub-industry", () => {
+  it("saturates resolution for nearly every single-type corner", () => {
     const singleType = dataset.businessTypes.filter(
       (t) =>
         membersOf(t.id).length >= 2 &&
         membersOf(t.id).every((c) => c.businessTypes.length === 1),
     );
-    // Every one of these resolves at 1.0 — the point is that this is the norm, so
-    // a coarse bucket like fin-payments is invisible unless we look at WHAT it
-    // groups, not at the score.
     for (const t of singleType) {
       expect(internalResolution(t.id), t.id).toBeGreaterThan(0.999);
     }
-  });
-
-  /**
-   * The diagnostic that matters: sub-industries big enough to fill a peer set on
-   * their own, so most visitors who pick them never leave the bucket. These are
-   * where a conflated grouping does the most damage. `fin-payments` is on the list
-   * and is the identified instance — it lumps card networks, acquirers/gateways,
-   * money transfer and expense-card businesses under one row. Bounded so a newly
-   * conflated bucket is visible; named so a split reads as a change.
-   */
-  it("keeps the large single-type buckets to this bounded, named set", () => {
-    const large = dataset.businessTypes
-      .filter((t) => membersOf(t.id).length >= 10)
-      .filter((t) => internalResolution(t.id) > 0.999)
-      .map((t) => t.id)
-      .sort();
-    // fin-payments is the identified conflated instance. When it is split into
-    // finer payments types this assertion flips and must be removed — that flip is
-    // the signal the fix landed.
-    expect(large).toContain("fin-payments");
   });
 });
