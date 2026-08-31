@@ -1,5 +1,32 @@
 import { formatCount } from "@/components/public/primitives";
+import { DEFAULT_PUBLIC_COPY, type PublicCopy } from "@/data/schema";
 import type { PeerView } from "@/data/screen1";
+
+/**
+ * **Every STATIC heading and label in this file is now DERIVED from
+ * `DEFAULT_PUBLIC_COPY`, and none of them is typed twice.**
+ *
+ * The schema holds the shipped wording, because these strings are published data an
+ * admin edits; this file holds the reasoning for the wording, because that reasoning is
+ * a code decision and belongs where the code is. Splitting them that way is only safe
+ * if there is exactly one copy of the value — so the constants below read the schema
+ * key rather than restating its string, and `tests/unit/public-copy.test.ts` pins each
+ * one to the key it came from. Restating a string here would give the surface two
+ * defaults, and the one nobody rendered would be the one the next reader edited.
+ *
+ * **What these constants are FOR, now that the screens read the published copy through
+ * `usePublicCopy()`:** they are the value the context resolves to when no provider is
+ * above it, which is the shipped wording. So each comment below still explains the
+ * string directly under it. What they are not is the render path — a wording change
+ * ships through the dataset, not through this file.
+ *
+ * Everything DERIVED stays here untouched. A sentence that names a count, a share or an
+ * ordering has to move when the thing it describes moves, so it cannot be free text an
+ * admin edits; and a function of the visitor's answers has no fixed wording to edit in
+ * the first place. `FUNCTIONS_TITLE` also stays, for a third reason: its exact phrasing
+ * is what stops eight function tags being read as a claim about the five companies above
+ * them.
+ */
 
 /**
  * Screen 1's visitor-facing sentences, in one file.
@@ -100,10 +127,19 @@ export const ASK = {
    * admin-editable for that reason; this describes the controls directly beneath it,
    * so it belongs with the rest of the form's chrome and changes when the form does.
    */
-  panelTitle: "Build your GCC intelligence view",
-  panelLead:
-    "Share your company details to identify relevant companies with GCCs in India and explore talent, capability and location metrics.",
-  submit: "See my results",
+  panelTitle: DEFAULT_PUBLIC_COPY.askTitle,
+  panelLead: DEFAULT_PUBLIC_COPY.askLead,
+  submit: DEFAULT_PUBLIC_COPY.askSubmit,
+  /**
+   * **The one field here that is NOT published data, and the asymmetry is deliberate.**
+   * The other three are what a visitor reads while deciding whether to fill the form in,
+   * which is positioning an admin may want to reword. This is what the button says for
+   * the ~300ms the server action is in flight — a transient machine state rather than a
+   * message, and an admin editing it could not see the result of the edit without
+   * throttling their own connection. It is also the one string here whose LENGTH is
+   * load-bearing: the button does not resize between states, so a longer word wraps the
+   * only control on the card.
+   */
   submitPending: "Finding comparable companies…",
 } as const;
 
@@ -119,7 +155,7 @@ export const ASK = {
  * or implies they used this tool, because they did not.
  */
 export const CUSTOMERS = {
-  label: "Companies ANSR has worked with in India",
+  label: DEFAULT_PUBLIC_COPY.customersLabel,
 } as const;
 
 /**
@@ -147,7 +183,14 @@ export const IMPACT = {
    * The band's one orange is now the lockup's burst rather than the word. Same rule,
    * spent once — and it no longer has to be measured as text, because it is not text.
    */
-  titleLead: "Impact delivered by",
+  titleLead: DEFAULT_PUBLIC_COPY.impactTitleLead,
+  /**
+   * **Not published data, because it is not a string — it is the accessible NAME of the
+   * drawn lockup.** An admin who could edit it could rename ANSR's own mark to something
+   * the graphic beside it does not say, and the rendered result would look correct to
+   * everyone who is not using a screen reader. The one field on this surface where a
+   * typo is invisible is the one field that stays in code.
+   */
   titleBrand: "ANSR",
 } as const;
 
@@ -681,7 +724,7 @@ export function largestLine(view: PeerView): string {
  * the band directly above — so the heading now names the real comparison and claims
  * nothing about what the visitor runs.
  */
-export const PEERS_TITLE = "India GCCs closest to your profile";
+export const PEERS_TITLE = DEFAULT_PUBLIC_COPY.peersTitle;
 
 /**
  * How many are shown, out of what.
@@ -755,7 +798,7 @@ export function peerCountLine(view: PeerView): string {
  * labelled "in {industry}", so the reader is told whose industry inside the graphic. The
  * heading only has to name the frame, which is India's whole GCC base.
  */
-export const INDUSTRY_TITLE = "Inside India's GCC base";
+export const INDUSTRY_TITLE = DEFAULT_PUBLIC_COPY.industryTitle;
 
 /**
  * The largest-centres section's lead.
@@ -980,7 +1023,7 @@ export const SCALE = {
    * indices plus the people inside them, so naming the subject and the place is the
    * whole job.
    */
-  title: "The world's largest companies, in India",
+  title: DEFAULT_PUBLIC_COPY.scaleTitle,
   /**
    * **The share clause is gone from both, at ANSR's request.** Each label read
    * "…run a GCC in India, 36% of the list." — the share was moved INTO the sentence
@@ -993,8 +1036,8 @@ export const SCALE = {
    * and the snapshot use, so nothing about how a share is rounded changed — this strip
    * simply states none.
    */
-  fortuneLabel: "Fortune Global 500 companies run a GCC in India.",
-  forbesLabel: "Forbes Global 2000 companies run a GCC in India.",
+  fortuneLabel: DEFAULT_PUBLIC_COPY.scaleFortuneLabel,
+  forbesLabel: DEFAULT_PUBLIC_COPY.scaleForbesLabel,
   /**
    * **"those" now means BOTH indices, and the figure is their union.** It was the
    * Fortune Global 500 subset alone, under two cells naming two different indices — so
@@ -1002,8 +1045,7 @@ export const SCALE = {
    * is `scale.indexedProfessionals`, deduplicated by construction rather than by
    * subtraction; a company on both lists is counted once. See `indexedProfessionals`.
    */
-  peopleLabel:
-    "people work in those Fortune Global 500 and Forbes Global 2000 GCCs in India.",
+  peopleLabel: DEFAULT_PUBLIC_COPY.scalePeopleLabel,
 } as const;
 
 /* The strip's source-and-method block is GONE, and so is `asOfLine`, which
@@ -1151,6 +1193,41 @@ export interface Signal {
 }
 
 /**
+ * The three snapshot labels that are published strings, and NOT the fourth.
+ *
+ * **The opening cell's label is composed, which is why it is not here and cannot be.**
+ * It reads "GCCs in your sub-industry" or "GCCs in your industry" depending on whether
+ * the visitor named a sub-industry, so it is a function of the input rather than a fixed
+ * string — the same reason every derived sentence in this file stayed in code. A flat
+ * field could only hold one of the two branches, and the branch it dropped would be the
+ * one most visitors see.
+ *
+ * `publicCopySchema` carries three snapshot labels rather than four for that reason. It
+ * briefly held a fourth — "Of every GCC in India", the label from the version of this
+ * cell that stated the industry's SHARE of the national base, before ANSR asked for a
+ * count — and it was removed rather than left unread: an editable field nothing draws is
+ * a change an admin makes and cannot see, which is worse than no field. `0-screen1.spec.ts`
+ * asserts that old string is absent from the strip.
+ */
+export interface SnapshotLabels {
+  headcount: string;
+  cities: string;
+  leadingCity: string;
+}
+
+/** The three labels as published copy supplies them. See `SnapshotLabels`. */
+export function snapshotLabels(copy: PublicCopy): SnapshotLabels {
+  return {
+    headcount: copy.snapshotHeadcountLabel,
+    cities: copy.snapshotCitiesLabel,
+    leadingCity: copy.snapshotLeadingCityLabel,
+  };
+}
+
+/** The shipped wording, which is what `signals` uses when a caller states nothing. */
+export const SNAPSHOT_LABELS = snapshotLabels(DEFAULT_PUBLIC_COPY);
+
+/**
  * The four snapshot cells.
  *
  * **Every one of them is INDUSTRY-level, and that is the change from the version
@@ -1164,8 +1241,20 @@ export interface Signal {
  * which was right when the grid sized itself to whatever came back and is wrong for
  * a stated four-up snapshot — a three-cell row of four columns reads as a card that
  * failed to load. What it must never do instead is invent the figure; see `value`.
+ *
+ * **The labels are an ARGUMENT, not a hook call, and that is what keeps this pure.**
+ * Three of the four are published strings now, so the obvious version reads
+ * `usePublicCopy()` here — and this is a plain function called from a component, not a
+ * component, so a hook in it would be a rules-of-hooks violation that happens to work
+ * until something calls it in a loop or a branch. It is also the reason the unit suite
+ * can run it at all: `tests/unit/screen1.test.ts` calls it over all 24 industries with
+ * no React tree anywhere. So the caller reads the context and passes the strings in,
+ * defaulted to the shipped ones for every caller that has no opinion.
  */
-export function signals(view: PeerView): Signal[] {
+export function signals(
+  view: PeerView,
+  labels: SnapshotLabels = SNAPSHOT_LABELS,
+): Signal[] {
   const leader = view.map.cities[0];
   const cityCount = view.map.cities.length;
   const average = view.industry.averageHeadcount;
@@ -1244,7 +1333,7 @@ export function signals(view: PeerView): Signal[] {
       // "typical" is the honest word for a number arrived at that way — it claims a
       // central tendency rather than an arithmetic result. "GCCs" plural, never
       // "GCC's", which ANSR asked never to appear.
-      label: "Typical GCC headcount",
+      label: labels.headcount,
     },
     {
       kind: "figure",
@@ -1254,7 +1343,7 @@ export function signals(view: PeerView): Signal[] {
       // it made a plain count of cities sound like a shortlist somebody had drawn up.
       // The figure is the number of Indian cities where this industry operates a
       // centre, so that is what the label says.
-      label: "Indian cities with a GCC",
+      label: labels.cities,
     },
     {
       /**
@@ -1269,7 +1358,7 @@ export function signals(view: PeerView): Signal[] {
       value: leader ? leader.city : null,
       // "Most common location" named the metric; this names the answer. The note
       // stops the reader wondering whether it leads on companies, centres or people.
-      label: "Leading GCC city",
+      label: labels.leadingCity,
     },
   ];
 }

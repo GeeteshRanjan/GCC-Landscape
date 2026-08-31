@@ -6,6 +6,7 @@ import { useDraft, type TaxonomyKey } from "@/components/admin/draft-provider";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { latLonSchema } from "@/data/schema";
 
 /**
  * Taxonomy editor: industry, revenue band, city, HQ country.
@@ -24,6 +25,14 @@ import { Label } from "@/components/ui/label";
  *
  * The other three lists are shown in the order they are stored too, because
  * silently sorting them would produce a diff on every publish.
+ *
+ * **Two of the four carry a second thing per row, and both are extensions of this
+ * config rather than editors of their own.** An industry can be held in the
+ * dropdown's leading tier and a city can carry a coordinate for the density map;
+ * both live in `taxonomy` as a parallel key holding copies of strings from the list
+ * beside them, so both belong on the row that owns the string. Forking a second
+ * component for either would have meant a second add, rename, delete and usage
+ * count to keep in step with this one.
  */
 
 interface ListConfig {
@@ -33,6 +42,12 @@ interface ListConfig {
   /** Order carries meaning and must be editable. */
   ordered: boolean;
   addLabel: string;
+  /**
+   * The per-row extra this list carries, if any. One field rather than a boolean
+   * each, because a row can only ever have one: the two are keyed to different
+   * lists and neither generalises to the other two.
+   */
+  rowExtra?: "pin" | "coordinate";
 }
 
 const LISTS: readonly ListConfig[] = [
@@ -43,6 +58,7 @@ const LISTS: readonly ListConfig[] = [
       "The primary peer match key. Renaming one updates every company that used it.",
     ordered: false,
     addLabel: "New industry",
+    rowExtra: "pin",
   },
   {
     key: "revenueBands",
@@ -59,6 +75,7 @@ const LISTS: readonly ListConfig[] = [
       "Offered when editing a company, and the source of the city density heatmap.",
     ordered: false,
     addLabel: "New city",
+    rowExtra: "coordinate",
   },
   {
     key: "hqCountries",
@@ -129,10 +146,13 @@ function TaxonomyList({
   usage: Map<string, number>;
 }) {
   const {
+    draft,
     addTaxonomyValue,
     renameTaxonomyValue,
     removeTaxonomyValue,
     moveTaxonomyValue,
+    setPinnedIndustry,
+    setCityCoordinate,
   } = useDraft();
 
   const [newValue, setNewValue] = useState("");
@@ -140,6 +160,59 @@ function TaxonomyList({
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
   const [editingValue, setEditingValue] = useState("");
   const [renameError, setRenameError] = useState<string | null>(null);
+  /**
+   * The coordinate editor holds its two fields locally and commits on Save, which is
+   * the rename control's shape rather than the site-copy tab's write-through one.
+   *
+   * Deliberately, and for a reason that is about the value rather than about taste: a
+   * coordinate is two numbers that only mean something together, and writing each
+   * keystroke into the draft would put a half-typed "1" into the map's overlay and
+   * plot a dot in the Arabian Sea until the second digit arrived. There is also
+   * nothing to write for an empty field — the record has no null — so the pair has
+   * to be complete before it can land.
+   */
+  const [plottingIndex, setPlottingIndex] = useState<number | null>(null);
+  const [latText, setLatText] = useState("");
+  const [lonText, setLonText] = useState("");
+  const [coordError, setCoordError] = useState<string | null>(null);
+
+  const pinned = new Set(draft.taxonomy.pinnedIndustries);
+  const coordinates = draft.taxonomy.cityCoordinates;
+  const extraHintId = `taxonomy-${config.key}-extra-hint`;
+
+  function openCoordinates(index: number, value: string) {
+    const held = coordinates[value];
+    setPlottingIndex(index);
+    setLatText(held ? String(held.lat) : "");
+    setLonText(held ? String(held.lon) : "");
+    setCoordError(null);
+  }
+
+  function commitCoordinate(city: string) {
+    const lat = latText.trim();
+    const lon = lonText.trim();
+    if (!lat || !lon) {
+      setCoordError(
+        "Both numbers or neither — one on its own cannot place a dot. Use Clear to take the dot off.",
+      );
+      return;
+    }
+    // The schema's own bounds and the schema's own message, so this cannot say
+    // "fine" for something the publish gate rejects — nor invent a second wording
+    // for the same rule.
+    const parsed = latLonSchema.safeParse({ lat: Number(lat), lon: Number(lon) });
+    if (!parsed.success) {
+      setCoordError(
+        parsed.error.issues
+          .map((issue) => `${issue.path.join(".") || "coordinate"}: ${issue.message}`)
+          .join(" · "),
+      );
+      return;
+    }
+    setCityCoordinate(city, parsed.data);
+    setPlottingIndex(null);
+    setCoordError(null);
+  }
 
   function onAdd(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -200,12 +273,33 @@ function TaxonomyList({
         <p className="mt-1 max-w-measure text-sm text-text-muted">
           {config.description}
         </p>
+        {/* One hint for the whole list, referenced by every row's control rather than
+            repeated on each of them: the explanation is about the column, not about
+            the row, and twenty-four copies of it is what a screen reader would read
+            out twenty-four times. */}
+        {config.rowExtra === "pin" ? (
+          <p id={extraHintId} className="mt-1 max-w-measure text-sm text-text-muted">
+            A pinned industry sits in the dropdown&rsquo;s leading tier however few
+            companies it has. Position inside the tier is still by company count, so
+            this decides membership only. Keep the set short — everything pinned makes
+            nothing prominent.
+          </p>
+        ) : null}
+        {config.rowExtra === "coordinate" ? (
+          <p id={extraHintId} className="mt-1 max-w-measure text-sm text-text-muted">
+            Only needed for a city the code does not already know. A city with no
+            coordinate is still counted, ranked and listed — it simply carries no dot
+            on the map, and nothing on the public page says so.
+          </p>
+        ) : null}
       </div>
 
       <ul className="divide-y divide-border-subtle">
         {values.map((value, index) => {
           const count = usage.get(value) ?? 0;
           const editing = editingIndex === index;
+          const plotting = plottingIndex === index;
+          const coordinate = coordinates[value];
           return (
             <li
               key={`${value}-${index}`}
@@ -266,6 +360,93 @@ function TaxonomyList({
                     </p>
                   ) : null}
                 </form>
+              ) : plotting ? (
+                <form
+                  className="flex flex-1 flex-wrap items-end gap-3"
+                  onSubmit={(event) => {
+                    event.preventDefault();
+                    commitCoordinate(value);
+                  }}
+                >
+                  <div className="flex flex-col gap-1.5">
+                    <Label htmlFor={`lat-${config.key}-${index}`} className="text-xs">
+                      Latitude
+                      {/* The city is in the accessible name and not on screen: a
+                          hundred rows of "Latitude" would otherwise be a hundred
+                          identically-named fields to a screen reader. */}
+                      <span className="sr-only"> for {value}</span>
+                    </Label>
+                    <Input
+                      id={`lat-${config.key}-${index}`}
+                      value={latText}
+                      inputMode="decimal"
+                      className="w-28"
+                      aria-invalid={coordError ? true : undefined}
+                      aria-describedby={`${extraHintId}${coordError ? ` coord-error-${config.key}-${index}` : ""}`}
+                      onChange={(event) => {
+                        setLatText(event.target.value);
+                        setCoordError(null);
+                      }}
+                      autoFocus
+                    />
+                  </div>
+                  <div className="flex flex-col gap-1.5">
+                    <Label htmlFor={`lon-${config.key}-${index}`} className="text-xs">
+                      Longitude
+                      <span className="sr-only"> for {value}</span>
+                    </Label>
+                    <Input
+                      id={`lon-${config.key}-${index}`}
+                      value={lonText}
+                      inputMode="decimal"
+                      className="w-28"
+                      aria-invalid={coordError ? true : undefined}
+                      aria-describedby={`${extraHintId}${coordError ? ` coord-error-${config.key}-${index}` : ""}`}
+                      onChange={(event) => {
+                        setLonText(event.target.value);
+                        setCoordError(null);
+                      }}
+                    />
+                  </div>
+                  <Button type="submit" size="sm">
+                    Save
+                    <span className="sr-only"> coordinates for {value}</span>
+                  </Button>
+                  {coordinate ? (
+                    <button
+                      type="button"
+                      className="ansr-destructive inline-flex h-8 items-center px-3 text-sm"
+                      onClick={() => {
+                        setCityCoordinate(value, null);
+                        setPlottingIndex(null);
+                        setCoordError(null);
+                      }}
+                    >
+                      Clear
+                      <span className="sr-only"> coordinates for {value}</span>
+                    </button>
+                  ) : null}
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => {
+                      setPlottingIndex(null);
+                      setCoordError(null);
+                    }}
+                  >
+                    Cancel
+                  </Button>
+                  {coordError ? (
+                    <p
+                      id={`coord-error-${config.key}-${index}`}
+                      role="alert"
+                      className="ansr-field-error w-full text-xs"
+                    >
+                      {coordError}
+                    </p>
+                  ) : null}
+                </form>
               ) : (
                 <>
                   <span className="flex-1 text-sm text-text">{value}</span>
@@ -274,6 +455,43 @@ function TaxonomyList({
                       ? "not used"
                       : `${count.toLocaleString()} row${count === 1 ? "" : "s"}`}
                   </span>
+
+                  {config.rowExtra === "pin" ? (
+                    <label
+                      htmlFor={`pin-${config.key}-${index}`}
+                      className="flex min-h-6 shrink-0 cursor-pointer items-center gap-2 text-xs text-text"
+                    >
+                      <input
+                        id={`pin-${config.key}-${index}`}
+                        type="checkbox"
+                        checked={pinned.has(value)}
+                        aria-describedby={extraHintId}
+                        onChange={(event) =>
+                          setPinnedIndustry(value, event.target.checked)
+                        }
+                        className="size-4 shrink-0 accent-[var(--ansr-accent)]"
+                      />
+                      Leading tier
+                      <span className="sr-only"> for {value}</span>
+                    </label>
+                  ) : null}
+
+                  {config.rowExtra === "coordinate" ? (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => openCoordinates(index, value)}
+                    >
+                      {/* The figures rather than the word "edit": whether a city
+                          carries a dot is the thing an admin is scanning the list
+                          for, and a button labelled "Coordinates" on every row says
+                          nothing about which ones are missing. */}
+                      {coordinate
+                        ? `${coordinate.lat}, ${coordinate.lon}`
+                        : "No coordinates"}
+                      <span className="sr-only"> for {value} — edit</span>
+                    </Button>
+                  ) : null}
 
                   {config.ordered ? (
                     <div className="flex gap-1">

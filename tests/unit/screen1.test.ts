@@ -17,6 +17,7 @@ import {
   companyName,
   COMMON_FUNCTIONS,
   GCC_STATUSES,
+  industryOptions,
   peerViewInputSchema,
   roundProfessionals,
   type PeerViewInput,
@@ -27,7 +28,12 @@ import {
   formatRevenueBand,
   formatShare,
 } from "@/components/public/primitives";
-import { parseDataset, type Dataset } from "@/data/schema";
+import {
+  DEFAULT_COMMON_FUNCTIONS,
+  parseDataset,
+  type Dataset,
+  type LatLon,
+} from "@/data/schema";
 import {
   framing,
   industryLine,
@@ -81,6 +87,32 @@ function input(overrides: Partial<PeerViewInput> = {}): PeerViewInput {
   };
 }
 
+/**
+ * The published dataset with one taxonomy or `siteContent` key replaced.
+ *
+ * Three things the view model used to hardcode are now dataset fields, and each of
+ * them can only be tested by varying it — the shipped values are the ones the live
+ * screen uses, so asserting against them alone would pass just as happily on a
+ * constant. These build the counter-case.
+ *
+ * Structural spreads rather than a re-parse, deliberately. Re-validating 1,834
+ * companies per case buys nothing here: what the schema guarantees about these keys
+ * (a pinned industry exists, a coordinate's city exists, the coordinate is inside
+ * India) is asserted in `schema.test.ts`, and these tests are about what the view
+ * model does with a value that already passed the gate.
+ */
+const withTaxonomy = (taxonomy: Partial<Dataset["taxonomy"]>): Dataset => ({
+  ...dataset,
+  taxonomy: { ...dataset.taxonomy, ...taxonomy },
+});
+
+const withSiteContent = (
+  siteContent: Partial<Dataset["siteContent"]>,
+): Dataset => ({
+  ...dataset,
+  siteContent: { ...dataset.siteContent, ...siteContent },
+});
+
 describe("input validation", () => {
   const schema = peerViewInputSchema(dataset.taxonomy);
 
@@ -116,6 +148,108 @@ describe("input validation", () => {
     expect(
       schema.safeParse(input({ companyName: "x".repeat(500) })).success,
     ).toBe(false);
+  });
+});
+
+/**
+ * The industry dropdown's leading tier: company counts, plus whatever the taxonomy
+ * pins.
+ *
+ * **The pinned list is data now, and these tests are what stop it quietly becoming a
+ * constant again.** Retail and Consumer Packaged Goods are what `data/dataset.json`
+ * pins today, so every assertion about the shipped dataset would pass identically
+ * against a hardcoded pair — which is why the cases below vary the field and check the
+ * tier moves with it. The two properties that have to survive any value: pinning
+ * decides MEMBERSHIP and never position, and an empty list leaves a pure count
+ * ordering, which is the behaviour a dataset written before the key existed reads with.
+ */
+describe("the industry dropdown's leading tier", () => {
+  const counts = new Map<string, number>();
+  for (const company of dataset.companies) {
+    counts.set(company.industry, (counts.get(company.industry) ?? 0) + 1);
+  }
+  const count = (industry: string) => counts.get(industry) ?? 0;
+
+  /** Count descending, name ascending — the order `industryOptions` derives from. */
+  const byCount = [...dataset.taxonomy.industries].sort(
+    (a, b) => count(b) - count(a) || a.localeCompare(b, "en"),
+  );
+  const COMMON_INDUSTRIES = 6;
+  const onCount = byCount.slice(0, COMMON_INDUSTRIES);
+  const smallest = byCount[byCount.length - 1]!;
+  const largest = byCount[0]!;
+
+  it("pins what the taxonomy pins, and nothing frequency would have found anyway", () => {
+    expect(dataset.taxonomy.pinnedIndustries).toEqual([
+      "Retail",
+      "Consumer Packaged Goods",
+    ]);
+
+    const { common, others } = industryOptions(dataset);
+    for (const pinned of dataset.taxonomy.pinnedIndustries) {
+      expect(common, pinned).toContain(pinned);
+      expect(others, pinned).not.toContain(pinned);
+      // The reason pinning exists at all: neither reaches the tier on count. If one
+      // ever does, its pin has stopped doing anything and can go.
+      expect(onCount, pinned).not.toContain(pinned);
+    }
+  });
+
+  it("takes the list from the taxonomy rather than from a value written down here", () => {
+    // The smallest industry in the data. Nothing about frequency could put it in a
+    // six-entry tier, so its presence there is only explicable by the pin.
+    const { common, others } = industryOptions(
+      withTaxonomy({ pinnedIndustries: [smallest] }),
+    );
+    expect(common).toContain(smallest);
+    expect(others).not.toContain(smallest);
+
+    // And the pair the shipped dataset pins drops out, which is the half that a
+    // surviving constant would fail.
+    for (const unpinned of dataset.taxonomy.pinnedIndustries) {
+      expect(common, unpinned).not.toContain(unpinned);
+      expect(others, unpinned).toContain(unpinned);
+    }
+  });
+
+  it("sorts the tier by count, so a pin decides membership and never position", () => {
+    const { common } = industryOptions(
+      withTaxonomy({ pinnedIndustries: [smallest] }),
+    );
+    for (let i = 1; i < common.length; i += 1) {
+      expect(
+        count(common[i]!),
+        `${common[i]} above ${common[i - 1]}`,
+      ).toBeLessThanOrEqual(count(common[i - 1]!));
+    }
+    // Largest-first means the pinned outlier lands last, not first.
+    expect(common[common.length - 1]).toBe(smallest);
+  });
+
+  it("leaves a pure count ordering when nothing is pinned", () => {
+    const { common, others } = industryOptions(
+      withTaxonomy({ pinnedIndustries: [] }),
+    );
+    expect(common).toEqual(onCount);
+    expect(others).toEqual(
+      [...byCount.slice(COMMON_INDUSTRIES)].sort((a, b) => a.localeCompare(b, "en")),
+    );
+    // Nothing is lost or duplicated by the split, whatever is pinned.
+    expect([...common, ...others].sort()).toEqual(
+      [...dataset.taxonomy.industries].sort(),
+    );
+  });
+
+  it("never lists an industry twice, however the pins overlap the count", () => {
+    // The case a concat would break: pinning something the count already put in the
+    // tier. It shows up as a duplicated option in a dropdown long after the person
+    // who pinned it has forgotten.
+    const { common, others } = industryOptions(
+      withTaxonomy({ pinnedIndustries: [largest, smallest] }),
+    );
+    expect(common.filter((industry) => industry === largest)).toHaveLength(1);
+    expect(common).toEqual([...onCount, smallest]);
+    expect(others).not.toContain(largest);
   });
 });
 
@@ -292,7 +426,12 @@ describe("buildPeerView", () => {
 
   it("carries the common functions, and says nothing per-company about them", () => {
     const view = buildPeerView(dataset, input());
-    expect(view.functions).toEqual(COMMON_FUNCTIONS);
+    // The PUBLISHED labels, which is what the block renders. The shipped dataset
+    // still holds the seeded eight, so the two agree today — asserted both ways,
+    // because the agreement is the thing that makes every other test in this file
+    // able to talk about "the functions" without saying which copy it means.
+    expect(view.functions).toEqual(dataset.siteContent.commonFunctions);
+    expect(dataset.siteContent.commonFunctions).toEqual([...COMMON_FUNCTIONS]);
     /**
      * **`functionsBasis` is gone from the view model**, with the two caveat paragraphs
      * it fed. They said the list is the general India pattern rather than a breakdown
@@ -307,6 +446,34 @@ describe("buildPeerView", () => {
     expect("functionsBasis" in view).toBe(false);
     expect(FUNCTIONS_TITLE).toMatch(/GCCs/);
     expect(FUNCTIONS_LEAD).not.toMatch(/%/);
+  });
+
+  /**
+   * **The labels follow `siteContent.commonFunctions`, and `COMMON_FUNCTIONS` is the
+   * seed rather than the render source.**
+   *
+   * The block could become editable data because it claims nothing — no count, no
+   * share, no order — so there is nothing for an edit to contradict. That is also why
+   * this test can vary the labels to something ANSR never approved without checking
+   * anything about the words: what matters is which copy the screen reads.
+   *
+   * The constant is asserted NOT to be the render source, which is the failure this
+   * guards. Both are the shipped eight today, so a `view.functions` that had gone on
+   * reading the constant would pass every other test in the file.
+   */
+  it("renders the published functions, never the seeded constant", () => {
+    const edited = ["Engineering", "Payroll & benefits", "Treasury"];
+    const view = buildPeerView(
+      withSiteContent({ commonFunctions: edited }),
+      input(),
+    );
+    expect(view.functions).toEqual(edited);
+    expect(view.functions).not.toEqual([...COMMON_FUNCTIONS]);
+
+    // And the seed itself did not move: it is the schema's default and the thing to
+    // diff a live dataset against, so it has to stay the shipped eight.
+    expect(COMMON_FUNCTIONS).toEqual(DEFAULT_COMMON_FUNCTIONS);
+    expect(COMMON_FUNCTIONS).toHaveLength(8);
   });
 
   /**
@@ -746,6 +913,121 @@ describe("geography", () => {
 
   it("returns null for a city it has never heard of", () => {
     expect(projectCity("Atlantis")).toBeNull();
+  });
+
+  /**
+   * `taxonomy.cityCoordinates`, the dataset's overlay on the seeded table.
+   *
+   * It exists for the one thing the code cannot know: where a city added after the
+   * seed actually is. So the cases that matter are the resolution order and the miss —
+   * an overlay that silently lost to the table would leave a new city unplotted with
+   * nothing failing, and an overlay that fabricated a position for a city neither side
+   * knows would draw a dot claiming a company is somewhere it is not.
+   *
+   * Warangal is used throughout as the city a taxonomy editor might add: a real place,
+   * really absent from `CITY_COORDINATES`.
+   */
+  describe("the taxonomy's coordinate overlay", () => {
+    const WARANGAL: Readonly<Record<string, LatLon>> = {
+      Warangal: { lat: 17.97, lon: 79.59 },
+    };
+
+    it("plots a city only the overlay knows", () => {
+      expect("Warangal" in CITY_COORDINATES).toBe(false);
+      expect(projectCity("Warangal")).toBeNull();
+
+      const point = projectCity("Warangal", WARANGAL)!;
+      expect(point).not.toBeNull();
+      expect(point.x).toBeGreaterThanOrEqual(0);
+      expect(point.x).toBeLessThanOrEqual(MAP_WIDTH);
+      expect(point.y).toBeGreaterThanOrEqual(0);
+      expect(point.y).toBeLessThanOrEqual(MAP_HEIGHT);
+
+      // The supplied coordinate is really what was projected, not a stand-in that
+      // happens to land inside the frame: Warangal is north-east of Hyderabad, and
+      // the point has to sit north-east of Hyderabad's.
+      const hyderabad = projectCity("Hyderabad")!;
+      expect(point.y).toBeLessThan(hyderabad.y);
+      expect(point.x).toBeGreaterThan(hyderabad.x);
+    });
+
+    it("lets the overlay win, so a wrong coordinate is correctable without a deploy", () => {
+      const seeded = projectCity("Bengaluru")!;
+      const corrected = projectCity("Bengaluru", {
+        // Delhi's coordinate, which is also NCR's — so the corrected point can be
+        // asserted against a known projection rather than merely "different".
+        Bengaluru: { lat: 28.61, lon: 77.21 },
+      })!;
+      expect(corrected).not.toEqual(seeded);
+      expect(corrected).toEqual(projectCity("NCR"));
+    });
+
+    it("leaves the seeded table as the source wherever the overlay is silent", () => {
+      const seeded = projectCity("Bengaluru")!;
+      // An overlay about some other city, and an empty one. Both are the live case:
+      // `cityCoordinates` is `{}` in the published dataset, so every dot on the screen
+      // today comes from the code's table.
+      expect(projectCity("Bengaluru", WARANGAL)).toEqual(seeded);
+      expect(projectCity("Bengaluru", {})).toEqual(seeded);
+    });
+
+    it("invents nothing for a city neither side has a coordinate for", () => {
+      // Null, not a centre-of-India default and not a point on the frame's edge. A dot
+      // is a claim about where a company is, and a guessed one is a wrong claim drawn
+      // at full confidence.
+      expect(projectCity("Atlantis", {})).toBeNull();
+      expect(projectCity("Atlantis", WARANGAL)).toBeNull();
+    });
+
+    /**
+     * And the view model passes the overlay through, which is the half of this that a
+     * unit test of `projectCity` alone would miss: the function could resolve the
+     * overlay perfectly while `buildPeerView` went on calling it with one argument.
+     *
+     * A city is added to the taxonomy AND to a company, because `cityDensity` counts
+     * companies rather than reading the taxonomy — a city no company is in never
+     * reaches the map at all.
+     */
+    describe("reaches the map through the view model", () => {
+      const inWarangal = (coordinates: Record<string, LatLon>): Dataset => {
+        const [first, ...rest] = dataset.companies;
+        return {
+          ...withTaxonomy({
+            cities: [...dataset.taxonomy.cities, "Warangal"],
+            cityCoordinates: coordinates,
+          }),
+          companies: [
+            { ...first!, cities: [...first!.cities, "Warangal"] },
+            ...rest,
+          ],
+        };
+      };
+      const industry = dataset.companies[0]!.industry;
+      const cityOn = (data: Dataset) =>
+        buildPeerView(data, input({ industry })).map.cities.find(
+          (entry) => entry.city === "Warangal",
+        )!;
+
+      it("plots an added city once the taxonomy carries its coordinate", () => {
+        const data = inWarangal(WARANGAL);
+        expect(cityOn(data).point).not.toBeNull();
+        expect(buildPeerView(data, input({ industry })).map.unplotted).not.toContain(
+          "Warangal",
+        );
+      });
+
+      it("lists an added city with no coordinate, and says nothing about it", () => {
+        const data = inWarangal({});
+        const entry = cityOn(data);
+        // Counted and ranked as normal — the city is present in the block with its
+        // company count. It simply carries no dot.
+        expect(entry.point).toBeNull();
+        expect(entry.companies).toBeGreaterThan(0);
+        expect(buildPeerView(data, input({ industry })).map.unplotted).toContain(
+          "Warangal",
+        );
+      });
+    });
   });
 
   it("orients north up and east right", () => {

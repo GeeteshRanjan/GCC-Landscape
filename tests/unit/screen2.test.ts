@@ -54,6 +54,8 @@ function datasetWith(metrics: Metric[]): Dataset {
       revenueBands: ["Above $20 Bn"],
       cities: ["Bengaluru"],
       hqCountries: ["USA"],
+      pinnedIndustries: [],
+      cityCoordinates: {},
     },
     companies: [
       {

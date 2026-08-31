@@ -9,6 +9,7 @@ import {
   INDUSTRY_TERMS,
   SUB_INDUSTRY_TERMS,
 } from "@/data/search-terms";
+import { usePublicCopy } from "@/components/public/copy-context";
 import { cn } from "@/lib/utils";
 import { SelectField } from "./select-field";
 import { ASK } from "./copy";
@@ -286,6 +287,7 @@ export function InputPanel({
   submitError,
   onSubmit,
 }: InputPanelProps) {
+  const copy = usePublicCopy();
   const [companyName, setCompanyName] = useState(initial?.companyName ?? "");
   const [industry, setIndustry] = useState(initial?.industry ?? "");
   const [revenueBand, setRevenueBand] = useState(initial?.revenueBand ?? "");
@@ -636,7 +638,11 @@ export function InputPanel({
               "hover:bg-action-hover disabled:opacity-60 disabled:active:scale-100",
             )}
           >
-            {pending ? ASK.submitPending : ASK.submit}
+            {/* **The resting label is published copy; the pending one is not.** One is
+                what a visitor reads while deciding to press, which is positioning; the
+                other is a transient machine state an admin could not see the effect of
+                editing. See `ASK.submitPending`. */}
+            {pending ? ASK.submitPending : copy.askSubmit}
           </button>
         </div>
       </div>

@@ -1,4 +1,5 @@
 import type { FunctionAreaView, ShownMetric } from "@/data/screen2";
+import { usePublicCopy } from "@/components/public/copy-context";
 import { Panel } from "@/components/public/primitives";
 import {
   MilestoneTrack,
@@ -8,11 +9,7 @@ import {
   type BarTone,
 } from "@/components/public/charts";
 import { TabZones } from "./zones";
-import {
-  FIGURES_HEADING,
-  HR_SECTIONS,
-  METRIC_NOTES,
-} from "./copy";
+import { figuresHeadings, hrSections, METRIC_NOTES } from "./copy";
 import { GraduateOutput } from "./graduate-card";
 import { scalarCells, SummaryFigures } from "./summary-figures";
 
@@ -219,9 +216,11 @@ export function HrPanel({ area }: { area: FunctionAreaView }) {
    ========================================================================== */
 
 function MarketSummary({ figures }: { figures: readonly ShownMetric[] }) {
+  const copy = usePublicCopy();
+
   return (
     <SummaryFigures
-      heading={FIGURES_HEADING.hr}
+      heading={figuresHeadings(copy).hr}
       headingId="figures-hr-heading"
       cells={scalarCells(figures)}
     />
@@ -236,10 +235,15 @@ function MarketSummary({ figures }: { figures: readonly ShownMetric[] }) {
    ========================================================================== */
 
 function Velocity({ ranges }: { ranges: readonly ShownMetric[] }) {
+  const copy = usePublicCopy();
+
   return (
     <section
       id="hr-velocity"
-      aria-label={HR_SECTIONS.velocity}
+      // The section's name, from the shared `velocityHeading` key — the operations tab
+      // draws this same section under the same key, so the two cannot be reworded apart.
+      // Located by `id` in the suite, never by this string.
+      aria-label={hrSections(copy).velocity}
       className="flex min-w-0 flex-col"
     >
       {/* **`items-stretch` and a centring body, which is the peer view's own fix for this
@@ -308,10 +312,12 @@ function Analysis({
   milestones?: ShownMetric;
   salary?: ShownMetric;
 }) {
+  const copy = usePublicCopy();
+
   return (
     <section
       id="hr-analysis"
-      aria-label={HR_SECTIONS.analysis}
+      aria-label={hrSections(copy).analysis}
       className="flex min-w-0 flex-col"
     >
       {/* `items-stretch` and centring bodies, which is what the velocity section above

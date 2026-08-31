@@ -3,7 +3,14 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import { fetchPeerView } from "@/app/actions";
-import type { CloseCopy, HeroCopy, ImpactStat } from "@/data/schema";
+import { PublicCopyProvider } from "@/components/public/copy-context";
+import type {
+  CloseCopy,
+  CustomerLogo,
+  HeroCopy,
+  ImpactStat,
+  PublicCopy,
+} from "@/data/schema";
 import type { TieredOptions } from "@/components/screen1/input-panel";
 import type { PeerView, PeerViewInput } from "@/data/screen1";
 import type { FunctionView } from "@/data/screen2";
@@ -82,6 +89,25 @@ export interface GccLandscapeToolProps {
    * server action for it could only ever return one answer.
    */
   closeCopy: CloseCopy;
+  /**
+   * Every static heading and label on both screens, from `siteContent.copy`.
+   *
+   * **Threaded to here and then supplied as a CONTEXT rather than as a prop**, because
+   * the consumers are thirty deep across four levels of component and most of the levels
+   * between have no interest in copy at all — see `copy-context.tsx`. This is the one
+   * place the published strings enter the tree, which is also what makes "the public
+   * screens render published copy" a single seam rather than a property of eleven files.
+   */
+  publicCopy: PublicCopy;
+  /**
+   * The customer marks in the entry point's scrolling strip.
+   *
+   * A prop rather than part of the copy context, deliberately: it has exactly one
+   * consumer, two levels down, and a context for a value read in one place is
+   * indirection bought for nothing. It is also not copy — the names are accessible names
+   * for images, and the dimensions are measured ink bounds.
+   */
+  logos: readonly CustomerLogo[];
 }
 
 type Phase =
@@ -99,6 +125,8 @@ export function GccLandscapeTool({
   impactStats,
   ctaHref,
   closeCopy,
+  publicCopy,
+  logos,
 }: GccLandscapeToolProps) {
   useFrameHeight();
 
@@ -306,12 +334,24 @@ export function GccLandscapeTool({
      * it. It brings Light 300 body copy with it, which is the brand's single biggest
      * typographic tell.
      */
+    /**
+     * **The provider wraps the whole tree, and it is OUTSIDE the phase switch on
+     * purpose.** All three phases read published copy, and two of them share the header
+     * band — so a provider per phase would be three places for one decision, and the
+     * shared band would take its strings from whichever phase happened to mount it.
+     *
+     * It carries no ground, no class and no element of its own, so it cannot affect the
+     * `font-display` scope below it or the stacking context the entry point's dropdown
+     * depends on.
+     */
+    <PublicCopyProvider copy={publicCopy}>
     <main className="bg-surface font-display">
       {phase.kind === "ask" ? (
         <PeerViewAsk
           headingRef={askHeadingRef}
           heroCopy={heroCopy}
           impactStats={impactStats}
+          logos={logos}
           industries={industries}
           revenueBands={revenueBands}
           hqCountries={hqCountries}
@@ -349,5 +389,6 @@ export function GccLandscapeTool({
         />
       ) : null}
     </main>
+    </PublicCopyProvider>
   );
 }

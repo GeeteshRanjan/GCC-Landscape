@@ -406,6 +406,8 @@ function buildTaxonomy(companies: Company[]): Dataset["taxonomy"] {
     revenueBands: [...revenueBands],
     cities,
     hqCountries: collect((c) => c.hqCountry),
+    pinnedIndustries: [],
+    cityCoordinates: {},
   };
 }
 

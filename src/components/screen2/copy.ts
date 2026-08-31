@@ -1,6 +1,27 @@
 import type { MetricShape } from "@/data/metrics";
 import type { PeerViewInput } from "@/data/screen1";
-import type { MetricFunction } from "@/data/schema";
+import {
+  DEFAULT_PUBLIC_COPY,
+  type MetricFunction,
+  type PublicCopy,
+} from "@/data/schema";
+
+/**
+ * **The seven static headings in this file are DERIVED from `DEFAULT_PUBLIC_COPY`.**
+ *
+ * Same split as Screen 1's `copy.ts`: the schema holds the shipped wording because it is
+ * published data an admin edits, this file holds the reasoning because that is a code
+ * decision. The constants below read the schema key rather than restating its string, so
+ * there is one value and the reasoning cannot drift away from what it explains; the
+ * grouped shapes (`FIGURES_HEADING`, `HR_SECTIONS`, `OPS_SECTIONS`) are each a function
+ * of `PublicCopy` applied to the default, which is what keeps the SHAPE in one place as
+ * well as the value.
+ *
+ * The screens render through `usePublicCopy()`, so these constants are the value the
+ * context resolves to with no provider above it. Everything else in the file — every
+ * derived sentence, every per-metric note, the held group's strings — stays in code for
+ * the reasons recorded beside each one.
+ */
 
 /**
  * Screen 2's visitor-facing sentences, in one file — same rule as Screen 1's
@@ -202,15 +223,28 @@ export const TABS_LABEL = "Function";
  * name a subject is the length that stops it reading as a label. The relationship is
  * still true; it is not the reader's problem.
  */
-export const FIGURES_HEADING: Record<MetricFunction, string> = {
-  tech: "India's technology talent",
-  // "landscape" rather than "base", at ANSR's wording for the composed operations tab.
-  // The four cells under it are a workforce, an uptime, a stock of floorspace and a
-  // count of lost days — "base" named the first of those and stretched over the rest.
-  operations: "India's operations landscape",
-  hr: "India's hiring market",
-  finance: "India's cost base",
-};
+/**
+ * **The four-key mapping lives here and nowhere else.** `publicCopySchema` names its
+ * fields after the tabs a reader sees (`figuresOperations`) while the code keys them off
+ * `MetricFunction` (`operations`), and the two vocabularies are not the same list —
+ * `tech` against `figuresTech` is the one that does not transliterate. One function is
+ * what stops four call sites each doing that translation, and each getting one wrong
+ * would be a heading from the wrong tab rather than a type error.
+ */
+export function figuresHeadings(copy: PublicCopy): Record<MetricFunction, string> {
+  return {
+    tech: copy.figuresTech,
+    // "landscape" rather than "base", at ANSR's wording for the composed operations tab.
+    // The four cells under it are a workforce, an uptime, a stock of floorspace and a
+    // count of lost days — "base" named the first of those and stretched over the rest.
+    operations: copy.figuresOperations,
+    hr: copy.figuresHr,
+    finance: copy.figuresFinance,
+  };
+}
+
+export const FIGURES_HEADING: Record<MetricFunction, string> =
+  figuresHeadings(DEFAULT_PUBLIC_COPY);
 
 /**
  * Who stands behind the figures, under the content surface.
@@ -225,7 +259,7 @@ export const FIGURES_HEADING: Record<MetricFunction, string> = {
  * claim it carries — that these are aggregates rather than a survey — is still one no
  * heading or label on the screen can make.
  */
-export const SOURCE_LINE = "Source: ANSR Research";
+export const SOURCE_LINE = DEFAULT_PUBLIC_COPY.sourceLine;
 
 /**
  * How to read the trailing plus, on the cards that have one and nowhere else.
@@ -259,7 +293,13 @@ export const FLOOR_NOTE = "+ indicates a floor, not a point measurement";
  * "India GCCs closest to your profile", "Functions most GCCs run from India" — a subject
  * stated, no noun for the artefact.
  */
-export const VELOCITY_HEADING = "How long hiring takes";
+/**
+ * **One schema KEY, which is the published form of "one constant rather than the same
+ * words typed twice".** `velocityHeading` is a single field, so an admin who rewords the
+ * section rewords it on both tabs at once and cannot reword one alone — exactly the
+ * property two literals would have given up, now held one level further out.
+ */
+export const VELOCITY_HEADING = DEFAULT_PUBLIC_COPY.velocityHeading;
 
 /* ==========================================================================
    The HR composition
@@ -290,10 +330,14 @@ export const VELOCITY_HEADING = "How long hiring takes";
  * person costs next year, so "pressure" is what the second one measures; "analysis" was a
  * word about us doing analysis, which is the class of sentence this screen keeps cutting.
  */
-export const HR_SECTIONS = {
-  velocity: VELOCITY_HEADING,
-  analysis: "Scale and salary pressure",
-} as const;
+export function hrSections(copy: PublicCopy) {
+  return {
+    velocity: copy.velocityHeading,
+    analysis: copy.hrAnalysisHeading,
+  };
+}
+
+export const HR_SECTIONS = hrSections(DEFAULT_PUBLIC_COPY);
 
 /**
  * How to read a metric, per metric, on a composed tab.
@@ -352,10 +396,14 @@ export const METRIC_NOTES: Record<string, string> = {
  * problem, and "benchmarks" names the artefact. The two cards are the scale curve and
  * network latency, which is what the heading now says.
  */
-export const OPS_SECTIONS = {
-  velocity: VELOCITY_HEADING,
-  supporting: "Scale and connectivity",
-} as const;
+export function opsSections(copy: PublicCopy) {
+  return {
+    velocity: copy.velocityHeading,
+    supporting: copy.opsSupportingHeading,
+  };
+}
+
+export const OPS_SECTIONS = opsSections(DEFAULT_PUBLIC_COPY);
 
 /* --------------------------------------------------------------------------
    The held group — DELETED

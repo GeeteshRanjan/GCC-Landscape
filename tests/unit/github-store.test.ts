@@ -49,6 +49,8 @@ function dataset(overrides: Partial<Dataset> = {}): Dataset {
       revenueBands: ["$1 Bn – $5 Bn"],
       cities: ["Bengaluru"],
       hqCountries: ["USA"],
+      pinnedIndustries: [],
+      cityCoordinates: {},
     },
     companies: [
       {

@@ -10,10 +10,15 @@ import {
 } from "@/data/diff";
 import {
   DATASET_VERSION,
+  DEFAULT_COMMON_FUNCTIONS,
+  DEFAULT_LOGOS,
+  DEFAULT_PUBLIC_COPY,
   type BusinessType,
   type Company,
+  type CustomerLogo,
   type Dataset,
   type Metric,
+  type PublicCopy,
   DEFAULT_SITE_CONTENT,
 } from "@/data/schema";
 
@@ -54,6 +59,8 @@ function dataset(overrides: Partial<Dataset> = {}): Dataset {
       revenueBands: ["< $100 Mn", "$1 Bn – $5 Bn", "Above $20 Bn"],
       cities: ["Bengaluru", "Pune"],
       hqCountries: ["USA", "Japan"],
+      pinnedIndustries: [],
+      cityCoordinates: {},
     },
     companies: [company()],
     businessTypes: [],
@@ -84,6 +91,12 @@ describe("diffDatasets — site content", () => {
     // REQUIRED on the parsed type — so a fixture that omits it is a compile error rather
     // than a silent `undefined` reaching the diff.
     close: { body: "Access the complete dataset.", ctaLabel: "Unlock full intelligence" },
+    // The three collections that moved out of code, on the same terms as `close`:
+    // defaulted in the schema, required on the parsed type. The shipped values are
+    // reused rather than restated so a copy change does not have to be typed twice.
+    commonFunctions: [...DEFAULT_COMMON_FUNCTIONS],
+    logos: [...DEFAULT_LOGOS],
+    copy: DEFAULT_PUBLIC_COPY,
     ...overrides,
   });
 
@@ -174,6 +187,161 @@ describe("diffDatasets — site content", () => {
     expect(diff.siteContent.impactStats.added).toHaveLength(1);
     expect(diff.siteContent.impactStats.reordered).toBe(false);
     expect(diff.counts.siteContent).toBe(1);
+  });
+
+  /**
+   * The thirty static strings.
+   *
+   * Every one of them, in a loop, because the list of fields the diff walks is the
+   * thing being tested here rather than the walking of it. A hand-maintained list of
+   * twenty-nine keys loses one eventually, and the key it loses is a heading that then
+   * publishes silently — the `businessTypes`-missing-from-`COMPANY_FIELDS` defect,
+   * with twenty-nine chances to happen instead of one.
+   */
+  it("catches a change in every one of the twenty-nine copy strings", () => {
+    const keys = Object.keys(DEFAULT_PUBLIC_COPY) as Array<keyof PublicCopy>;
+    expect(keys).toHaveLength(29);
+
+    for (const field of keys) {
+      const copy: PublicCopy = { ...DEFAULT_PUBLIC_COPY, [field]: "Edited" };
+      const diff = diffDatasets(
+        dataset({ siteContent: content({ copy }) }),
+        dataset({ siteContent: content() }),
+      );
+      expect(diff.counts.siteContent, field).toBe(1);
+      expect(diff.siteContent.copy, field).toEqual([
+        { field, before: DEFAULT_PUBLIC_COPY[field], after: "Edited" },
+      ]);
+    }
+  });
+
+  it("reports a copy edit as a site-content change and nothing else", () => {
+    const diff = diffDatasets(
+      dataset({
+        siteContent: content({
+          copy: { ...DEFAULT_PUBLIC_COPY, viewPeers: "Peers" },
+        }),
+      }),
+      dataset({ siteContent: content() }),
+    );
+    // The category exists so a one-word edit to a tab label cannot hide inside a
+    // company batch's "changed" count.
+    expect(diff.counts.changed).toBe(0);
+    expect(diff.counts.siteContent).toBe(1);
+    expect(diff.isEmpty).toBe(false);
+  });
+
+  it("reports an added and a removed function tag", () => {
+    const diff = diffDatasets(
+      dataset({
+        siteContent: content({
+          commonFunctions: [
+            ...DEFAULT_COMMON_FUNCTIONS.slice(1),
+            "Engineering & R&D",
+          ],
+        }),
+      }),
+      dataset({ siteContent: content() }),
+    );
+    expect(diff.siteContent.commonFunctions.added).toEqual(["Engineering & R&D"]);
+    expect(diff.siteContent.commonFunctions.removed).toEqual([
+      DEFAULT_COMMON_FUNCTIONS[0],
+    ]);
+    expect(diff.counts.siteContent).toBe(2);
+  });
+
+  it("reports a reordered function list, and does not call an addition one", () => {
+    // The tags render in this order, so a reorder is a real change — and an added
+    // tag shifts everything after it, which is why membership is checked first.
+    const reordered = diffDatasets(
+      dataset({
+        siteContent: content({ commonFunctions: [...DEFAULT_COMMON_FUNCTIONS].reverse() }),
+      }),
+      dataset({ siteContent: content() }),
+    );
+    expect(reordered.siteContent.commonFunctions.reordered).toBe(true);
+    expect(reordered.counts.siteContent).toBe(1);
+
+    const added = diffDatasets(
+      dataset({
+        siteContent: content({
+          commonFunctions: ["Engineering & R&D", ...DEFAULT_COMMON_FUNCTIONS],
+        }),
+      }),
+      dataset({ siteContent: content() }),
+    );
+    expect(added.siteContent.commonFunctions.reordered).toBe(false);
+    expect(added.counts.siteContent).toBe(1);
+  });
+
+  it("reports a renamed, resized and repointed logo", () => {
+    const logos = [...DEFAULT_LOGOS] as CustomerLogo[];
+    const first = logos[0] as CustomerLogo;
+
+    const renamed = diffDatasets(
+      dataset({
+        siteContent: content({
+          logos: [{ ...first, name: "Best Buy Co.", width: 120 }, ...logos.slice(1)],
+        }),
+      }),
+      dataset({ siteContent: content() }),
+    );
+    expect(renamed.siteContent.logos.changed).toEqual([
+      {
+        src: first.src,
+        name: "Best Buy Co.",
+        changes: [
+          { field: "name", before: first.name, after: "Best Buy Co." },
+          { field: "width", before: String(first.width), after: "120" },
+        ],
+      },
+    ]);
+    expect(renamed.counts.siteContent).toBe(1);
+
+    // A different file is a different mark, not an edit: the file IS the identity,
+    // for the reason recorded on `SiteContentDiff.logos`.
+    const repointed = diffDatasets(
+      dataset({
+        siteContent: content({
+          logos: [{ ...first, src: "/logos/newmark.svg" }, ...logos.slice(1)],
+        }),
+      }),
+      dataset({ siteContent: content() }),
+    );
+    expect(repointed.siteContent.logos.added.map((l) => l.src)).toEqual([
+      "/logos/newmark.svg",
+    ]);
+    expect(repointed.siteContent.logos.removed.map((l) => l.src)).toEqual([first.src]);
+    expect(repointed.siteContent.logos.changed).toEqual([]);
+  });
+
+  it("reports a reordered logo strip, since the strip scrolls in that order", () => {
+    const diff = diffDatasets(
+      dataset({ siteContent: content({ logos: [...DEFAULT_LOGOS].reverse() }) }),
+      dataset({ siteContent: content() }),
+    );
+    expect(diff.siteContent.logos.reordered).toBe(true);
+    expect(diff.counts.siteContent).toBe(1);
+    expect(diff.isEmpty).toBe(false);
+  });
+
+  it("names the new collections in the console output", () => {
+    const text = renderDiffText(
+      diffDatasets(
+        dataset({
+          siteContent: content({
+            copy: { ...DEFAULT_PUBLIC_COPY, sourceLine: "Source: ANSR" },
+            commonFunctions: [...DEFAULT_COMMON_FUNCTIONS, "Engineering & R&D"],
+            logos: [...DEFAULT_LOGOS].slice(1),
+          }),
+        }),
+        dataset({ siteContent: content() }),
+      ),
+    );
+    expect(text).toContain("copy sourceLine");
+    expect(text).toContain("Source: ANSR");
+    expect(text).toContain("functions added");
+    expect(text).toContain("logos removed");
   });
 
   it("reports no hero change on a first import, having nothing to compare against", () => {
@@ -364,10 +532,113 @@ describe("diffDatasets — taxonomy", () => {
     });
   });
 
-  it("covers all four lists", () => {
+  it("covers all four lists, and the two parallel keys beside them", () => {
+    // A label is what makes an entry render on both surfaces: each walks
+    // `diff.taxonomy` and names the entry from this record, so a key diffed without
+    // a label here is a change reported into an empty heading.
     expect(Object.keys(TAXONOMY_LABELS).sort()).toEqual(
-      ["cities", "hqCountries", "industries", "revenueBands"].sort(),
+      [
+        "cities",
+        "cityCoordinates",
+        "hqCountries",
+        "industries",
+        "pinnedIndustries",
+        "revenueBands",
+      ].sort(),
     );
+  });
+
+  /**
+   * The two parallel keys — the pinned tier and the map coordinates.
+   *
+   * Both hold copies of strings from the four lists, and both change what a visitor
+   * is shown without any of those lists moving: pinning reorders the industry
+   * dropdown's leading tier, and a coordinate puts a dot on the density map. An edit
+   * to either that the diff did not report would publish as a no-op, which is the
+   * same failure `businessTypes` had.
+   */
+  it("reports a pinned industry added and removed", () => {
+    const before = dataset();
+    before.taxonomy = { ...before.taxonomy, pinnedIndustries: ["BFSI"] };
+    const next = dataset();
+    next.taxonomy = { ...next.taxonomy, pinnedIndustries: ["Retail"] };
+
+    const diff = diffDatasets(next, before);
+
+    expect(diff.isEmpty).toBe(false);
+    expect(diff.counts.taxonomy).toBe(1);
+    expect(diff.taxonomy[0]).toEqual({
+      key: "pinnedIndustries",
+      added: ["Retail"],
+      removed: ["BFSI"],
+      reordered: false,
+    });
+  });
+
+  it("does not report a reordered pin list, because the tier is ordered by count", () => {
+    // The opposite call to `revenueBands` and the same one as a tag reorder: this
+    // list decides membership only, so a different order draws an identical
+    // dropdown. Reporting it would train an admin to skip the section.
+    const before = dataset();
+    before.taxonomy = {
+      ...before.taxonomy,
+      pinnedIndustries: ["BFSI", "Retail"],
+    };
+    const next = dataset();
+    next.taxonomy = { ...next.taxonomy, pinnedIndustries: ["Retail", "BFSI"] };
+
+    expect(diffDatasets(next, before).isEmpty).toBe(true);
+  });
+
+  it("reports a coordinate added, and a moved one as the old removed plus the new added", () => {
+    const added = dataset();
+    added.taxonomy = {
+      ...added.taxonomy,
+      cityCoordinates: { Pune: { lat: 18.52, lon: 73.86 } },
+    };
+    const first = diffDatasets(added, dataset());
+    expect(first.counts.taxonomy).toBe(1);
+    expect(first.taxonomy[0]).toEqual({
+      key: "cityCoordinates",
+      added: ["Pune (18.52, 73.86)"],
+      removed: [],
+      reordered: false,
+    });
+
+    const moved = dataset();
+    moved.taxonomy = {
+      ...moved.taxonomy,
+      cityCoordinates: { Pune: { lat: 18.6, lon: 73.86 } },
+    };
+    // Both numbers, because a coordinate moving is the one change here a reviewer
+    // cannot check by eye — and a record has no third shape to report it in.
+    expect(diffDatasets(moved, added).taxonomy[0]).toEqual({
+      key: "cityCoordinates",
+      added: ["Pune (18.6, 73.86)"],
+      removed: ["Pune (18.52, 73.86)"],
+      reordered: false,
+    });
+
+    expect(diffDatasets(dataset(), added).taxonomy[0]).toMatchObject({
+      key: "cityCoordinates",
+      added: [],
+      removed: ["Pune (18.52, 73.86)"],
+    });
+  });
+
+  it("names both parallel keys in the console output", () => {
+    const next = dataset();
+    next.taxonomy = {
+      ...next.taxonomy,
+      pinnedIndustries: ["Retail"],
+      cityCoordinates: { Pune: { lat: 18.52, lon: 73.86 } },
+    };
+    const text = renderDiffText(diffDatasets(next, dataset()));
+
+    expect(text).toContain("taxonomy.pinnedIndustries");
+    expect(text).toContain("Retail");
+    expect(text).toContain("taxonomy.cityCoordinates");
+    expect(text).toContain("Pune (18.52, 73.86)");
   });
 });
 

@@ -5,9 +5,9 @@ import {
   largestShortfallLine,
   largestOverlapLine,
   peerCountLine,
-  SCALE,
   shortfallLine,
 } from "./copy";
+import { usePublicCopy } from "@/components/public/copy-context";
 import {
   Chip,
   formatCount,
@@ -157,6 +157,20 @@ function PeerCardBody({
 }: {
   peer: { headcount: string; cities: readonly string[]; establishedYear: number };
 }) {
+  /**
+   * **The three labels are published copy, read here rather than threaded from
+   * `PeerBlockView`.** This is the component that draws them, and the alternative is a
+   * `labels` prop on a component whose parent maps over five peers — five copies of a
+   * value that is the same for all five, passed through a boundary that exists to
+   * describe one card.
+   *
+   * `peerHeadcountLabel` is drawn TWICE on this surface: here, and as the ranking's
+   * column header 400px below. One key, so an edit moves both — the two figures are the
+   * same quantity, and a reader crossing from the cards to the ranking must not meet two
+   * names for it. See `LargestBlockView`.
+   */
+  const copy = usePublicCopy();
+
   return (
     // `h-full` so the body fills the card and `mt-auto` on the year has something to
     // push against — without it the flex column is only as tall as its content and the
@@ -168,7 +182,7 @@ function PeerCardBody({
           the centre this page is about. Every label on the card names the GCC for the
           same reason — a reader should not have to infer the subject from the section
           heading two hundred pixels up. */}
-      <CardFact label="GCC headcount">
+      <CardFact label={copy.peerHeadcountLabel}>
         {/* 20/24px, down from 24/30. Five cards on one row are about 205px wide at
             1440, and "59,900–60,000" at 30px overflowed its own cell — the figure has
             to fit the column it is the subject of. It is still the largest thing on the
@@ -188,7 +202,7 @@ function PeerCardBody({
           own section heading is "India GCCs closest to your profile". The subject is
           named by the heading and again by the figure's own label directly above this
           one, so a third statement of it is a prefix rather than information. */}
-      <CardFact label="Cities">
+      <CardFact label={copy.peerCitiesLabel}>
         <CityCells cities={peer.cities} />
       </CardFact>
       {/* **"GCC since 2002", not "Established 2002".** The year is when the CENTRE was
@@ -212,8 +226,12 @@ function PeerCardBody({
           same thing without the third "GCC" on the card: the company has been in India
           since that year, which is true of the centre and cannot be read as the founding
           date. */}
+      {/* **The label and the year are two elements, so the label is a PREFIX rather than
+          a template.** There is no placeholder for an admin to move the year to the front
+          of, and an edit cannot detach the two: whatever the field says, the year follows
+          it in the same sentence, in the same weight. */}
       <span className="text-sm text-text-muted">
-        In India since{" "}
+        {copy.peerSinceLabel}{" "}
         <span className="font-semibold text-text">{peer.establishedYear}</span>
       </span>
     </div>
@@ -527,6 +545,10 @@ export function IndustryCountView({ view }: { view: PeerView }) {
  * quantity its own bars encode states its axis in row one.
  */
 export function LargestBlockView({ view }: { view: PeerView }) {
+  // Two of the comparison card's three labels are drawn here as well — the column
+  // header over the figures, and the year chip on each row. Same keys, because they name
+  // the same two quantities; see `PeerCardBody`.
+  const copy = usePublicCopy();
   const { entries, repeatsPeers } = view.largest;
   const line = largestLine(view);
 
@@ -562,10 +584,14 @@ export function LargestBlockView({ view }: { view: PeerView }) {
           One label over a column of five is the cheapest place to say it: the same
           small-caps treatment the comparison cards use for exactly this job, aligned to
           the edge the figures share. `justify-end` rather than `justify-between` — there is
-          no leading column to label, since the names are self-evident. */}
+          no leading column to label, since the names are self-evident.
+
+          **`peerHeadcountLabel`, the same key the comparison card's own label reads.** The
+          two figures are the same quantity in the same treatment, so two keys would let an
+          edit give one quantity two names on one page. */}
       <div className="flex justify-end">
         <span className="text-[0.6875rem] font-semibold tracking-caps text-text-muted uppercase">
-          GCC headcount
+          {copy.peerHeadcountLabel}
         </span>
       </div>
 
@@ -669,7 +695,7 @@ export function LargestBlockView({ view }: { view: PeerView }) {
                 <div className="flex min-w-0 flex-wrap items-center gap-1.5">
                   <CityCells cities={entry.company.cities} size="sm" />
                   <Chip size="sm">
-                    In India since {entry.company.establishedYear}
+                    {copy.peerSinceLabel} {entry.company.establishedYear}
                   </Chip>
                 </div>
                 {/* **The same treatment as the comparison card's figure, and it is one
@@ -925,6 +951,19 @@ export function NationalScaleView({
   /** Supplied by the caller, so this file draws no glyphs. */
   icons: { fortune: React.ReactNode; forbes: React.ReactNode; people: React.ReactNode };
 }) {
+  /**
+   * **All three labels are published copy, and each is the PREDICATE of a sentence whose
+   * subject is the figure above it.** That is what the 120/140-character caps in
+   * `publicCopySchema` are protecting: a label long enough to wrap to a third line stops
+   * reading as one sentence with the number, which is the whole construction of this
+   * strip.
+   *
+   * The two index names are the one thing an edit here can genuinely break — "Fortune
+   * Global 500" and "Fortune 500" are different lists with different membership, and the
+   * figure is a count over the former. `screen1.test.ts` asserts the shipped wording
+   * names each index in full; an admin edit is not checked by anything.
+   */
+  const copy = usePublicCopy();
   const { scale } = view;
 
   return (
@@ -943,19 +982,19 @@ export function NationalScaleView({
       <ScaleFigure
         icon={icons.fortune}
         value={formatCount(scale.fortuneGlobal500Count)}
-        label={SCALE.fortuneLabel}
+        label={copy.scaleFortuneLabel}
       />
       <ScaleFigure
         icon={icons.forbes}
         value={formatCount(scale.forbesGlobal2000Count)}
-        label={SCALE.forbesLabel}
+        label={copy.scaleForbesLabel}
       />
       {/* The union of the two memberships, counted once each. It was the Fortune Global
           500 subset alone, under two cells naming two indices. */}
       <ScaleFigure
         icon={icons.people}
         value={formatProfessionals(scale.indexedProfessionals)}
-        label={SCALE.peopleLabel}
+        label={copy.scalePeopleLabel}
       />
     </div>
   );

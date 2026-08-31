@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 
-import { band, choose, expectBand } from "./helpers";
+import { band, choose, expectBand, LEAK_CANARY } from "./helpers";
 
 /**
  * Screen 1, the public Peer View, against a real production build.
@@ -17,9 +17,6 @@ import { band, choose, expectBand } from "./helpers";
  * the way back, and — the one that matters most — that the dataset does not reach
  * the browser. The view model's own logic is unit-tested in tests/unit/screen1.
  */
-
-/** Distinctive, present in the dataset, and in neither industry used below. */
-const LEAK_CANARY = "Walmart";
 
 async function ask(
   page: import("@playwright/test").Page,

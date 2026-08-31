@@ -1,4 +1,5 @@
 import type { ImpactStat } from "@/data/schema";
+import { usePublicCopy } from "@/components/public/copy-context";
 import { cn } from "@/lib/utils";
 
 import { IMPACT } from "./copy";
@@ -61,6 +62,8 @@ const DESKTOP_COLUMNS: Readonly<Record<number, string>> = {
  * inside the evidence bands: it is the same kind of claim as the logos.
  */
 export function ImpactBand({ stats }: { stats: readonly ImpactStat[] }) {
+  const copy = usePublicCopy();
+
   // An empty list would render a heading over nothing. The schema cannot forbid
   // it — an admin mid-edit legitimately has zero rows — so the band withdraws
   // rather than drawing a headed void.
@@ -149,7 +152,11 @@ export function ImpactBand({ stats }: { stats: readonly ImpactStat[] }) {
           // previous pass stack the mark instead of inlining it.
           className="text-center text-xl leading-[1.8] font-medium tracking-body text-balance text-text-inverse sm:text-2xl md:text-4xl lg:text-5xl"
         >
-          {IMPACT.titleLead}{" "}
+          {/* Published copy — and the 40-character cap on `impactTitleLead` is the
+              measurement above expressed as a schema rule: this heading is words plus a
+              2.78:1 lockup on ONE line at 320, so what a longer phrase costs is the mark
+              dropping to a second line with its rays reaching into the first. */}
+          {copy.impactTitleLead}{" "}
           {/* The brand name, drawn rather than typed, and set INLINE where the word
               used to be — so the sentence still reads as one sentence and the mark is
               its last word rather than a signature under it.

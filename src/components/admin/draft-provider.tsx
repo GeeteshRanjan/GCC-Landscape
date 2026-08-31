@@ -14,12 +14,15 @@ import { alignValue } from "@/data/metrics";
 import type {
   BusinessType,
   Company,
+  CustomerLogo,
   Dataset,
   CloseCopy,
   HeroCopy,
   ImpactStat,
+  LatLon,
   Metric,
-  Taxonomy,
+  PublicCopy,
+  TaxonomyListKey,
 } from "@/data/schema";
 import { slugify, uniqueSlug } from "@/data/normalize";
 
@@ -45,7 +48,7 @@ import { slugify, uniqueSlug } from "@/data/normalize";
 
 /**
  * Bumped to v3 when the business-type catalogue joined the editable slice; v2
- * added the function metrics.
+ * added the function metrics; v5 when the close's copy did.
  *
  * Not cosmetic. A draft stored under an older key is missing a whole editable
  * collection, and restoring it would produce a draft the publish gate rejects
@@ -54,6 +57,16 @@ import { slugify, uniqueSlug } from "@/data/normalize";
  * versioned for exactly this.
  *
  * `tests/browser/helpers.ts` owns `DRAFT_STORAGE_KEY` and must move with it.
+ *
+ * **The five keys added since v5 are guarded by SHAPE rather than by a sixth
+ * version, and the restore below is where that happens.** A version bump is the
+ * blunt instrument and it is the right one when a whole collection appears; these
+ * five are all `.default()`-ed in the schema, which makes the failure quieter and
+ * worse. A v5 draft written before them parses on the way out — the defaults fill
+ * the gaps — so publishing one would silently RESET the pinned industries, the
+ * coordinates, the function list, the logo strip and all thirty copy strings to the
+ * shipped values, and report it as an ordinary edit. So the restore checks the keys
+ * it is about to trust and drops a draft that predates them.
  */
 const STORAGE_KEY = "gcc-admin-draft-v5";
 const AUTOSAVE_DEBOUNCE_MS = 800;
@@ -64,7 +77,7 @@ type EditableDataset = Pick<
   "taxonomy" | "companies" | "businessTypes" | "metrics" | "siteContent"
 >;
 
-export type TaxonomyKey = keyof Taxonomy;
+export type TaxonomyKey = TaxonomyListKey;
 
 interface StoredDraft {
   /** The baseline this draft was started from. */
@@ -132,11 +145,43 @@ interface DraftContextValue {
    */
   moveImpactStat: (index: number, delta: number) => void;
 
+  /**
+   * The thirty static strings, patched like the hero's two and for the same
+   * reason: they are thirty independent slots with no rule spanning any pair, so
+   * there is nothing that has to land as one edit.
+   */
+  updatePublicCopy: (patch: Partial<PublicCopy>) => void;
+  /**
+   * The function tags, replaced wholesale rather than patched per item.
+   *
+   * `setTaxonomyValues` sets the precedent: adding, renaming, removing and
+   * reordering a flat list of strings are four shapes of one operation, and a
+   * mutator per shape would be four ways to write the same array. The editor
+   * computes the next list and hands it over.
+   */
+  setCommonFunctions: (values: string[]) => void;
+  addLogo: () => void;
+  updateLogo: (index: number, patch: Partial<CustomerLogo>) => void;
+  removeLogo: (index: number) => void;
+  /** Reorder by one step. The strip scrolls in this order. */
+  moveLogo: (index: number, delta: number) => void;
+
   setTaxonomyValues: (key: TaxonomyKey, values: string[]) => void;
   addTaxonomyValue: (key: TaxonomyKey, value: string) => void;
   renameTaxonomyValue: (key: TaxonomyKey, from: string, to: string) => void;
   removeTaxonomyValue: (key: TaxonomyKey, value: string) => void;
   moveTaxonomyValue: (key: TaxonomyKey, index: number, delta: number) => void;
+
+  /**
+   * The two parallel taxonomy keys, each with its own mutator rather than a
+   * generic one, because neither is a flat list of its own values: one holds
+   * copies of strings from `industries` and the other is keyed by a string from
+   * `cities`. The generic list mutators above would have needed a special case
+   * each; see `TAXONOMY_LIST_KEYS` in the schema for the same split.
+   */
+  setPinnedIndustry: (industry: string, pinned: boolean) => void;
+  /** `null` removes the coordinate, which is how a city goes back to carrying no dot. */
+  setCityCoordinate: (city: string, coord: LatLon | null) => void;
 
   /** Throw the draft away and go back to what is published. */
   discardDraft: () => void;
@@ -159,6 +204,18 @@ function editableOf(dataset: Dataset): EditableDataset {
 }
 
 
+
+/**
+ * What a new row in the logo strip starts as.
+ *
+ * `src` is empty, so a new row is incomplete until a file is chosen and the editor
+ * says so — the same state an added impact figure starts in. The two dimensions are
+ * not: they are a plausible starting size rather than a measurement, because zero is
+ * refused by the schema and would put a bounds error on a row nobody had touched
+ * yet. 64 is the height every raster mark in the shipped set was exported at, and
+ * measuring the real ink bounds is the whole job of the two fields.
+ */
+const NEW_LOGO: CustomerLogo = { name: "", src: "", width: 100, height: 64 };
 
 /** Which taxonomy list a company field draws from. */
 const COMPANY_FIELD_FOR: Record<TaxonomyKey, keyof Company | "cities"> = {
@@ -245,7 +302,16 @@ export function DraftProvider({
       !stored.editable?.companies ||
       !stored.editable?.taxonomy ||
       !stored.editable?.metrics ||
-      !stored.editable?.siteContent
+      !stored.editable?.siteContent ||
+      // The five keys added after this storage key was last moved. Checked here
+      // rather than by a sixth version for the reason recorded on STORAGE_KEY: all
+      // five are defaulted in the schema, so a draft missing one publishes cleanly
+      // and resets it, which is the one outcome this provider must never produce.
+      !stored.editable.taxonomy.pinnedIndustries ||
+      !stored.editable.taxonomy.cityCoordinates ||
+      !stored.editable.siteContent.commonFunctions ||
+      !stored.editable.siteContent.logos ||
+      !stored.editable.siteContent.copy
     ) {
       window.localStorage.removeItem(STORAGE_KEY);
       return;
@@ -428,6 +494,13 @@ export function DraftProvider({
                * and a form field that could flip it would make a documented
                * invariant one stray click from being wrong. Same for `format`,
                * which decides whether a cell may hold text.
+               *
+               * **`atLeast` is deliberately NOT in this list**, which is the whole
+               * reason the spread above comes first. It is part of the definition
+               * like `format` is, but it is a claim about how the figures being
+               * typed were arrived at — so it is the editor's to set and arrives
+               * with the rest of the form. `progression` and `subset` are not
+               * editable at all, so they ride the spread unchanged.
                */
               id: metric.id,
               functionArea: metric.functionArea,
@@ -591,6 +664,89 @@ export function DraftProvider({
     });
   }, [applyEdit]);
 
+  const updatePublicCopy = useCallback((patch: Partial<PublicCopy>) => {
+    applyEdit((current) => ({
+      ...current,
+      siteContent: {
+        ...current.siteContent,
+        copy: { ...current.siteContent.copy, ...patch },
+      },
+    }));
+  }, [applyEdit]);
+
+  /**
+   * The whole list at once, stored exactly as handed over — nothing is trimmed,
+   * de-duplicated or dropped here.
+   *
+   * Deliberately, because every cleanup that belongs to a finished list is wrong
+   * while one is being typed: dropping an empty item takes the row the admin just
+   * added, and collapsing a duplicate takes the row under their cursor the moment
+   * they finish typing a label that already exists. The schema trims on parse, and
+   * the editor is what refuses to leave an item empty.
+   */
+  const setCommonFunctions = useCallback((values: string[]) => {
+    applyEdit((current) => ({
+      ...current,
+      siteContent: { ...current.siteContent, commonFunctions: values },
+    }));
+  }, [applyEdit]);
+
+  const addLogo = useCallback(() => {
+    applyEdit((current) => ({
+      ...current,
+      siteContent: {
+        ...current.siteContent,
+        // Appended, like an impact figure and for the same reason: order here is
+        // what the strip scrolls through, so a new mark lands at the end and is
+        // moved into place deliberately.
+        logos: [...current.siteContent.logos, NEW_LOGO],
+      },
+    }));
+  }, [applyEdit]);
+
+  /**
+   * Patched by INDEX, not by a key, because a logo has no id.
+   *
+   * `src` is the closest thing to one — it is the only field chosen from a fixed
+   * set rather than typed — but it is also editable, so keying on it would make
+   * pointing a row at a different file indistinguishable from replacing the row.
+   * The index is stable for the duration of one edit, which is all a controlled
+   * input needs, and the rows are never sorted.
+   */
+  const updateLogo = useCallback((index: number, patch: Partial<CustomerLogo>) => {
+    applyEdit((current) => ({
+      ...current,
+      siteContent: {
+        ...current.siteContent,
+        logos: current.siteContent.logos.map((logo, i) =>
+          i === index ? { ...logo, ...patch } : logo,
+        ),
+      },
+    }));
+  }, [applyEdit]);
+
+  const removeLogo = useCallback((index: number) => {
+    applyEdit((current) => ({
+      ...current,
+      siteContent: {
+        ...current.siteContent,
+        logos: current.siteContent.logos.filter((_, i) => i !== index),
+      },
+    }));
+  }, [applyEdit]);
+
+  const moveLogo = useCallback((index: number, delta: number) => {
+    applyEdit((current) => {
+      const logos = [...current.siteContent.logos];
+      const target = index + delta;
+      if (index < 0 || index >= logos.length) return current;
+      if (target < 0 || target >= logos.length) return current;
+      const [moved] = logos.splice(index, 1);
+      logos.splice(target, 0, moved as CustomerLogo);
+      return { ...current, siteContent: { ...current.siteContent, logos } };
+    });
+  }, [applyEdit]);
+
   const setTaxonomyValues = useCallback((key: TaxonomyKey, values: string[]) => {
     applyEdit((current) => ({
       ...current,
@@ -663,9 +819,50 @@ export function DraftProvider({
               )
             : current.businessTypes;
 
+        /**
+         * The two parallel taxonomy keys hold COPIES of strings from the primary
+         * lists, so a rename has to carry the copy across as well.
+         *
+         * Same failure as the business-type cascade above, one level along: the
+         * schema checks a pinned industry against `industries` and a coordinate's
+         * key against `cities`, so a pin or a coordinate left under the old name is
+         * a publish that fails referential integrity on an edit the UI reported as
+         * successful. That is the correct-but-useless outcome the whole cascade
+         * exists to avoid.
+         */
+        const pinned = current.taxonomy.pinnedIndustries;
+        const renamedPins =
+          key === "industries" ? pinned.map((v) => (v === from ? next : v)) : pinned;
+        // A merge can pin the same industry twice. Nothing downstream breaks on
+        // that — membership is read as a set — but the diff would report a pin
+        // nobody added, so it is collapsed here the same way the list itself is.
+        const pinnedIndustries = renamedPins.filter(
+          (v, i) => renamedPins.indexOf(v) === i,
+        );
+
+        const held = current.taxonomy.cityCoordinates;
+        const moving = key === "cities" ? held[from] : undefined;
+        const cityCoordinates =
+          moving === undefined
+            ? held
+            : Object.fromEntries([
+                ...Object.entries(held).filter(([city]) => city !== from),
+                // A merge keeps the SURVIVING name's own coordinate: it describes
+                // the place that is left, and the name being renamed away was a
+                // second spelling of it.
+                ...(held[next] === undefined
+                  ? ([[next, moving]] as Array<[string, LatLon]>)
+                  : []),
+              ]);
+
         return {
           ...current,
-          taxonomy: { ...current.taxonomy, [key]: deduped },
+          taxonomy: {
+            ...current.taxonomy,
+            [key]: deduped,
+            pinnedIndustries,
+            cityCoordinates,
+          },
           companies,
           businessTypes,
         };
@@ -685,11 +882,29 @@ export function DraftProvider({
           ? current.businessTypes.filter((type) => type.industry !== value)
           : current.businessTypes;
 
+      // And the two parallel keys, for the reason spelled out in the rename above:
+      // the schema checks both against the list they copy from, so a pin or a
+      // coordinate for a value that no longer exists fails the publish.
+      const pinnedIndustries =
+        key === "industries"
+          ? current.taxonomy.pinnedIndustries.filter((v) => v !== value)
+          : current.taxonomy.pinnedIndustries;
+      const cityCoordinates =
+        key === "cities" && current.taxonomy.cityCoordinates[value] !== undefined
+          ? Object.fromEntries(
+              Object.entries(current.taxonomy.cityCoordinates).filter(
+                ([city]) => city !== value,
+              ),
+            )
+          : current.taxonomy.cityCoordinates;
+
       return {
         ...current,
         taxonomy: {
           ...current.taxonomy,
           [key]: current.taxonomy[key].filter((v) => v !== value),
+          pinnedIndustries,
+          cityCoordinates,
         },
         businessTypes,
       };
@@ -711,6 +926,63 @@ export function DraftProvider({
     },
     [applyEdit],
   );
+
+  /**
+   * Pinning is membership, not position. The industry is appended rather than
+   * inserted anywhere in particular, because order INSIDE the leading tier is still
+   * company count — this list decides who is in the tier and nothing else.
+   */
+  const setPinnedIndustry = useCallback((industry: string, pinned: boolean) => {
+    applyEdit((current) => {
+      const held = current.taxonomy.pinnedIndustries;
+      // No-op guard, so toggling a checkbox back to where it was does not mark the
+      // draft unsaved for an edit that changed nothing.
+      if (pinned === held.includes(industry)) return current;
+      return {
+        ...current,
+        taxonomy: {
+          ...current.taxonomy,
+          pinnedIndustries: pinned
+            ? [...held, industry]
+            : held.filter((v) => v !== industry),
+        },
+      };
+    });
+  }, [applyEdit]);
+
+  /**
+   * Clearing a coordinate DELETES the key rather than writing an empty value.
+   *
+   * "We do not know where this is" is the absence of an entry, and it has to stay
+   * that way: `projectCity` reads this record as an overlay on the code's own table,
+   * so an entry present but blank would shadow a city the code already knows and
+   * take its dot off the map. There is also nothing to write — the bounds refuse a
+   * zero pair and the schema has no null to put in one.
+   */
+  const setCityCoordinate = useCallback((city: string, coord: LatLon | null) => {
+    applyEdit((current) => {
+      const held = current.taxonomy.cityCoordinates;
+      if (coord === null) {
+        if (held[city] === undefined) return current;
+        return {
+          ...current,
+          taxonomy: {
+            ...current.taxonomy,
+            cityCoordinates: Object.fromEntries(
+              Object.entries(held).filter(([name]) => name !== city),
+            ),
+          },
+        };
+      }
+      return {
+        ...current,
+        taxonomy: {
+          ...current.taxonomy,
+          cityCoordinates: { ...held, [city]: coord },
+        },
+      };
+    });
+  }, [applyEdit]);
 
   const discardDraft = useCallback(() => {
     setEditable(editableOf(currentBaseline));
@@ -776,11 +1048,19 @@ export function DraftProvider({
       updateImpactStat,
       removeImpactStat,
       moveImpactStat,
+      updatePublicCopy,
+      setCommonFunctions,
+      addLogo,
+      updateLogo,
+      removeLogo,
+      moveLogo,
       setTaxonomyValues,
       addTaxonomyValue,
       renameTaxonomyValue,
       removeTaxonomyValue,
       moveTaxonomyValue,
+      setPinnedIndustry,
+      setCityCoordinate,
       discardDraft,
       keepDraftAgainstNewBaseline,
       markPublished,
@@ -803,6 +1083,12 @@ export function DraftProvider({
       updateImpactStat,
       removeImpactStat,
       moveImpactStat,
+      updatePublicCopy,
+      setCommonFunctions,
+      addLogo,
+      updateLogo,
+      removeLogo,
+      moveLogo,
       editable.businessTypes,
       addBusinessType,
       updateBusinessType,
@@ -812,6 +1098,8 @@ export function DraftProvider({
       renameTaxonomyValue,
       removeTaxonomyValue,
       moveTaxonomyValue,
+      setPinnedIndustry,
+      setCityCoordinate,
       discardDraft,
       keepDraftAgainstNewBaseline,
       markPublished,

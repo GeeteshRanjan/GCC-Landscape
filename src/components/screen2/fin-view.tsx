@@ -1,4 +1,5 @@
 import type { FunctionAreaView, ShownMetric } from "@/data/screen2";
+import { usePublicCopy } from "@/components/public/copy-context";
 import { Panel } from "@/components/public/primitives";
 import {
   IndexSpread,
@@ -9,7 +10,7 @@ import {
   type IndexTableRow,
 } from "@/components/public/charts";
 import {
-  FIGURES_HEADING,
+  figuresHeadings,
   FIN_DRIVERS_INSIGHT,
   FIN_FIGURES_QUALIFIER,
   FIN_LEADS,
@@ -180,9 +181,11 @@ export function FinPanel({ area }: { area: FunctionAreaView }) {
    ========================================================================== */
 
 function CostOverview({ figures }: { figures: readonly ShownMetric[] }) {
+  const copy = usePublicCopy();
+
   return (
     <SummaryFigures
-      heading={FIGURES_HEADING.finance}
+      heading={figuresHeadings(copy).finance}
       headingId="figures-finance-heading"
       cells={scalarCells(figures)}
     />

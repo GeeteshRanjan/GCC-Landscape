@@ -119,7 +119,12 @@
       "UAE",
       "UK",
       "USA"
-    ]
+    ],
+    "pinnedIndustries": [
+      "Retail",
+      "Consumer Packaged Goods"
+    ],
+    "cityCoordinates": {}
   },
   "companies": [
     {
@@ -41043,6 +41048,109 @@
     "close": {
       "body": "Access the complete dataset, deeper benchmarks and detailed cost structures behind your results.",
       "ctaLabel": "Unlock full intelligence"
+    },
+    "commonFunctions": [
+      "Technology & engineering",
+      "Data & analytics",
+      "Finance & accounting",
+      "Shared services & operations",
+      "Human resources",
+      "Customer & partner support",
+      "Procurement & supply chain",
+      "Legal, risk & compliance"
+    ],
+    "logos": [
+      {
+        "name": "Best Buy",
+        "src": "/logos/bestbuy.png",
+        "width": 106,
+        "height": 64
+      },
+      {
+        "name": "Target",
+        "src": "/logos/target.svg",
+        "width": 62,
+        "height": 79
+      },
+      {
+        "name": "Walmart",
+        "src": "/logos/walmart.svg",
+        "width": 107,
+        "height": 22
+      },
+      {
+        "name": "Lowe's",
+        "src": "/logos/lowes.svg",
+        "width": 125,
+        "height": 62
+      },
+      {
+        "name": "Nike",
+        "src": "/logos/nike.svg",
+        "width": 98,
+        "height": 51
+      },
+      {
+        "name": "Airbnb",
+        "src": "/logos/airbnb.svg",
+        "width": 86,
+        "height": 72
+      },
+      {
+        "name": "X",
+        "src": "/logos/x.svg",
+        "width": 55,
+        "height": 50
+      },
+      {
+        "name": "Wells Fargo",
+        "src": "/logos/wellsfargo.png",
+        "width": 127,
+        "height": 64
+      },
+      {
+        "name": "PepsiCo",
+        "src": "/logos/pepsico.png",
+        "width": 81,
+        "height": 64
+      },
+      {
+        "name": "Goldman Sachs",
+        "src": "/logos/goldmansachs.png",
+        "width": 154,
+        "height": 64
+      }
+    ],
+    "copy": {
+      "askTitle": "Build your GCC intelligence view",
+      "askLead": "Share your company details to identify relevant companies with GCCs in India and explore talent, capability and location metrics.",
+      "askSubmit": "See my results",
+      "customersLabel": "Companies ANSR has worked with in India",
+      "impactTitleLead": "Impact delivered by",
+      "headerPeers": "How your industry operates in India",
+      "headerFunctions": "The India market beyond your industry",
+      "viewPeers": "Peer Landscape",
+      "viewFunctions": "Function Metrics",
+      "peersTitle": "India GCCs closest to your profile",
+      "industryTitle": "Inside India's GCC base",
+      "peerHeadcountLabel": "GCC headcount",
+      "peerCitiesLabel": "Cities",
+      "peerSinceLabel": "In India since",
+      "snapshotHeadcountLabel": "Typical GCC headcount",
+      "snapshotCitiesLabel": "Indian cities with a GCC",
+      "snapshotLeadingCityLabel": "Leading GCC city",
+      "scaleTitle": "The world's largest companies, in India",
+      "scaleFortuneLabel": "Fortune Global 500 companies run a GCC in India.",
+      "scaleForbesLabel": "Forbes Global 2000 companies run a GCC in India.",
+      "scalePeopleLabel": "people work in those Fortune Global 500 and Forbes Global 2000 GCCs in India.",
+      "figuresTech": "India's technology talent",
+      "figuresOperations": "India's operations landscape",
+      "figuresHr": "India's hiring market",
+      "figuresFinance": "India's cost base",
+      "velocityHeading": "How long hiring takes",
+      "hrAnalysisHeading": "Scale and salary pressure",
+      "opsSupportingHeading": "Scale and connectivity",
+      "sourceLine": "Source: ANSR Research"
     }
   }
 }

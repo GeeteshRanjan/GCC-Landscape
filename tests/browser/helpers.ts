@@ -255,3 +255,29 @@ export async function expectBand(page: Page, id: string): Promise<void> {
     `#${id} must be a named region — it has neither aria-labelledby nor aria-label`,
   ).toBeTruthy();
 }
+
+/**
+ * A company name that must never appear in a public document.
+ *
+ * The specs that use it assert the dataset did not serialize to the browser, and a
+ * canary only works if its ONLY route into the HTML is that failure. Three
+ * properties, and the third is the one that has already bitten:
+ *
+ *   - distinctive enough that a substring match cannot fire by accident;
+ *   - present in the dataset, so it would genuinely travel if the guard broke;
+ *   - in neither industry the public specs drive (BFSI, Electrical & Electronics)
+ *     **and not the name of a customer logo.**
+ *
+ * It was "Walmart", which satisfied the first two and quietly stopped satisfying the
+ * third. The logo strip's list moved from a client-side module constant into
+ * `siteContent.logos`, so the ten marks now cross at the client boundary and sit in
+ * the RSC payload of every phase — which is correct and is the point of making them
+ * editable, but it put a dataset company name in the document legitimately. The
+ * canary tripped on both result screens for a reason that had nothing to do with the
+ * dataset.
+ *
+ * Held here rather than in either spec so the two cannot drift: `0-screen2.spec.ts`
+ * had the string typed out a second time, which is how one of them would have been
+ * fixed alone.
+ */
+export const LEAK_CANARY = "ArcelorMittal";

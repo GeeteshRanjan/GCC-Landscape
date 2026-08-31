@@ -82,6 +82,8 @@ function dataset(overrides: Partial<Dataset> = {}): Dataset {
       revenueBands: BANDS,
       cities: ["Bengaluru"],
       hqCountries: ["USA", "Germany"],
+      pinnedIndustries: [],
+      cityCoordinates: {},
     },
     companies: [company()],
     businessTypes: [type()],
@@ -257,6 +259,8 @@ describe("scoring intent — the reason the weights are what they are", () => {
       revenueBands: BANDS,
       cities: ["Bengaluru"],
       hqCountries: ["USA", "Germany"],
+      pinnedIndustries: [],
+      cityCoordinates: {},
     },
     companies: [
       // The visitor is a sportswear brand above $20 Bn.

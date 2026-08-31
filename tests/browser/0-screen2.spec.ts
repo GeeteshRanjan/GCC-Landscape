@@ -1,6 +1,6 @@
 import { expect, test, type Page } from "@playwright/test";
 
-import { band, choose, expectBand } from "./helpers";
+import { band, choose, expectBand, LEAK_CANARY } from "./helpers";
 /**
  * **Imported rather than retyped.** This sentence was spelled out in three places in this
  * file, so rewording it — "+ indicates a floor" for "+ is a floor", at the HR
@@ -1399,8 +1399,9 @@ test.describe("iframe constraints", () => {
     await openFunctionView(page);
     const html = await page.content();
     // A company from an unrelated industry. If the dataset were serialized this
-    // would be the first thing to appear.
-    expect(html).not.toContain("Walmart");
+    // would be the first thing to appear. Shared with the peer-view spec so the two
+    // cannot drift — see `LEAK_CANARY`.
+    expect(html).not.toContain(LEAK_CANARY);
     expect(html.length).toBeLessThan(300_000);
   });
 });

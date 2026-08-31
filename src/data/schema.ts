@@ -90,12 +90,73 @@ export const businessTypeSchema = z.object({
   tags: z.array(z.enum(BUSINESS_TAGS)).min(2).max(16),
 });
 
+/**
+ * Where a city sits, so the density map can plot it.
+ *
+ * Bounded to India's own extent rather than to the globe. `MAP_FRAME` in geo.ts is
+ * the field the map draws, and a coordinate outside it would render a dot on the
+ * frame's edge or clipped away entirely — which reads as a broken map rather than as
+ * a bad number. The bounds are deliberately a little wider than the frame so a city
+ * on the boundary is not refused by rounding.
+ */
+export const latLonSchema = z.object({
+  lat: z.number().min(5).max(38.5),
+  lon: z.number().min(66).max(99),
+});
+
+/**
+ * The four flat string lists, named so "a taxonomy list" has a type.
+ *
+ * `keyof Taxonomy` used to mean exactly this, and it stopped meaning it the moment
+ * the two parallel keys below arrived — one is a record, the other holds copies of
+ * strings from `industries` rather than values of its own. Everything that
+ * generically walks the lists (the rename cascade, the usage counts, the diff, the
+ * editor's own config) wants these four and nothing else, so they get their own key
+ * type instead of a wider one each of those places would have to narrow again.
+ */
+export const TAXONOMY_LIST_KEYS = [
+  "industries",
+  "revenueBands",
+  "cities",
+  "hqCountries",
+] as const;
+
+export type TaxonomyListKey = (typeof TAXONOMY_LIST_KEYS)[number];
+
 export const taxonomySchema = z.object({
   industries: z.array(nonEmpty).min(1),
   /** Ascending. Adjacency in peer matching is a step in this array. */
   revenueBands: z.array(nonEmpty).min(1),
   cities: z.array(nonEmpty).min(1),
   hqCountries: z.array(nonEmpty).min(1),
+  /**
+   * Industries held in the dropdown's leading tier whatever their company count.
+   *
+   * **A parallel list of names rather than a flag on a restructured `industries`,
+   * and that is a compatibility decision.** `industries` is a `string[]` that
+   * companies, business types and the public dropdowns all key on by value;
+   * turning it into an array of objects would touch every one of those consumers
+   * to buy one boolean. A second list of the same strings costs a referential
+   * check, which `datasetSchema` does below.
+   *
+   * Defaulted, so a dataset written before the key existed still reads. Order
+   * inside the tier is still by count — this decides membership, not position.
+   */
+  pinnedIndustries: z.array(nonEmpty).default([]),
+  /**
+   * Coordinates for cities the code does not already know.
+   *
+   * **An OVERLAY on `CITY_COORDINATES`, never a replacement for it.** The code's
+   * table is geographic fact for the 31 cities the seed shipped, and it stays the
+   * source for those so the taxonomy editor cannot move Bengaluru. What this adds
+   * is the one thing the code cannot supply: where a city added after the seed
+   * actually is. `projectCity` reads the overlay first, then the table.
+   *
+   * A city with no coordinate on either side is counted, ranked and listed as
+   * normal and simply carries no dot. Nothing on the public screen says so — see
+   * the admin hint, which is where the gap is surfaced.
+   */
+  cityCoordinates: z.record(nonEmpty, latLonSchema).default({}),
 });
 
 /* ==========================================================================
@@ -602,6 +663,110 @@ export const closeCopySchema = z.object({
   ctaLabel: nonEmpty.max(28),
 });
 
+/**
+ * One customer mark in the entry point's scrolling strip.
+ *
+ * **The file is chosen from what is already served, never uploaded.** `src` is
+ * validated as a path under `/logos/`, so this field cannot become a way to point the
+ * strip at an arbitrary URL — the marks are adapted copies committed to
+ * `public/logos/`, and adapting a new one is a `brand_asset.py` step rather than a
+ * form field. What an admin controls is which of them appear, in what order, and
+ * under what name.
+ *
+ * `width` and `height` are the mark's own ink bounds, and both are needed: the strip
+ * caps height AND width, because ten marks across three aspect ratios set to one
+ * uniform height render a 4.9:1 wordmark six times the optical weight of a 0.8:1
+ * stacked mark. See `customer-logos.tsx`.
+ */
+export const customerLogoSchema = z.object({
+  /** The company, as its accessible name. Never drawn as text. */
+  name: nonEmpty.max(40),
+  src: z
+    .string()
+    .regex(
+      /^\/logos\/[A-Za-z0-9._-]+\.(svg|png)$/,
+      "src must be a file already served from /logos/, e.g. /logos/nike.svg",
+    ),
+  width: z.number().int().min(1).max(400),
+  height: z.number().int().min(1).max(200),
+});
+
+/**
+ * The static visitor-facing strings, as data.
+ *
+ * **Only the ones that state no CLAIM about the dataset, which is the line every
+ * entry here had to clear.** Most copy on the public screens is an argument about
+ * the company data and lives beside the logic making that argument — a sentence
+ * naming a count, a share or an ordering has to move when the thing it describes
+ * moves, so holding it as free text would let it drift into a falsehood nothing
+ * catches. Those stay in `copy.ts`, as do all the derived sentences, which are
+ * functions of the visitor's answers and have no fixed wording to edit.
+ *
+ * What is here is headings, labels and attributions: they name what a reader is
+ * looking at without asserting anything about it. Two exceptions kept in code
+ * deliberately, both because the exact wording is load-bearing:
+ * `FUNCTIONS_TITLE`, whose phrasing is what stops eight function tags being read
+ * as a claim about the five companies above them, and `peerCountLine` and its
+ * siblings, which state exact counts.
+ *
+ * **Every cap is a render limit measured on the real layout, not editorial
+ * taste.** The two band lines especially: `HeaderFinding` sets at 48px capped at
+ * the lead measure, so past roughly 36 characters it wraps — and a two-line band
+ * on one view beside a one-line band on the other puts back the height jump
+ * across the tab switch that the pair exists to remove.
+ */
+export const publicCopySchema = z.object({
+  /* The entry point's form card. */
+  askTitle: nonEmpty.max(48),
+  askLead: nonEmpty.max(200),
+  askSubmit: nonEmpty.max(32),
+  /* The logo strip's accessible name, and the impact band's heading. */
+  customersLabel: nonEmpty.max(80),
+  impactTitleLead: nonEmpty.max(40),
+  /* The result band, shared by both screens. Capped to hold one line. */
+  headerPeers: nonEmpty.max(40),
+  headerFunctions: nonEmpty.max(40),
+  /* The view switch. Two equal halves, so neither may wrap. */
+  viewPeers: nonEmpty.max(24),
+  viewFunctions: nonEmpty.max(24),
+  /* Peer landscape section headings. */
+  peersTitle: nonEmpty.max(60),
+  industryTitle: nonEmpty.max(40),
+  /* The peer card's three small-caps labels. */
+  peerHeadcountLabel: nonEmpty.max(24),
+  peerCitiesLabel: nonEmpty.max(24),
+  peerSinceLabel: nonEmpty.max(24),
+  /**
+   * The snapshot's cell labels — THREE of the four, not all of them.
+   *
+   * The opening cell's label is deliberately absent, and its absence is the rule
+   * this whole object is held to: a field an admin can fill that nothing draws is
+   * worse than no field at all. That label is COMPOSED over the visitor's own scope
+   * — "GCCs in your industry" or "GCCs in your sub-industry" — so a flat string
+   * could hold only one of its two branches, and an admin editing it would change
+   * neither. It stays in `copy.ts` with the other derived wording.
+   */
+  snapshotHeadcountLabel: nonEmpty.max(32),
+  snapshotCitiesLabel: nonEmpty.max(32),
+  snapshotLeadingCityLabel: nonEmpty.max(32),
+  /* The terminating scale strip. Each label is a whole sentence's predicate. */
+  scaleTitle: nonEmpty.max(60),
+  scaleFortuneLabel: nonEmpty.max(120),
+  scaleForbesLabel: nonEmpty.max(120),
+  scalePeopleLabel: nonEmpty.max(140),
+  /* Function metrics. One figure-row eyebrow per tab. */
+  figuresTech: nonEmpty.max(40),
+  figuresOperations: nonEmpty.max(40),
+  figuresHr: nonEmpty.max(40),
+  figuresFinance: nonEmpty.max(40),
+  /* The composed tabs' section headings. `velocity` is shared by HR and operations. */
+  velocityHeading: nonEmpty.max(40),
+  hrAnalysisHeading: nonEmpty.max(40),
+  opsSupportingHeading: nonEmpty.max(40),
+  /* The attribution under the function view's card. */
+  sourceLine: nonEmpty.max(60),
+});
+
 export const siteContentSchema = z.object({
   hero: heroCopySchema,
   /**
@@ -619,6 +784,28 @@ export const siteContentSchema = z.object({
    * forward.
    */
   close: closeCopySchema.default(() => DEFAULT_CLOSE_COPY),
+  /**
+   * The functions block on the peer view.
+   *
+   * **A plain list of labels that claims nothing, which is why it can be data at
+   * all.** There is no per-company function record in this dataset and there will
+   * not be one, so the block draws no numeral, no bar and no order — the tags are a
+   * statement about India GCCs in general, made by the section heading above them.
+   * That heading stays in code for exactly that reason; these do not have to.
+   *
+   * Capped at 12 and each item at 32 characters, because the set wraps as one row of
+   * tags with no column count: an item much longer than the rest is the one that
+   * decides the layout. The shipped eight sit inside a 16-to-28 character range.
+   */
+  commonFunctions: z.array(nonEmpty.max(32)).min(1).max(12).default(() => [
+    ...DEFAULT_COMMON_FUNCTIONS,
+  ]),
+  /**
+   * The customer strip. Defaulted, and capped at twelve — the strip scrolls, so a
+   * longer set is not a layout failure, but it stops being a curated set of proof.
+   */
+  logos: z.array(customerLogoSchema).max(12).default(() => [...DEFAULT_LOGOS]),
+  copy: publicCopySchema.default(() => DEFAULT_PUBLIC_COPY),
 });
 
 /**
@@ -630,6 +817,82 @@ export const DEFAULT_CLOSE_COPY: CloseCopy = {
     "Access the complete dataset, deeper benchmarks and detailed cost " +
     "structures behind your results.",
   ctaLabel: "Unlock full intelligence",
+};
+
+/**
+ * The eight functions, in the order ANSR supplied. Order carries no claim — the
+ * block states none — so it is the order they are read in and nothing more.
+ */
+export const DEFAULT_COMMON_FUNCTIONS: readonly string[] = [
+  "Technology & engineering",
+  "Data & analytics",
+  "Finance & accounting",
+  "Shared services & operations",
+  "Human resources",
+  "Customer & partner support",
+  "Procurement & supply chain",
+  "Legal, risk & compliance",
+];
+
+/**
+ * The ten marks, with the ink bounds each was measured at. Walmart's export
+ * arrived with a `viewBox` nine tenths too small, so only "Wal" rendered; the
+ * corrected file is what these dimensions describe.
+ */
+export const DEFAULT_LOGOS: readonly CustomerLogo[] = [
+  { name: "Best Buy", src: "/logos/bestbuy.png", width: 106, height: 64 },
+  { name: "Target", src: "/logos/target.svg", width: 62, height: 79 },
+  { name: "Walmart", src: "/logos/walmart.svg", width: 107, height: 22 },
+  { name: "Lowe's", src: "/logos/lowes.svg", width: 125, height: 62 },
+  { name: "Nike", src: "/logos/nike.svg", width: 98, height: 51 },
+  { name: "Airbnb", src: "/logos/airbnb.svg", width: 86, height: 72 },
+  { name: "X", src: "/logos/x.svg", width: 55, height: 50 },
+  { name: "Wells Fargo", src: "/logos/wellsfargo.png", width: 127, height: 64 },
+  { name: "PepsiCo", src: "/logos/pepsico.png", width: 81, height: 64 },
+  { name: "Goldman Sachs", src: "/logos/goldmansachs.png", width: 154, height: 64 },
+];
+
+/**
+ * The shipped wording for every static string, and the fallback a dataset written
+ * before this key existed reads with.
+ *
+ * Each of these was authored in `copy.ts` and the reasoning for the wording stays
+ * there — this is the value, not the argument for it. Changing one here changes the
+ * live site on the next publish; changing the reasoning is still a code edit.
+ */
+export const DEFAULT_PUBLIC_COPY: PublicCopy = {
+  askTitle: "Build your GCC intelligence view",
+  askLead:
+    "Share your company details to identify relevant companies with GCCs in " +
+    "India and explore talent, capability and location metrics.",
+  askSubmit: "See my results",
+  customersLabel: "Companies ANSR has worked with in India",
+  impactTitleLead: "Impact delivered by",
+  headerPeers: "How your industry operates in India",
+  headerFunctions: "The India market beyond your industry",
+  viewPeers: "Peer Landscape",
+  viewFunctions: "Function Metrics",
+  peersTitle: "India GCCs closest to your profile",
+  industryTitle: "Inside India's GCC base",
+  peerHeadcountLabel: "GCC headcount",
+  peerCitiesLabel: "Cities",
+  peerSinceLabel: "In India since",
+  snapshotHeadcountLabel: "Typical GCC headcount",
+  snapshotCitiesLabel: "Indian cities with a GCC",
+  snapshotLeadingCityLabel: "Leading GCC city",
+  scaleTitle: "The world's largest companies, in India",
+  scaleFortuneLabel: "Fortune Global 500 companies run a GCC in India.",
+  scaleForbesLabel: "Forbes Global 2000 companies run a GCC in India.",
+  scalePeopleLabel:
+    "people work in those Fortune Global 500 and Forbes Global 2000 GCCs in India.",
+  figuresTech: "India's technology talent",
+  figuresOperations: "India's operations landscape",
+  figuresHr: "India's hiring market",
+  figuresFinance: "India's cost base",
+  velocityHeading: "How long hiring takes",
+  hrAnalysisHeading: "Scale and salary pressure",
+  opsSupportingHeading: "Scale and connectivity",
+  sourceLine: "Source: ANSR Research",
 };
 
 /**
@@ -667,11 +930,27 @@ export const DEFAULT_SITE_CONTENT: SiteContent = {
     { id: "capital-created", value: "$2.5B+", label: "Capital investment created" },
   ],
   close: DEFAULT_CLOSE_COPY,
+  /**
+   * **Key order here matches `siteContentSchema`'s declaration order, and that is a
+   * correctness requirement rather than tidiness.** Zod emits a parsed object in the
+   * order its schema declares, `serializeDataset` is `JSON.stringify`, and
+   * `JSON.stringify` preserves insertion order — so a literal whose keys run in a
+   * different order serialises to different bytes than the same content round-tripped
+   * through the schema. The GitHub store asserts the two are byte-identical, because
+   * otherwise a publish through one store shows up as a whole-file rewrite in the
+   * other's diff.
+   */
+  commonFunctions: [...DEFAULT_COMMON_FUNCTIONS],
+  logos: [...DEFAULT_LOGOS],
+  copy: DEFAULT_PUBLIC_COPY,
 };
 
 export type HeroCopy = z.infer<typeof heroCopySchema>;
 export type ImpactStat = z.infer<typeof impactStatSchema>;
 export type CloseCopy = z.infer<typeof closeCopySchema>;
+export type CustomerLogo = z.infer<typeof customerLogoSchema>;
+export type PublicCopy = z.infer<typeof publicCopySchema>;
+export type LatLon = z.infer<typeof latLonSchema>;
 export type SiteContent = z.infer<typeof siteContentSchema>;
 
 export type MetricStructure = z.infer<typeof metricStructureSchema>;
@@ -741,7 +1020,7 @@ export const datasetSchema = z
     // the dropdowns do not offer is unreachable by any visitor, so it is an
     // error rather than a warning.
     const checks: ReadonlyArray<
-      [keyof typeof dataset.taxonomy, "industry" | "revenueBand" | "hqCountry"]
+      [TaxonomyListKey, "industry" | "revenueBand" | "hqCountry"]
     > = [
       ["industries", "industry"],
       ["revenueBands", "revenueBand"],
@@ -771,6 +1050,33 @@ export const datasetSchema = z
             message: `city "${city}" is not in taxonomy.cities`,
           });
         }
+      }
+    }
+    /* ----------------------------------------------------------------------
+       The two parallel taxonomy lists. Both hold copies of strings that live in
+       one of the four primary lists, which is the cost of not restructuring
+       those into arrays of objects — so both need the check that keeps the copy
+       honest. A pinned industry that no longer exists would silently stop
+       pinning anything; a coordinate keyed to a deleted city would plot a dot
+       for a place no company is in.
+       ---------------------------------------------------------------------- */
+    const allowedIndustries = new Set(dataset.taxonomy.industries);
+    for (const [index, industry] of dataset.taxonomy.pinnedIndustries.entries()) {
+      if (!allowedIndustries.has(industry)) {
+        ctx.addIssue({
+          code: "custom",
+          path: ["taxonomy", "pinnedIndustries", index],
+          message: `pinned industry "${industry}" is not in taxonomy.industries`,
+        });
+      }
+    }
+    for (const city of Object.keys(dataset.taxonomy.cityCoordinates)) {
+      if (!allowedCities.has(city)) {
+        ctx.addIssue({
+          code: "custom",
+          path: ["taxonomy", "cityCoordinates", city],
+          message: `coordinate for "${city}", which is not in taxonomy.cities`,
+        });
       }
     }
 

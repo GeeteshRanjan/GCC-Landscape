@@ -4,6 +4,7 @@ import { useState } from "react";
 
 import { useDraft } from "@/components/admin/draft-provider";
 import {
+  CheckboxField,
   SelectField,
   TextAreaField,
   TextField,
@@ -37,6 +38,14 @@ import { metricSchema, type Metric, type MetricValue } from "@/data/schema";
  * text, and which metrics sit behind the gate is an invariant in project.md. The
  * provider re-pins both on save regardless of what arrives.
  *
+ * **`atLeast` IS a field, and the line between it and those two is worth being
+ * precise about.** It is part of the definition, like the format — but it is a
+ * statement about how the figures in front of the admin were arrived at, which is
+ * the one thing only whoever entered them knows. "8.7 million or more" against
+ * "8.7 million" is their call about their own number, so the provider takes it from
+ * this form rather than re-pinning it. `progression` and `subset` are not fields
+ * for the opposite reason: both change which chart is drawn.
+ *
  * **Gated metrics are edited normally, and say why that is safe.** The value is
  * held in the dataset and omitted server-side on the way out — see
  * `publicMetric`. The admin browser is authenticated and already holds the whole
@@ -52,6 +61,8 @@ interface Form {
   indexBaseline: string;
   asOf: string;
   note: string;
+  /** Part of the definition. See the note on `atLeast` at the top of this file. */
+  atLeast: boolean;
   /** Range only. */
   minLabel: string;
   maxLabel: string;
@@ -86,6 +97,7 @@ function toForm(metric: Metric): Form {
     indexBaseline: metric.indexBaseline ?? "",
     asOf: metric.asOf ?? "",
     note: metric.note ?? "",
+    atLeast: metric.atLeast ?? false,
     minLabel: structure.kind === "range" ? structure.minLabel ?? "" : "",
     maxLabel: structure.kind === "range" ? structure.maxLabel ?? "" : "",
     scalar: "",
@@ -268,6 +280,10 @@ export function MetricEditor({
         : { indexBaseline: undefined }),
       ...(form.asOf.trim() ? { asOf: form.asOf.trim() } : { asOf: undefined }),
       ...(form.note.trim() ? { note: form.note.trim() } : { note: undefined }),
+      // Written as `undefined` rather than `false` when it is off, so an unmarked
+      // metric serialises without the key at all — the same shape the catalogue
+      // authored and the diff already compares against.
+      atLeast: form.atLeast ? true : undefined,
       structure: buildStructure(),
       value: value === "invalid" ? null : value,
     };
@@ -357,6 +373,31 @@ export function MetricEditor({
               widthClass="w-80"
             />
           ) : null}
+
+          {/*
+            Absent rather than disabled in the two cases the schema refuses, because
+            neither is something an admin can act on: a rating is an ordinal and has
+            no "or more", and a progression is drawn from the differences between its
+            waypoints, where the difference between two floors is not itself a floor.
+            A control that can only ever produce an error is worse than no control.
+
+            **Its label may not contain the word "figure", and that is a test
+            constraint rather than a copy preference.** The scalar control below is
+            labelled "Figure", `getByLabel` matches on a SUBSTRING, and four admin
+            specs locate that control by it — so "Figures are a floor" resolved to two
+            elements and broke all four. "Shown as a floor" is also the wording
+            `METRIC_FIELD_LABELS.atLeast` already uses in the publish diff, which is
+            the better outcome anyway: one set of words for the field an admin sets
+            and the field a reviewer approves. See docs/traps.md.
+          */}
+          {metric.format === "rating" || metric.progression ? null : (
+            <CheckboxField
+              label="Shown as a floor"
+              hint="Every value renders with a trailing + — “8.7M+”. Part of the definition rather than of the value, so it holds for whatever number is entered next."
+              checked={form.atLeast}
+              onChange={(checked) => set("atLeast", checked)}
+            />
+          )}
 
           {kind === "scalar" ? (
             <TextField

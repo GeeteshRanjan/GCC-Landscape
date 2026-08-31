@@ -4,13 +4,24 @@
  *
  * Two decisions worth recording, because both were deliberate:
  *
- *   1. **Coordinates are hardcoded here rather than stored in the dataset.** They
- *      are geographic fact, not company data — an admin has no reason to edit a
- *      city's latitude, and putting them in the dataset would mean the taxonomy
- *      editor could produce a city with a plausible-looking wrong position. A
- *      city added in admin and missing from this table degrades to being listed
- *      without a dot, which is visible and fixable, rather than being plotted
- *      somewhere invented.
+ *   1. **The table below is the source, and the dataset may only OVERLAY it.**
+ *      Coordinates are geographic fact rather than company data — an admin has no
+ *      reason to edit a city's latitude, and a dataset that owned every position
+ *      outright would let the taxonomy editor move Bengaluru by typing. What the
+ *      dataset can supply is the one thing this file cannot: where a city added
+ *      after the seed actually is. `taxonomy.cityCoordinates` is that, and
+ *      `projectCity` reads it as an overlay on the cities below.
+ *
+ *      The overlay takes PRECEDENCE, so a coordinate that turns out to be wrong is
+ *      correctable without a deploy — but it is a correction path and not a second
+ *      home for geography, because the table is still the answer for every city the
+ *      overlay says nothing about, which today is all of them.
+ *
+ *      A city with no coordinate on either side is listed without a dot, which is
+ *      visible and fixable, rather than being plotted somewhere invented. There is
+ *      no fallback position and no centre-of-India default: a dot is a claim about
+ *      where a company is, and a guessed one is a wrong claim drawn at full
+ *      confidence.
  *
  *   2. **The outline is generated from a licensed source, never hand-authored.**
  *      Invariant 8 has always forbidden a traced or approximated India — a guess
@@ -32,6 +43,16 @@
  * kilometre, which is far finer than a dot on a 440-unit-wide field can express.
  */
 
+/**
+ * Declared here rather than imported from `schema.ts`, which infers the same shape
+ * from `latLonSchema`.
+ *
+ * The two are structurally identical, so the dataset's coordinates satisfy this
+ * without a conversion — and the duplication is what keeps this module free of zod.
+ * `city-map.tsx` is a client component and imports `MAP_WIDTH` from here, so an
+ * import of the schema would put the whole validation layer in the browser bundle to
+ * buy two numbers a name.
+ */
 export interface LatLon {
   /** Degrees north. */
   lat: number;
@@ -138,9 +159,23 @@ export interface Point {
  * City name to a point in the `MAP_WIDTH` x `MAP_HEIGHT` box, or null when the
  * city has no recorded coordinate. Null is a real outcome, not a bug: admin can
  * add a city to the taxonomy at any time, and the caller lists it without a dot.
+ *
+ * `overlay` is `taxonomy.cityCoordinates`, and it is OPTIONAL rather than required
+ * for a reason beyond call-site convenience: the projection is also what the
+ * generated outline was drawn with and what several tests reason about, none of
+ * which have a dataset in hand. A caller with no overlay gets the seeded table,
+ * which is what this function has always returned.
+ *
+ * Resolution order is overlay, then table, then null — the precedence argued for at
+ * the top of this file. Read as `??` on the lookup rather than as a merged object so
+ * a dataset carrying an empty `cityCoordinates`, which is every dataset today, does
+ * no work per city.
  */
-export function projectCity(city: string): Point | null {
-  const at = CITY_COORDINATES[city];
+export function projectCity(
+  city: string,
+  overlay?: Readonly<Record<string, LatLon>>,
+): Point | null {
+  const at = overlay?.[city] ?? CITY_COORDINATES[city];
   if (!at) return null;
   return {
     x:

@@ -1,4 +1,5 @@
-import { CUSTOMERS } from "./copy";
+import { usePublicCopy } from "@/components/public/copy-context";
+import type { CustomerLogo } from "@/data/schema";
 
 /**
  * The customer-logo strip: one row of marks, moving continuously, on the palest
@@ -6,7 +7,8 @@ import { CUSTOMERS } from "./copy";
  *
  * **What this band claims, and what it must not.** These are companies ANSR has
  * worked with in India. Nothing here says or implies they used this tool, and the
- * section's accessible name is where that is stated precisely — see
+ * section's accessible name is where that is stated precisely — `customersLabel` in
+ * `publicCopySchema`, whose shipped wording and the reasoning for it are in
  * `CUSTOMERS.label`. There is no visible heading by design, so that name is the
  * only thing making it a real `region` landmark rather than an anonymous
  * `<section>`.
@@ -22,13 +24,22 @@ import { CUSTOMERS } from "./copy";
  */
 
 /**
- * The marks, with their intrinsic dimensions.
+ * **The marks are DATA now, from `siteContent.logos`, threaded in as a prop.** They were
+ * a module constant here; the shipped ten are unchanged and live in `DEFAULT_LOGOS`,
+ * which is also what `--reseed-site-content` restores. What an admin controls is which
+ * of the files already served from `public/logos/` appear, in what order, and under what
+ * name — `customerLogoSchema` validates `src` against that directory, so this cannot
+ * become a way to point the strip at an arbitrary URL. Adapting a NEW mark is still a
+ * `brand_asset.py` step and a commit.
+ *
+ * Everything below about how they are sized is unchanged, and all of it still matters:
  *
  * **Dimensions are stated rather than left to the browser**, so each slot has its
  * aspect ratio before the file arrives. Without them the row is ten zero-width
  * boxes until the last logo loads and then jumps to full width — a layout shift
  * on the band directly under the form, which is the worst place on the page for
- * one.
+ * one. They are the mark's own ink bounds, which is why the schema requires both and
+ * why an admin adding a row has to measure rather than guess.
  *
  * **Four are PNG and six are SVG, and the split is not arbitrary.** Best Buy,
  * Wells Fargo, PepsiCo and Goldman Sachs were supplied as a single base64 raster
@@ -41,23 +52,6 @@ import { CUSTOMERS } from "./copy";
  * Walmart's export also arrived with a `viewBox` nine tenths too small, so only
  * "Wal" rendered. Corrected in `public/logos/walmart.svg` to its real ink bounds.
  */
-const LOGOS: ReadonlyArray<{
-  name: string;
-  src: string;
-  width: number;
-  height: number;
-}> = [
-  { name: "Best Buy", src: "/logos/bestbuy.png", width: 106, height: 64 },
-  { name: "Target", src: "/logos/target.svg", width: 62, height: 79 },
-  { name: "Walmart", src: "/logos/walmart.svg", width: 107, height: 22 },
-  { name: "Lowe's", src: "/logos/lowes.svg", width: 125, height: 62 },
-  { name: "Nike", src: "/logos/nike.svg", width: 98, height: 51 },
-  { name: "Airbnb", src: "/logos/airbnb.svg", width: 86, height: 72 },
-  { name: "X", src: "/logos/x.svg", width: 55, height: 50 },
-  { name: "Wells Fargo", src: "/logos/wellsfargo.png", width: 127, height: 64 },
-  { name: "PepsiCo", src: "/logos/pepsico.png", width: 81, height: 64 },
-  { name: "Goldman Sachs", src: "/logos/goldmansachs.png", width: 154, height: 64 },
-];
 
 /**
  * **A height cap AND a width cap, which is the one real design decision here.**
@@ -94,7 +88,13 @@ const LOGOS: ReadonlyArray<{
  */
 const LOGO_SIZE = "h-10 w-auto max-w-32 object-contain";
 
-function LogoRow({ duplicate }: { duplicate: boolean }) {
+function LogoRow({
+  logos,
+  duplicate,
+}: {
+  logos: readonly CustomerLogo[];
+  duplicate: boolean;
+}) {
   return (
     /* The gap is on the container, not a margin on each item, and that is what
        makes the loop seamless: the space between the last logo of one copy and
@@ -109,7 +109,7 @@ function LogoRow({ duplicate }: { duplicate: boolean }) {
       // prevents.
       aria-hidden={duplicate || undefined}
     >
-      {LOGOS.map((logo) => (
+      {logos.map((logo) => (
         <li key={logo.name} className="flex shrink-0 items-center">
           {/* eslint-disable-next-line @next/next/no-img-element -- ten small
               static files already sized for their slot; an optimiser round trip
@@ -136,13 +136,21 @@ function LogoRow({ duplicate }: { duplicate: boolean }) {
   );
 }
 
-export function CustomerLogos() {
+export function CustomerLogos({ logos }: { logos: readonly CustomerLogo[] }) {
+  const copy = usePublicCopy();
+
   return (
     <section
       id="customers"
       // No visible heading, so the name comes from here. Without it a `<section>`
       // is not a landmark and is unreachable by role.
-      aria-label={CUSTOMERS.label}
+      //
+      // **Published copy, and this is the one accessible name on the surface that is.**
+      // It is safe because the string states a fact about ANSR's own business rather
+      // than describing what is drawn: the marks carry their own names, so an edit here
+      // cannot make the images unreadable — the worst it can do is misdescribe the set,
+      // which is exactly the claim ANSR is the right party to word.
+      aria-label={copy.customersLabel}
       // **Read together with the tint band's bottom padding in `peer-view.tsx`** —
       // the two are adjacent and add up, and at 40 + 56 = 96px the gap between the
       // form card and this strip read as a hole rather than as separation. Both came
@@ -151,8 +159,8 @@ export function CustomerLogos() {
     >
       <div className="gcc-marquee">
         <div className="gcc-marquee-track">
-          <LogoRow duplicate={false} />
-          <LogoRow duplicate />
+          <LogoRow logos={logos} duplicate={false} />
+          <LogoRow logos={logos} duplicate />
         </div>
       </div>
     </section>

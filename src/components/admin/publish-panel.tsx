@@ -6,6 +6,7 @@ import { useDraft } from "@/components/admin/draft-provider";
 import { Button } from "@/components/ui/button";
 import {
   METRIC_FIELD_LABELS,
+  PUBLIC_COPY_LABELS,
   TAXONOMY_LABELS,
   formatFieldValue,
   formatMetricFieldValue,
@@ -352,6 +353,73 @@ function DiffView({ diff }: { diff: DatasetDiff }) {
                 <p className="mt-0.5 text-text">{change.after}</p>
               </li>
             ))}
+            {/* The static strings, spelled out for the same reason the hero is: these
+                are headings and labels a reviewer has to READ. `PUBLIC_COPY_LABELS`
+                names the slot rather than the key, because "figuresHr" tells an admin
+                nothing about which screen moved. */}
+            {diff.siteContent.copy.map((change) => (
+              <li key={change.field} className="px-5 py-3 text-sm">
+                <p className="text-xs uppercase tracking-caps text-text-muted">
+                  {PUBLIC_COPY_LABELS[change.field] ?? change.field}
+                </p>
+                <p className="mt-1 text-text-muted line-through">{change.before}</p>
+                <p className="mt-0.5 text-text">{change.after}</p>
+              </li>
+            ))}
+            {diff.siteContent.commonFunctions.added.map((value) => (
+              <li key={`fn-add-${value}`} className="px-5 py-2.5 text-sm text-text">
+                Function added: {value}
+              </li>
+            ))}
+            {diff.siteContent.commonFunctions.removed.map((value) => (
+              <li key={`fn-del-${value}`} className="px-5 py-2.5 text-sm text-text">
+                Function removed: {value}
+              </li>
+            ))}
+            {diff.siteContent.commonFunctions.reordered ? (
+              <li className="px-5 py-2.5 text-sm text-text">
+                Function list reordered. The tags render in this order, so the page
+                changes even though no tag did.
+              </li>
+            ) : null}
+            {diff.siteContent.logos.changed.map((logo) => (
+              <li key={`logo-${logo.src}`} className="px-5 py-3 text-sm">
+                <p className="font-medium text-text">{logo.name || logo.src}</p>
+                <ul className="mt-1.5 flex flex-col gap-1">
+                  {logo.changes.map((change) => (
+                    <li key={change.field} className="flex flex-wrap gap-x-2">
+                      <span className="text-xs uppercase tracking-caps text-text-muted">
+                        {change.field}
+                      </span>
+                      <span className="text-text-muted line-through">
+                        {change.before}
+                      </span>
+                      <span aria-hidden="true" className="text-text-muted">
+                        →
+                      </span>
+                      <span className="text-text">{change.after}</span>
+                    </li>
+                  ))}
+                </ul>
+              </li>
+            ))}
+            {diff.siteContent.logos.added.map((logo) => (
+              <li key={`logo-add-${logo.src}`} className="px-5 py-2.5 text-sm text-text">
+                Logo added: {logo.name || "unnamed"}
+                <span className="ms-2 font-mono text-xs text-text-muted">{logo.src}</span>
+              </li>
+            ))}
+            {diff.siteContent.logos.removed.map((logo) => (
+              <li key={`logo-del-${logo.src}`} className="px-5 py-2.5 text-sm text-text">
+                Logo removed: {logo.name || "unnamed"}
+                <span className="ms-2 font-mono text-xs text-text-muted">{logo.src}</span>
+              </li>
+            ))}
+            {diff.siteContent.logos.reordered ? (
+              <li className="px-5 py-2.5 text-sm text-text">
+                Logo strip reordered. The strip scrolls in this order.
+              </li>
+            ) : null}
             {diff.siteContent.impactStats.changed.map((stat) => (
               <li key={stat.id} className="px-5 py-3 text-sm">
                 <p className="font-medium text-text">{stat.label || stat.id}</p>

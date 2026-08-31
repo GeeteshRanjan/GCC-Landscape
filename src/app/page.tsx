@@ -83,6 +83,18 @@ export default async function Page() {
       impactStats={dataset.siteContent.impactStats}
       ctaHref={CTA_HREF}
       closeCopy={dataset.siteContent.close}
+      /**
+       * The static headings and labels, and the customer marks. Handed down beside the
+       * hero and the close rather than fetched, for the same reason those two are: none
+       * of it depends on the visitor, so a server action for it could only ever return
+       * one answer.
+       *
+       * Both are `.default()`-ed in `siteContentSchema`, so a dataset written before
+       * either key existed reads and arrives here as the shipped values. There is no
+       * branch anywhere downstream for an absent copy block.
+       */
+      publicCopy={dataset.siteContent.copy}
+      logos={dataset.siteContent.logos}
     />
   );
 }

@@ -2,7 +2,9 @@
 
 import { Pencil } from "lucide-react";
 
+import { usePublicCopy } from "@/components/public/copy-context";
 import { DottedWorldMap } from "@/components/screen1/dotted-world-map";
+import { DEFAULT_PUBLIC_COPY, type PublicCopy } from "@/data/schema";
 import { cn } from "@/lib/utils";
 
 /**
@@ -226,55 +228,77 @@ export function ResultSurface({
  * would give you") is a different sentence about a different thing, so nothing is said
  * twice inside one scroll.
  *
- * Held here rather than in either screen's `copy.ts` for the same reason `VIEW_LABELS`
+ * Held here rather than in either screen's `copy.ts` for the same reason `viewLabels`
  * is: they are a pair, and the failure mode is one drifting out of construction with
  * the other. The peer line is composed in `screen1/copy.ts` because it depends on the
  * result rather than on the input, and it is the one thing on this band that does.
  */
-export const HEADER_LINES = {
-  /**
-   * The peer view's line.
-   *
-   * **It states no COUNT, and that is the correction rather than a simplification.** It
-   * read "5 India GCCs match your BFSI profile", which is false in the one direction that
-   * matters: five is what the block SHOWS, capped by `DEFAULT_PEER_LIMIT`, not how many
-   * matched — the count line under the grid says "Showing 5 of 189". So the band's own
-   * sentence understated the evidence directly above a line that contradicted it, and it
-   * read as "we could only find five".
-   *
-   * It does not say the opposite either. "…and more" would be a second claim about a
-   * denominator the band has no room to state, and the grid's count line already states
-   * it exactly. What is left is what the whole screen is: how this industry operates
-   * here, which every band under it evidences.
-   */
-  peers: "How your industry operates in India",
-  /**
-   * The function view's line. A scope statement, because that screen's figures are
-   * national and do not move with the visitor's answers.
-   *
-   * **"beyond your industry", at ANSR's wording.** It said "The India market behind
-   * {industry} GCCs", which was right about the subject and wrong about the relationship:
-   * these figures are not the market behind one industry, they are the market that
-   * extends past it. "Beyond" says that in one word.
-   */
-  functions: "The India market beyond your industry",
-  /**
-   * **NEITHER LINE INTERPOLATES THE INDUSTRY, and that is a hard constraint rather than a
-   * style choice.** `HeaderFinding` is capped at `--ansr-container-lead` (800px) and sets
-   * at 48px, so anything past roughly 36 characters wraps — and a two-line band beside a
-   * one-line band puts back the 50px jump across the tab switch that this pair exists to
-   * remove. Industry names run from "BFSI" to "Agribusiness & Food Processing", so any
-   * interpolated line is one line for some visitors and two for others. The previous
-   * function line held `{industry}` and was verified on BFSI only; at "Software &
-   * Internet" it wrapped.
-   *
-   * The band is not left impersonal by it: the four answer pills directly beneath carry
-   * the company, the industry, the headquarters and the revenue band.
-   *
-   * Sentence case with a capital first letter, both of them. The peer line used to open
-   * on a digit.
-   */
-} as const;
+/**
+ * **The pair, built from published copy in ONE place, which is the whole reason this
+ * shape survived becoming data.** Two schema keys could be edited independently, so what
+ * keeps them a pair is that both screens read them through this function rather than
+ * reaching for a field each: whoever changes what the peer line is FOR has the function
+ * line in front of them while they do it. The caps in `publicCopySchema` carry the other
+ * half of the constraint — 40 characters each, which is what holds both to one line.
+ */
+export function headerLines(copy: PublicCopy) {
+  return {
+    /**
+     * The peer view's line.
+     *
+     * **It states no COUNT, and that is the correction rather than a simplification.** It
+     * read "5 India GCCs match your BFSI profile", which is false in the one direction that
+     * matters: five is what the block SHOWS, capped by `DEFAULT_PEER_LIMIT`, not how many
+     * matched — the count line under the grid says "Showing 5 of 189". So the band's own
+     * sentence understated the evidence directly above a line that contradicted it, and it
+     * read as "we could only find five".
+     *
+     * It does not say the opposite either. "…and more" would be a second claim about a
+     * denominator the band has no room to state, and the grid's count line already states
+     * it exactly. What is left is what the whole screen is: how this industry operates
+     * here, which every band under it evidences.
+     *
+     * **Not stating a count is also what let this line become editable at all.** A
+     * sentence naming a figure has to move when the figure moves, so it belongs beside
+     * the logic that computes it; a scope statement makes no claim about the data and can
+     * be free text. That test is the reason `peerCountLine` is still in code twenty lines
+     * of DOM below this.
+     */
+    peers: copy.headerPeers,
+    /**
+     * The function view's line. A scope statement, because that screen's figures are
+     * national and do not move with the visitor's answers.
+     *
+     * **"beyond your industry", at ANSR's wording.** It said "The India market behind
+     * {industry} GCCs", which was right about the subject and wrong about the relationship:
+     * these figures are not the market behind one industry, they are the market that
+     * extends past it. "Beyond" says that in one word.
+     */
+    functions: copy.headerFunctions,
+    /**
+     * **NEITHER LINE INTERPOLATES THE INDUSTRY, and that is a hard constraint rather than a
+     * style choice.** `HeaderFinding` is capped at `--ansr-container-lead` (800px) and sets
+     * at 48px, so anything past roughly 36 characters wraps — and a two-line band beside a
+     * one-line band puts back the 50px jump across the tab switch that this pair exists to
+     * remove. Industry names run from "BFSI" to "Agribusiness & Food Processing", so any
+     * interpolated line is one line for some visitors and two for others. The previous
+     * function line held `{industry}` and was verified on BFSI only; at "Software &
+     * Internet" it wrapped.
+     *
+     * It is also why neither is a template an admin can put `{industry}` into: there is no
+     * interpolation on this band, so a brace in the field renders as a brace.
+     *
+     * The band is not left impersonal by it: the four answer pills directly beneath carry
+     * the company, the industry, the headquarters and the revenue band.
+     *
+     * Sentence case with a capital first letter, both of them. The peer line used to open
+     * on a digit.
+     */
+  };
+}
+
+/** The shipped pair, which is what `headerLines` returns with no provider above it. */
+export const HEADER_LINES = headerLines(DEFAULT_PUBLIC_COPY);
 
 export function HeaderFinding({ children }: { children: React.ReactNode }) {
   return (
@@ -543,12 +567,29 @@ export function ContextPanels({
  * It also pairs. "Peer Landscape" and "Function Metrics" are both {qualifier + what
  * you get}; "Peer Landscape" and "Function Opportunity" were a noun and a promise.
  */
-const VIEW_LABELS = {
-  peers: "Peer Landscape",
-  functions: "Function Metrics",
-} as const;
+/**
+ * **Built in one place from two published keys, for the reason `headerLines` is.** The
+ * two labels are a pair — {qualifier + what you get}, twice — and a pair whose halves are
+ * reached independently is a pair only by coincidence. The 24-character cap on each is
+ * what keeps the bar's two equal halves from wrapping at 320.
+ */
+function viewLabels(copy: PublicCopy): Record<ViewKind, string> {
+  return {
+    peers: copy.viewPeers,
+    functions: copy.viewFunctions,
+  };
+}
 
-export type ViewKind = keyof typeof VIEW_LABELS;
+/**
+ * The two views, as a type rather than as `keyof typeof` over a literal.
+ *
+ * It was derived from the label object, which stopped being possible once the labels
+ * became published strings: `Record<string, string>` has no keys to read. Written out
+ * instead, and `viewLabels` returns a `Record<ViewKind, string>` — so the compiler still
+ * refuses a label object that is missing a view, which is the property the old
+ * `keyof typeof` was actually buying.
+ */
+export type ViewKind = "peers" | "functions";
 
 const VIEW_ORDER: readonly ViewKind[] = ["peers", "functions"];
 
@@ -623,6 +664,11 @@ export function ViewTabs({
    */
   ground?: "surface" | "tint" | "pale";
 }) {
+  // The one component that draws BOTH labels, whichever screen mounted it — so the
+  // switch cannot disagree with itself about what the visitor is looking at, and the
+  // published pair is read once per render rather than once per cell.
+  const labels = viewLabels(usePublicCopy());
+
   const move = (from: number, to: number) => {
     const next = VIEW_ORDER[(to + VIEW_ORDER.length) % VIEW_ORDER.length];
     if (!next || next === VIEW_ORDER[from]) return;
@@ -709,7 +755,7 @@ export function ViewTabs({
                   "gcc-result-tab--off text-text-muted hover:text-text",
             )}
           >
-            {VIEW_LABELS[view]}
+            {labels[view]}
           </button>
         );
       })}

@@ -1,13 +1,18 @@
+import { publicCopySchema } from "./schema";
 import type {
   BusinessType,
   Company,
+  CustomerLogo,
   Dataset,
   CloseCopy,
   HeroCopy,
   ImpactStat,
+  LatLon,
   Metric,
+  PublicCopy,
   SiteContent,
   Taxonomy,
+  TaxonomyListKey,
 } from "./schema";
 
 /**
@@ -23,7 +28,7 @@ import type {
  * admin publish view renders `DatasetDiff` directly.
  */
 
-export type TaxonomyKey = keyof Taxonomy;
+export type TaxonomyKey = TaxonomyListKey;
 
 export const TAXONOMY_KEYS: readonly TaxonomyKey[] = [
   "industries",
@@ -44,8 +49,22 @@ export interface ChangedCompany {
   changes: FieldChange[];
 }
 
+/**
+ * What one taxonomy entry in the diff can be about: the four flat lists, plus the
+ * two parallel keys that hold copies of strings from them.
+ *
+ * **The two are reported as entries in the same list rather than as a category of
+ * their own, and that is what makes them visible without a renderer change.** Both
+ * renderers walk `diff.taxonomy` and label each entry from `TAXONOMY_LABELS`, so a
+ * new key with a label reads out on both surfaces the way an added city already
+ * does. A separate category would have had two counts, two sections and two
+ * chances to be left out of one of them — which is how `businessTypes` came to be
+ * missing from `COMPANY_FIELDS`.
+ */
+export type TaxonomyDiffKey = TaxonomyKey | "pinnedIndustries" | "cityCoordinates";
+
 export interface TaxonomyDiff {
-  key: TaxonomyKey;
+  key: TaxonomyDiffKey;
   added: string[];
   removed: string[];
   /**
@@ -53,6 +72,11 @@ export interface TaxonomyDiff {
    * meaningful for `revenueBands`, where order is the contract for
    * adjacent-band peer matching — a reorder there is a real change even though
    * added and removed are both empty.
+   *
+   * Never set for the two parallel keys, and that is the same judgement made the
+   * other way: pinning decides MEMBERSHIP of the leading tier and position inside
+   * it is still company count, so a reordered pin list draws an identical dropdown.
+   * Reporting it would be the tag-reorder noise `diffBusinessTypes` refuses.
    */
   reordered: boolean;
 }
@@ -106,18 +130,22 @@ export interface BusinessTypesDiff {
 }
 
 /**
- * Site-content changes — the hero's copy and the impact figures.
+ * Site-content changes — every public string and figure that is data rather than
+ * code.
  *
  * A fourth category rather than a field list folded into one of the others, and
  * for the sharpest reason of the four: this is the only part of the dataset whose
- * changes are visible on the entry point of the public site the moment they
- * publish. A month of company edits changes what a few visitors are shown; a
- * one-character edit here changes the headline every visitor reads. It gets its
- * own count so it can never be the smaller number hidden inside a larger one.
+ * changes are visible on the public site regardless of what a visitor answered. A
+ * month of company edits changes what a few visitors are shown; a one-character
+ * edit here changes the headline every visitor reads. It gets its own count so it
+ * can never be the smaller number hidden inside a larger one.
  *
- * `hero` is a field list because there are two fields and both are prose worth
- * reading in full before approving. `impactStats` is keyed by id like the other
- * collections, since rows are added, removed and reordered.
+ * Two shapes inside it, and which one a member takes follows from whether its keys
+ * are fixed. `hero`, `close` and `copy` are field lists: the slots are known, so
+ * every change is an edit and both sides are worth reading in full. `impactStats`,
+ * `commonFunctions` and `logos` are collections whose rows are added, removed and
+ * reordered, so each is keyed — by id, by the value itself, and by `src`
+ * respectively, for the reasons recorded on each.
  */
 export interface SiteContentDiff {
   hero: Array<{ field: keyof HeroCopy; before: string; after: string }>;
@@ -132,6 +160,50 @@ export interface SiteContentDiff {
    * because there are two fields and both are prose worth reading before approving.
    */
   close: Array<{ field: keyof CloseCopy; before: string; after: string }>;
+  /**
+   * The thirty static strings, reported exactly like the hero's two.
+   *
+   * A field list rather than a keyed collection because the keys are fixed: a copy
+   * edit is always an edit, never an addition or a removal, so there is nothing to
+   * key on and nothing to report as added. Each entry carries both sides for the
+   * reason the hero's does — these are headings and labels a reviewer has to READ,
+   * and "copy changed" tells them nothing they can approve.
+   */
+  copy: Array<{ field: keyof PublicCopy; before: string; after: string }>;
+  /**
+   * The function tags, as a set plus an order.
+   *
+   * Diffed like a taxonomy list rather than like the impact figures, because the
+   * items ARE their own identity — there is no id, and a renamed tag is
+   * indistinguishable from one removed and another added. Order is reported for the
+   * same reason it is on the impact figures: it is what a visitor reads.
+   */
+  commonFunctions: {
+    added: string[];
+    removed: string[];
+    reordered: boolean;
+  };
+  /**
+   * The customer strip, keyed by `src`.
+   *
+   * **The file is the identity here, and it is the one field that is not free
+   * text** — it is chosen from what is already served, so two rows pointing at the
+   * same file would be the same mark twice. Repointing a row at a different file
+   * therefore reads as one mark removed and another added, which is what it is: a
+   * different company's logo in the strip. Renaming, resizing and reordering are
+   * edits.
+   */
+  logos: {
+    added: Array<Pick<CustomerLogo, "name" | "src">>;
+    removed: Array<Pick<CustomerLogo, "name" | "src">>;
+    changed: Array<{
+      src: string;
+      name: string;
+      changes: Array<{ field: keyof CustomerLogo; before: string; after: string }>;
+    }>;
+    /** The strip scrolls in this order, so a reorder is a change. */
+    reordered: boolean;
+  };
   impactStats: {
     added: Array<Pick<ImpactStat, "id" | "value" | "label">>;
     removed: Array<Pick<ImpactStat, "id" | "value" | "label">>;
@@ -314,6 +386,81 @@ function metricsCount(diff: MetricsDiff): number {
 const HERO_FIELDS: ReadonlyArray<keyof HeroCopy> = ["title", "lead"];
 const CLOSE_FIELDS: ReadonlyArray<keyof CloseCopy> = ["body", "ctaLabel"];
 const IMPACT_FIELDS: ReadonlyArray<keyof ImpactStat> = ["value", "label"];
+const LOGO_FIELDS: ReadonlyArray<keyof CustomerLogo> = ["name", "width", "height"];
+
+/**
+ * Read off the gate rather than typed out, and that is the lesson from
+ * `COMPANY_FIELDS`.
+ *
+ * Thirty keys is exactly the length at which a hand-maintained list quietly loses
+ * one, and a copy field missing from here is a publish that reports "no changes"
+ * for a heading every visitor reads — the `businessTypes` defect again, thirty
+ * times over. Derived from the schema's own shape, so a key added there is diffed
+ * the moment it exists.
+ */
+const PUBLIC_COPY_FIELDS = Object.keys(publicCopySchema.shape) as ReadonlyArray<
+  keyof PublicCopy
+>;
+
+/** A coordinate as one readable string, since both renderers show a list of them. */
+function describeCoordinate(city: string, coord: LatLon): string {
+  return `${city} (${coord.lat}, ${coord.lon})`;
+}
+
+/**
+ * The two parallel taxonomy keys, as entries in the same list the four flat ones
+ * produce.
+ *
+ * A MOVED coordinate is reported as the old one removed and the new one added,
+ * rather than as a third kind of change. That is how a rename already reads in the
+ * four lists — added under the new name, removed under the old — and it is honest
+ * for a record: the entry that described the city before is gone and a different one
+ * describes it now. It also means the existing renderers spell out both numbers
+ * without either of them growing a case for a shape they have never seen.
+ */
+function diffParallelTaxonomy(
+  next: Taxonomy,
+  previous: Taxonomy,
+): TaxonomyDiff[] {
+  const entries: TaxonomyDiff[] = [];
+
+  const pinnedBefore = new Set(previous.pinnedIndustries);
+  const pinnedAfter = new Set(next.pinnedIndustries);
+  const pinnedAdded = next.pinnedIndustries.filter((v) => !pinnedBefore.has(v));
+  const pinnedRemoved = previous.pinnedIndustries.filter((v) => !pinnedAfter.has(v));
+  if (pinnedAdded.length > 0 || pinnedRemoved.length > 0) {
+    entries.push({
+      key: "pinnedIndustries",
+      added: pinnedAdded,
+      removed: pinnedRemoved,
+      reordered: false,
+    });
+  }
+
+  const added: string[] = [];
+  const removed: string[] = [];
+  for (const [city, coord] of Object.entries(next.cityCoordinates)) {
+    const old = previous.cityCoordinates[city];
+    if (old === undefined) {
+      added.push(describeCoordinate(city, coord));
+      continue;
+    }
+    if (old.lat !== coord.lat || old.lon !== coord.lon) {
+      removed.push(describeCoordinate(city, old));
+      added.push(describeCoordinate(city, coord));
+    }
+  }
+  for (const [city, coord] of Object.entries(previous.cityCoordinates)) {
+    if (next.cityCoordinates[city] === undefined) {
+      removed.push(describeCoordinate(city, coord));
+    }
+  }
+  if (added.length > 0 || removed.length > 0) {
+    entries.push({ key: "cityCoordinates", added, removed, reordered: false });
+  }
+
+  return entries;
+}
 
 function diffSiteContent(
   next: SiteContent,
@@ -334,6 +481,35 @@ function diffSiteContent(
     before: previous.close[field],
     after: next.close[field],
   }));
+
+  const copy = PUBLIC_COPY_FIELDS.filter(
+    (field) => next.copy[field] !== previous.copy[field],
+  ).map((field) => ({
+    field,
+    before: previous.copy[field],
+    after: next.copy[field],
+  }));
+
+  const functionsBefore = new Set(previous.commonFunctions);
+  const functionsAfter = new Set(next.commonFunctions);
+  const functionsAdded = next.commonFunctions.filter((v) => !functionsBefore.has(v));
+  const functionsRemoved = previous.commonFunctions.filter(
+    (v) => !functionsAfter.has(v),
+  );
+  const commonFunctions = {
+    added: functionsAdded,
+    removed: functionsRemoved,
+    // Membership first, the same guard the taxonomy lists and the impact figures
+    // both carry: an added item shifts everything after it, so a naive order
+    // comparison would call every addition a reorder as well and count it twice.
+    reordered:
+      functionsAdded.length === 0 &&
+      functionsRemoved.length === 0 &&
+      !sameValue(previous.commonFunctions, next.commonFunctions),
+  };
+
+  const logos = diffLogos(next.logos, previous.logos);
+
   const before = new Map(previous.impactStats.map((stat) => [stat.id, stat]));
   const after = new Map(next.impactStats.map((stat) => [stat.id, stat]));
 
@@ -367,13 +543,75 @@ function diffSiteContent(
       next.impactStats.map((stat) => stat.id),
     );
 
-  return { hero, close, impactStats: { added, removed, changed, reordered } };
+  return {
+    hero,
+    close,
+    copy,
+    commonFunctions,
+    logos,
+    impactStats: { added, removed, changed, reordered },
+  };
+}
+
+/** Field-level diff of the logo strip, keyed by `src`. See `SiteContentDiff.logos`. */
+function diffLogos(
+  next: readonly CustomerLogo[],
+  previous: readonly CustomerLogo[],
+): SiteContentDiff["logos"] {
+  const before = new Map(previous.map((logo) => [logo.src, logo]));
+  const after = new Map(next.map((logo) => [logo.src, logo]));
+
+  const added: SiteContentDiff["logos"]["added"] = [];
+  const changed: SiteContentDiff["logos"]["changed"] = [];
+  for (const [src, logo] of after) {
+    const old = before.get(src);
+    if (!old) {
+      added.push({ name: logo.name, src });
+      continue;
+    }
+    const changes = LOGO_FIELDS.filter((field) => logo[field] !== old[field]).map(
+      (field) => ({
+        field,
+        // Stringified because the three editable fields are a name and two
+        // measurements, and a reviewer reads "106 → 128" the same way either way.
+        before: String(old[field]),
+        after: String(logo[field]),
+      }),
+    );
+    if (changes.length > 0) changed.push({ src, name: logo.name, changes });
+  }
+
+  const removed: SiteContentDiff["logos"]["removed"] = [];
+  for (const [src, logo] of before) {
+    if (!after.has(src)) removed.push({ name: logo.name, src });
+  }
+
+  return {
+    added,
+    removed,
+    changed,
+    reordered:
+      added.length === 0 &&
+      removed.length === 0 &&
+      !sameValue(
+        previous.map((logo) => logo.src),
+        next.map((logo) => logo.src),
+      ),
+  };
 }
 
 function siteContentCount(diff: SiteContentDiff): number {
   return (
     diff.hero.length +
     diff.close.length +
+    diff.copy.length +
+    diff.commonFunctions.added.length +
+    diff.commonFunctions.removed.length +
+    (diff.commonFunctions.reordered ? 1 : 0) +
+    diff.logos.added.length +
+    diff.logos.removed.length +
+    diff.logos.changed.length +
+    (diff.logos.reordered ? 1 : 0) +
     diff.impactStats.added.length +
     diff.impactStats.removed.length +
     diff.impactStats.changed.length +
@@ -386,17 +624,32 @@ export function diffDatasets(
   previous: Dataset | null,
 ): DatasetDiff {
   if (!previous) {
-    return {
-      firstImport: true,
-      added: next.companies.map((c) => ({ id: c.id, name: c.name })),
-      removed: [],
-      changed: [],
-      taxonomy: TAXONOMY_KEYS.map((key) => ({
+    /**
+     * The two parallel keys are diffed against an EMPTY taxonomy rather than listed
+     * outright, so a first import that pins nothing and plots nothing produces no
+     * entry for them at all. An entry with two empty lists would render as a
+     * labelled heading with nothing under it on both surfaces.
+     */
+    const taxonomy: TaxonomyDiff[] = [
+      ...TAXONOMY_KEYS.map((key) => ({
         key,
         added: [...next.taxonomy[key]],
         removed: [],
         reordered: false,
       })),
+      ...diffParallelTaxonomy(next.taxonomy, {
+        ...next.taxonomy,
+        pinnedIndustries: [],
+        cityCoordinates: {},
+      }),
+    ];
+
+    return {
+      firstImport: true,
+      added: next.companies.map((c) => ({ id: c.id, name: c.name })),
+      removed: [],
+      changed: [],
+      taxonomy,
       businessTypes: {
         added: next.businessTypes.map((b) => ({ id: b.id, name: b.name })),
         removed: [],
@@ -413,6 +666,25 @@ export function diffDatasets(
         // rows are listed because they genuinely are new rows.
         hero: [],
         close: [],
+        // The copy strings are the hero's case, thirty times: fixed keys with no
+        // previous value, so every one of them would report as an edit against
+        // nothing. The two collections beside them are the impact figures' case —
+        // genuinely new rows — so they are listed.
+        copy: [],
+        commonFunctions: {
+          added: [...next.siteContent.commonFunctions],
+          removed: [],
+          reordered: false,
+        },
+        logos: {
+          added: next.siteContent.logos.map((logo) => ({
+            name: logo.name,
+            src: logo.src,
+          })),
+          removed: [],
+          changed: [],
+          reordered: false,
+        },
         impactStats: {
           added: next.siteContent.impactStats.map((s) => ({
             id: s.id,
@@ -431,10 +703,16 @@ export function diffDatasets(
         added: next.companies.length,
         removed: 0,
         changed: 0,
-        taxonomy: TAXONOMY_KEYS.length,
+        // Counted from what was actually built rather than from the number of keys
+        // there are, since the two parallel ones only produce an entry when they
+        // hold something.
+        taxonomy: taxonomy.length,
         businessTypes: next.businessTypes.length,
         metrics: next.metrics.length,
-        siteContent: next.siteContent.impactStats.length,
+        siteContent:
+          next.siteContent.impactStats.length +
+          next.siteContent.commonFunctions.length +
+          next.siteContent.logos.length,
       },
     };
   }
@@ -482,6 +760,7 @@ export function diffDatasets(
       });
     }
   }
+  taxonomy.push(...diffParallelTaxonomy(next.taxonomy, previous.taxonomy));
 
   const businessTypes = diffBusinessTypes(next.businessTypes, previous.businessTypes);
   const metrics = diffMetrics(next.metrics, previous.metrics);
@@ -521,12 +800,64 @@ export function diffDatasets(
   };
 }
 
-/** Human label for a taxonomy list. Used by both renderers. */
-export const TAXONOMY_LABELS: Record<TaxonomyKey, string> = {
+/**
+ * Human label for a taxonomy entry. Used by both renderers.
+ *
+ * The two parallel keys are named for what they DO rather than for the key they
+ * live under, because a reviewer approving a publish is deciding about a dropdown
+ * and a map, not about the shape of a JSON object.
+ */
+export const TAXONOMY_LABELS: Record<TaxonomyDiffKey, string> = {
   industries: "Industries",
   revenueBands: "Revenue bands",
   cities: "Cities",
   hqCountries: "HQ countries",
+  pinnedIndustries: "Industries held in the dropdown's leading tier",
+  cityCoordinates: "City coordinates for the map",
+};
+
+/**
+ * Human label for each static copy string. One wording, two surfaces.
+ *
+ * Beside `TAXONOMY_LABELS` and `METRIC_FIELD_LABELS` rather than in the admin form,
+ * because both the form and the publish diff have to name the same slot and a
+ * reviewer approving "figuresHr" learns nothing from the key. The admin editor
+ * groups these by screen and reads its labels from here, so the words a person
+ * types under cannot differ from the words they approve under.
+ *
+ * Each names WHERE the string appears, never what it says: several of them are two
+ * words, and a label quoting the value would be stale the moment it was edited.
+ */
+export const PUBLIC_COPY_LABELS: Record<keyof PublicCopy, string> = {
+  askTitle: "Form heading",
+  askLead: "Form intro",
+  askSubmit: "Form submit",
+  customersLabel: "Logo strip description",
+  impactTitleLead: "Impact band heading",
+  headerPeers: "Peer view finding",
+  headerFunctions: "Function view finding",
+  viewPeers: "Peer view switch",
+  viewFunctions: "Function view switch",
+  peersTitle: "Comparable companies heading",
+  industryTitle: "Industry count heading",
+  peerHeadcountLabel: "Peer card, headcount",
+  peerCitiesLabel: "Peer card, cities",
+  peerSinceLabel: "Peer card, year",
+  snapshotHeadcountLabel: "Snapshot, headcount",
+  snapshotCitiesLabel: "Snapshot, city spread",
+  snapshotLeadingCityLabel: "Snapshot, leading city",
+  scaleTitle: "Scale strip heading",
+  scaleFortuneLabel: "Scale strip, Fortune sentence",
+  scaleForbesLabel: "Scale strip, Forbes sentence",
+  scalePeopleLabel: "Scale strip, people sentence",
+  figuresTech: "Technology figure row",
+  figuresOperations: "Operations figure row",
+  figuresHr: "HR figure row",
+  figuresFinance: "Finance figure row",
+  velocityHeading: "Hiring speed heading",
+  hrAnalysisHeading: "HR analysis heading",
+  opsSupportingHeading: "Operations supporting heading",
+  sourceLine: "Attribution line",
 };
 
 /** One-line summary of a field value, for a table cell or a console line. */
@@ -621,7 +952,7 @@ export function renderDiffText(diff: DatasetDiff): string {
       `  + ${diff.counts.added} companies`,
       `  + ${diff.counts.businessTypes} business types`,
       `  + ${diff.counts.metrics} metrics`,
-      `  + ${diff.counts.siteContent} impact figures, and the hero copy`,
+      `  + ${diff.counts.siteContent} site content entries — the impact figures, the function list and the logo strip, plus the hero and close copy`,
     ].join("\n");
   }
 
@@ -704,6 +1035,37 @@ export function renderDiffText(diff: DatasetDiff): string {
     lines.push(`  close ${change.field}:`);
     lines.push(`    - ${change.before}`);
     lines.push(`    + ${change.after}`);
+  }
+  /* The static strings, one field per line with both sides — same treatment as the
+     hero and the close, because these are headings and labels rather than a count of
+     something. Named by their key, which is what the admin form labels them by too. */
+  for (const change of diff.siteContent.copy) {
+    lines.push(`  copy ${change.field}:`);
+    lines.push(`    - ${change.before}`);
+    lines.push(`    + ${change.after}`);
+  }
+  sample("functions added", diff.siteContent.commonFunctions.added);
+  sample("functions removed", diff.siteContent.commonFunctions.removed);
+  if (diff.siteContent.commonFunctions.reordered) {
+    lines.push("  functions reordered");
+  }
+  sample(
+    "logos added",
+    diff.siteContent.logos.added.map((logo) => `${logo.name} ${logo.src}`),
+  );
+  sample(
+    "logos removed",
+    diff.siteContent.logos.removed.map((logo) => `${logo.name} ${logo.src}`),
+  );
+  for (const logo of diff.siteContent.logos.changed) {
+    for (const change of logo.changes) {
+      lines.push(
+        `  logo ${logo.src} ${change.field}: ${change.before} -> ${change.after}`,
+      );
+    }
+  }
+  if (diff.siteContent.logos.reordered) {
+    lines.push("  logos reordered");
   }
   for (const stat of diff.siteContent.impactStats.added) {
     lines.push(`  impact figure added: ${stat.value} ${stat.label}`);

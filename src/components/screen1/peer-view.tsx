@@ -5,10 +5,11 @@
 import { Globe, Landmark, Users } from "lucide-react";
 
 import { CloseBackdrop, ClosingCta } from "@/components/public/closing-cta";
+import { usePublicCopy } from "@/components/public/copy-context";
 import { Block, formatRevenueBand, Panel, Zone } from "@/components/public/primitives";
 import {
   ContextPanels,
-  HEADER_LINES,
+  headerLines,
   HeaderFinding,
   ProductIdentity,
   ResultSurface,
@@ -17,7 +18,7 @@ import {
   type ContextFact,
   type HeaderMotif,
 } from "@/components/public/screen-header";
-import type { CloseCopy, HeroCopy, ImpactStat } from "@/data/schema";
+import type { CloseCopy, CustomerLogo, HeroCopy, ImpactStat } from "@/data/schema";
 import { companyName, type PeerView, type PeerViewInput } from "@/data/screen1";
 import { cn } from "@/lib/utils";
 import { CityMap } from "./city-map";
@@ -30,15 +31,12 @@ import {
   PeerBlockView,
 } from "./evidence";
 import {
-  ASK,
   FUNCTIONS_TITLE,
-  INDUSTRY_TITLE,
   largestTitle,
   mapTitle,
-  PEERS_TITLE,
-  SCALE,
   signals,
   snapshotHeading,
+  snapshotLabels,
 } from "./copy";
 import { Snapshot } from "./snapshot";
 import { AskHero } from "./ask-hero";
@@ -122,6 +120,7 @@ export function PeerViewAsk({
   headingRef,
   heroCopy,
   impactStats,
+  logos,
   industries,
   revenueBands,
   hqCountries,
@@ -134,6 +133,12 @@ export function PeerViewAsk({
   headingRef: React.RefObject<HTMLHeadingElement | null>;
   heroCopy: HeroCopy;
   impactStats: readonly ImpactStat[];
+  /**
+   * The customer marks, on their way to `CustomerLogos`. Threaded rather than read
+   * from the copy context, because this is the only band that draws them — see
+   * `GccLandscapeToolProps.logos`.
+   */
+  logos: readonly CustomerLogo[];
   industries: TieredOptions;
   revenueBands: readonly string[];
   hqCountries: TieredOptions;
@@ -143,6 +148,8 @@ export function PeerViewAsk({
   submitError: string | null;
   onSubmit: (input: PeerViewInput) => void;
 }) {
+  const copy = usePublicCopy();
+
   return (
     // The display face is set once on the public root in `tool.tsx`, not per phase — it
     // was on this wrapper and on the answer's, and missing from Screen 2, which is how
@@ -287,7 +294,10 @@ export function PeerViewAsk({
                 // drawn wordmark — there is no mark on this line to match.
                 className="text-2xl leading-tight font-medium tracking-display text-balance text-accent-teal md:text-3xl lg:text-4xl"
               >
-                {ASK.panelTitle}
+                {/* Published copy, so the card's heading and the line under it can be
+                    reworded without a deploy. `ASK` still holds the shipped wording and
+                    the reasoning for it — see the note at the head of `copy.ts`. */}
+                {copy.askTitle}
               </h2>
               {/* Light 300, which is the brand's own paragraph weight and the whole
                   reason this screen is on the display face. Black rather than muted:
@@ -296,7 +306,7 @@ export function PeerViewAsk({
                   starts being skipped. Capped at the reading measure so it does not
                   run the full 896px of the card. */}
               <p className="max-w-measure text-base leading-normal font-light text-pretty text-text md:text-lg">
-                {ASK.panelLead}
+                {copy.askLead}
               </p>
               </div>
               <InputPanel
@@ -314,7 +324,7 @@ export function PeerViewAsk({
         </div>
       </section>
 
-      <CustomerLogos />
+      <CustomerLogos logos={logos} />
 
       <ImpactBand stats={impactStats} />
     </div>
@@ -387,6 +397,7 @@ export function PeerViewAnswer({
   /** The close's editable copy. See `tool.tsx`. */
   closeCopy: CloseCopy;
 }) {
+  const copy = usePublicCopy();
   const peerCount = view.peers.peers.length;
   const name = companyName(view.input);
 
@@ -485,8 +496,17 @@ export function PeerViewAnswer({
                 it survive being four figures with no section around them. */}
             <Zone ground="pale">
               <Enter index={1}>
+                {/* **The three static labels are passed IN, not read inside
+                    `signals`.** That is a plain function the unit suite calls over all
+                    24 industries with no React tree, so it cannot hold a hook — see
+                    `SnapshotLabels`. The fourth label stays composed inside it, because
+                    it names the visitor's own scope.
+
+                    `snapshotHeading` is unchanged and still derived: it interpolates the
+                    industry, which is the whole reason all four labels stopped naming
+                    it. */}
                 <Snapshot
-                  signals={signals(view)}
+                  signals={signals(view, snapshotLabels(copy))}
                   heading={snapshotHeading(view)}
                 />
               </Enter>
@@ -520,7 +540,7 @@ export function PeerViewAnswer({
                     `peerLead` is kept in `copy.ts` and still unit-tested on both
                     branches, because it is the sentence to restore rather than a sentence
                     that was wrong. On the blocked list. */}
-                <Block id="peers" title={PEERS_TITLE} weight="lead">
+                <Block id="peers" title={copy.peersTitle} weight="lead">
                   <PeerBlockView view={view} />
                 </Block>
               </Enter>
@@ -599,7 +619,7 @@ export function PeerViewAnswer({
                     failed to fill. */}
                 <Panel
                   id="industry"
-                  title={INDUSTRY_TITLE}
+                  title={copy.industryTitle}
                   className="lg:col-span-2 lg:h-full"
                   bodyClassName="flex flex-col lg:grow lg:justify-center [&>*]:lg:grow"
                   motif={<PanelArc />}
@@ -668,7 +688,7 @@ export function PeerViewAnswer({
               <Enter index={6}>
                 <Panel
                   id="scale"
-                  title={SCALE.title}
+                  title={copy.scaleTitle}
                   tone="inverse"
                   bodyClassName="py-6 md:py-8"
                 >
@@ -730,7 +750,7 @@ export function PeerViewAnswer({
 
               The `h1` stays the product; see `HeaderFinding` for why this is not a second
               heading. */}
-          <HeaderFinding>{HEADER_LINES.peers}</HeaderFinding>
+          <HeaderFinding>{headerLines(copy).peers}</HeaderFinding>
         </div>
         <ContextPanels facts={facts} onEdit={onChangeDetails} />
       </ResultSurface>

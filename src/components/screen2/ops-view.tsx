@@ -3,6 +3,7 @@ import type {
   LaidOutHeld,
   ShownMetric,
 } from "@/data/screen2";
+import { usePublicCopy } from "@/components/public/copy-context";
 import { Panel } from "@/components/public/primitives";
 import {
   MilestoneTrack,
@@ -10,12 +11,7 @@ import {
   RankedBars,
   type BarRow,
 } from "@/components/public/charts";
-import {
-  FIGURES_HEADING,
-  heldHeading,
-  METRIC_NOTES,
-  OPS_SECTIONS,
-} from "./copy";
+import { figuresHeadings, heldHeading, METRIC_NOTES, opsSections } from "./copy";
 import { GraduateOutput } from "./graduate-card";
 import { HeldMetricCard } from "./metric-card";
 import { SummaryFigures, type SummaryFigure } from "./summary-figures";
@@ -279,9 +275,11 @@ export function OpsPanel({ area }: { area: FunctionAreaView }) {
    ========================================================================== */
 
 function OperationsSummary({ cells }: { cells: readonly SummaryFigure[] }) {
+  const copy = usePublicCopy();
+
   return (
     <SummaryFigures
-      heading={FIGURES_HEADING.operations}
+      heading={figuresHeadings(copy).operations}
       headingId="figures-operations-heading"
       cells={cells}
     />
@@ -297,10 +295,14 @@ function OperationsSummary({ cells }: { cells: readonly SummaryFigure[] }) {
    ========================================================================== */
 
 function Velocity({ ranges }: { ranges: readonly ShownMetric[] }) {
+  const copy = usePublicCopy();
+
   return (
     <section
       id="ops-velocity"
-      aria-label={OPS_SECTIONS.velocity}
+      // The SAME key the HR tab's velocity section reads. One field, so a reader crossing
+      // between the two tabs cannot be shown two names for one section.
+      aria-label={opsSections(copy).velocity}
       className="flex min-w-0 flex-col"
     >
       {/* `items-stretch` and a centring body, exactly as the HR tab draws this same
@@ -359,10 +361,12 @@ function Supporting({
   milestones?: ShownMetric;
   latency?: ShownMetric;
 }) {
+  const copy = usePublicCopy();
+
   return (
     <section
       id="ops-supporting"
-      aria-label={OPS_SECTIONS.supporting}
+      aria-label={opsSections(copy).supporting}
       className="flex min-w-0 flex-col"
     >
       {/* `items-stretch` and centring bodies, exactly as the HR tab draws its own

@@ -7,10 +7,11 @@ import type { CloseCopy } from "@/data/schema";
 import { companyName, type PeerViewInput } from "@/data/screen1";
 import type { FunctionAreaView, FunctionView, LaidOutCard } from "@/data/screen2";
 import { CloseBackdrop, ClosingCta } from "@/components/public/closing-cta";
+import { usePublicCopy } from "@/components/public/copy-context";
 import { formatRevenueBand, Zone } from "@/components/public/primitives";
 import {
   ContextPanels,
-  HEADER_LINES,
+  headerLines,
   HeaderFinding,
   ProductIdentity,
   ResultSurface,
@@ -20,12 +21,7 @@ import {
   type HeaderMotif,
 } from "@/components/public/screen-header";
 import { cn } from "@/lib/utils";
-import {
-  FIGURES_HEADING,
-  heldHeading,
-  SOURCE_LINE,
-  TABS_LABEL,
-} from "./copy";
+import { figuresHeadings, heldHeading, TABS_LABEL } from "./copy";
 import { HeldMetricCard, MetricCard } from "./metric-card";
 import { scalarCells, SummaryFigures } from "./summary-figures";
 import { FinPanel } from "./fin-view";
@@ -132,6 +128,7 @@ export function FunctionViewScreen({
   ctaHref,
   closeCopy,
 }: FunctionViewScreenProps) {
+  const copy = usePublicCopy();
   const name = companyName(input);
   const first = view.areas[0]?.functionArea ?? "tech";
   const [active, setActive] = useState<string>(first);
@@ -302,7 +299,10 @@ export function FunctionViewScreen({
           </Zone>
         </ViewPanel>
       }
-      footer={SOURCE_LINE}
+      /* Published copy. It is an attribution rather than a claim about method — which
+         is exactly the test that let it become data; `SCREEN_SOURCE`, which does make a
+         claim about method, stays in code and unrendered. */
+      footer={copy.sourceLine}
     >
         {/* **This band has a line now, and it is a SCOPE statement rather than this
             screen's finding.** It had none for one pass, on the argument that the
@@ -319,7 +319,7 @@ export function FunctionViewScreen({
             because they are national and do not move with the visitor's answers. */}
         <div className="flex flex-col gap-3 md:gap-4">
           <ProductIdentity id="product-identity" />
-          <HeaderFinding>{HEADER_LINES.functions}</HeaderFinding>
+          <HeaderFinding>{headerLines(copy).functions}</HeaderFinding>
         </div>
         {/* Straight to the form, not via the peer view. Same behaviour as Screen 1's
             row, which is the point: it is the same component in the same place on both
@@ -404,6 +404,11 @@ function CardGrid({ cards }: { cards: readonly LaidOutCard[] }) {
  * behind the first.
  */
 function AreaPanel({ area }: { area: FunctionAreaView }) {
+  // Read before the three composed-tab returns below, because a hook cannot sit after a
+  // conditional return. It costs nothing: the three early returns render components that
+  // read the same context themselves.
+  const copy = usePublicCopy();
+
   /**
    * **HR is composed rather than derived, and this is the whole seam.** One tab, one
    * branch, and everything below it is untouched — the technology and finance tabs still
@@ -467,7 +472,7 @@ function AreaPanel({ area }: { area: FunctionAreaView }) {
       <SummaryFigures
         key="figures"
         cells={scalarCells(area.figures)}
-        heading={FIGURES_HEADING[area.functionArea]}
+        heading={figuresHeadings(copy)[area.functionArea]}
         headingId={`figures-${area.functionArea}-heading`}
       />,
     );

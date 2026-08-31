@@ -10,7 +10,12 @@ import {
   DEFAULT_PEER_LIMIT,
   type PeerTier,
 } from "./peers";
-import type { Company, Dataset, Taxonomy } from "./schema";
+import {
+  DEFAULT_COMMON_FUNCTIONS,
+  type Company,
+  type Dataset,
+  type Taxonomy,
+} from "./schema";
 import { z } from "zod";
 
 /**
@@ -136,34 +141,6 @@ export interface TieredOptions {
 const COMMON_INDUSTRIES = 6;
 
 /**
- * Industries pinned into the leading tier regardless of how many companies they
- * have.
- *
- * **This is a business input, not a derivation, and it is the one place in the
- * dropdown ordering that is.** Everything else here is computed from company
- * counts precisely so nobody has to maintain a list of "important" values. These
- * two are different: ANSR expects enquiries from retail and consumer goods out of
- * proportion to how much of the researched dataset they occupy — Retail is eighth
- * by count and Consumer Packaged Goods sixteenth, so neither would surface on
- * frequency alone. Anticipated demand and dataset composition are genuinely
- * different things, and only ANSR knows the first.
- *
- * Kept deliberately short. Every addition here is a claim that the data is wrong
- * about what visitors will pick, and the more of them there are the less the
- * "most common" label means. If this grows past four or five, the honest move is to
- * relabel the group rather than keep pinning.
- *
- * Pinned entries still sort by company count inside the tier, so the row reads
- * largest-first and Consumer Packaged Goods does not appear above Software &
- * Internet. A value here that is not in the taxonomy is ignored rather than
- * invented, so an industry rename cannot put a dead option in the dropdown.
- */
-const PINNED_INDUSTRIES: readonly string[] = [
-  "Retail",
-  "Consumer Packaged Goods",
-];
-
-/**
  * The same, for HQ country: twelve.
  *
  * **The tier is capped rather than being "every country in the data", which is what
@@ -189,6 +166,27 @@ const COMMON_HQ_COUNTRIES = 12;
  *
  * Unlike revenue bands, industry order carries no matching meaning — it is a filter
  * key, matched by equality — so reordering it for display is safe.
+ *
+ * **Membership of the leading tier is count plus `taxonomy.pinnedIndustries`, and the
+ * pinned list is the one part of this that is a business input rather than a
+ * derivation.** Everything else is computed from company counts precisely so nobody
+ * has to maintain a list of "important" values; pinning exists because anticipated
+ * demand and dataset composition are genuinely different things and only ANSR knows
+ * the first. Retail is eighth by count and Consumer Packaged Goods sixteenth, so
+ * neither would surface on frequency alone, and both are where ANSR expects enquiries
+ * from.
+ *
+ * **It is read from the dataset rather than from a constant here for the same reason
+ * the taxonomy itself is:** the judgement is ANSR's, it moves with their pipeline
+ * rather than with ours, and a deploy is the wrong unit of change for it. What is
+ * still ours is the shape of the list — pinning decides MEMBERSHIP and never position,
+ * so the tier is re-sorted by count below and Consumer Packaged Goods cannot appear
+ * above Software & Internet.
+ *
+ * Nothing enforces a maximum, and that is a judgement to keep making rather than a
+ * check to add: every pinned entry is a claim that the data is wrong about what
+ * visitors will pick, and the more of them there are the less the "most common" label
+ * means. Past four or five the honest move is to relabel the group.
  */
 export function industryOptions(dataset: Dataset): TieredOptions {
   const counts = new Map<string, number>();
@@ -208,10 +206,18 @@ export function industryOptions(dataset: Dataset): TieredOptions {
    * must not appear twice, and it will be the moment one of them grows — which is
    * the kind of thing that shows up as a duplicated option in a dropdown long
    * after the person who pinned it has forgotten.
+   *
+   * Filtered against the taxonomy even though `datasetSchema` already refuses a
+   * pinned industry that is not in `industries`. The check is not redundant work so
+   * much as a statement of what happens to a stale name: it is ignored rather than
+   * invented, so this function cannot put a dead option in the dropdown even if it is
+   * ever handed a taxonomy the gate did not see.
    */
   const inTier = new Set([
     ...byFrequency.slice(0, COMMON_INDUSTRIES),
-    ...PINNED_INDUSTRIES.filter((industry) => byFrequency.includes(industry)),
+    ...dataset.taxonomy.pinnedIndustries.filter((industry) =>
+      byFrequency.includes(industry),
+    ),
   ]);
   const common = byFrequency.filter((industry) => inTier.has(industry));
   const others = byFrequency
@@ -320,10 +326,10 @@ export function peerViewInputSchema(taxonomy: Taxonomy, businessTypeIds?: readon
 /* ==========================================================================
    Common functions
 
-   The one thing on Screen 1 with no data source. The database has no
+   The one block on Screen 1 with no company data under it. The database has no
    per-company function column, and the brief's own note anticipates that and
-   permits a hardcoded set: "Could be hardcoded as mostly all the functions are
-   more or less the same."
+   permits a fixed set: "Could be hardcoded as mostly all the functions are more
+   or less the same."
 
    So this is a general pattern and the SECTION HEADING says so — "Functions most
    GCCs run from India", which is a claim about GCCs in general and cannot be read as
@@ -335,36 +341,43 @@ export function peerViewInputSchema(taxonomy: Taxonomy, businessTypeIds?: readon
    visitor's peers' functions is still the failure mode being avoided; a CIO who
    spots one fabricated detail discounts the whole screen.
 
-   Ordered most to least common, and deliberately at the level a CIO recognises
-   rather than at org-chart granularity. Headcount is not shown, per the brief.
+   **The labels themselves are now `siteContent.commonFunctions`, and they could
+   become data precisely BECAUSE the block claims nothing.** Every other string on
+   this screen is an argument about the company data and lives in `copy.ts` beside
+   the logic making the argument — hold one of those as free text and it drifts into
+   a falsehood nothing catches. These assert no count, no share and no order, so
+   there is nothing for an edit to contradict. What must stay in code is the heading
+   above them, which is the sentence carrying the basis.
+
+   Deliberately at the level a CIO recognises rather than at org-chart granularity.
+   Headcount is not shown, per the brief.
    ========================================================================== */
 
 /**
- * **Ampersands, not "and", and it is a fit decision rather than a style one.** Seven of
- * the eight items were compound, so the list read as eight sentences and the longest
- * wrapped to two lines in a four-column grid while its neighbours took one. The
- * ampersand is what makes the set symmetrical enough to tile evenly. "Legal, risk &
- * compliance" keeps its serial comma because it is a list of three, where the ampersand
- * replaces only the final conjunction.
+ * The eight shipped labels: the SEED and the schema's default, not what the screen
+ * renders.
  *
- * **"Shared services & operations", where this was "Business operations & shared
- * services".** At 37 characters it was half again as long as the next longest item and
- * more than twice the shortest, which is what left the set ragged whatever the column
- * count — and "business" was doing no work, since a GCC's operations function is
- * business operations by definition. Reversing the pair puts the term a CIO recognises
- * first and brings the whole set inside a 16-to-28 character range, so no item is the
- * one that decides the layout.
+ * `buildPeerView` reads `siteContent.commonFunctions`, so an admin edit reaches the
+ * visitor on the next publish and this constant does not move. It is re-exported
+ * under the old name rather than dropped because it is still the thing to diff a
+ * live dataset against, and because a fixture asserting "the shipped eight" wants a
+ * name for them — but a caller reaching for this to RENDER is reading last month's
+ * copy.
+ *
+ * The wording is held here for the same reason the caps are held in the schema: both
+ * are the layout's constraints rather than editorial taste. **Ampersands, not "and",
+ * and it is a fit decision.** Seven of the eight items are compound, so with "and"
+ * the list read as eight sentences and the longest wrapped to two lines in a
+ * four-column grid while its neighbours took one. "Legal, risk & compliance" keeps
+ * its serial comma because it is a list of three, where the ampersand replaces only
+ * the final conjunction. And "Shared services & operations" was "Business operations
+ * & shared services" at 37 characters — half again the next longest, which left the
+ * set ragged whatever the column count, while "business" did no work, since a GCC's
+ * operations function is business operations by definition. Reversed, the whole set
+ * sits inside a 16-to-28 character range, so no item is the one that decides the
+ * layout. An admin editing this list is editing against that range.
  */
-export const COMMON_FUNCTIONS = [
-  "Technology & engineering",
-  "Data & analytics",
-  "Finance & accounting",
-  "Shared services & operations",
-  "Human resources",
-  "Customer & partner support",
-  "Procurement & supply chain",
-  "Legal, risk & compliance",
-] as const;
+export const COMMON_FUNCTIONS = DEFAULT_COMMON_FUNCTIONS;
 
 /* ==========================================================================
    Blocks
@@ -889,10 +902,19 @@ export function buildPeerView(
       : null;
 
   const density = cityDensity(dataset, input.industry);
+  /**
+   * The taxonomy's coordinates are passed in so a city added after the seed plots.
+   *
+   * Without the overlay a new city is counted, ranked and listed and simply carries
+   * no dot — survivable, and how this behaved before the field existed, but the gap
+   * is only fixable by a deploy. With it, the fix is a taxonomy edit. A city with no
+   * coordinate on either side still lands in `unplotted` below and still says nothing
+   * to the visitor about it.
+   */
   const cities: MapCity[] = density.map((entry) => ({
     city: entry.city,
     companies: entry.companies,
-    point: projectCity(entry.city),
+    point: projectCity(entry.city, dataset.taxonomy.cityCoordinates),
     tier1: TIER1_CITIES.has(entry.city),
   }));
 
@@ -949,7 +971,11 @@ export function buildPeerView(
         largestEntries.every((entry) => entry.alsoPeer),
       shortfall: largest.shortfall,
     },
-    functions: COMMON_FUNCTIONS,
+    // The published labels, not the constant above — see the "Common functions"
+    // block. Passed through rather than copied: the field is `readonly string[]` on
+    // the view model, and this crosses a serialization boundary on its way to the
+    // client, so nothing downstream can hold a reference to the dataset's array.
+    functions: dataset.siteContent.commonFunctions,
     map: {
       industry: input.industry,
       cities,

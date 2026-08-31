@@ -26,6 +26,8 @@ interface FieldShellProps {
   hint?: string;
   error?: string;
   optional?: boolean;
+  /** Live "18/48" against a schema bound. See `TextField`'s `max`. */
+  counter?: string;
   className?: string;
   children: (ids: { controlId: string; describedBy?: string }) => React.ReactNode;
 }
@@ -35,26 +37,46 @@ function FieldShell({
   hint,
   error,
   optional,
+  counter,
   className,
   children,
 }: FieldShellProps) {
   const controlId = useId();
   const hintId = `${controlId}-hint`;
   const errorId = `${controlId}-error`;
+  const countId = `${controlId}-count`;
   const describedBy =
-    [hint ? hintId : null, error ? errorId : null].filter(Boolean).join(" ") ||
-    undefined;
+    [hint ? hintId : null, counter ? countId : null, error ? errorId : null]
+      .filter(Boolean)
+      .join(" ") || undefined;
 
   return (
     <div className={cn("flex flex-col gap-1.5", className)}>
-      <Label htmlFor={controlId}>
-        {label}
-        {/* Optional is marked, not required — most fields here are required, so
-            flagging the exceptions is the quieter signal. */}
-        {optional ? (
-          <span className="font-regular text-text-muted"> (optional)</span>
+      {/* The count sits on the label's own row, at its trailing end. It belongs to
+          the field rather than to the value, and putting it under the control would
+          push the error line down by a row on every field that has one. */}
+      <div className="flex items-baseline justify-between gap-3">
+        <Label htmlFor={controlId}>
+          {label}
+          {/* Optional is marked, not required — most fields here are required, so
+              flagging the exceptions is the quieter signal. */}
+          {optional ? (
+            <span className="font-regular text-text-muted"> (optional)</span>
+          ) : null}
+        </Label>
+        {counter ? (
+          /* Described-by rather than a live region. Thirty of these on one page
+             announcing on every keystroke would make the form unusable with a
+             screen reader; on focus is when the number is worth hearing, and the
+             error below is what announces the moment it stops being allowed. */
+          <span
+            id={countId}
+            className="shrink-0 text-xs tabular-nums text-text-muted"
+          >
+            {counter}
+          </span>
         ) : null}
-      </Label>
+      </div>
       {hint ? (
         <p id={hintId} className="text-xs text-text-muted">
           {hint}
@@ -78,6 +100,7 @@ export function TextField({
   hint,
   error,
   optional,
+  max,
   className,
   value,
   onChange,
@@ -89,6 +112,16 @@ export function TextField({
   hint?: string;
   error?: string;
   optional?: boolean;
+  /**
+   * The field's cap, shown as a live count.
+   *
+   * A number rather than a formatted string, so the caller passes the bound it
+   * already read off the schema and cannot state a different one here. There is
+   * deliberately no `maxLength` on the input to go with it: truncating silently at
+   * the cap loses the end of a sentence somebody typed, and the error below says
+   * what is wrong instead.
+   */
+  max?: number;
   className?: string;
   value: string;
   onChange: (value: string) => void;
@@ -103,6 +136,7 @@ export function TextField({
       hint={hint}
       error={error}
       optional={optional}
+      counter={max === undefined ? undefined : `${value.trim().length}/${max}`}
       className={className}
     >
       {({ controlId, describedBy }) => (
