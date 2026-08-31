@@ -43,8 +43,8 @@ async function openIndustryAndFilter(
 test.describe("finding a sub-industry by the words a visitor uses", () => {
   /**
    * The reported case. A payments platform is one business this taxonomy holds on both
-   * sides of a hard industry boundary — `Payments & financial infrastructure` under
-   * Software & Internet and `Payment processing & gateways` under BFSI — and matching never
+   * sides of a hard industry boundary — `Payments & Financial Infrastructure` under
+   * Software & Internet and `Payment Processing & Gateways` under BFSI — and matching never
    * crosses that boundary. So the one thing the form can do is refuse to hide the
    * choice: `payments` has to surface both industries, and the visitor picks.
    */
@@ -63,18 +63,19 @@ test.describe("finding a sub-industry by the words a visitor uses", () => {
   /**
    * `fintech` appears in neither industry's name and in neither payments row's label.
    * It reaching a payments row in both industries is the mechanism working end to end.
-   * (`fin-payments` was renamed "Payment processing & gateways" when payments was split
+   * (`fin-payments` was renamed "Payment Processing & Gateways" when payments was split
    * into four BFSI rows; it keeps `fintech` among its search terms.)
    */
   /**
-   * Two page loads rather than one, because below 1440 the cascade pane is a DRILL-IN
-   * that covers the parent list — so once Software & Internet is open, BFSI is behind
-   * it and unclickable. That is the control working as designed; a spec that clicked
-   * both in one pass would be asserting the pane does not cover the list.
+   * Two page loads rather than one, and it is now belt-and-braces rather than a hard
+   * constraint. The cascade pane sits BESIDE the first pane from `md` up, so at the
+   * default viewport both industries are on screen and clickable in one pass. Below `md`
+   * it is a drill-in covering the list, where the second industry would be behind it.
+   * A fresh load per industry is correct at every width, so this stays.
    */
   for (const [industry, subIndustry] of [
-    ["Software & Internet", "Payments & financial infrastructure"],
-    ["BFSI", "Payment processing & gateways"],
+    ["Software & Internet", "Payments & Financial Infrastructure"],
+    ["BFSI", "Payment Processing & Gateways"],
   ] as const) {
     test(`\`fintech\` reaches ${subIndustry}`, async ({ page }) => {
       await openIndustryAndFilter(page, "fintech");
@@ -90,10 +91,10 @@ test.describe("finding a sub-industry by the words a visitor uses", () => {
    * `si` reached a third of the taxonomy.
    */
   const ACRONYMS = [
-    ["3pl", "Logistics & Transportation", "Freight forwarding & third-party logistics"],
-    ["bpo", "Professional Services", "Business process outsourcing"],
-    ["qsr", "Restaurant & Food Service", "Quick service restaurants"],
-    ["cro", "Healthcare & Lifescience", "Clinical research & development services"],
+    ["3pl", "Logistics & Transportation", "Freight Forwarding & Third-Party Logistics"],
+    ["bpo", "Professional Services", "Business Process Outsourcing"],
+    ["qsr", "Restaurant & Food Service", "Quick Service Restaurants"],
+    ["cro", "Healthcare & Lifescience", "Clinical Research & Development Services"],
   ] as const;
 
   for (const [query, industry, subIndustry] of ACRONYMS) {
@@ -134,7 +135,7 @@ test.describe("finding a sub-industry by the words a visitor uses", () => {
     await expect(parent).toBeVisible();
     await parent.click();
     await expect(
-      page.getByRole("treeitem", { name: "Clinical research & development services" }),
+      page.getByRole("treeitem", { name: "Clinical Research & Development Services" }),
     ).toBeVisible();
   });
 
@@ -152,12 +153,12 @@ test.describe("finding a sub-industry by the words a visitor uses", () => {
     // Named EXACTLY its label, with no trace of the term that found it. The only row
     // in the pane whose name contains "fintech" is the one whose printed label does.
     await expect(
-      page.getByRole("treeitem", { name: "Payment processing & gateways", exact: true }),
+      page.getByRole("treeitem", { name: "Payment Processing & Gateways", exact: true }),
     ).toBeVisible();
     const named = await page
       .getByRole("treeitem", { name: /fintech/i })
       .evaluateAll((nodes) => nodes.map((node) => node.getAttribute("aria-label")));
-    expect(named).toEqual(["Fintech & digital lending"]);
+    expect(named).toEqual(["Fintech & Digital Lending"]);
   });
 
   /** A country by a name that is not its entry. The field is one flat listbox. */
@@ -192,14 +193,14 @@ test("finding the sub-industry changes which companies are shown", async ({ page
     await page
       .getByRole("treeitem", {
         name: withSubIndustry
-          ? "Payments & financial infrastructure"
+          ? "Payments & Financial Infrastructure"
           : "All of Software & Internet",
         exact: true,
       })
       .click();
 
     await page.getByLabel("Annual revenue").click();
-    await page.getByRole("option", { name: "$1 Bn – $5 Bn", exact: true }).click();
+    await page.getByRole("option", { name: "1 Bn – 5 Bn", exact: true }).click();
     await page.getByLabel("Headquarters").click();
     await page.getByLabel(/^Filter/).fill("USA");
     await page.getByRole("option", { name: "USA", exact: true }).click();

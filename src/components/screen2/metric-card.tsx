@@ -25,7 +25,6 @@ import {
   StackedShare,
 } from "@/components/public/charts";
 import {
-  FLOOR_NOTE,
   HELD_CHIP,
   heldShapeNote,
   indexedNote,
@@ -99,11 +98,9 @@ const WIDTH_CLASS: Record<MetricWidth, string> = {
  */
 function CardMeta({
   indexBaseline,
-  atLeast,
   asOf,
 }: {
   indexBaseline?: string;
-  atLeast?: boolean;
   asOf?: string;
 }) {
   const parts = [
@@ -111,7 +108,8 @@ function CardMeta({
     // a card SUBTITLE rather than as a foot note, and two copies of the prefix would let
     // one of them be reworded alone.
     indexBaseline ? indexedNote(indexBaseline) : undefined,
-    atLeast ? FLOOR_NOTE : undefined,
+    // The floor sentence ("+ indicates a floor…") was removed at ANSR's request; the
+    // trailing `+` on the figure carries it now, unexplained.
     // Verbatim, not prefixed with "As of". The schema calls this free-text
     // provenance rather than a date, so a prefix turns a phrase into nonsense the
     // moment somebody types anything other than a quarter.
@@ -176,7 +174,19 @@ export function MetricCard({
   const Container = container === "panel" ? Panel : Block;
 
   return (
-    <Container id={panelId} title={metric.title} className={WIDTH_CLASS[width]}>
+    <Container
+      id={panelId}
+      title={metric.title}
+      className={WIDTH_CLASS[width]}
+      /* The card grid stretches its row to one bottom edge, so the body takes the
+         surplus and centres the chart in it — otherwise the shorter chart sits at the
+         top of a tall card and the empty space just moves inside the border. `Block`
+         takes no `bodyClassName`, so this is passed only where the container is a
+         `Panel`, which is every card in the grid today. */
+      {...(container === "panel"
+        ? { bodyClassName: "flex flex-col grow justify-center" }
+        : {})}
+    >
       {/* One column with a real gap, so `CardMeta` is not butted against the last
           row of the chart above it. Neither container supplies one — `Panel`'s body
           and `Block`'s both stack their children — and the reading instruction is the
@@ -237,11 +247,7 @@ export function MetricCard({
         />
       ) : null}
 
-      <CardMeta
-        indexBaseline={metric.indexBaseline}
-        atLeast={metric.atLeast}
-        asOf={metric.asOf}
-      />
+      <CardMeta indexBaseline={metric.indexBaseline} asOf={metric.asOf} />
       </div>
     </Container>
   );
@@ -382,10 +388,16 @@ function BreakdownChart({
        * quantity its bars encode, so row one is full width and states the axis — the
        * self-labelling exemption. It wraps back to the two-line layout below `sm`.
        */
+      /**
+       * **The unit heads the figure COLUMN now instead of sitting under the chart.** As an
+       * `axisNote` "professionals" rendered at the foot of the card, after the seven
+       * figures it qualifies — so the numerals were unlabelled where they are actually
+       * read. See `quantityHeader` on `RankedBars`; it is the peer view's own device.
+       */
       return (
         <RankedBars
           rows={shown.parts}
-          axisNote={unit}
+          quantityHeader={unit}
           dense={shown.parts.length > 5}
           inline
           bareTrack={shown.selfLabelling}

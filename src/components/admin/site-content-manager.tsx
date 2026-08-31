@@ -4,9 +4,11 @@ import { useDraft } from "@/components/admin/draft-provider";
 import { TextField } from "@/components/admin/fields";
 import { Button } from "@/components/ui/button";
 import {
+  closeCopySchema,
   heroCopySchema,
   impactStatSchema,
   siteContentSchema,
+  type CloseCopy,
   type HeroCopy,
   type ImpactStat,
 } from "@/data/schema";
@@ -46,6 +48,8 @@ const MAX = {
   lead: heroCopySchema.shape.lead.maxLength ?? 240,
   value: impactStatSchema.shape.value.maxLength ?? 16,
   label: impactStatSchema.shape.label.maxLength ?? 64,
+  closeBody: closeCopySchema.shape.body.maxLength ?? 140,
+  closeLabel: closeCopySchema.shape.ctaLabel.maxLength ?? 28,
 } as const;
 
 const MAX_STATS = 6;
@@ -63,13 +67,14 @@ export function SiteContentManager() {
   const {
     draft,
     updateHeroCopy,
+    updateCloseCopy,
     addImpactStat,
     updateImpactStat,
     removeImpactStat,
     moveImpactStat,
   } = useDraft();
 
-  const { hero, impactStats } = draft.siteContent;
+  const { hero, impactStats, close } = draft.siteContent;
   // Checked against the real gate rather than re-deriving its rules, so the
   // banner cannot say "ready" for something the publish endpoint will reject.
   const blocked = !siteContentSchema.safeParse(draft.siteContent).success;
@@ -78,13 +83,14 @@ export function SiteContentManager() {
     <div className="flex flex-col gap-8">
       <div>
         <h1 className="text-xl font-semibold tracking-heading text-text">
-          Entry point
+          Site copy
         </h1>
         <p className="mt-1 max-w-measure text-sm text-text-muted">
-          The headline on the first screen and the impact figures at the bottom of
-          it. These are the only words and numbers on the public pages that are not
-          drawn from the company data, which is why they are editable here — nothing
-          is live until you publish.
+          The headline on the first screen, the impact figures at the bottom of it,
+          and the closing call to action on both result screens. These are the only
+          words and numbers on the public pages that are not drawn from the company
+          data, which is why they are editable here — nothing is live until you
+          publish.
         </p>
       </div>
 
@@ -98,6 +104,8 @@ export function SiteContentManager() {
       ) : null}
 
       <HeroEditor hero={hero} onChange={updateHeroCopy} />
+
+      <CloseEditor close={close} onChange={updateCloseCopy} />
 
       <section
         aria-labelledby="impact-figures"
@@ -198,6 +206,62 @@ function HeroEditor({
           value={hero.lead}
           error={lengthError(hero.lead, MAX.lead)}
           onChange={(value) => onChange({ lead: value })}
+        />
+      </div>
+    </section>
+  );
+}
+
+/**
+ * The closing call to action, on both result screens.
+ *
+ * **Two fields, because the band renders two strings and has no heading.** It had one —
+ * "Unlock the full GCC landscape" — and it was removed so the supporting line and the
+ * button carry the band on their own. There is deliberately no heading field here: a
+ * field an admin can fill that nothing draws is worse than no field, and restoring the
+ * heading is a schema addition and a component change together.
+ *
+ * The hints name where the words appear rather than describing them, because this is the
+ * one editable band an admin cannot see from the entry point — it is three clicks into
+ * the result screens, behind the form.
+ */
+function CloseEditor({
+  close,
+  onChange,
+}: {
+  close: CloseCopy;
+  onChange: (patch: Partial<CloseCopy>) => void;
+}) {
+  return (
+    <section
+      aria-labelledby="close-copy"
+      className="border border-border-subtle bg-surface"
+    >
+      <div className="border-b border-border-subtle px-5 py-4">
+        <h2 id="close-copy" className="text-base font-semibold text-text">
+          Closing call to action
+        </h2>
+        <p className="mt-1 max-w-measure text-sm text-text-muted">
+          The last band on both result screens — the peer landscape and the function
+          metrics — over the blurred panel of withheld detail. It is the only link out
+          of the tool. There is no heading: these two elements are the whole band.
+        </p>
+      </div>
+
+      <div className="flex flex-col gap-5 px-5 py-5">
+        <TextField
+          label="Supporting line"
+          hint={`The band's own statement, set large, light and centred at up to ${MAX.closeBody} characters. Past that it runs to a fourth line and pushes the button off the first screenful on a phone.`}
+          value={close.body}
+          error={lengthError(close.body, MAX.closeBody)}
+          onChange={(value) => onChange({ body: value })}
+        />
+        <TextField
+          label="Button"
+          hint={`Sits in a pill that must not wrap, so keep it under ${MAX.closeLabel} characters. Say what pressing it does — the link opens in the parent window rather than inside the embedded tool.`}
+          value={close.ctaLabel}
+          error={lengthError(close.ctaLabel, MAX.closeLabel)}
+          onChange={(value) => onChange({ ctaLabel: value })}
         />
       </div>
     </section>

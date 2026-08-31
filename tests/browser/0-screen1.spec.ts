@@ -466,12 +466,11 @@ test.describe("the answer", () => {
      */
     const snapshot = band(page, "snapshot");
     /**
-     * **The first cell is the industry's SHARE of the national base, not its count.**
-     * The count appeared four times on this surface in three framings — here, the
-     * industry card's lead, the containment chart's middle layer, and the denominator
-     * of the peer count line — so the strip that exists to save the reader work was
-     * making them reconcile one number four times. The share is the one figure the
-     * chart draws and never states.
+     * **The first cell is a COUNT of comparable centres, where it was the industry's
+     * share of the national base**, at ANSR's request. This visitor gave no sub-industry,
+     * so the comparable population is the industry and the label says so — the
+     * sub-industry wording is asserted in the unit suite, which can vary the input
+     * without driving the cascade.
      */
     /**
      * **The industry is named by the section HEADING now, and by none of the four
@@ -483,7 +482,9 @@ test.describe("the answer", () => {
     await expect(
       snapshot.getByRole("heading", { name: "Snapshot of BFSI GCCs in India" }),
     ).toBeVisible();
-    await expect(snapshot.getByText("Of every GCC in India")).toBeVisible();
+    await expect(snapshot.getByText("GCCs in your industry")).toBeVisible();
+    // The share's own label and its unit are both gone with it.
+    await expect(snapshot.getByText("Of every GCC in India")).toHaveCount(0);
     await expect(snapshot.getByText("Typical GCC headcount")).toBeVisible();
     // **Not "Indian cities in play"**, which was consultants' shorthand and made a
     // plain count of cities sound like a shortlist somebody had drawn up.
@@ -963,15 +964,23 @@ test.describe("the answer", () => {
     // and the list say the same thing — so the locator has to name which one it means.
     await expect(map.locator("dl").getByText("Bengaluru").first()).toBeVisible();
     /**
-     * **The page ends at the evidence strip.** No closing CTA card, no "Talk to ANSR"
-     * panel, no review-profile action, no footer and no methodology links — all
-     * removed at ANSR's request. Screen 2 still carries the conversation, which is
+     * **The page ends at the CLOSE now, and the evidence strip is the last thing before
+     * it.** The close was removed at ANSR's request on the page-end instruction and is
+     * restored at the project owner's decision; this assertion is inverted rather than
+     * deleted, because a close arriving back on one screen and not the other is the
+     * half-restored state the shared component exists to prevent. Screen 2's own is
      * asserted in `0-screen2.spec.ts`.
+     *
+     * Still no footer and still no methodology link: only the close came back.
      */
-    await expect(page.getByRole("link", { name: /Talk to ANSR/ })).toHaveCount(0);
     await expect(page.locator("footer")).toHaveCount(0);
-    // And the strip really is last: nothing follows it in the document.
-    const trailing = await band(page, "scale").evaluate((el) => {
+    await expectBand(page, "close");
+    // Located by ROLE inside the band, never by its words: the button's label is
+    // `siteContent.close.ctaLabel` and admin-editable, so naming it here would make a
+    // copy edit break a public spec — the same failure twenty band locators had.
+    await expect(band(page, "close").getByRole("link")).toBeVisible();
+    // And the close really is last: nothing follows it in the document.
+    const trailing = await band(page, "close").evaluate((el) => {
       // Non-rendering elements only. Next.js appends its own `<script>` tags after
       // the tree, so the assertion is about RENDERED content rather than about the
       // document ending — otherwise it fails on the framework rather than on the page.
@@ -1001,6 +1010,79 @@ test.describe("the answer", () => {
       return rest;
     });
     expect(trailing).toEqual([]);
+  });
+
+  /**
+   * The close, and the one thing about it that is an INVARIANT rather than a design
+   * decision.
+   *
+   * It is a paywall band: a blurred field of content with the ask centred over it. The
+   * blurred layer is what needs a test, because it is the part that would be a leak if
+   * it were built the obvious way.
+   *
+   * **It is not built that way, and this asserts the difference structurally.** What is
+   * blurred is a synthetic lattice authored in `closing-cta.tsx` — no figure, no metric
+   * name, nothing read from the data. `publicMetric`'s gated branch has no `value` and
+   * no `structure` field, so a withheld figure never reaches the document to be covered
+   * up. So the test reads the backdrop's TEXT rather than checking that a filter is
+   * applied: emptiness of content is the guarantee, and the blur is only how the band
+   * suggests depth.
+   *
+   * The whole layer is also `aria-hidden`, so nothing fabricated is in the reading
+   * order — asserted here, because a decorative layer that reaches a screen reader is
+   * the same defect as one that carries real data.
+   */
+  test("closes on an ask over a blurred field that carries no data", async ({
+    page,
+  }) => {
+    await page.goto("/");
+    await ask(page, { industry: "BFSI", revenueBand: "Above $20 Bn" });
+
+    const close = band(page, "close");
+    await expect(close).toBeVisible();
+
+    // Exactly one outbound link on the whole screen, and it is this one. The tool had
+    // none at all for a while; what must not come back is a second one somewhere else.
+    await expect(page.getByRole("link")).toHaveCount(1);
+    const cta = close.getByRole("link");
+    await expect(cta).toHaveAttribute("target", "_parent");
+
+    /**
+     * **The backdrop carries no text at all**, which is the assertion that fails if
+     * anyone ever implements this band by rendering something real and blurring it.
+     */
+    const backdrop = page.locator(".gcc-close-backdrop");
+    await expect(backdrop).toHaveCount(1);
+    expect(
+      await backdrop.evaluate((el) => (el as HTMLElement).innerText.trim()),
+    ).toBe("");
+    // And it is out of the accessibility tree, along with the scrim over it.
+    await expect(backdrop).toHaveAttribute("aria-hidden", "true");
+    await expect(page.locator(".gcc-close-scrim")).toHaveAttribute(
+      "aria-hidden",
+      "true",
+    );
+
+    /**
+     * **The band says it in TWO elements: one line and a button.** Asserted as a count
+     * rather than by wording, because what this replaced was verbose — an eyebrow, a
+     * heading, a two-sentence body and a bordered panel listing four metric names — and
+     * the failure mode is it growing back one element at a time.
+     *
+     * **No heading at all**, so the band takes its accessible name from `aria-label`.
+     * `expectBand` above accepts either mechanism; what must not pass is a band with
+     * neither, which would not be a `region` and would be unreachable by role.
+     */
+    await expect(close.getByRole("heading")).toHaveCount(0);
+    await expect(close.locator("p")).toHaveCount(1);
+    // And nothing above the line: no eyebrow came back with the heading's removal.
+    expect(
+      await close.evaluate((el) => el.firstElementChild?.tagName ?? ""),
+    ).toBe("P");
+
+    // Unchanged by the close coming back: it links out and collects nothing.
+    expect(await page.locator('input[type="email"]').count()).toBe(0);
+    expect(await close.locator("form, input, textarea").count()).toBe(0);
   });
   /**
    * **The two views are connected TABS at the head of the page, not a pill switch in
@@ -1140,7 +1222,7 @@ test.describe("the answer", () => {
     // to its own content and the possessive was two thirds of the width of the value.
     await expect(profile.getByText("Company")).toBeVisible();
     await expect(profile.getByText("Northwind Financial")).toBeVisible();
-    await expect(profile.getByText("Above $20 Bn")).toBeVisible();
+    await expect(profile.getByText("Above 20 Bn")).toBeVisible();
     // And no affordance survives on the answers themselves.
     await expect(profile.getByText("Edit profile")).toHaveCount(0);
     /**
@@ -1409,7 +1491,7 @@ test.describe("the answer", () => {
      */
     await expect(page.getByText("India today")).toHaveCount(0);
     const profile = page.getByRole("group", { name: /Your profile/ });
-    for (const label of ["Industry", "Headquarters", "Revenue band"]) {
+    for (const label of ["Industry", "Headquarters", "Revenue band (USD)"]) {
       await expect(profile.getByText(label, { exact: true })).toBeVisible();
     }
     // And the one control, which is the only way back from either result screen.
@@ -1448,7 +1530,7 @@ test.describe("the answer", () => {
     // has no `value` at all, so `toHaveValue` here would not fail loudly — it would
     // compare against undefined.
     await expect(page.getByLabel("Industry")).toContainText("BFSI");
-    await expect(page.getByLabel("Annual revenue")).toContainText("Above $20 Bn");
+    await expect(page.getByLabel("Annual revenue")).toContainText("Above 20 Bn");
     await expect(page.getByLabel("Headquarters")).toContainText("Germany");
     await expect(page.getByLabel(/^Company name/)).toBeVisible();
   });
@@ -1568,18 +1650,19 @@ test.describe("a thin industry", () => {
     await expect(
       strip.getByRole("heading", { name: "Snapshot of Electrical & Electronics GCCs in India" }),
     ).toBeVisible();
-    await expect(strip.getByText("Of every GCC in India")).toBeVisible();
+    await expect(strip.getByText("GCCs in your industry")).toBeVisible();
     await expect(strip.getByText("Typical GCC headcount")).toBeVisible();
     await expect(strip.getByText(/^(—|n\/a)$/i)).toHaveCount(0);
     /**
-     * **A thin industry's share reads "<1%", never "0%".** Two companies against a
-     * national base of 1,834 rounds to nought, and a nought in the opening cell says
-     * the industry is not in India at all — to the exact visitors the shortfall copy
-     * below is written to reassure. This is the industry that produces it, so it is
-     * asserted here rather than in a unit test alone.
+     * **The thinnest industry in the dataset, and the opening cell still reads as a
+     * count rather than as a nought.** Two companies, so the cell states 2 — where the
+     * share this replaced had to be special-cased to "<1%", because 2 against a national
+     * base of 1,834 rounds to 0 and a nought there says the industry is not in India at
+     * all. A count needs no such branch: the figure it states is the population itself.
      */
-    await expect(strip.getByText("<1%")).toBeVisible();
     await expect(strip.getByText(/^0%$/)).toHaveCount(0);
+    await expect(strip.getByText("<1%")).toHaveCount(0);
+    await expect(strip.getByText("Data unavailable")).toHaveCount(0);
 
     // The national scale block is unchanged — that is what it is for.
     await expect(band(page, "scale").getByText("181")).toBeVisible();

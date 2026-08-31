@@ -2,6 +2,7 @@
 
 import { useId, useMemo, useRef, useState } from "react";
 
+import { formatRevenueBand } from "@/components/public/primitives";
 import { type GccStatus, type PeerViewInput } from "@/data/screen1";
 import {
   HQ_COUNTRY_TERMS,
@@ -476,6 +477,13 @@ export function InputPanel({
                  opening the control. */
               hint="Pick an industry to see its sub-industries (optional)"
               childLabel="sub-industries"
+              /* **Widened to the whole form grid, in two columns.** 24 industries in a
+                 field-width popup showed eight of them, so a visitor was deciding
+                 between industries without seeing the set — and one who cannot find
+                 their own row takes the broad answer, which drops the primary ordering
+                 signal off the peer set. Two columns rather than three because the
+                 taxonomy's longest name is 41 characters; see the `columns` prop. */
+              wide
               invalid={Boolean(errors.industry)}
               describedBy={describedBy}
               onChange={handleIndustryChange}
@@ -496,6 +504,12 @@ export function InputPanel({
                 controls.current.revenueBand = node;
               }}
               placeholder="Choose a band"
+              /* **The currency, once.** Every row used to carry its own `$` — up to two
+                 each, fourteen across seven rows — which is fourteen marks saying one
+                 thing and crowding the figures that differ. The hint is the panel's own
+                 place for a statement about the whole list, and it is where the industry
+                 control already puts its one piece of help text. */
+              hint="All figures in US dollars."
               invalid={Boolean(errors.revenueBand)}
               describedBy={describedBy}
               onChange={(next) => {
@@ -504,8 +518,21 @@ export function InputPanel({
               }}
               /* One group, in the taxonomy's own stored order. Never tiered and
                  never sorted: that order is the peer-matching contract, because the
-                 "adjacent band" step is index arithmetic on the array. */
-              groups={[{ label: "Revenue bands", options: asOptions(revenueBands) }]}
+                 "adjacent band" step is index arithmetic on the array.
+
+                 **The only control whose label is not its value.** `formatRevenueBand`
+                 spells `<` out as "Under" and takes the currency mark off; the value
+                 committed is still the stored string, so nothing about matching or
+                 validation sees the rewrite. */
+              groups={[
+                {
+                  label: "Revenue bands",
+                  options: revenueBands.map((band) => ({
+                    value: band,
+                    label: formatRevenueBand(band),
+                  })),
+                },
+              ]}
             />
           )}
         </Field>
@@ -522,6 +549,12 @@ export function InputPanel({
                 controls.current.hqCountry = node;
               }}
               placeholder="Choose a country"
+              /* Three columns, where industry takes two: a country name is short, so
+                 the list that gains most from density is also the one that can afford
+                 it. This is the longest list on the form by a wide margin and the
+                 filter is still what most visitors will use to cross it. */
+              wide
+              columns={3}
               invalid={Boolean(errors.hqCountry)}
               describedBy={describedBy}
               onChange={(next) => {

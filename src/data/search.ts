@@ -46,7 +46,7 @@
  *
  * The ampersand is the case that matters most here: nearly every row in this
  * taxonomy contains one, so a visitor typing `research and development` against
- * `Clinical research & development services` used to match nothing. Both sides
+ * `Clinical Research & Development Services` used to match nothing. Both sides
  * collapse `&` and `and` to the same thing.
  */
 

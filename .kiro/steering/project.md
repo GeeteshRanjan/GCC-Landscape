@@ -57,16 +57,57 @@ exactly as tall open as closed; the pane never gives the framed document a horiz
 pane is `aria-owns`-ed by its parent row rather than nested in it, so **every row carries an explicit
 `aria-label`**; the pane's leading `All of {industry}` row is the exit that keeps the broad answer,
 because the press that opened the pane deliberately does not close the panel; and re-opening the control
-does not re-open the visitor's branch. Room beside the field is `layoutWidth / 2 − 400` above 1280,
-nothing may clamp the pane at runtime (reading the viewport is what the iframe forbids), so widths come
-from a measured table and **below 1440 the pane covers the parent list as a drill-in**. Table and
-rejected geometry: style lock.
+does not re-open the visitor's branch. **The pane is a flex sibling INSIDE the panel and the two panes
+split the body in half** — it is not positioned outside it, so there is no room table and nothing to
+clamp at runtime. **Below `md` it covers the first pane as a drill-in**, covering the BODY only so the
+filter stays reachable. Rejected geometry, including the `layoutWidth / 2 − 400` table this replaced:
+style lock.
+
+**THE PANEL IS WIDER THAN THE FIELD, AND THE OPTIONS ARE IN COLUMNS.** A popup one field wide showed
+eight of 24 industries, so a visitor was deciding between industries without seeing the set — and one
+who cannot find their own row takes the broad answer, which is the findability failure below. `wide`
+widens the panel to the whole form grid; `columns` is 2 for industry (its longest name is 41 characters
+and needs a full half of the 800px body) and 3 for countries. Four things hold it together: **the
+widening is a negative inline-start margin of `calc(-100% - space-6)`, expressed in the FIELD's own
+width and never the viewport's**, gated on `md` where the grid gains its second column; it is
+LEADING-side, so `wide` is set per control rather than derived from a count, because only the grid's
+trailing column may widen; **columns are CSS multi-column so DOM order IS column order**, which is what
+keeps the keyboard walking what is drawn; and tier headings take `column-span: all`, so each tier
+balances into its own equal columns. The body is a FIXED height on a wide panel and a CEILING otherwise
+— seven revenue bands in a 416px box read as a list that failed to load. Opening a branch drops the
+first pane to one column; the body's box does not change.
+
+**A row is 14px on `--ansr-leading-snug` at 4px of block padding.** 16px is a floor on the TRIGGER only,
+where iOS zooms the viewport; a row in an open popup cannot trigger that. **Row fills are diluted into
+`--ansr-surface-pale`, the tint that marks India's column in the technology capability grid**, at
+ANSR's request — matte, meaning one flat fill and no gradient, shadow, border or ring. **Nothing in the
+panel's chrome is tinted**: the filter row, the hint line and the pane header are all on `--ansr-surface`,
+separated by one hairline. The hint is 12px Medium in `--ansr-text-muted` with symmetric padding — a
+supporting note, not a coloured strip.
+
+**A SELECTED ROW IS MEDIUM WEIGHT IN THE HEADING TEAL, AND THERE IS NO CHECK GLYPH.** Removed at ANSR's
+request: a mark drawn on one row has to be reserved on all of them, which put every label 22px inside
+the hint and the tier heading and made the heading's inset a `calc`. The fill stays out of it — the fill
+is the keyboard's position. Every row keeps `aria-selected`, which is what the assistive reading used.
+**No `font-family` on the panel**: `font-display` is set once on the public root and the popup inherits
+it, so restating it there was reverted as a second place to decide the typeface.
+
+**A REVENUE BAND IS FORMATTED FOR THE VISITOR AND NEVER RENAMED IN THE DATA.** `formatRevenueBand` in
+`primitives.tsx` spells `<` out as "Under" and takes the `$` off every row; the dropdown states the
+currency once in its hint and each result screen's pill carries it in the label, "Revenue band (USD)".
+The stored string stays the matching key and `taxonomy.revenueBands` order stays the contract, so admin
+keeps showing the stored strings — admin edits the datum. Applied at all three display sites and pinned
+on all seven bands by a unit test; `helpers.ts`'s `choose()` translates for the one control whose label
+is not its value.
 
 **`gccStatus` is kept, supplied as the `evaluating` constant (`ASSUMED_GCC_STATUS`), and rendered by
-nothing.** `framing()` and `functionFraming` are both still exported and unit-tested on all three
-values. **Do not delete the field on the strength of its being unrendered** — restoring a close is one
-component and one prop. Neither screen's fact summary echoes "India today": showing a constant there
-would be the tool telling a visitor what they said about something it never asked.
+nothing.** `framing()` and `functionFraming` are both still exported and unit-tested on all three values,
+and the unit suite is the only place the field can be varied at all. It briefly had a renderer on each
+screen; the close's copy is now supplied and fixed, so there is nothing left for a status to select, and
+Screen 1's `peerClosing` was deleted rather than kept as a second unrendered copy of the same branch. **Do
+not delete the field on the strength of its being unrendered** — restoring a branched close is one prop.
+Neither screen's fact summary echoes "India today": showing a constant there would be the tool telling a
+visitor what they said about something it never asked.
 
 **The three dropdowns are a custom listbox, not `<select>`, and not Radix Select** — Radix portals with
 `position: fixed`, which anchors to the wrong viewport inside a frame sized to its own content. The
@@ -168,7 +209,10 @@ card's top row.**
   because activating swaps the entire screen. `aria-controls` on the selected tab alone. **Not sticky.**
 - **The band carries the entry point's dotted world map from `lg` and the screen's motif below it —
   swapped at that breakpoint, never layered.** Held back by opacity and faded out over half the band's
-  height. **No blur, at ANSR's request**: quieten it with opacity and the masks, never with a filter.
+  height. **No blur on THIS band, at ANSR's request**: quieten it with opacity and the masks, never with a
+  filter. That is scoped to the header band's map, which read as a low-resolution copy of the entry
+  point's when blurred; the close's backdrop is a different graphic doing a different job and is blurred
+  deliberately.
   Plus `.gcc-header-lattice` on the leading edge.
 - **The card's top edge is where the selected tab meets the content**, same fill by construction. A line
   across that joint means something added a border.
@@ -219,9 +263,15 @@ stem (0.137 of cap height) rather than chosen.
 count, mean centre size, spread of cities, leading city. It **introduces no figure a card does not
 evidence**, holds four cells whatever the result, and says "Data unavailable" rather than a dash, a zero
 or an estimate. The SECTION HEADING carries the industry (`snapshotHeading`) and **no label does** —
-labels are three or four words each. **Never "GCC's".** The share is `industry.shareOfIndia`, derived in
-the view model over one population; computing it from `industry.total / scale.companyCount` was an
-arithmetic defect, those two counting populations that differ by one. The leading city takes the same
+labels are three or four words each. **Never "GCC's".** The opening cell is a COUNT of comparable
+centres, at ANSR's request, labelled **"GCCs in your sub-industry"** or "GCCs in your industry" — never
+"Comparable GCCs", also at ANSR's request. It reads `businessType.count` — the population the PEERS came
+from — or `industry.total` where no sub-industry was given, because any other population disagrees with
+the five cards below it; the sub-industry label therefore reads marginally wider than what it counts, and
+that is accepted since the cell and the cards still agree. Zero renders "Data unavailable", so the share's
+`<1%` special case is gone with it. **`industry.shareOfIndia` is still derived and is now rendered by nothing**; if it comes
+back, it is computed in the view model over one population, never as `industry.total /
+scale.companyCount`, which counts two populations differing by one. The leading city takes the same
 orange as the three figures, one size step down, with no `tabular-nums` and no `tracking-display`. A unit
 is a field (`Signal.suffix`), set two scale steps under the figure — never a fraction of an em.
 
@@ -325,10 +375,59 @@ group paragraph, no provenance line, no interpretive strip. **The cards are `h2`
 and unrendered** — still authored, still admin-editable, still crossing the gate, which is what keeps the
 schema's no-digits rule guarding something real.
 
-**THE TOOL HAS NO CALL TO ACTION ON EITHER SCREEN.** What ends the page is the capability matrix and then
-`SOURCE_LINE` under the card, on the page ground. `closing-cta.tsx` is rendered by nothing;
-`NEXT_PUBLIC_GCC_CTA_URL` reaches nothing and `ctaHref` is still threaded to `tool.tsx`. **There is no
-outbound link anywhere on either public screen** and a spec asserts it.
+**BOTH SCREENS CLOSE ON THE SAME BAND, and it is the tool's only outbound link.** Restored at the project
+owner's decision after being removed twice at ANSR's request. `ClosingCta` in `closing-cta.tsx` is the one
+implementation; each screen passes an id, `ctaHref` and its own two-string copy. **One link per screen and
+a spec on each asserts the count**, so a second CTA cannot appear anywhere. `NEXT_PUBLIC_GCC_CTA_URL` is
+live now rather than dormant — unset in production, so it falls back to ansr.com. The band still collects
+NOTHING: no form, no email field, no stored visitor input.
+
+**It is a PAYWALL band: a blurred field of chart panels with the ask centred on it.** What is blurred is
+synthetic — `CloseBackdrop` and `TILES` draw eight authored panels in four chart kinds (a headline figure,
+a column chart, a donut, a sparkline), reading nothing from the data. **It is not a gated metric covered up
+and it must never become one**; see invariant 1. **A "figure" in the field is a BLOCK at display height,
+never a typed number** — a blurred numeral is still a real character in the public DOM, so a plausible
+figure there is a fabricated one in the bundle. The whole layer is `aria-hidden` and a spec on each screen
+asserts it contains no text at all.
+
+**Three things hold the field together and each fixed a specific defect.** Every tile carries its own faint
+panel fill, because blocks on the bare ground read as scattered marks rather than as a dashboard. The eight
+tiles have 180-degree ROTATIONAL symmetry, so the field is balanced about the centre where the copy sits.
+And the grid gap must stay WIDER THAN THE BLUR RADIUS or adjacent rows merge into one tall panel.
+
+**The band admits WHITE INK ONLY, and that is measured rather than stylistic.** The veil is one flat value,
+so its weight is set by the faintest ink on the band; at the weight `--ansr-text-inverse-muted` needs, the
+field is too dim for the tiles to be distinguishable. White is 8.08:1 against the field's brightest
+possible pixel, the muted token is 3.93:1 and is forbidden here. Same class of constraint as
+`ask-hero.tsx`. **The veil is FLAT, never radial** — a radial one is a spotlight behind the copy, removed
+at the project owner's request.
+
+**The backdrop fades out at the band's own edges, and that is a bug fix.** It carried `transform: scale()`,
+which pushed the brightest content into the band's corners — and the close is the card's last band, so
+those are the CARD's bottom corners, where `.gcc-result-card` draws a 9%-white ring on the teal-deep page
+ground. Bright blur behind a light ring read as light leaking out of the card's foot.
+
+**TWO elements, and a spec counts them: one line and one button.** No heading, no eyebrow, no secondary
+action, no panel. **The band has NO `h2`** — its accessible name is an `aria-label` (`CLOSE_LABEL`), the way
+`#function-metrics` names itself, because a `<section>` with no name is not a `region`; an `sr-only` heading
+is the wrong fix and `docs/traps.md` says why. Centred, on `--ansr-surface-inverse-soft` via `Zone`'s exempt
+ground, and the last thing inside the card — `SOURCE_LINE` still follows it outside, on the page ground.
+
+**It asks QUIETLY: 18/20px Light for the line, 48px for the pill.** The line was promoted to the heading's
+old display scale once and reverted — at 24/30/38 a one-sentence band reads as a second hero, and the close
+is the last thing on a long page of evidence.
+
+**The copy is `siteContent.close`, so the close is the only EDITABLE band on the result screens.** Two
+fields, `body` and `ctaLabel`, on the same argument the hero is editable on: it is positioning on ANSR's own
+schedule rather than an argument about the dataset. `closeCopySchema` is defaulted so an older dataset still
+reads (the `metrics` precedent); `SiteContentDiff.close` means an edit is REPORTED, which is that category's
+whole reason to exist; the admin tab is "Site copy" rather than "Entry point". **There is no heading field**
+— a field an admin can fill that nothing draws is worse than none. **No public spec names the button's
+words**, because editable copy must not be a spec's locator.
+
+Four earlier shapes are deleted rather than parked: a bordered panel NAMING each withheld metric beside a
+frosted empty slot (`withheldTitles` and its prop went with it), a "NEXT STEP" eyebrow, a per-status branched
+copy set of up to eighteen sentences, and the `h2` "Unlock the full GCC landscape". Git holds all four.
 
 **EVERY BARE SCALAR LEAVES THE CARD GRID FOR ONE FIGURE ROW, drawn by `SummaryFigures`** on Screen 1's
 snapshot treatment. The split is by SHAPE, and that is what licenses moving a scalar at all: a scalar
@@ -352,11 +451,16 @@ draws no mark, so nothing a card's edges were measuring can be misrepresented. `
 - **A composed row carries no QUALIFIER.**
 
 **A COMPOSED TAB MAY DRAW A METRIC AS A SUMMARY FIGURE RATHER THAN A CARD, and only if it is a bare
-SCALAR.** Operations is the one that does. **The supporting note is the part's own LABEL, not a sentence
-in `copy.ts`** — a note authored beside a lifted figure drifts; a part's label cannot.
-`OPS_SUMMARY_NOTES` holds the one exception, the disruption cell, which states the whole set's extent.
-**The disruption cell states "2 – 6", not "0 days"** — there is no zero in this dataset, and a spec
-asserts the extent AND the absence of a zero. `ops-grade-a-office-stock` loses its vacant figure and
+SCALAR.** Operations is the one that does. **A cell is ONE line under its figure and that line is the
+metric's own TITLE** — the unit and the population a lifted part must not claim are authored into the
+title, because a note written beside a lifted figure drifts and a title cannot. There is no
+`OPS_SUMMARY_NOTES` and no second string per cell.
+**The disruption cell states "0", at the project owner's explicit instruction, and it is the one figure
+on either screen the data does not support** — the metric's four supplied values do not include a zero.
+It is supplied in `ops-view.tsx` (`DISRUPTION_FIGURE`) and never written into the metric, so
+`ops-disruption-days` still holds only supplied values and admin still edits the datum. It previously
+stated "2 – 6" with a spec asserting the absence of a zero; that assertion is inverted now.
+`ops-grade-a-office-stock` loses its vacant figure and
 nothing replaces it; accepted by the project owner as the cost of the promotion.
 
 **Card width is `metricWidth` → `half | full` on twelve columns, `items-start`. There is no `third`.** A
@@ -429,6 +533,16 @@ parse a label** — entry and axis names are admin-editable.
   found from the cells (the column identical in every row), never parsed out of `indexBaseline`.
 - **Direction lives in the metric's own `indexBaseline`**, because `format: "index"` says nothing about
   whether up is good.
+- **`IndexTable` DRAWS NO BAR AND EMPHASISES NO ROW**, both removed at ANSR's request. Every cell states
+  its exact index and that is the only encoding, so the figures are one element each and align on their
+  column's start edge; the table takes no minimum width and only a phone scrolls it. The base column keeps
+  the single fill (`surface-pale`) and its figures in the heading teal, being the reference the rest are
+  read against. `cells[].share` is unread here and stays for `IndexLollipop`. With the emphasised row gone,
+  `metric-card.tsx`'s capability grid is again the ONLY place this screen reads an admin-editable string.
+- **`IndexSpread` labels the COMPARATOR's mark with its own figure**, at ANSR's request — the base needs
+  none, the rail ending at it. That figure is on the card three times (the pair above, this label, the
+  delta as a difference) and the repetition is accepted: the rail is where a reader looks to see where the
+  cheaper option sits.
 - **Nesting is AUTHORED (`subset`); a shared `unit` is only the precondition.** Two same-unit parts
   without it draw as two ADJACENT proportional blocks. Refused on anything but two parts, on parts with no
   shared unit, and alongside `progression`.
@@ -492,7 +606,12 @@ Violating any of these breaks the product, not just the build.
 
 1. **Gated values never reach the visitor's browser.** Fully loaded cost per FTE by role and level, HR
    cost per employee served, the cost-vs-ecosystem-depth trade-off, and the workplace-cost gradient are
-   server-side omissions rendered as shape-only placeholders. A CSS blur over real text is a leak.
+   server-side omissions rendered as shape-only placeholders. **A CSS blur over real text is a leak** — a
+   paint-time filter is reversible from markup the browser already holds, so concealment is never a
+   rendering decision. The close's blurred backdrop is not an exception to this and is the reason to state
+   it twice: what it blurs is an authored lattice that reads nothing from the data, and a spec on each
+   screen asserts the layer contains no text. **Rendering a gated metric and blurring it would satisfy no
+   rule here and break this one.**
    **`publicMetric` in `src/data/metrics.ts` is the single enforcement point**: its gated branch has no
    `value` or `structure` field for a number to travel in, so the compiler carries the invariant. It also
    drops row and column names, the unit, the index base and the as-of date; both branches drop `lens` and
@@ -604,23 +723,29 @@ against its own copy in `tests/browser/.tmp`.
 Screen 1 sends five peers and a few counts.
 
 **Three editable collections, one file.** Companies, metrics, and `siteContent` (the entry point's hero
-copy and ANSR's impact figures) all live in `dataset.json`. A second file would mean a second write
+copy, ANSR's impact figures, and the result screens' CLOSE) all live in `dataset.json`. A second file would mean a second write
 target, a second diff, a second cache and a publish that could half-succeed. `metrics` is **defaulted to
 `[]` rather than required**, so a dataset written before it existed still reads — the fs store refuses an
 unrecognised version, so bumping `DATASET_VERSION` would have turned a compatible addition into a broken
 read.
 
-**Why the hero copy is data when no other public string is:** everything else is an argument about the
-dataset and lives beside the logic making the argument. The hero is positioning and the impact figures are
-corporate facts on their own schedule. It is the only part of a publish that changes what every visitor
-sees on arrival, so it gets its own diff category and leads the preview. Its default is real content
-rather than `[]`. **The hero's company count is deliberately "1,800+" and not 1,834** — editable text, not
+**Why the hero copy and the close are data when no other public string is:** everything else is an argument
+about the dataset and lives beside the logic making the argument. The hero is positioning, the impact figures
+are corporate facts on their own schedule, and the close is an offer — none of the three makes a claim about
+the data. **That is the test any addition here has to pass**, and it is why no heading, label or finding on
+either result screen is editable. This category changes what every visitor is shown regardless of what they
+answered, so it gets its own diff and leads the preview. Its default is real content rather than `[]`, and
+`close` is `.default()`-ed for the reason `metrics` is `[]`-defaulted: a required new key would make every
+dataset written before it a broken read. **The hero's company count is deliberately "1,800+" and not 1,834** — editable text, not
 `companies.length`; `data:verify` cannot check it and a spec asserts the exact figure is absent.
 
 **The importer preserves the catalogue.** A re-import rebuilds companies and taxonomy and would otherwise
 erase months of typed-in metric values in a way that looks like a normal import.
-`--reseed-metrics` and `--reseed-site-content` adopt the in-code versions and are loud about what they
-discard.
+`--reseed-metrics`, `--reseed-business-types` and `--reseed-site-content` adopt the in-code versions and are
+loud about what they discard. **The importer is also the recovery path**: companies, taxonomy, business types
+and the metric catalogue are all reproducible from the seed plus the in-code tables, so a lost `dataset.json`
+is rebuilt rather than re-typed — `data:verify` matching the committed baseline is what confirms the rebuild
+is faithful.
 
 **No invented metric values, and no estimated ones.** An incomplete open metric is left off the public
 screen rather than rendered half-filled; a gated one is always included. Three rules govern the
@@ -663,14 +788,29 @@ sub-industry the scored engine reproduces it company-for-company, asserted in `s
 a `data:verify` invariant. Do not delete it without deleting those.
 
 **Sub-industry is never a match key.** 620 values over 1834 companies is not a taxonomy: it is read on
-import, collapsed through `scripts/business-type-map.ts` into one of 158 business types, and discarded.
+import, collapsed through `scripts/business-type-map.ts` into one of 164 business types, and discarded.
 
-**Tags are code, business types are data.** `BUSINESS_TAGS` (137) is the scoring substrate — deleting one
+**Tags are code, business types are data.** `BUSINESS_TAGS` (138) is the scoring substrate — deleting one
 silently re-scores every peer set, so the vocabulary is a code change. Business types are admin-editable.
+**A NEW TAG CANNOT BE MADE ADMIN-EDITABLE WITHOUT BOUNDING THE WEIGHT FIRST, and that is measured.** IDF
+is unbounded, so a fresh tag arrives at roughly 100x a common one (Software & Internet: 6.44 on one
+carrier, 5.75 on two, 0.05 for `b2b`) and dominates the visitor's denominator — one invented tag cut the
+eligible population 20% on average and 95% at worst, and took the named five to two in five
+sub-industries. **Skipping a tag with one carrier does NOT fix it**: a type with two companies still
+scores 5.75, 65 of 164 types still moved, and the tweak itself changed 41 existing peer sets. So
+`business-type-manager.tsx`'s claim that a one-type tag "has no effect at all" is backwards — it is the
+maximum-weight case. Opening tags up means re-running `sweep-floor.ts` and re-baselining, the same bar
+`log(1 + N/f)` was rejected against; an unscored admin LABEL field is the cheap way to buy the
+expressiveness instead.
+**A business type's NAME is Title Case**, at ANSR's request — "Apparel & Footwear Brand". Applied in
+`business-type-catalogue.ts` AND `dataset.json`, because the catalogue is what a re-import seeds from.
+The rule and the acronym and hyphen cases: `docs/business-types.md`. Nothing that matches moved — a
+company, a tag, a search term and `business-type-map.ts` all key on `id`.
 **Every tag must be carried by at least two business types**, asserted by `data:verify`. **A company's
 business types must belong to its own industry**, enforced by the schema — so an industry rename cascades
-into `businessTypes[].industry` as well as into companies. **An untagged company is a safe state**: 66 are
-deliberately untagged.
+into `businessTypes[].industry` as well as into companies. **An untagged company is a safe state**: 38 are
+deliberately untagged. It still counts in every total, but it can never be shown as a peer to a visitor
+who names a sub-industry — similarity 0 is below the floor.
 
 **The comparison block shows neither revenue band nor HQ country.** `toCard` drops `revenueBand`,
 `industry`, `businessTypes`, `forbesGlobal2000` and `hqCountry`. HQ has been off, on, and off again, and
@@ -735,7 +875,7 @@ What lives where. Never a file listing — the tree is supplied each session.
 | `src/app/api/admin/` | Login, logout, diff preview, publish. Each **re-checks the session itself** — a layout cannot guard a route handler, and a route that forgot would be silently public. |
 | `src/lib/admin/` | `password.ts` (scrypt), `session.ts` (signed cookie, `server-only`), `rate-limit.ts` (two budgets), `totp.ts` (RFC 6238 on `node:crypto`, no dependency), `guard.ts` (redirect for pages, bare 401 for APIs), `publish.ts` (validate → read → diff, shared by preview and commit), `constants.ts` (exists because `server-only` throws under `tsx`). |
 | `src/components/admin/` | Client-side admin UI. `draft-provider.tsx` autosaves locally and pins the baseline it started from; its `STORAGE_KEY` is versioned and **must be bumped whenever the editable shape changes**, because restoring a draft missing a key produces a schema error the admin cannot fix from the UI. `site-content-manager.tsx` is the one editor with no local form state and no Save button — nothing in it has a cross-field rule, so there is no second copy of the truth. Plus the app shell, company table and editor, taxonomy editor, metric catalogue and editor, publish view. |
-| `src/components/public/` | What both screens use. `tool.tsx` owns the phase machine — ask, Peer View, Function View — as component state, and moves focus to the new phase's landmark on every transition. **On the result screens that landmark is the tab panel, not the `h1`**, which is identical on both. **The focus move is an effect keyed on the phase, never a call beside `setPhase`** — the `requestAnimationFrame` version assumed React commits before the next frame, and when it did not the ref was null and the only announcement was silently dropped; it passed locally and failed on the deployed build. The effect must skip its first run. **It always takes `preventScroll`, and `tool.tsx` states the position itself**: the visitor's own offset between the two views, document top for anything involving the ask. The offset is read on the press and written back after the commit, because `preventScroll` alone still dropped to 0 when a ~2,900px document was replaced by a ~1,650px one. None of this is the banned scroll logic and every write is inert in the embed. `primitives.tsx` holds `Section`, `Stat`, chip, fact-list and provenance shapes, the number formatters, `Panel` (bordered card, radius `none`, no shadow, `PanelTone` = `plain | inverse | sealed`, plus `chip` and `headingLevel`), `Block` (same landmark contract, no container, `weight="lead"`) and `Zone` (the alternating full-bleed grounds; each screen owns its own SEQUENCE). `screen-header.tsx` owns the whole result SURFACE: `ResultSurface` (ornamented band + floating card, taking the tab bar and the panel as separate props because their order is not a caller's decision, plus a `footer` for the caption under the card), `ProductIdentity`, `HeaderFinding`, `ContextPanels`, `ViewTabs`. `charts.tsx` is the shared vocabulary, including `Containment`, `RangeBenchmark`, `MilestoneTrack`, `IndexSpread`, `IndexTable`, `BarTone`, and the five renderers with no live caller. `closing-cta.tsx` is rendered by nothing. This folder exists because Screen 2 wanted most of `screen1/primitives.tsx`. |
+| `src/components/public/` | What both screens use. `tool.tsx` owns the phase machine — ask, Peer View, Function View — as component state, and moves focus to the new phase's landmark on every transition. **On the result screens that landmark is the tab panel, not the `h1`**, which is identical on both. **The focus move is an effect keyed on the phase, never a call beside `setPhase`** — the `requestAnimationFrame` version assumed React commits before the next frame, and when it did not the ref was null and the only announcement was silently dropped; it passed locally and failed on the deployed build. The effect must skip its first run. **It always takes `preventScroll`, and `tool.tsx` states the position itself**: the visitor's own offset between the two views, document top for anything involving the ask. The offset is read on the press and written back after the commit, because `preventScroll` alone still dropped to 0 when a ~2,900px document was replaced by a ~1,650px one. None of this is the banned scroll logic and every write is inert in the embed. `primitives.tsx` holds `Section`, `Stat`, chip, fact-list and provenance shapes, the number formatters, `Panel` (bordered card, radius `none`, no shadow, `PanelTone` = `plain | inverse | sealed`, plus `chip` and `headingLevel`), `Block` (same landmark contract, no container, `weight="lead"`) and `Zone` (the alternating full-bleed grounds; each screen owns its own SEQUENCE — plus `inverse-soft`, the one ground EXEMPT from the alternation, and `behind`, a full-bleed layer under the padded container, both of which exist for the close). `screen-header.tsx` owns the whole result SURFACE: `ResultSurface` (ornamented band + floating card, taking the tab bar and the panel as separate props because their order is not a caller's decision, plus a `footer` for the caption under the card), `ProductIdentity`, `HeaderFinding`, `ContextPanels`, `ViewTabs`. `charts.tsx` is the shared vocabulary, including `Containment`, `RangeBenchmark`, `MilestoneTrack`, `IndexSpread`, `IndexTable`, `BarTone`, and the five renderers with no live caller. `closing-cta.tsx` is the shared close — `ClosingCta`, `PrimaryCta`, `CloseBackdrop`, the `TILES` field and the one `CLOSE_COPY`; both result screens render it, and neither decides anything about the backdrop or supplies a word of the copy. This folder exists because Screen 2 wanted most of `screen1/primitives.tsx`. |
 | `src/components/screen1/` | The public Peer View. `peer-view.tsx` (ask and answer states), `ask-hero.tsx` (the one band using the brand's real display ground, which **admits white ink only** — every muted token measures under 3:1 on it), `customer-logos.tsx`, `impact-band.tsx`, `ansr-wordmark.tsx` (drawn lockup, sized off cap height, word carried in `sr-only` so the accessible name is unchanged), `dotted-world-map.tsx` (layout only — two `<path>` elements over generated geometry; all ink, opacity, radius and edge fade in `.gcc-hero-map` and `.gcc-header-map`, so the two placements cannot diverge), `input-panel.tsx` (four controls over six fields, its own field primitives because a public form and a dense internal tool want different densities), `select-field.tsx` (the widget all four use, and the one place an option carrying children turns the popup into a tree; `.gcc-select-*` in globals.css carries both shapes and the measured room table), `evidence.tsx` (comparison grid, containment layers, largest-centres chart, function tags, scale strip; `CityCells` has two consumers), `city-map.tsx`, `snapshot.tsx`, `copy.ts` (**every visitor-facing sentence**, because which lines exist is a statement about what may honestly be claimed), `use-frame-height.ts`. **Both ranked TABLES are gone, and with them the focusable horizontal scroller.** |
 | `src/components/screen2/` | The public Function View. `function-view.tsx` (screen + four tabs, on the Radix Tabs primitive rather than the registry wrapper — 44px triggers, no `transition-all`, no shadow; cuts the already-packed card list where widths change). `metric-card.tsx` is layout only — selects no chart and does no arithmetic; owns the shape-only placeholder (static, hatched, uniform, so it reads as sealed rather than loading), `CardMeta`, and the capability grid's row glyphs keyed by LABEL, the single place this screen reads an admin-editable string, guarded all-or-nothing. `summary-figures.tsx` (`SummaryFigures` + `scalarCells`), `zones.tsx` (`TabZones`), `graduate-card.tsx` (`GraduateOutput`, drawn by operations AND HR, here rather than in either file because two views of one shared metric must not be two pieces of markup), `hr-view.tsx`, `ops-view.tsx`, `fin-view.tsx` (the three composed tabs; `OpsPanel` has no gated metric and owns `summaryCells`, which selects rather than computes; `FinPanel` refuses most of its own reference and owns the tier spread and location grid). `copy.ts` holds `FIGURES_HEADING`, `SOURCE_LINE`, `VELOCITY_HEADING` (one heading shared by two tabs, a constant rather than the same words typed twice), `heldHeading`, `indexedNote`, `METRIC_NOTES`, each composition's own strings, and six sentences exported, unit-tested and rendered nowhere. |
 | `src/components/ui/` | shadcn/ui, unmodified from the registry. On-brand because `globals.css` maps the contract variables onto brand tokens. |
@@ -746,7 +886,7 @@ What lives where. Never a file listing — the tree is supplied each session.
 | `.tastemaker/` | `style-lock.md` — **both public screens' visual decisions and the reasoning behind them**, including every rejected alternative. Restates no token values; `docs/design-reference.md` and `tokens.css` outrank it. |
 | `.impeccable/` | Untracked working directory of a skill that is no longer installed. `critique/` holds one dated snapshot, kept as a local artifact. |
 | `tests/unit/` | Vitest, node environment, no jsdom. Pure and server-side logic. `vitest.config.ts` resolves the `react-server` condition, which is how these import a `server-only` module at all. |
-| `tests/browser/` | Playwright against a real `next build && next start`, on its own dataset copy. Covers what a unit test structurally cannot: draft lifecycle, autosave, restore after reload, stale-baseline conflict, focus behaviour. **Serial, one worker** — the server holds the rate limiter and dataset cache in memory. Numbered specs run in reading order; `6-lockout.spec.ts` exhausts the limiter and must stay last. The `public` project runs first, before the publish spec rewrites the fixture. **Each project's `testMatch` is narrow, so a spec numbered outside all of them silently never runs.** `helpers.ts` owns `DRAFT_STORAGE_KEY`, `choose()`, `chooseSubIndustry()`, and `band()` / `expectBand()`. **A public spec must never locate a band by its heading text** — twenty did, and a copy pass broke all twenty. The id is the contract; `expectBand` accepts either `aria-labelledby` or `aria-label`, and what must not pass is a band with neither. Peer landscape ids: `snapshot`, `peers`, `industry`, `largest`, `functions`, `map`, `scale`. Screen 2: `function-metrics`, plus `hr-velocity`, `hr-analysis`, `hr-held`, `ops-velocity`, `ops-supporting` — prefixed by function because two composed tabs draw the same section under the same heading. `0-search.spec.ts` drives the dropdown FILTER, and **it may not open two industries in one pass** — below 1440 the cascade pane is a drill-in that covers the parent list, so the second industry is behind it. |
+| `tests/browser/` | Playwright against a real `next build && next start`, on its own dataset copy. Covers what a unit test structurally cannot: draft lifecycle, autosave, restore after reload, stale-baseline conflict, focus behaviour. **Serial, one worker** — the server holds the rate limiter and dataset cache in memory. Numbered specs run in reading order; `6-lockout.spec.ts` exhausts the limiter and must stay last. The `public` project runs first, before the publish spec rewrites the fixture. **Each project's `testMatch` is narrow, so a spec numbered outside all of them silently never runs.** `helpers.ts` owns `DRAFT_STORAGE_KEY`, `choose()`, `chooseSubIndustry()`, and `band()` / `expectBand()`. **A public spec must never locate a band by its heading text** — twenty did, and a copy pass broke all twenty. The id is the contract; `expectBand` accepts either `aria-labelledby` or `aria-label`, and what must not pass is a band with neither. Peer landscape ids: `snapshot`, `peers`, `industry`, `largest`, `functions`, `map`, `scale`. Screen 2: `function-metrics`, plus `hr-velocity`, `hr-analysis`, `hr-held`, `ops-velocity`, `ops-supporting` — prefixed by function because two composed tabs draw the same section under the same heading. `0-search.spec.ts` drives the dropdown FILTER, and it takes a fresh load per industry — from `md` the cascade pane sits beside the list so both are clickable, but below `md` the second one is behind a drill-in. |
 | `scripts/` | Run by hand, never at request time. Python: `brand_lint.py`, `brand_asset.py`, `brand_status_analysis.py`, `inspect_xlsx.py`, `build_dot_map.py`, `build_india_outline.py`. TypeScript via `tsx`: `import-seed.ts`, `verify-data.ts`, `admin-hash.ts` (mints the env values from a TTY prompt so the password never lands in shell history), `business-type-map.ts` (601 sub-industry mappings + 568 per-company decisions, keyed `industry||name` because company names are not unique even case-insensitively), `check-business-tags.ts`, `check-company-types.ts`, and the two analysis scripts `sweep-floor.ts` (worthless if its self-check does not say SOUND) and `proto-industry-tag.ts`. Rerun them rather than re-deriving their numbers. |
 | `.kiro/` | `steering/` — always-in-context rules, three files. `hooks/` — `brand-guard` (PostFileSave → `brand_lint.py`) and `handoff-refresh` (Stop → rewrite the handoff). `settings/` — MCP config, permission-guarded against agent writes. `skills/` — one skill, `ansr-brand-assets`, which is ours; **untracked**, and `skill-sources.json` pins the 135 removed third-party packs for restoration. |
 | `docs/` | Reference, read on demand. Not steering. `brief.md` (read it, not the image), `data-audit.md`, `business-types.md`, `design-reference.md`, `ansrx-visual-language.md`, `traps.md`. |

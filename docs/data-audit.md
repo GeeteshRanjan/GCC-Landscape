@@ -71,7 +71,7 @@ bucket would not have fixed it either: Retail has 60 companies and five slots, s
 exhausted the next peer is whoever is biggest in the industry, which is exactly how Lowe's got
 there.
 
-**Resolution: the 620 values are collapsed into 161 business types carrying a 137-tag vocabulary,
+**Resolution: the 620 values are collapsed into 164 business types carrying a 138-tag vocabulary,
 and similarity is scored continuously rather than filtered.** Coverage does not move, because a
 visitor who selects no line of business gets the band ladder's peers unchanged — asserted as an
 invariant, not assumed. The design, the vetting and the coverage figures are in
@@ -86,10 +86,10 @@ two paths through the form by a factor of three to seven:
 
 | Industry | Companies | Visitor names a sub-industry | Visitor takes `All of {industry}` |
 | --- | --- | --- | --- |
-| Software & Internet | 656 | 0.93 | 0.23 |
-| Manufacturing | 207 | 0.94 | 0.13 |
+| Software & Internet | 646 | 0.93 | 0.23 |
+| Manufacturing | 198 | 0.94 | 0.13 |
 | BFSI | 189 | 0.96 | 0.31 |
-| Retail | 60 | 0.90 | 0.27 |
+| Retail | 61 | 0.90 | 0.27 |
 | Healthcare & Lifescience | 135 | 0.96 | 0.30 |
 
 Two things follow, and both are why a reported "these peers are nothing like us" is usually not a
@@ -114,15 +114,45 @@ being read too coarsely:
 
 | Sub-industry | Was | Because the source says |
 | --- | --- | --- |
-| Staffing & workforce services | Korn Ferry filed as market research | "Research and Consulting" |
-| Business process outsourcing | Indecomm filed as market research | "Information Services" |
-| Household & home care products | Reckitt, Henkel, Kimberly-Clark filed as diversified | "Personal & Home Care" |
-| Consumer products brand | Mattel filed as a retailer | "Retail - Toys & Games" |
-| Building materials distribution | Ferguson, Winsupply filed as industrial supplies | "Industrial Supplies" |
+| Staffing & Workforce Services | Korn Ferry filed as market research | "Research and Consulting" |
+| Business Process Outsourcing | Indecomm filed as market research | "Information Services" |
+| Household & Home Care Products | Reckitt, Henkel, Kimberly-Clark filed as diversified | "Personal & Home Care" |
+| Consumer Products Brand | Mattel filed as a retailer | "Retail - Toys & Games" |
+| Building Materials Distribution | Ferguson, Winsupply filed as industrial supplies | "Industrial Supplies" |
 
-The sixth, **Aviation services & maintenance, is honestly empty** — all seven Aviation entries are
+The sixth, **Aviation Services & Maintenance, is honestly empty** — all seven Aviation entries are
 airlines, so there is no MRO or ground-handling company to map. Removing the row or sourcing
 companies for it is ANSR's call.
+
+### Peer-quality pass: 66 untagged → 38, and 26 companies re-homed
+
+A later pass took the untagged share from 66/1834 (96% tagged) to 38/1834 (98%). It is two moves,
+both world knowledge and both ANSR sign-off points, recorded in `scripts/business-type-map.ts`:
+
+- **Three wrong tags corrected.** Walmart read as grocery alone (now general merchandise + grocery),
+  Sagent read as a lender (it is mortgage-servicing SaaS → financial technology), and Future Pipe
+  Industries read as HVAC (it makes composite pipe → building products).
+- **26 companies were untagged only because the source filed them under the wrong INDUSTRY.** A new
+  `COMPANY_INDUSTRY_FIXES` table moves each to its real industry, after which it tags normally — e.g.
+  Air Liquide → Chemicals (now peers with Linde), Silicon Labs / Synaptics / Knowles / BrainChip /
+  d-Matrix → Semiconductors, Lumen / Calix → Telecom, KION → Manufacturing, Ecolab / Orica /
+  Diversey → Chemicals, Fanatics → Retail, IDP Education → Education, Carousell → Software. Two of
+  these fixes also gave a lone business type a second member: **industrial gases** (Air Liquide) and
+  **defense electronics** (Kongsberg) are no longer single-member.
+
+Effect on the ladder profile (see `data/verify-baseline.json`): peer sets the floor shortens fell
+from 147 to 126, and two more industries became fully tagged.
+
+**38 companies stay deliberately untagged**, and untagged is still a safe state (industry-level
+matching). They are the genuinely unidentifiable small private firms, plus a few whose real industry
+has no home here (real-estate developers such as DAMAC) or that are too diversified to place with one
+honest type (IDEMIA — cards, government ID and security at once). The full list and each reason is in
+`DELIBERATELY_UNTAGGED`.
+
+**Six business types remain single-member** and are honest thin types, the same class as the empty
+Aviation row: `agr-agribusiness`, `log-ports`, `rst-dining`, `aec-shipbuilding`, `prof-staffing`,
+`enr-utilities`. Nothing in the dataset can pair them without inventing a company, so they stay as-is
+until a future batch adds a genuine second member — ANSR's call, not a defect to patch.
 
 Two further corrections came out of the same pass. **`cpg-diversified` held twelve of the 24 CPG
 companies**, including Nestlé, PepsiCo and Coca-Cola, because the source writes "CPG - Food &

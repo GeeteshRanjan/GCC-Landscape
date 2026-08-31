@@ -18,12 +18,12 @@ test("lists the catalogue and filters it by industry", async ({ page }) => {
   await page.goto("/admin/business-types");
 
   await expect(page.getByRole("heading", { name: "Business types", level: 1 })).toBeVisible();
-  await expect(page.getByText(/161 business types/)).toBeVisible();
+  await expect(page.getByText(/164 business types/)).toBeVisible();
 
   await page.getByLabel("Filter by industry").selectOption("Retail");
   await expect(page.getByText(/10 business types/)).toBeVisible();
   await expect(
-    page.getByRole("button", { name: /^Edit Apparel & footwear brand \(Retail\)$/ }),
+    page.getByRole("button", { name: /^Edit Apparel & Footwear Brand \(Retail\)$/ }),
   ).toBeVisible();
 });
 
@@ -36,13 +36,13 @@ test("the company table shows the sub-industry, and finds it by name", async ({
   // admin has to be able to read it without opening the editor.
   await page.getByLabel("Search").fill("Nike");
   await expect(
-    page.getByRole("cell", { name: "Apparel & footwear brand" }).first(),
+    page.getByRole("cell", { name: "Apparel & Footwear Brand" }).first(),
   ).toBeVisible();
 
   // Searching the business-type NAME is how a tagging decision gets checked in bulk
   // rather than one row at a time.
   await page.getByLabel("Search").fill("Sportswear & athletic");
-  await expect(page.getByRole("cell", { name: /Sportswear & athletic brand/ }).first()).toBeVisible();
+  await expect(page.getByRole("cell", { name: /Sportswear & Athletic Brand/ }).first()).toBeVisible();
 
   // Untagged is a real state, not missing data, and has to look different from blank.
   await page.getByLabel("Search").fill("not set");
@@ -55,7 +55,7 @@ test("a tag edit is reported by the publish diff with no company row touched", a
   await page.goto("/admin/business-types");
   await page.getByLabel("Filter by industry").selectOption("Retail");
   await page
-    .getByRole("button", { name: /^Edit Apparel & footwear brand \(Retail\)$/ })
+    .getByRole("button", { name: /^Edit Apparel & Footwear Brand \(Retail\)$/ })
     .click();
 
   await page.getByRole("checkbox", { name: /^luxury/ }).check();

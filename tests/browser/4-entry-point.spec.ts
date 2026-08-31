@@ -34,7 +34,7 @@ test.afterEach(async ({ page }) => {
 test("edits the hero copy and keeps it across a reload", async ({ page }) => {
   await page.goto("/admin/entry-point");
 
-  await expect(page.getByRole("heading", { name: "Entry point", level: 1 })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Site copy", level: 1 })).toBeVisible();
 
   const title = page.getByLabel("Title");
   await expect(title).toHaveValue("ANSR GCC Intelligence");
@@ -127,4 +127,52 @@ test("shows the entry point in the publish diff, with both sides of the copy", a
    */
   await expect(page.getByText("ANSR GCC Intelligence")).toBeVisible();
   await expect(page.getByText("India GCC Benchmarks")).toBeVisible();
+});
+
+/**
+ * The closing call to action, which is the second thing this tab edits.
+ *
+ * **It is here rather than in a tab of its own because it is the same KIND of string as
+ * the hero's**: positioning on ANSR's own schedule rather than an argument about the
+ * dataset. Every other public sentence lives in code beside the logic that justifies it.
+ *
+ * Two halves are asserted, and the second is the one that matters. That the fields edit
+ * the draft — and that the close reaches the public band at all, which is what makes it
+ * worth editing. And that a close edit is REPORTED IN THE DIFF: it is the tool's only
+ * call to action, so a publish that changed its words silently is the same defect as a
+ * silently changed headline, which is the failure this whole diff category exists for.
+ */
+test("edits the closing call to action, and reports it in the diff", async ({
+  page,
+}) => {
+  await page.goto("/admin/entry-point");
+  await expect(
+    page.getByRole("heading", { name: "Closing call to action", level: 2 }),
+  ).toBeVisible();
+
+  const close = page.locator("section[aria-labelledby='close-copy']");
+  // Labelled the same way the hero's are, so the two bands read as one kind of edit.
+  await close.getByLabel("Supporting line").fill("See the full picture.");
+  await close.getByLabel("Button").fill("Request access");
+  await waitForDraftSaved(page);
+
+  // The limit is the render limit, and it is shown while typing rather than at publish.
+  await close.getByLabel("Button").fill("x".repeat(40));
+  await expect(close.getByText(/The limit is 28/)).toBeVisible();
+  await close.getByLabel("Button").fill("Request access");
+  await expect(close.getByText(/The limit is 28/)).toHaveCount(0);
+  await waitForDraftSaved(page);
+
+  await page.goto("/admin/publish");
+  await expect(page.getByText("Checking the changes…")).toHaveCount(0);
+  /**
+   * The values this test TYPED, plus the row labels naming which band moved. Deliberately
+   * not the "before" strings: those are whatever `siteContent.close` currently holds, so
+   * asserting them would couple this test to editable copy — and an ANSR wording change
+   * would fail a test about the diff mechanism rather than about the wording.
+   */
+  await expect(page.getByText("Request access")).toBeVisible();
+  await expect(page.getByText("See the full picture.")).toBeVisible();
+  await expect(page.getByText(/Result close body/i)).toBeVisible();
+  await expect(page.getByText(/Result close button/i)).toBeVisible();
 });

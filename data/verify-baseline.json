@@ -1,6 +1,6 @@
 {
   "describedAs": "1834 companies, from Consolidated_GCC_India_Database_2026_New.xlsx",
-  "recordedAt": "2026-08-31T09:57:51.267Z",
+  "recordedAt": "2026-08-31T13:16:07.819Z",
   "figures": {
     "companies": 1834,
     "industries": 24,
@@ -32,12 +32,12 @@
       "Mumbai 224"
     ],
     "multi-city companies": 626,
-    "business types defined": 161,
-    "distinct tags in use": 137,
-    "companies with a business type": 1768,
-    "companies with two business types": 68,
-    "industries fully tagged": 18,
-    "peer sets the floor shortens": 147,
+    "business types defined": 164,
+    "distinct tags in use": 138,
+    "companies with a business type": 1796,
+    "companies with two business types": 69,
+    "industries fully tagged": 20,
+    "peer sets the floor shortens": 126,
     "business types with no company": 1,
     "metrics defined": 35,
     "metrics with every figure entered": 35,
@@ -69,16 +69,16 @@
       "hr 10",
       "finance 8"
     ],
-    "industry + revenue band": 1683,
-    "industry + revenue band +/- 1 step": 1795,
-    "industry x band combinations": 136,
+    "industry + revenue band": 1673,
+    "industry + revenue band +/- 1 step": 1800,
+    "industry x band combinations": 137,
     "combinations short of five peers": 6,
     "industries with nobody in the top band": [
       "Education",
       "Electrical & Electronics",
       "Professional Services"
     ],
-    "Education: in industry / peers / shortfall": "6 / 5 / 0",
+    "Education: in industry / peers / shortfall": "7 / 5 / 0",
     "Electrical & Electronics: in industry / peers / shortfall": "2 / 2 / 3"
   }
 }

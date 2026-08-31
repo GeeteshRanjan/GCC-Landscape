@@ -73,6 +73,45 @@ export function formatProfessionals(value: number): string {
   return numberFormat.format(value);
 }
 
+/**
+ * A revenue band, as a visitor reads it.
+ *
+ * **Presentation only. The stored string is untouched and stays the matching key.**
+ * `taxonomy.revenueBands` holds `"< $100 Mn"` and `"$1 Bn – $5 Bn"`, and that array's
+ * ORDER is the peer-matching contract — the adjacent-band step is index arithmetic on it.
+ * So the band is not renamed in the data: renaming would cascade into all 1834 companies,
+ * move the `data:verify` profile, and put a taxonomy edit behind a typographic decision.
+ * Admin keeps showing the stored strings, which is correct, because admin edits the datum.
+ *
+ * Two changes, both ANSR's:
+ *
+ *   - **`<` becomes "Under", `>` becomes "Above".** A mathematical operator in a list a
+ *     CFO reads is a glyph that has to be decoded; the word does not. `"Above $20 Bn"` is
+ *     already spelled out at the other end of the list, so this also makes the two ends
+ *     of the band set symmetrical, which they were not.
+ *   - **The currency mark comes off every row and is stated ONCE**, in the panel's own
+ *     hint. Seven rows carrying up to two `$` each is fourteen marks saying one thing,
+ *     and they crowd the figures that actually differ between the rows.
+ *
+ * It is a rule rather than a lookup table, deliberately and unlike `COMPANY_NAME_FIXES`:
+ * these seven strings are one authored series in one notation, not 1834 names arriving
+ * from the world in every convention — so a rule cannot damage a row it was not aimed at.
+ * `tests/unit/screen1.test.ts` pins all seven outputs, so a new band that does not fit
+ * the notation fails there rather than rendering wrong.
+ *
+ * **Applied everywhere a band is shown to a visitor, which is three places**: the
+ * dropdown's options, and the answer pills on each result screen. A band formatted in the
+ * control and raw in the echo of the visitor's own answer would read as two different
+ * answers.
+ */
+export function formatRevenueBand(band: string): string {
+  return band
+    .replaceAll("$", "")
+    .replace(/^<\s*/, "Under ")
+    .replace(/^>\s*/, "Above ")
+    .trim();
+}
+
 type SectionWeight = "connective" | "standard" | "pivotal";
 
 /**
@@ -602,9 +641,33 @@ export function Zone({
   ground,
   className,
   style,
+  behind,
   children,
 }: {
-  ground: "surface" | "tint" | "pale";
+  /**
+   * **`inverse-soft` is the one ground that is exempt from the alternation, and the
+   * exemption is what it is for.** The other three alternate so that every boundary
+   * between two zones is visible; this one is the CLOSE, which is a different kind of
+   * band — it asks rather than shows — and a deep ground against either white or mint
+   * is a boundary by a wider margin than alternating white and mint ever bought. So it
+   * may follow either of them, and a screen's sequence does not have to be re-derived
+   * when it is added or removed.
+   *
+   * **It is teal-800 rather than the inverse teal, and that is a structural
+   * requirement rather than a preference.** The close is the last band inside the
+   * floating result card, and the card floats on flat teal-deep
+   * (`.gcc-result-page`). An inverse band at the card's foot would be the same value
+   * as the ground it is lifted off, so the card would lose its bottom edge — the one
+   * edge that makes the whole surface read as a single object. `surface-inverse-soft`
+   * exists for exactly this case and its own token note says so.
+   *
+   * Its ink contract holds with no per-placement measurement, because it is a flat
+   * fill rather than a gradient: white 13.79:1, `--ansr-text-inverse-muted` 5.95:1,
+   * `--ansr-accent-inverse` 5.64:1. **`--ansr-accent-warm` is not among them** and is
+   * unusable here, which is why the close's eyebrow is teal-bright where every eyebrow
+   * on a light ground is the warm orange.
+   */
+  ground: "surface" | "tint" | "pale" | "inverse-soft";
   /** Applied to the inner container, which is what carries the rhythm. */
   className?: string;
   /**
@@ -613,17 +676,41 @@ export function Zone({
    * one caller.
    */
   style?: React.CSSProperties;
+  /**
+   * A FULL-BLEED layer behind the zone's padded container, edge to edge.
+   *
+   * **The one thing a zone could not previously hold, and the close is why.** Its
+   * backdrop is a blurred field that has to reach the card's own edges — a decorative
+   * layer inside the container would stop at the gutter and read as a rectangle parked
+   * in the middle of the band. Every other ornament on these screens is either inside a
+   * card or on the header band, which is not a zone.
+   *
+   * The caller is responsible for positioning it (`absolute inset-0`) and for
+   * `aria-hidden`; this only guarantees it a positioned parent at the zone's full width
+   * and that the content renders above it. `.gcc-zone` already clips, so a layer that
+   * overflows cannot widen a document whose horizontal scroll the iframe does not own.
+   */
+  behind?: React.ReactNode;
   children: React.ReactNode;
 }) {
   const GROUND = {
     surface: "bg-surface",
     tint: "bg-surface-tint",
     pale: "bg-surface-pale",
+    "inverse-soft": "bg-surface-inverse-soft",
   } as const;
   return (
-    <div className={cn("gcc-zone", GROUND[ground])}>
+    // `relative` unconditionally rather than only with `behind`: it changes nothing
+    // visually on a static block, and a positioning context that appears and disappears
+    // with a prop is the kind of difference a caller debugs once and never expects.
+    <div className={cn("gcc-zone relative", GROUND[ground])}>
+      {behind}
       <div
         className={cn(
+          // Above the full-bleed layer, and it needs its own stacking position to be
+          // there — the layer is absolutely positioned, so a static sibling after it
+          // paints underneath.
+          "relative",
           // Tighter than the band system's rhythm, on purpose. This is an embedded
           // tool inside a page with its own rhythm, and the complaint this pass is
           // answering was that everything was too far apart.

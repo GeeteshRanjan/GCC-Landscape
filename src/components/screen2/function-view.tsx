@@ -3,9 +3,11 @@
 import { useState } from "react";
 import { Tabs as TabsPrimitive } from "radix-ui";
 
+import type { CloseCopy } from "@/data/schema";
 import { companyName, type PeerViewInput } from "@/data/screen1";
 import type { FunctionAreaView, FunctionView, LaidOutCard } from "@/data/screen2";
-import { Zone } from "@/components/public/primitives";
+import { CloseBackdrop, ClosingCta } from "@/components/public/closing-cta";
+import { formatRevenueBand, Zone } from "@/components/public/primitives";
 import {
   ContextPanels,
   HEADER_LINES,
@@ -20,7 +22,6 @@ import {
 import { cn } from "@/lib/utils";
 import {
   FIGURES_HEADING,
-  FLOOR_NOTE,
   heldHeading,
   SOURCE_LINE,
   TABS_LABEL,
@@ -116,6 +117,10 @@ export interface FunctionViewScreenProps {
   onEditProfile: () => void;
   /** The tab panel, which is where focus goes on a phase change. See `tool.tsx`. */
   panelRef: React.RefObject<HTMLDivElement | null>;
+  /** Where the close links out to. See `tool.tsx`. */
+  ctaHref: string;
+  /** The close's editable copy. See `tool.tsx`. */
+  closeCopy: CloseCopy;
 }
 
 export function FunctionViewScreen({
@@ -124,6 +129,8 @@ export function FunctionViewScreen({
   onBack,
   onEditProfile,
   panelRef,
+  ctaHref,
+  closeCopy,
 }: FunctionViewScreenProps) {
   const name = companyName(input);
   const first = view.areas[0]?.functionArea ?? "tech";
@@ -149,7 +156,10 @@ export function FunctionViewScreen({
     ...(name ? [{ label: "Company", value: name }] : []),
     { label: "Industry", value: input.industry },
     { label: "Headquarters", value: input.hqCountry },
-    { label: "Revenue band", value: input.revenueBand },
+    // Same treatment as Screen 1's row, from the same function. See `peer-view.tsx`:
+    // the band is formatted for the visitor and the currency lives in the label,
+    // because the two screens' pill rows must not read differently.
+    { label: "Revenue band (USD)", value: formatRevenueBand(input.revenueBand) },
   ];
 
   return (
@@ -270,23 +280,26 @@ export function FunctionViewScreen({
             </TabsPrimitive.Root>
           </section>
 
-          {/* **`ClosingCta` was here and is removed at ANSR's request, so the tool now
-              has no call to action on either screen.** Screen 1's went first, on the
-              page-end instruction; this was the remaining one, and the argument for
-              keeping it — that the conversation has to be offered somewhere, and this is
-              the deeper of the two views — is unchanged and simply overruled. The page
-              ends at the capability matrix and the source line.
+          {/* **The close, restored at the project owner's decision**, having been
+              removed at ANSR's request in the pass that rebuilt this screen's zones.
+              The argument recorded for keeping it then — that the conversation has to
+              be offered somewhere, and this is the deeper of the two views — is what
+              it comes back on, and the same band is now on Screen 1 as well.
 
-              **Two consequences worth naming before anyone acts on them.**
-              `NEXT_PUBLIC_GCC_CTA_URL` now reaches nothing: `ctaHref` is still threaded
-              from `page.tsx` to `tool.tsx` and stops there, because a link out is a
-              decision to restore rather than a variable to delete. And `gccStatus` has
-              lost its ONLY renderer — `functionFraming`'s three CTA fields were the last
-              thing on either screen that branched on it, `framing()` on Screen 1 having
-              had no caller for some time. Both branches are still exported and
-              unit-tested on all three values. The field is the one piece of the input
-              contract that nothing now draws, and `project.md` records that as a state
-              to restore from rather than as dead weight to remove. */}
+              **It is a `Zone` like every other band inside this card, and its ground
+              is exempt from the alternation rather than part of it.** The tabs have
+              different section counts, so the last content zone is white on one tab
+              and mint on another; a close that had to alternate with whatever came
+              before it would need its ground derived per tab. `inverse-soft` may
+              follow either — see `Zone`.
+
+              What ends the document is unchanged in shape: the close, then
+              `SOURCE_LINE` under the card on the page ground. `gccStatus` keeps
+              `functionFraming` as its renderer here and gains `peerClosing` on Screen
+              1, so both screens now branch on it. */}
+          <Zone ground="inverse-soft" behind={<CloseBackdrop />}>
+            <ClosingCta id="close" href={ctaHref} copy={closeCopy} />
+          </Zone>
         </ViewPanel>
       }
       footer={SOURCE_LINE}
@@ -333,7 +346,18 @@ export function FunctionViewScreen({
  */
 function CardGrid({ cards }: { cards: readonly LaidOutCard[] }) {
   return (
-    <div className="grid grid-cols-1 items-start gap-6 lg:grid-cols-12 lg:gap-8">
+    /**
+     * **`items-stretch`, where this was `items-start`, and it closes the gap ANSR reported
+     * under the graduate card.** Two cards in one row are two different charts, so their
+     * natural heights differ — the graduate pair came out 34px shorter than the specialism
+     * ranking beside it, and at `items-start` that surplus rendered as a band of bare zone
+     * under the shorter card, which reads as a card that failed to fill rather than as one
+     * that had less to say. Stretched, the row has one bottom edge and the leftover room is
+     * inside the shorter card, where `MetricCard` centres its chart in it. Same fix the
+     * velocity sections on the two composed tabs already use, and the peer view before
+     * them.
+     */
+    <div className="grid grid-cols-1 items-stretch gap-6 lg:grid-cols-12 lg:gap-8">
       {cards.map(({ shown, width }) => (
         <MetricCard key={shown.metric.id} shown={shown} width={width} />
       ))}
@@ -438,20 +462,13 @@ function AreaPanel({ area }: { area: FunctionAreaView }) {
          draw now. It leads because a single figure reads in one glance and a chart does
          not, and it is the tab's one orange role.
 
-         The floor note is the ROW's here rather than each cell's: two of technology's
-         five figures declare a floor, so a per-cell note rendered the same sentence
-         twice inside one row, 400px apart, with nothing saying it referred to two
-         different figures. */
+         The floor sentence that used to sit under this row is gone at ANSR's request;
+         the trailing `+` on a figure carries it now, unexplained. */
       <SummaryFigures
         key="figures"
-        cells={scalarCells(area.figures, { floor: "row" })}
+        cells={scalarCells(area.figures)}
         heading={FIGURES_HEADING[area.functionArea]}
         headingId={`figures-${area.functionArea}-heading`}
-        note={
-          area.figures.some((shown) => shown.metric.atLeast)
-            ? FLOOR_NOTE
-            : undefined
-        }
       />,
     );
   }

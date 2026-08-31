@@ -74,7 +74,7 @@ test("the internal lens groupings are labelled as internal", async ({ page }) =>
 
 test("entering a figure marks the draft dirty and survives a reload", async ({ page }) => {
   await page.goto("/admin/metrics");
-  await openMetric(page, "Bench strength", "Technology");
+  await openMetric(page, "Technology professionals", "Technology");
 
   await page.getByLabel("Figure").fill("912000");
   await page.getByRole("button", { name: "Save to draft" }).click();
@@ -87,13 +87,13 @@ test("entering a figure marks the draft dirty and survives a reload", async ({ p
   await page.reload();
 
   await expect(page.getByText("You have unpublished changes.")).toBeVisible();
-  await openMetric(page, "Bench strength", "Technology");
+  await openMetric(page, "Technology professionals", "Technology");
   await expect(page.getByLabel("Figure")).toHaveValue("912000");
 });
 
 test("a metric edit survives moving between tabs", async ({ page }) => {
   await page.goto("/admin/metrics");
-  await openMetric(page, "Bench strength", "Operations");
+  await openMetric(page, "Technology professionals", "Operations");
   await page.getByLabel("Figure").fill("84");
   await page.getByRole("button", { name: "Save to draft" }).click();
   await waitForDraftSaved(page);
@@ -102,13 +102,13 @@ test("a metric edit survives moving between tabs", async ({ page }) => {
   await expect(page.getByRole("heading", { name: "Companies", level: 1 })).toBeVisible();
   await page.getByRole("link", { name: "Metrics" }).click();
 
-  await openMetric(page, "Bench strength", "Operations");
+  await openMetric(page, "Technology professionals", "Operations");
   await expect(page.getByLabel("Figure")).toHaveValue("84");
 });
 
 test("editing a figure back to its original clears the unpublished warning", async ({ page }) => {
   await page.goto("/admin/metrics");
-  await openMetric(page, "Bench strength", "Technology");
+  await openMetric(page, "Technology professionals", "Technology");
   const original = await page.getByLabel("Figure").inputValue();
   expect(original).not.toBe("");
 
@@ -116,7 +116,7 @@ test("editing a figure back to its original clears the unpublished warning", asy
   await page.getByRole("button", { name: "Save to draft" }).click();
   await expect(page.getByText("You have unpublished changes.")).toBeVisible();
 
-  await openMetric(page, "Bench strength", "Technology");
+  await openMetric(page, "Technology professionals", "Technology");
   await page.getByLabel("Figure").fill(original);
   await page.getByRole("button", { name: "Save to draft" }).click();
 
@@ -125,7 +125,7 @@ test("editing a figure back to its original clears the unpublished warning", asy
 });
 
 test.describe("a breakdown", () => {
-  const title = "Technology ecosystem by specialism";
+  const title = "Talent depth by specialism";
 
   test("keeps figures already typed when a part is added", async ({ page }) => {
     await page.goto("/admin/metrics");
@@ -171,7 +171,7 @@ test.describe("a breakdown", () => {
      * this pair is the technology tab's graduate blocks, and it is at the floor for the
      * same reason: two entries is the schema's minimum for a breakdown.
      */
-    await openMetric(page, "Graduate talent relevant to technology");
+    await openMetric(page, "Graduate pipeline into technology");
 
     // Disabled rather than allowed and then rejected at the publish gate.
     await expect(page.getByRole("button", { name: "Remove part 1" })).toBeDisabled();
@@ -199,7 +199,7 @@ test.describe("a breakdown", () => {
 });
 
 test.describe("a comparison grid", () => {
-  const title = "Capability compared with other delivery locations";
+  const title = "Capability against other GCC hubs";
 
   test("carries the worked example, and offers an unassessed option per cell", async ({ page }) => {
     await page.goto("/admin/metrics");
@@ -319,20 +319,20 @@ test("names each copy of a shared metric by its function area", async ({ page })
   /**
    * The public screen shows one figure on three tabs; admin shows three editable
    * rows. Without the function area in the button's accessible name they would all
-   * be called "Edit Bench strength", and an admin correcting the figure would have
+   * be called "Edit Technology professionals", and an admin correcting the figure would have
    * no way to tell which one they had opened — or that there were three.
    */
-  await expect(page.getByRole("button", { name: /^Edit Bench strength/ })).toHaveCount(3);
+  await expect(page.getByRole("button", { name: /^Edit Technology professionals/ })).toHaveCount(3);
   for (const area of ["Technology", "Operations", "HR"]) {
     await expect(
-      page.getByRole("button", { name: `Edit Bench strength, ${area}` }),
+      page.getByRole("button", { name: `Edit Technology professionals, ${area}` }),
     ).toHaveCount(1);
   }
 });
 
 test("an index metric will not save without a stated base", async ({ page }) => {
   await page.goto("/admin/metrics");
-  await openMetric(page, "India compared with other delivery locations");
+  await openMetric(page, "Cost against other GCC hubs");
 
   await page.getByLabel("Index base").fill("");
   await page.getByRole("button", { name: "Save to draft" }).click();
@@ -345,7 +345,7 @@ test("an index metric will not save without a stated base", async ({ page }) => 
 
 test("a figure that is not a number is reported rather than silently dropped", async ({ page }) => {
   await page.goto("/admin/metrics");
-  await openMetric(page, "Bench strength", "Technology");
+  await openMetric(page, "Technology professionals", "Technology");
 
   await page.getByLabel("Figure").fill("about a million");
   await page.getByRole("button", { name: "Save to draft" }).click();
@@ -356,7 +356,7 @@ test("a figure that is not a number is reported rather than silently dropped", a
 
 test("a title is required, because it is the public heading", async ({ page }) => {
   await page.goto("/admin/metrics");
-  await openMetric(page, "Bench strength", "Technology");
+  await openMetric(page, "Technology professionals", "Technology");
 
   await page.getByLabel("Title").fill("   ");
   await page.getByRole("button", { name: "Save to draft" }).click();
@@ -367,11 +367,11 @@ test("a title is required, because it is the public heading", async ({ page }) =
 
 test("clearing all figures leaves the definition intact", async ({ page }) => {
   await page.goto("/admin/metrics");
-  await openMetric(page, "Capability compared with other delivery locations");
+  await openMetric(page, "Capability against other GCC hubs");
   await page.getByRole("button", { name: "Clear all figures" }).click();
   await expect(page.getByRole("dialog")).toBeHidden();
 
-  await openMetric(page, "Capability compared with other delivery locations");
+  await openMetric(page, "Capability against other GCC hubs");
   await expect(page.getByLabel("Product engineering, India")).toHaveValue("");
   // The rows and columns are the definition, and they stay.
   await expect(page.getByLabel("Columns 1")).toHaveValue("India");
@@ -379,7 +379,7 @@ test("clearing all figures leaves the definition intact", async ({ page }) => {
 
 test("the dialog traps focus and closes on Escape", async ({ page }) => {
   await page.goto("/admin/metrics");
-  await openMetric(page, "Bench strength", "Technology");
+  await openMetric(page, "Technology professionals", "Technology");
 
   const dialog = page.getByRole("dialog");
   await expect(dialog).toBeVisible();

@@ -47,7 +47,7 @@
  * `BFSI` is the reason this half of the file is not optional. It is the one
  * industry name in the taxonomy that is an abbreviation a visitor outside India
  * has very likely never seen, and the row says nothing else. Somebody at an
- * American insurer types "insurance", finds `Insurance software` under Software &
+ * American insurer types "insurance", finds `Insurance Software` under Software &
  * Internet, and never learns that 189 banks and insurers were one row away.
  */
 export const INDUSTRY_TERMS: Readonly<Record<string, readonly string[]>> = {
@@ -133,6 +133,7 @@ export const SUB_INDUSTRY_TERMS: Readonly<Record<string, readonly string[]>> = {
   "sw-marketplace": ["marketplace", "consumer internet", "classifieds", "social", "dating", "food delivery", "gig", "aggregator", "d2c platform"],
   "sw-gaming": ["games", "gaming", "video games", "mobile games", "game studio", "game engine", "interactive entertainment"],
   "sw-it-services": ["it services", "system integrator", "si", "digital engineering", "product engineering", "outsourced development", "consulting technology", "managed it"],
+  "sw-content-services": ["localization", "localisation", "translation", "language services", "content services", "transcription", "data annotation", "data labeling", "data labelling", "editorial services"],
   "sw-media-tech": ["media tech", "streaming", "ott", "video platform", "cdn", "content management", "cms", "digital asset management"],
   "sw-legal-compliance": ["legaltech", "legal software", "contract management", "clm", "compliance software", "grc", "e discovery", "esg software"],
   "sw-automotive-tech": ["automotive software", "connected car", "adas software", "in vehicle", "autonomous", "mobility software", "dealer software"],
@@ -158,7 +159,15 @@ export const SUB_INDUSTRY_TERMS: Readonly<Record<string, readonly string[]>> = {
   "fin-investment-bank": ["investment bank", "capital markets", "m and a", "private equity", "hedge fund", "brokerage", "securities", "underwriting"],
   "fin-insurance-pc": ["p and c", "property and casualty", "general insurance", "reinsurance", "commercial lines", "motor insurance", "specialty insurance", "lloyds"],
   "fin-insurance-life": ["life insurance", "health insurance", "annuities", "pensions", "retirement", "protection", "life insurer"],
-  "fin-asset-management": ["asset management", "investment management", "wealth management", "mutual funds", "etf", "private banking", "pension fund", "custody"],
+  "fin-asset-management": ["asset management", "investment management", "wealth management", "mutual funds", "etf", "private banking", "pension fund", "private equity", "hedge fund"],
+  // Split from asset management: the back-office servicers, not the principals.
+  // "custody" moved here off asset management, where the investor was really
+  // being pointed at a custodian.
+  "fin-fund-services": [
+    "fund administration", "fund services", "fund accounting", "fund administrator",
+    "corporate services", "asset servicing", "custody", "custodian", "transfer agency",
+    "middle office", "back office", "investor services",
+  ],
   // Payments was one row and is now four. `fin-payments` keeps the general payment
   // words so it still pairs with `sw-payments` across the industry boundary (the
   // assertion in search-terms.test.ts); the three siblings carry only the words that
@@ -188,7 +197,8 @@ export const SUB_INDUSTRY_TERMS: Readonly<Record<string, readonly string[]>> = {
   "fin-software-services": ["financial technology services", "processing services", "bank technology", "outsourced processing", "regtech", "kyc", "aml", "financial crime"],
 
   /* ── Healthcare & Lifescience ───────────────────────────────────────────── */
-  "hc-pharma": ["pharma", "pharmaceutical", "drugs", "generics", "specialty pharma", "vaccines", "branded drugs", "otc"],
+  "hc-pharma": ["pharma", "pharmaceutical", "drugs", "generics", "specialty pharma", "vaccines", "branded drugs", "prescription"],
+  "hc-consumer-health": ["consumer health", "otc", "over the counter", "self care", "oral care", "pain relief", "vitamins", "vms"],
   "hc-biotech": ["biotech", "biotechnology", "biologics", "gene therapy", "cell therapy", "biosimilars", "genomics", "mrna"],
   "hc-medical-devices": ["medical devices", "medtech", "implants", "surgical", "imaging equipment", "orthopaedics", "orthopedics", "cardiovascular devices", "dental"],
   "hc-diagnostics": ["diagnostics", "lab", "laboratory", "pathology", "in vitro diagnostics", "ivd", "testing services", "reference lab"],

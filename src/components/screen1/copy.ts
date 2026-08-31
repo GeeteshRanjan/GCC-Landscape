@@ -1170,85 +1170,72 @@ export function signals(view: PeerView): Signal[] {
   const cityCount = view.map.cities.length;
   const average = view.industry.averageHeadcount;
 
-  const share = view.industry.shareOfIndia;
+  /**
+   * **The opening cell is a COUNT of comparable centres again, at ANSR's request, where
+   * it was the industry's share of the national base.**
+   *
+   * What the share was solving is still real and is worth stating so it is not
+   * rediscovered as a defect: a count here is the same number a reader also meets on the
+   * containment chart's middle layer and as the denominator of the peer count line. The
+   * share sidestepped that by publishing the one quantity the chart draws and never
+   * states. It was overruled on the ground that a percentage of every GCC in India is a
+   * fact about the market's composition, while what a visitor arrives wanting is how many
+   * companies like theirs are already here.
+   *
+   * **`businessType.count`, which is the population the PEERS were drawn from** — every
+   * company above the similarity floor in the visitor's sub-industry, not the ones
+   * carrying their exact business type. It has to be that population or this cell
+   * disagrees with the five cards below it; see `IndustryBlock.businessType`.
+   *
+   * Sub-industry is optional, so the cell has a second branch rather than a hole: with no
+   * sub-industry the comparable set IS the industry, and the label says so. Neither branch
+   * names the industry — the section heading does that once, for all four cells.
+   */
+  const comparable = view.industry.businessType
+    ? { count: view.industry.businessType.count, scope: "sub-industry" }
+    : { count: view.industry.total, scope: "industry" };
 
   return [
     {
       kind: "figure",
       /**
-       * **A SHARE, where this was the industry count — and the swap is the
-       * de-duplication rather than a change of subject.** The count was the first of
-       * four appearances of one number: this cell, the industry card's lead, the
-       * containment chart's middle layer, and the denominator of the peer count line.
-       * A reader who meets "189" four times in four wordings has to satisfy
-       * themselves the four agree before trusting any of them, which is the exact
-       * cost this strip exists to remove.
+       * A grouped count, and no `suffix` — the cell's `%` went with the share.
        *
-       * The share is the one thing the chart DRAWS and never states. Its middle layer
-       * is 10.3% of its own track by construction, and no label on it says so — so
-       * this cell adds a figure to the page instead of repeating one, and the chart
-       * below is where the count keeps its denominator.
-       *
-       * Guarded on the base rather than on the total: a zero base would make this a
-       * division by zero, and a zero total is a legitimate share of nought.
+       * **Zero renders as "Data unavailable" rather than as a nought**, which is the
+       * strip's standing rule and matters more on this cell than on any other: a 0 in the
+       * opening figure of a personalised result says "there is nobody like you here",
+       * which is a claim, where the truth is that this industry is thin enough that the
+       * comparable population cannot be stated. The peer block and the containment chart
+       * below both say that in words. Unreachable in today's data on the industry branch
+       * — the thinnest industry holds two companies — and reachable in principle on the
+       * sub-industry one.
        */
-      /**
-       * **`<1%` rather than `0%` for a thin industry, and that is not a rounding
-       * preference.** Electrical & Electronics holds two companies against a national
-       * base of 1,834, which `formatShare` rounds to "0%" — a figure that says the
-       * industry is not here at all, in the opening cell, for exactly the visitors the
-       * thin-set copy elsewhere is written to reassure. Nought is a claim; "under one
-       * percent" is the same measurement stated so it cannot be read as absence.
-       *
-       * Guarded on the total as well, so a genuinely empty industry still reads "0%"
-       * rather than being promoted to a population it does not have.
-       */
-      /**
-       * The numeral only. The `%` travels as `suffix` so the cell can set it a step
-       * smaller — see `Signal.suffix`. `<1` keeps its comparator here, because that
-       * belongs to the figure rather than to the unit.
-       *
-       * **The ratio is `industry.shareOfIndia`, derived in the view model, and it is NOT
-       * `industry.total / scale.companyCount` any more.** That was a ratio of two
-       * populations differing by one: `total` is the peer pool, which drops the visitor's
-       * own company where the dataset holds it, and the base does not. Both sides are now
-       * counted over the same population — see `shareOfIndia`.
-       */
-      value:
-        share !== null
-          ? share > 0 && share < 0.005
-            ? "<1"
-            : String(Math.round(share * 100))
-          : null,
-      suffix: share !== null ? "%" : undefined,
-      // **The industry is named by the SECTION now, not by each label.** Every figure
-      // on this strip is a property of the industry rather than of the five-company set
-      // our own matching chose, and a reader who takes the first cell for a peer-set
-      // statistic misreads the other three the same way — so the subject still has to
-      // be stated, once, where it governs all four cells. See `snapshotHeading`.
+      value: comparable.count > 0 ? formatCount(comparable.count) : null,
+      // **The industry is named by the SECTION, not by any label.** Every figure on this
+      // strip is a property of the industry rather than of the five-company set our own
+      // matching chose, and a reader who takes the first cell for a peer-set statistic
+      // misreads the other three the same way — so the subject is stated once, where it
+      // governs all four cells. See `snapshotHeading`.
       //
       // **It cannot say "already", however well the word would work here.** Six uses
       // were removed across this file for leaning on the reader to feel late, and the
       // rule is asserted rather than remembered — see the copy test.
       //
-      // **"other than your own" is gone**, at ANSR's request. `industry.total` does
-      // still exclude the visitor's own company where the data holds it, so the
-      // exclusion is now unstated rather than untrue — a difference of one on a figure
-      // in the hundreds, against a clause that made the strip's opening cell read as a
-      // footnote.
-      // A noun phrase, as all four labels are — "Of India's GCCs are X" would read as
-      // the predicate of the figure above it, which is the shape the scale strip uses
-      // and this strip deliberately does not: there the label IS the sentence, here it
-      // names the metric and the note says what it counts.
-      /**
-       * **"Of every GCC in India", where this said "Share of India's GCCs".** The old
-       * label named the arithmetic and not the claim: "India's GCCs" reads as a possessive
-       * that could be India's share of something, and "Share of" is the one word a reader
-       * can infer from the `%` beside it. With the section heading now naming the subject
-       * — "Snapshot of {industry} GCCs in India" — the cell only has to say what the
-       * denominator is, which is every GCC in the country.
-       */
-      label: "Of every GCC in India",
+      // A noun phrase, as all four labels are.
+      //
+      // **"GCCs in your {scope}", where this read "Comparable GCCs in your {scope}"** — at
+      // ANSR's request, and the word that went was carrying something. On the industry
+      // branch nothing is lost: `industry.total` IS every GCC in the industry, so the
+      // shorter label is the more exact of the two. On the sub-industry branch the figure
+      // is the population above the similarity floor rather than everything sharing one
+      // sub-industry label, so "GCCs in your sub-industry" now reads very slightly wider
+      // than what is counted. Accepted because it cannot mislead in the direction that
+      // matters: the count is the population the five cards below were drawn from, so the
+      // cell and the cards still agree, which is the failure the count was chosen to avoid.
+      //
+      // "your" stays — it is the one place on this strip the visitor's own answer is
+      // addressed, the other three cells being national facts.
+      label: `GCCs in your ${comparable.scope}`,
     },
     {
       kind: "figure",

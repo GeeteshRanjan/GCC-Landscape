@@ -27,6 +27,7 @@ import { hasTier2Presence, locationCount } from "../src/data/derive";
 import { diffDatasets, renderDiffText } from "../src/data/diff";
 import { seedMetricCatalogue } from "../src/data/metric-catalogue";
 import {
+  COMPANY_INDUSTRY_FIXES,
   COMPANY_TO_TYPES,
   SUB_INDUSTRY_TO_TYPE,
   VAGUE_SUB_INDUSTRIES,
@@ -186,6 +187,32 @@ const COMPANY_TYPE_LOOKUP = new Map(
 );
 
 /**
+ * Per-company industry correction, keyed by the SOURCE industry and a case-folded
+ * name — the same normalisation as the type lookup, for the same reason.
+ */
+const COMPANY_INDUSTRY_LOOKUP = new Map(
+  Object.entries(COMPANY_INDUSTRY_FIXES).map(([key, industry]) => {
+    const separator = key.indexOf("||");
+    const source = key.slice(0, separator);
+    const name = key.slice(separator + 2);
+    return [`${source}||${cleanText(name).toLowerCase()}`, industry] as const;
+  }),
+);
+
+/**
+ * The company's real industry: the corrected one where the source mis-filed it,
+ * the source industry otherwise. Applied before the business-type lookup so the
+ * corrected industry reaches the slug, the taxonomy and the type key alike.
+ */
+function correctIndustry(sourceIndustry: string, name: string): string {
+  return (
+    COMPANY_INDUSTRY_LOOKUP.get(
+      `${sourceIndustry}||${cleanText(name).toLowerCase()}`,
+    ) ?? sourceIndustry
+  );
+}
+
+/**
  * A company's business types, from the per-company table first and the
  * sub-industry collapse second.
  *
@@ -288,9 +315,13 @@ function buildCompanies(rows: Array<Record<ColumnKey, string>>): BuildResult {
     }
     namesSeen.set(name.toLowerCase(), sheetRow);
 
+    // A handful of rows are filed under the wrong industry at source; correct it
+    // here so the fix flows into the slug, the taxonomy and the business-type key.
+    const industry = correctIndustry(row.industry, name);
+
     const { types: businessTypes, gap } = classifyBusiness(
       name,
-      row.industry,
+      industry,
       row.subIndustry,
     );
     if (gap) businessTypeGaps.push(`${gap} (row ${sheetRow}, ${name})`);
@@ -299,7 +330,7 @@ function buildCompanies(rows: Array<Record<ColumnKey, string>>): BuildResult {
       id: uniqueSlug(name, slugs),
       name,
       hqCountry: row.hqCountry,
-      industry: row.industry,
+      industry,
       revenueBand: row.revenueBand,
       establishedYear,
       cities,

@@ -4,7 +4,8 @@
 
 import { Globe, Landmark, Users } from "lucide-react";
 
-import { Block, Panel, Zone } from "@/components/public/primitives";
+import { CloseBackdrop, ClosingCta } from "@/components/public/closing-cta";
+import { Block, formatRevenueBand, Panel, Zone } from "@/components/public/primitives";
 import {
   ContextPanels,
   HEADER_LINES,
@@ -16,7 +17,7 @@ import {
   type ContextFact,
   type HeaderMotif,
 } from "@/components/public/screen-header";
-import type { HeroCopy, ImpactStat } from "@/data/schema";
+import type { CloseCopy, HeroCopy, ImpactStat } from "@/data/schema";
 import { companyName, type PeerView, type PeerViewInput } from "@/data/screen1";
 import { cn } from "@/lib/utils";
 import { CityMap } from "./city-map";
@@ -343,13 +344,19 @@ export function PeerViewAsk({
  *   4. The packed grid of comparison cards, full width.
  *   5. Two analytical rows, three fifths and two fifths: the containment chart beside
  *      the function list, then the ranked centres and the locations map.
- *   6. The terminating dark evidence strip, which is where the card ends.
+ *   6. The terminating dark evidence strip, which is where the ARGUMENT ends.
+ *   7. The close, on the exempt dark ground, which is where the CARD ends.
  *
- * **The page ends at the strip.** There is no closing CTA card, no "Talk to ANSR"
- * panel, no footer and no methodology links. What the screen owes the reader is
- * either inside the strip's own source line or in the provenance on the card that
- * needed it. `ctaHref` is therefore no longer threaded into this screen at all —
- * Screen 2 still carries the conversation.
+ * **The close is restored at the project owner's decision**, having been removed at
+ * ANSR's request on the page-end instruction. `ctaHref` is threaded into this screen
+ * again, and `gccStatus` gains a renderer here for the first time — `peerClosing` in
+ * this screen's own `copy.ts`. There is still no footer and no methodology link: what
+ * the screen owes the reader is inside the strip's own source line or in the
+ * provenance on the card that needed it.
+ *
+ * **The band still collects nothing.** No form, no email field, and no visitor input
+ * stored anywhere in this codebase — that half of the brief is unchanged, and the
+ * specs assert it on both screens.
  *
  * **Three fifths and two fifths, not halves, on the analytical row.** The containment
  * chart is a wide chart; the function list is eight short lines that tile two to a
@@ -360,6 +367,8 @@ export function PeerViewAnswer({
   view,
   onChangeDetails,
   onOpenFunctions,
+  ctaHref,
+  closeCopy,
 }: {
   /**
    * The tab panel, which is where focus goes on a phase change.
@@ -373,6 +382,10 @@ export function PeerViewAnswer({
   view: PeerView;
   onChangeDetails: () => void;
   onOpenFunctions: () => void;
+  /** Where the close links out to. See `tool.tsx`. */
+  ctaHref: string;
+  /** The close's editable copy. See `tool.tsx`. */
+  closeCopy: CloseCopy;
 }) {
   const peerCount = view.peers.peers.length;
   const name = companyName(view.input);
@@ -404,7 +417,16 @@ export function PeerViewAnswer({
     ...(name ? [{ label: "Company", value: name }] : []),
     { label: "Industry", value: view.industry.industry },
     { label: "Headquarters", value: view.input.hqCountry },
-    { label: "Revenue band", value: view.input.revenueBand },
+    /**
+     * **Formatted, not the raw stored band, and the LABEL is where the currency went.**
+     * The dropdown spells `<` out as "Under" and drops the `$` from every row, stating
+     * the currency once in its own hint — so echoing the raw string here would show the
+     * visitor a different answer from the one they picked. This pill has no hint to
+     * carry the unit, so it goes in the label: "(USD)" is one word against seven rows
+     * of repeated marks. `formatRevenueBand` is the single definition, shared with the
+     * control and with Screen 2's identical row.
+     */
+    { label: "Revenue band (USD)", value: formatRevenueBand(view.input.revenueBand) },
   ];
 
   return (
@@ -636,9 +658,13 @@ export function PeerViewAnswer({
                 that runs to the card's edge — and a hard stop is what the last thing in
                 the card wants. The ground under it is the mint rather than white now,
                 which the alternation decided; a dark card floats on either, and this is
-                the one zone whose own value the card does not depend on. Nothing below
-                it. */}
-            <Zone ground="tint" className="pb-10 md:pb-14">
+                the one zone whose own value the card does not depend on.
+
+                **It no longer ends the card and has given its extra bottom padding
+                back.** The close is below it, and a zone that is not last takes the
+                zone rhythm's own padding — the override existed only so the card's
+                foot was not tight against the last thing in it. */}
+            <Zone ground="tint">
               <Enter index={6}>
                 <Panel
                   id="scale"
@@ -655,6 +681,29 @@ export function PeerViewAnswer({
                     }}
                   />
                 </Panel>
+              </Enter>
+            </Zone>
+
+            {/* ---- Zone 7: the close, and NOW the card ends here -----------------
+                **Restored at the project owner's decision**, having been removed at
+                ANSR's request on the page-end instruction. The zone above is still the
+                terminating EVIDENCE and still reads as a hard stop for the argument;
+                what follows it is the ask, which is a different kind of band and is
+                marked as one by its ground.
+
+                **`inverse-soft` is exempt from the alternation**, so it may follow the
+                mint above it without breaking the strict white/mint sequence the other
+                six zones hold — see `Zone`. It is teal-800 rather than the inverse
+                teal because the card floats on teal-deep, and an inverse band here
+                would take the card's own bottom edge with it.
+
+                The dark `Panel` above and this dark ZONE are deliberately different
+                objects: a floating inverse card on a light zone is a stop, and a band
+                running to the card's edge is a surface. Two stops in a row would have
+                been the mistake; a stop then a surface is the shape. */}
+            <Zone ground="inverse-soft" behind={<CloseBackdrop />}>
+              <Enter index={7}>
+                <ClosingCta id="close" href={ctaHref} copy={closeCopy} />
               </Enter>
             </Zone>
           </ViewPanel>

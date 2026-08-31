@@ -1278,6 +1278,57 @@
     0 0 0 1px color-mix(in oklab, var(--ansr-accent) 18%, transparent),
     0 20px 48px color-mix(in oklab, var(--ansr-teal-deep) 22%, transparent),
     0 4px 12px color-mix(in oklab, var(--ansr-teal-deep) 10%, transparent);
+
+  /* **No `font-family` here, deliberately.** `tool.tsx` sets `font-display` ONCE on the
+     public root and this panel is a DOM descendant of it — there is no portal — so the
+     popup is already in the same face as the rest of the page. Restating it on the panel
+     was tried and reverted: it changed no pixel, and it put a second place where the
+     public surface's typeface is decided, which is the thing the once-on-the-root rule
+     exists to prevent. */
+}
+
+/* --------------------------------------------------------------------------
+   The WIDE panel
+
+   **A popup one form field wide is the wrong container for 24 industries**, and the
+   symptom was not cosmetic: it showed eight rows of 24 in a 16rem scrollport, so a
+   visitor deciding between industries could not see the set they were deciding within.
+   A visitor who cannot find their own row takes the broad answer instead, and the peer
+   set loses its primary ordering signal — which is the failure mode this control exists
+   to prevent (`docs/data-audit.md` measures the cost: 0.9-plus coherence with a
+   sub-industry, 0.13 without one in Manufacturing).
+
+   **The widening is expressed in the FIELD's own width, and that is the whole reason it
+   is legal here.** The form grid is two equal columns with a `--ansr-space-6` gap, so
+   the sibling column is `100% + 24px` of this field. A negative inline-start margin of
+   exactly that, against `inset-inline: 0`, gives a panel spanning the grid — because a
+   percentage margin resolves against the containing block's inline size, and the
+   containing block is the field's own wrapper. Nothing measures the card, the container
+   or the window.
+
+   That replaced a table of pane widths fitted to `layoutWidth / 2 − 400` at four
+   breakpoints. Every value in it depended on the card width, the container cap AND the
+   grid staying put, and it had to be re-measured whenever any of the three moved. The
+   table is gone: the cascade pane now lives INSIDE this box (see `.gcc-select-pane`), so
+   there is no longer a question of what fits between the card and the window edge.
+
+   **Leading-side, which is why `wide` is set per control rather than derived from the
+   option count.** Only a field in the grid's trailing column can widen this way, and a
+   count-based rule would eventually widen the leading column's panel off the card.
+
+   Gated on `md`, where `md:grid-cols-2` gives the grid its second column. Below that the
+   grid is one column, there is no sibling to widen into, and the margin is absent — so
+   the panel is field-width and the options are one column, which on a phone is the only
+   shape available anyway.
+
+   Measured, for the two widths the columns below are fitted to: the card is capped at
+   `--ansr-container-card` and padded `md:px-10 lg:px-12`, so the grid — and therefore
+   this panel — is 592px at `md` and 800px from `lg`.
+   -------------------------------------------------------------------------- */
+@media (min-width: 48rem) {
+  .gcc-select-panel--wide {
+    margin-inline-start: calc(-100% - var(--ansr-space-6));
+  }
 }
 
 @keyframes gcc-select-in {
@@ -1300,9 +1351,11 @@
    back by 6px and rounded reads as a target. It also stops the fill colliding
    visually with the panel's border on the rows nearest the top and bottom.
 
-   Selected is carried by weight AND a check glyph, never by the fill — because the
-   fill is already spoken for by the keyboard's own position, and a state that shares
-   a signal with another state is not a state.
+   Selected is carried by WEIGHT and INK, never by the fill — because the fill is
+   already spoken for by the keyboard's own position, and a state that shares a signal
+   with another state is not a state. The check glyph that used to be the second signal
+   is gone; `select-field.tsx` has the reasoning, and the short version is that it was
+   reserved on every row in order to be drawn on one.
    -------------------------------------------------------------------------- */
 .gcc-select-row {
   position: relative;
@@ -1310,12 +1363,34 @@
   align-items: center;
   gap: var(--ansr-space-2);
   margin-inline: var(--ansr-space-1);
-  padding-block: var(--ansr-space-2);
-  padding-inline: var(--ansr-space-3);
+  /* **14px on 1.3, at 4px of block padding — a 26px row where it was 40.** The panel's
+     job is to show a visitor the set they are choosing from, and every pixel of row
+     height is a row that is not on screen: at the old measurements a 24-industry list
+     needed 960px and got 256, so two thirds of the taxonomy was behind a scrollbar. At
+     26px the same list is 364px and fits its body whole.
+
+     16px was never a legibility floor here, and it is worth saying why it looked like
+     one. The 16px floor that matters is on the TRIGGER, where iOS zooms the viewport for
+     anything smaller — a real constraint, and the trigger keeps 16px for it. A row in an
+     already-open popup is not a text input and cannot trigger that behaviour. `sm` is
+     also the size this project already sets dense evidence at, so the popup is now in
+     step with the tables rather than a step above them.
+
+     `--ansr-leading-snug` rather than `normal`: a wrapped two-line label in a column has
+     to read as ONE row, and at 1.5 the two lines sit far enough apart that a row of two
+     lines is hard to tell from two rows of one. */
+  padding-block: var(--ansr-space-1);
+  padding-inline: var(--ansr-space-2);
   border-radius: var(--ansr-radius-md);
-  font-size: var(--ansr-text-base);
+  font-size: var(--ansr-text-sm);
+  line-height: var(--ansr-leading-snug);
+  font-weight: var(--ansr-weight-light);
   color: var(--ansr-text);
   cursor: pointer;
+  /* A wrapped label stays whole rather than splitting across a column break. Without
+     this a two-line row can put its first line at the foot of one column and its second
+     at the head of the next, which reads as two truncated rows. */
+  break-inside: avoid;
   /* Colour only. A row that moved or grew under the pointer would fight the
      `block: "nearest"` scrolling that keeps the active row in view. */
   transition: background-color var(--ansr-duration-fast) var(--ansr-ease-standard);
@@ -1330,7 +1405,7 @@
    the panel's loudest fill at the same strength as a full-bleed page band, 4px from
    the row above it, so a hovered row read as a filled table cell rather than as a
    target the pointer is over. A wash mixed off the accent is a tenth of that weight,
-   is unmistakably the same teal as the lit trigger and the check glyph, and leaves the
+   is unmistakably the same teal as the lit trigger and the selected row's ink, and leaves the
    row's TEXT as the loudest thing in it — which is what a list of choices wants.
 
    **Mixed off `surface-tint` and not off `--ansr-accent`, which was tried and rendered
@@ -1338,11 +1413,41 @@
    tenth of it in white lands on a neutral grey with barely any hue left, and a grey
    hover fill on a teal brand reads as the browser's default rather than as a decision.
    `surface-tint` is the MEASURED mint, so diluting it keeps the reference's own hue and
-   only takes weight out of it. It is declared as a mix rather than as a ramp step
-   because no step is this light: `teal-50` is 2% off white and invisible against the
-   panel, `teal-100` is the slab this replaces, and the ramp has nothing between them. */
+   only takes weight out of it.
+
+   **The base of the dilution is now `--ansr-surface-pale`, not `--ansr-surface`, at
+   ANSR's request — the fill is the tint that marks India's column in the technology
+   tab's capability grid, one step up so it can carry a hover.** Diluting into white
+   drove the mix toward a neutral as it lightened; diluting into `teal-50` keeps the
+   mint in it at every strength, so the fill reads as a matte wash of the same colour
+   the evidence tables use rather than as a saturated slab. Matte is the operative word
+   and it is carried by what is ABSENT: one flat fill, no gradient, no inner shadow, no
+   border, and no ring — the row's only other change on hover is its cue's ink.
+
+   45% rather than the India tint neat: `teal-50` is ~2% off white, which is a band
+   marker on a table and disappears as a hover state on a white list. This is the
+   lightest mix that is still unambiguously a fill, and it is lighter than the 60%-in-
+   white it replaces. */
 .gcc-select-row--active {
-  background: color-mix(in oklab, var(--ansr-surface-tint) 60%, var(--ansr-surface));
+  background: color-mix(in oklab, var(--ansr-surface-tint) 45%, var(--ansr-surface-pale));
+}
+
+/* The row holding the current answer: Medium weight and the heading teal.
+   **It has to be declared HERE rather than as `font-medium text-accent-teal` on the
+   element, and that is the layer trap this file already documents for the filter input's
+   focus ring.** `tokens.css` and these rules are UNLAYERED while Tailwind's utilities are
+   layered, so `.gcc-select-row`'s own `color` beat `text-accent-teal` and the selected row
+   rendered plain black — measured as `rgb(0, 0, 0)` on a row that was supposed to be teal.
+   The weight happened to work only because nothing here sets `font-weight`; putting both
+   states in one place removes the coincidence.
+
+   Two signals, and the weight is the one that survives greyscale: Light 300 to Medium 500
+   is a 200-unit jump. The accent is 9.81:1 on white and 5.9:1 on the strongest of the two
+   washes, so it clears 4.5:1 at 14px wherever a selected row can also be the active one.
+   The FILL is deliberately not a third signal — it belongs to the keyboard's position. */
+.gcc-select-row--selected {
+  font-weight: var(--ansr-weight-medium);
+  color: var(--ansr-accent);
 }
 
 /* The row whose branch is open in the second pane. A 2px accent rule on its leading
@@ -1354,8 +1459,9 @@
   /* One step above the active wash, so a row whose branch is open still reads as the
      stronger of the two when the pointer has moved on to a neighbour. Same mix, same
      hue — the difference is depth rather than colour, which is what keeps two states
-     legible without introducing a third fill nobody can name. */
-  background: color-mix(in oklab, var(--ansr-surface-tint) 85%, var(--ansr-surface));
+     legible without introducing a third fill nobody can name. Same base as the active
+     wash, so both stay in the India tint's family rather than one drifting neutral. */
+  background: color-mix(in oklab, var(--ansr-surface-tint) 75%, var(--ansr-surface-pale));
 }
 
 .gcc-select-row--branch::before {
@@ -1415,9 +1521,25 @@
    as one list in two parts. Suppressed on the first, which has nothing to divide
    from. */
 .gcc-select-heading {
+  /* **`column-span: all`, which is what makes a tiered list survive columns.** Without
+     it the two tiers interleave down the first column and a heading lands mid-column
+     with its hairline cutting across it — the label then divides two rows of the same
+     tier. Spanning splits the multi-column box into column ROWS, so each tier balances
+     into its own equal columns beneath a full-width label, which is the shape the tiers
+     were drawn for. It is also what keeps the columns SYMMETRICAL per tier rather than
+     balanced across the whole list. */
+  column-span: all;
   margin-block-start: var(--ansr-space-2);
   padding-block: var(--ansr-space-2) var(--ansr-space-1);
-  padding-inline: var(--ansr-space-4);
+  /* 12px, which is a row's 4px margin plus its 8px padding — so the heading, the hint
+     line above it and every option label beneath it all start on one edge.
+
+     **It was a `calc` reaching past a reserved check glyph, and dropping the glyph is
+     what let it become a plain token again.** While every row reserved 14px plus a gap
+     for a mark drawn on at most one of them, a heading set from the panel edge hung 22px
+     outside the names it labelled. That was the alignment cost the glyph imposed on the
+     whole panel. */
+  padding-inline: var(--ansr-space-3);
   border-block-start: 1px solid var(--ansr-border);
   font-size: var(--ansr-text-xs);
   font-weight: var(--ansr-weight-semibold);
@@ -1431,27 +1553,39 @@
   border-block-start: 0;
 }
 
-/* The affordance line. On the tinted ground rather than on white, so it reads as
-   part of the panel's chrome with the filter above it rather than as a first list
-   row that cannot be chosen. */
+/* The affordance line: the one piece of help text on this form, and the only place the
+   second level can be offered before a visitor has opened anything.
+
+   **Set as a supporting note, not as a tinted chrome strip, at ANSR's request.** It sat
+   on `--ansr-surface-pale` with zero top padding, so it read as a coloured caption
+   welded to the underside of the search row — three stacked bands of chrome to get past
+   before the first choosable option. Now it is what a note is everywhere else on these
+   two screens: 12px, muted grey, on the surface it belongs to, with the same padding
+   above as below so it is a line of text with air rather than a strip.
+
+   Medium 500 rather than Light 300. This project sets body copy in the display face's
+   Light, which is the brand's biggest typographic tell and is right for a paragraph — at
+   12px in grey it is too little ink to survive next to a 14px option list, and this line
+   has to be noticed once. `--ansr-weight-medium` is the same step the field labels take.
+   Grey stays `--ansr-text-muted` at 8.59:1 on white, so nothing is riding a contrast
+   floor. */
 .gcc-select-hint {
-  padding-block: 0 var(--ansr-space-2);
-  padding-inline: var(--ansr-space-4);
+  padding-block: var(--ansr-space-2);
+  padding-inline: var(--ansr-space-3);
   border-block-end: 1px solid var(--ansr-border);
-  background: var(--ansr-surface-pale);
   font-size: var(--ansr-text-xs);
-  font-weight: var(--ansr-weight-light);
+  font-weight: var(--ansr-weight-medium);
   line-height: var(--ansr-leading-normal);
   color: var(--ansr-text-muted);
 }
 
-/* **The filter and the hint are ONE header band, not two.** They already shared a
-   ground, so the hairline between them divided `surface-pale` from `surface-pale` —
-   two near-identical strips stacked under the field, which is three pieces of chrome
-   (search, note, tier heading) to read past before the first choosable row. Dropping
-   the internal rule and the hint's top padding makes the note read as a caption
-   belonging to the search above it, and leaves the panel with exactly one boundary
-   between its chrome and its content.
+/* **The filter and the hint are ONE header block, not two**, so only the last of them
+   draws the boundary. A hairline between them would divide white from white and add a
+   third piece of chrome to read past before the first choosable row.
+
+   The hint keeps its own top padding now that it is no longer a tinted strip: it is a
+   note under a search row rather than a caption welded to it, and butting 12px grey text
+   against the input above it was the specific thing that read as bad padding.
 
    `:has` rather than a class on the panel, so the rule is a statement about the two
    elements being adjacent — which is the actual condition — and cannot be left behind
@@ -1461,23 +1595,143 @@
 }
 
 /* --------------------------------------------------------------------------
-   The panes' own scrollbars
+   The panel body, its scrollports, and the columns inside them
 
-   A 201-country list is scrolled by everyone who reaches it, so the scrollbar is part
-   of this control rather than part of the browser. Left alone it ships macOS's
-   translucent grey overlay and Windows' 15px light-grey trough — the one surface on
-   this panel that belongs to no design system. Scoped to the two scrolling lists
-   rather than set globally: the public screens do not own their scroll container, so
-   theming the document's scrollbar would be styling the host page's furniture.
+   Three elements where there used to be one, and each split is load-bearing.
 
-   Standard properties only. `::-webkit-scrollbar` would let the thumb be drawn to the
-   pixel and it also opts that element out of overlay behaviour entirely, which turns a
-   scrollbar that floats over the list into one that permanently takes 15px out of a
-   13rem pane.
+   **The BODY is what bounds the list**, and it is also the containing block for the
+   drill-in below `md`. Whether that bound is a ceiling or a fixed height depends on the
+   control; both cases are on the rules themselves.
+
+   **The SCROLLPORT and the COLUMNS cannot be the same element**, and this is the trap
+   worth writing down: a multi-column box with a definite height becomes a
+   fragmentainer, so content past that height creates further COLUMNS and overflows in
+   the inline direction rather than scrolling. Height on the wrapper, columns at height
+   auto: the content then balances into equal-height columns, and the wrapper scrolls if
+   the balanced result is taller than the body.
+
+   `column-fill: balance` is the default and is what "symmetrical" means here — with
+   `column-span: all` on the tier headings, each tier balances into its own equal columns
+   independently, so no column is left holding one orphan row.
+
+   **Scrollbars are part of this control rather than part of the browser.** A 201-country
+   list is scrolled by everyone who reaches it, and left alone it ships macOS's
+   translucent grey overlay and Windows' 15px light-grey trough — the one surface on this
+   panel belonging to no design system. Scoped to these scrollports rather than set
+   globally: the public screens do not own their scroll container, so theming the
+   document's scrollbar would be styling the host page's furniture. Standard properties
+   only — `::-webkit-scrollbar` would let the thumb be drawn to the pixel and it also
+   opts the element out of overlay behaviour entirely, which turns a scrollbar that
+   floats over the list into one that permanently takes 15px out of the pane's width.
    -------------------------------------------------------------------------- */
-.gcc-select-list {
+.gcc-select-body {
+  position: relative;
+  display: flex;
+  min-block-size: 0;
+  /* **A CEILING on a narrow panel, a fixed height only on a wide one**, and the
+     distinction is the difference between a bounded list and an empty box. Revenue band
+     has seven options and no second level: given a height it drew seven rows at the top
+     of a 416px panel and 230px of nothing under them, which reads as a list that failed
+     to load rather than as a short list. It takes its natural height and the ceiling only
+     bites if a future taxonomy grows past it.
+
+     The fixed height belongs to the controls that can open a cascade or that always
+     overflow anyway — see the `--wide` rule below, where the reasoning and the
+     measurements are. */
+  max-block-size: 18rem;
+  /* The panel draws the rounded corners and carries no `overflow: hidden` — it cannot,
+     because that clipped the filter's focus ring to a sliver. So the body clips its own
+     two bottom corners instead, which is all that is needed: a row's hover chip is the
+     only thing that reaches them. */
+  overflow: hidden;
+  border-end-start-radius: var(--ansr-radius-lg);
+  border-end-end-radius: var(--ansr-radius-lg);
+}
+
+/* The widened panel's body takes a FIXED height, at every width, and that fixed height
+   is the cascade's whole reason for existing: both panes stretch to it, so the panel is
+   exactly as tall open as closed. That replaced an indent which grew the list by up to
+   nine rows on expand, changing the popup's height under the pointer while it overhung
+   the card onto the logo strip.
+
+   Heights are fitted to the industry list, the longest thing that has to fit whole: 24
+   industries in two tiers, at a 26px row and a 26px heading, is 364px at two columns.
+   26rem clears that with slack, so from `lg` a visitor sees the entire taxonomy without
+   scrolling — the point of the exercise. 24rem at `md`, where a few labels wrap to two
+   lines and the last row or two scroll. 18rem below that, where the list is one column
+   and 24 industries do not fit at any height a popup may reasonably take. */
+.gcc-select-panel--wide .gcc-select-body {
+  block-size: 18rem;
+}
+
+@media (min-width: 48rem) {
+  .gcc-select-panel--wide .gcc-select-body {
+    block-size: 24rem;
+  }
+}
+
+@media (min-width: 64rem) {
+  .gcc-select-panel--wide .gcc-select-body {
+    block-size: 26rem;
+  }
+}
+
+.gcc-select-scroll {
+  flex: 1 1 0;
+  min-inline-size: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding-block: var(--ansr-space-2);
   scrollbar-width: thin;
   scrollbar-color: color-mix(in oklab, var(--ansr-accent) 35%, transparent) transparent;
+}
+
+.gcc-select-cols {
+  column-gap: var(--ansr-space-4);
+}
+
+/* **Columns exist only on a widened panel, and only in the FIRST pane.** A column inside
+   a panel the width of one field is 130px, and the cascade pane is already half the body
+   — a second column inside it would be 148px at `md`. Both are narrower than the shortest
+   sub-industry name.
+
+   The column count is a set of classes rather than an interpolated value because a
+   Tailwind class cannot be interpolated and because these two counts are measurements,
+   not a parameter. Two is fitted to the industry taxonomy: its longest name is 41
+   characters, which at `sm` needs about 290px of label — so at the `lg` body's 800px, two
+   columns give 400px each and every industry name stays on one line, while three would
+   give 267px and wrap two thirds of them. Three is for a list of SHORT labels, which
+   among these four controls means countries.
+
+   `--single` is the branch case and must win over both: opening a cascade gives the pane
+   half the body, so the list beside it has one column's worth of room. The body's box
+   does not change, so nothing moves around the panel — the list re-flows inside the half
+   it still has. That reflow is the accepted cost of parent-left/child-right at this
+   width, and the row that was pressed keeps its fill and its leading rule as the anchor.
+   -------------------------------------------------------------------------- */
+@media (min-width: 48rem) {
+  .gcc-select-panel--wide .gcc-select-cols--multi {
+    column-count: 2;
+  }
+
+  .gcc-select-panel--wide .gcc-select-cols--multi.gcc-select-cols--3 {
+    column-count: 3;
+  }
+
+  .gcc-select-panel--wide .gcc-select-cols--multi.gcc-select-cols--single {
+    column-count: 1;
+  }
+}
+
+/* "Nothing matches" and its per-pane twin. Spanning, so a filter that empties the list
+   does not leave its own explanation stranded in a 400px column beside two empty ones. */
+.gcc-select-empty {
+  column-span: all;
+  padding-block: var(--ansr-space-3);
+  padding-inline: var(--ansr-space-3);
+  font-size: var(--ansr-text-sm);
+  font-weight: var(--ansr-weight-light);
+  color: var(--ansr-text-muted);
 }
 
 /* --------------------------------------------------------------------------
@@ -1509,10 +1763,16 @@
   border-start-start-radius: var(--ansr-radius-lg);
   border-start-end-radius: var(--ansr-radius-lg);
   border-block-end: 1px solid var(--ansr-border);
-  /* The palest ground, so the search row separates from the white list beneath it
-     without becoming a second field inside a field. It takes every ink white does —
-     see the ramp note on `teal-50` — so nothing here needed re-measuring. */
-  background: var(--ansr-surface-pale);
+  /* **No fill, at ANSR's request.** It was `--ansr-surface-pale` — the palest teal — to
+     separate the search row from the white list beneath it. On a control whose every
+     other fill is now also in the mint family (the hover wash, the branch row) that made
+     the chrome read as tinted and the search row as the loudest thing above the options,
+     which is backwards for a row nobody has typed in yet.
+
+     The separation it was providing is carried by the hairline below it and by the
+     glyph, which is enough: this row is 40px of white with an icon in it, directly under
+     a lit field, and there is no other search input on the surface to confuse it with. */
+  background: var(--ansr-surface);
 }
 
 .gcc-select-filter__icon {
@@ -1549,31 +1809,30 @@
    short version is that the indent grew the panel by up to nine rows onto the logo
    strip below it.
 
-   **It opens TRAILING-side — parent left, child right — and the two widths below are
-   what that costs.** The industry field is the form's right-hand column at every
-   viewport, so the room for this pane is whatever is left between the card's inner
-   edge and the window edge. Measured, on this layout:
+   **It opens TRAILING-side — parent left, child right — which is ANSR's call, and it is
+   now a flex sibling INSIDE the panel rather than a box positioned outside it.** That is
+   what widening the panel bought, and it deleted a whole class of fragility with it.
 
-     layout width   768   1024   1280   1320   1366   1440   1472   1920
-     room (px)       88    112    240    260    283    320    336    560
+   The previous version had to fit between the card's inner edge and the window edge, so
+   its widths came from a measured table of `layoutWidth / 2 − 400` — 88px at `md`, 320px
+   at 1440 — picked at two breakpoints because reading the viewport at runtime is what
+   the iframe forbids. Every value in that table depended on the card width, the
+   container cap AND the grid all staying put, and none of it can be checked by a test.
+   None of it is needed now: the pane splits a box whose width is the form grid's, so it
+   has room from `md` up instead of only from 1440, and there is nothing left to measure.
 
-   which above 1280 is exactly `layoutWidth / 2 − 400`, because the container caps at
-   1280 and the card is centred inside it. Nothing may clamp the pane to that number
-   at runtime — reading the viewport is what the iframe forbids — so the widths are
-   picked FROM the table, each with at least 40px left over for the window edge and a
-   classic scrollbar. Re-measure the table if the card, the container or the grid
-   changes; every value here depends on all three.
+   **The two panes split the body in half**, which at the `lg` body's 800px is 400px each
+   — one line for every industry name and every sub-industry name in the taxonomy. The
+   16rem pane it replaces wrapped or truncated most of them.
 
-   **Two shapes, one element.** Below 1440px the pane covers the panel exactly and
-   becomes a drill-in whose header is the way back; from 1440 it sits beside the panel
-   at 16rem, and from 1536 at 18rem. A second component for the small case would be a
-   second thing to keep in step.
+   **Below `md` it is a drill-in**, absolutely positioned over the first pane with its
+   header as the way back, because there the panel is one field wide and two halves of it
+   are unusable. One element, two shapes, rather than a second component to keep in step.
 
-   Both widths leave at least 56px between the pane and the window edge, which is what
-   absorbs a classic 15px scrollbar reducing the layout width below the viewport's.
-
-   `inset-0` needs no `position: relative` on the panel — the panel is already
-   absolutely positioned, so it is a containing block.
+   No border and no shadow: it is inside the panel's own box now, so an edge of its own
+   would read as a second popup. From `md` a single hairline on its leading edge is the
+   whole boundary; below `md` it needs only to be opaque, which is load-bearing there
+   because it is the only thing hiding the list it covers.
    -------------------------------------------------------------------------- */
 .gcc-select-pane {
   position: absolute;
@@ -1581,56 +1840,29 @@
   z-index: 1;
   display: flex;
   flex-direction: column;
-  border-radius: var(--ansr-radius-lg);
-  /* Same air below as the panel gets, for the same reason: this is the reveal target
-     whenever a branch is open. No entrance delta to absorb here — the pane's keyframe
-     is a horizontal slide — so the whole 24px is air. */
-  scroll-margin-block-end: var(--ansr-space-6);
-  /* Opaque for the same reason the panel is, and here it is load-bearing rather
-     than cosmetic: below `md` this box is the only thing hiding the list it
-     covers. */
+  min-inline-size: 0;
   background: var(--ansr-surface);
-  border: 1px solid color-mix(in oklab, var(--ansr-accent) 25%, var(--ansr-grey-500));
-  box-shadow:
-    0 0 0 1px color-mix(in oklab, var(--ansr-accent) 18%, transparent),
-    0 20px 48px color-mix(in oklab, var(--ansr-teal-deep) 22%, transparent),
-    0 4px 12px color-mix(in oklab, var(--ansr-teal-deep) 10%, transparent);
   animation: gcc-select-pane-in var(--ansr-duration-fast) var(--ansr-ease-entrance) both;
 }
 
-/* 1440px — 256 + 8 of gap against 320 of room, so 56px is left over.
-
-   **The threshold is 1440 rather than the narrowest layout that fits anything.** A pane
-   does fit from about 1320, at 13rem, and it was tried: nearly every sub-industry wraps
-   to two lines at that width and the pane reads as a cramped afterthought beside a
-   388px list. The full-width drill-in is BETTER there, not a fallback — it gives every
-   name one line. So the side-by-side shape is used only where it can be comfortable,
-   and 1280 and 1366 laptops drill in. */
-@media (min-width: 90rem) {
+@media (min-width: 48rem) {
   .gcc-select-pane {
-    /* Beside the panel, off its trailing edge, with a gap wide enough that the two
-       shadows do not merge into one box. `auto` on the block end so the pane is only
-       as tall as its own list. */
-    inset: 0 auto auto 100%;
-    margin-inline-start: var(--ansr-space-2);
-    inline-size: 16rem;
+    /* In flow, beside the first pane, sharing the body's fixed height. `flex: 1 1 0` on
+       both panes is what makes the split even without either knowing the body's width. */
+    position: static;
+    flex: 1 1 0;
+    border-inline-start: 1px solid var(--ansr-border);
+    background: transparent;
   }
 
-  /* Only the drill-in needs a way back drawn on it — beside the panel, the list it
-     came out of is still right there. */
+  /* Only the drill-in needs a way back drawn on it — beside the list it came out of, a
+     back arrow would be pointing at something still on screen. */
   .gcc-select-pane__back {
     display: none;
   }
 }
 
-/* 1536px — 288 + 8 against 368 of room. */
-@media (min-width: 96rem) {
-  .gcc-select-pane {
-    inline-size: 18rem;
-  }
-}
-
-/* Slides out from under the panel's trailing edge, so the pane reads as coming FROM
+/* Slides out from under the first pane's trailing edge, so the pane reads as coming FROM
    the row that opened it. 4px and 120ms: any further and it reads as a card flying in,
    which is the wrong register for a list appearing beside another list. */
 @keyframes gcc-select-pane-in {
@@ -1651,16 +1883,28 @@
    focusable and sits in the same panel. */
 .gcc-select-pane__head {
   display: flex;
+  flex-shrink: 0;
   align-items: center;
   gap: var(--ansr-space-2);
   padding-block: var(--ansr-space-2);
-  padding-inline: var(--ansr-space-4);
-  border-start-start-radius: var(--ansr-radius-lg);
-  border-start-end-radius: var(--ansr-radius-lg);
+  /* 12px, so the industry's name starts on the same edge as the sub-industry labels
+     beneath it. */
+  padding-inline: var(--ansr-space-3);
   border-block-end: 1px solid var(--ansr-border);
-  background: var(--ansr-surface-pale);
+  /* No fill, for the same reason the filter row lost its own: with the hover wash and
+     the branch row both in the mint family, a tinted chrome strip put the panel's only
+     other mint where nothing was happening. The hairline below it and the industry's
+     name in Medium are what make this read as a header; the chevron is what makes it
+     read as pressable in the drill-in, which is the one shape where it has to. */
+  background: var(--ansr-surface);
   text-align: start;
   color: var(--ansr-text-muted);
+  /* **No radius, in either shape.** The pane covers the BODY rather than the whole
+     panel, so this header sits under the filter row and never at one of the panel's own
+     corners — a rounded top here drew two clipped corners in the middle of the popup.
+     Covering the body rather than the panel is also a fix in its own right: the filter
+     stays reachable while a visitor is drilled into a branch, where before it was behind
+     the pane. */
 }
 
 /* A native select with `appearance-none` still reserves room for a chevron on some
@@ -1787,50 +2031,204 @@ select.gcc-field {
 }
 
 /* --------------------------------------------------------------------------
-   The closing band's texture
+   The close — a blurred field with the ask floating on it
 
-   `assets/brand/texture/deep-teal-diagonal-wide.svg` is 2560x1600 full-viewport
-   deck art. A 480-unit horizontal band was cropped out of it via
-   scripts/brand_asset.py and written to public/brand/close-streaks.svg — the
-   whole texture behind a py-20 band would have been scaled to a slice of its
-   own top edge. Never placed unmodified; see
-   .kiro/skills/ansr-brand-assets/SKILL.md.
+   The paywall shape: a band of structured-looking content pushed out of focus,
+   with the call to action centred over it. What it says without a sentence is
+   "there is more detail here than the page is giving you", which is true — ANSR
+   holds four gated metrics this tool deliberately never ships.
 
-   Shared by both screens' closes, because it is one shared component.
+   **WHAT IS BLURRED IS SYNTHETIC, and that is the whole basis on which this is
+   allowed to exist.** The backdrop is an abstract lattice of blocks drawn by
+   `closing-cta.tsx`. It is not a gated metric rendered and covered up, and it
+   could not be: `publicMetric`'s gated branch has no `value` and no `structure`
+   field, so a withheld figure never reaches this document at all. A CSS blur over
+   real text would be a leak whatever it looked like, because a paint-time filter
+   is reversible from markup the browser already holds.
+
+   So the backdrop carries no figure, no metric name and no claim — there is no glyph
+   in it to resolve at any blur, only structure — and the whole layer is `aria-hidden`,
+   so the accessible name of the band is its heading, its line and its button. Nothing
+   fabricated is in the reading order.
+
+   **The field reads as six different charts on purpose**, and a "figure" in it is a
+   BLOCK at display height rather than a typed number. Blurred digits would still be real
+   characters in the public DOM: unreadable on screen, plainly readable in the markup, and
+   a fabricated cost figure either way. A wide block at figure scale beside two small ones
+   blurs to the same thing with nothing behind it to be wrong.
+
+   **Text contrast is guaranteed by the VEIL, measured against the field's brightest
+   possible pixel** — see `.gcc-close-scrim`, which carries the arithmetic. It holds at
+   every point of the band, so no placement here needs its own measurement.
    -------------------------------------------------------------------------- */
-.gcc-close-streaks {
-  /* Covers the band and bleeds off the trailing edge, so the diagonals read as a
-     slice of something larger rather than as a rectangle parked inside the
-     section. */
-  inset-block: 0;
-  inset-inline-end: 0;
-  inline-size: 72%;
 
-  /* The motif token's 0.18 is the posture for ink over a LIGHT ground, where the
-     job is to stop a graphic competing with black text. This texture sits on the
-     inverse band and its own streaks are already only a step or two off the ground
-     they are drawn on, so 0.18 composited to within a couple of RGB values of the
-     band — it was measurably present and visibly absent.
+/* The lattice. Held well back and pushed out of focus, then scaled up slightly so
+   the blur's own soft edge is pushed off the band rather than fading to the ground
+   inside it — a blurred layer at exactly `inset: 0` reads as a rectangle with
+   feathered sides, which is the tell that gives away a backdrop as an effect. */
+.gcc-close-backdrop {
+  /* One ink for the whole field, declared here and read by all three shapes below. The
+     field has a filled shape, a stroked ring and a stroked line in it, and three places to
+     write one colour is three places for one of them to drift a step. */
+  --gcc-close-ink: color-mix(in oklab, var(--ansr-teal-300) 75%, transparent);
+  position: absolute;
+  inset: 0;
+  /* `md` rather than `lg`, and the difference is whether the band works at all. At 18px
+     the field smears into an even wash and the composition reads as a flat teal band with
+     nothing behind it — which is what the first attempt shipped. 10px keeps the panel
+     grid, the bar rhythm and the donut's sweep legible AS STRUCTURE while resolving
+     nothing: there is no glyph in this layer to resolve, so the ceiling on the blur is set
+     by how much shape has to survive rather than by what has to be destroyed. */
+  filter: blur(var(--ansr-blur-md));
+  opacity: 0.9;
 
-     0.7 is where it reads. Measured rather than chosen: the lightest streak at
-     this strength leaves white at 10.48:1 and the 80% body copy at 7.31:1, both
-     clear of AA with room, and the mask below drops it further still under the
-     copy itself. */
-  --ansr-motif-opacity: 0.7;
+  /* **The edge fade, and it fixes a real defect rather than softening a look.**
+     `transform: scale(1.06)` used to sit here, to push the blur's own feathered edge off
+     the band. What it actually did was push the field's BRIGHTEST content into the band's
+     corners — and the close is the last band in the card, so the band's bottom corners are
+     the CARD's bottom corners, where `.gcc-result-card` draws a 9%-white hairline ring on
+     a teal-deep page ground. A blurred bright block behind a light ring on a dark ground
+     read as light leaking out of the card's bottom edges, which is exactly what it was.
 
-  /* Fades away from the trailing edge. The heading and body copy are
-     leading-aligned and capped at the reading measure, so the trailing side is
-     the ground the texture can have — and by the time the copy starts, the
-     texture has visibly stopped.
+     Fading the field out before the edge removes the cause: there is nothing bright at the
+     corners to leak. It also stops the field looking cropped mid-panel, which was the
+     other half of why it read as accidental.
 
-     A mask only reads the alpha channel, so the colour here is machinery rather
-     than a design choice — but it still comes from a token, because
-     brand_lint.py is right to refuse a literal hex even inside a mask. */
+     Asymmetric on purpose — a longer fade at the bottom, where the card's radius is, than
+     at the top, where the band meets a flat zone boundary. This is NOT the vignette that
+     was removed: that was a radial spotlight behind the copy, on the axis the reader looks
+     along. This is an edge treatment at the band's own boundary and does nothing behind
+     the text. */
   mask-image: linear-gradient(
-    to left,
-    var(--ansr-black),
-    transparent 88%
+    to bottom,
+    transparent 0%,
+    var(--ansr-black) 9%,
+    var(--ansr-black) 84%,
+    transparent 100%
   );
+}
+
+/* One panel in the field. Faint enough to sit under the blocks it groups and present
+   enough to survive the blur and the veil, so eight runs of marks read as eight cards
+   rather than as scattered bars. Radius `none`, like every card on the public screens. */
+.gcc-close-tile {
+  background-color: color-mix(in oklab, var(--ansr-teal-300) 15%, transparent);
+  border-radius: var(--ansr-radius-none);
+}
+
+/* One block in the lattice. A light teal on the dark ground, at a strength that
+   survives the blur without lifting the local ground under the copy — the scrim
+   above it is what actually protects the text, this only keeps the texture from
+   competing at the edges where the scrim has faded out. */
+/* One ink for the whole field, declared on the backdrop and read by all three shapes
+   below. The field has a filled shape, a stroked ring and a stroked line in it, and three
+   places to write one colour is three places for one of them to drift a step. */
+
+/* A filled block: a bar, a row, a table cell, or — at display height — a figure. Bright
+   enough to survive the blur and the veil over it. It was 22%, then 62%, and the net result
+   after both layers was within a few RGB values of the ground: measurably present, visibly
+   absent, the same failure `.gcc-close-streaks` had before it was retired. The ceiling on
+   this value is the veil's contrast arithmetic — see `.gcc-close-scrim`, which is computed
+   against a block at exactly this strength. */
+.gcc-close-block {
+  background-color: var(--gcc-close-ink);
+  border-radius: var(--ansr-radius-none);
+}
+
+/* The donut. `--ansr-radius-pill` on a square box is a circle, and this is the one place
+   on the public screens that shape appears outside a chip or an action — the radius rule
+   restricts `pill` to tags, counters and the primary action, and a decorative ring in an
+   `aria-hidden` layer is none of those, so it is called out here rather than passed off as
+   one. It is also the only round thing in the field, which is most of why the field reads
+   as a set of different charts. */
+/* The donut, as a swept arc with a punched hole.
+
+   A `conic-gradient` for the sweep and a `radial-gradient` mask for the hole, so it is ONE
+   element: an arc drawn as a border plus an overlay to cover the middle would be two
+   shapes that have to stay concentric through a blur, and they do not.
+
+   `--ansr-radius-pill` on a square box is a circle, and this is the one place on the
+   public screens that shape appears outside a chip or an action — the radius rule
+   restricts `pill` to tags, counters and the primary action, and a decorative arc in an
+   `aria-hidden` layer is none of those, so it is called out here rather than passed off as
+   one. It is also the only round thing in the field, which is most of why the field reads
+   as a set of different charts rather than one repeated motif. */
+.gcc-close-ring {
+  border-radius: var(--ansr-radius-pill);
+  background-image: conic-gradient(
+    var(--gcc-close-ink) 0 var(--gcc-ring-sweep),
+    color-mix(in oklab, var(--gcc-close-ink) 34%, transparent) var(--gcc-ring-sweep) 100%
+  );
+  /* The hole. 58% of the radius, which leaves a band thick enough to survive a 10px blur
+     — at 70% the ring closes up into a disc and the sweep is lost with it. */
+  mask-image: radial-gradient(
+    circle closest-side,
+    transparent 58%,
+    var(--ansr-black) 59%
+  );
+}
+
+/* The sparkline. `round` joins because a mitred corner on a 3px stroke survives the blur
+   as a hard speck, which is the one detail in this layer sharp enough to look like a
+   rendering fault rather than like depth. */
+.gcc-close-line {
+  fill: none;
+  stroke: var(--gcc-close-ink);
+  stroke-width: 4;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+/* The veil: ONE flat value of the band's own ground across the whole band.
+
+   **It was a radial gradient and the vignette was the problem.** Solid through the middle
+   and clearing at the top and bottom edges, it did make the copy the focus — and it also
+   put a visible oval of lighter ground behind the text, which reads as a spotlight
+   dropped on the band rather than as content behind glass. Removed at the project owner's
+   request, and a flat veil is the better answer anyway: a paywall dims the whole surface
+   evenly, because what is behind it is uniformly out of reach.
+
+   **58%, and the number is a worst case rather than a preference — but it only works
+   because this band admits WHITE INK ONLY.** That is the trade at the centre of the whole
+   composition and it is worth stating plainly. A flat veil dims the field everywhere,
+   including where no text sits, so the veil's weight is set by the FAINTEST ink on the
+   band. With `--ansr-text-inverse-muted` on the body line the veil had to reach 78% for it
+   to clear 4.5:1, and at 78% the field is dim enough that the six tiles stop being
+   distinguishable — which is the entire point of them. White on the body line moves the
+   binding constraint to an ink with far more headroom, and 20 points of veil come back to
+   the field.
+
+   The arithmetic, against the brightest pixel the field can produce — a block at
+   `--gcc-close-ink` (teal-300 at 75%) over teal-800, then the backdrop's own 0.9 opacity:
+   this veil over THAT leaves white at 8.08:1, clear of AAA for body text, let alone AA.
+   Because it is computed against the field's maximum it holds at every point of the band
+   with no per-placement measurement. `--ansr-text-inverse-muted` on the same pixel is
+   3.93:1 and is therefore FORBIDDEN here — see the ink note in `closing-cta.tsx`, and the
+   precedent in `ask-hero.tsx`, which is white-only for the same kind of reason.
+
+   One flat colour rather than a gradient also means the copy's contrast no longer depends
+   on where the field falls, which was the whole reason the radial version needed a plateau
+   in the middle. */
+.gcc-close-scrim {
+  position: absolute;
+  inset: 0;
+  background-color: color-mix(
+    in oklab,
+    var(--ansr-surface-inverse-soft) 58%,
+    transparent
+  );
+}
+
+/* A blurred layer is a transparency effect and a texture under text, so it goes
+   when the visitor has asked for less of the first or more of the second — the same
+   call `.ansr-motif`, `.gcc-hero-map` and `.gcc-header-lattice` all make. The band
+   keeps its ground, its heading, its line and its button; what is lost is only the
+   suggestion of depth behind them. */
+@media (prefers-reduced-transparency: reduce), (prefers-contrast: more) {
+  .gcc-close-backdrop,
+  .gcc-close-scrim {
+    display: none;
+  }
 }
 
 /* --------------------------------------------------------------------------
@@ -2726,13 +3124,25 @@ select.gcc-field {
   .gcc-milestones {
     display: block;
     position: relative;
-    /* Label, dot, figure. The figure's own line plus its top gap is the last term, and
-       the block padding is what stops the rail sitting hard against the card's own
-       header rule. */
+    /**
+     * Label, dot, figure. The figure's own line plus its top gap is the last term, and
+     * the block padding is what stops the rail sitting hard against the card's own
+     * header rule.
+     *
+     * **`space-8` rather than `space-10` for the figure term, and the block padding is
+     * top-only, which is what closes the gap ANSR reported under this chart.** The items
+     * are absolutely positioned, so this `min-height` is the ONLY thing holding the
+     * card's body open — and it was reserving a figure row of 40px plus 16px of padding
+     * at each end for a line that measures 24px. That surplus rendered as ~40px of empty
+     * card under the last figure, which beside a shorter neighbour read as a card that
+     * had failed to fill. The figure is `text-lg` with its own `space-2` top padding, so
+     * 32px covers the line and its gap with nothing to spare; the trailing padding goes
+     * because the card's own body padding is already below it.
+     */
     min-height: calc(
-      var(--gcc-milestone-label) + var(--gcc-milestone-dot) + var(--ansr-space-10)
+      var(--gcc-milestone-label) + var(--gcc-milestone-dot) + var(--ansr-space-8)
     );
-    padding-block: var(--ansr-space-4);
+    padding-block-start: var(--ansr-space-4);
   }
 
   .gcc-milestones__rail {

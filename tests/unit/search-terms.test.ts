@@ -117,21 +117,21 @@ describe("normaliseSearchText", () => {
   /**
    * Nearly every row in this taxonomy contains an ampersand, so this one rule is the
    * difference between `research and development` reaching
-   * `Clinical research & development services` and reaching nothing.
+   * `Clinical Research & Development Services` and reaching nothing.
    */
   it("writes & as the word, on both sides of the comparison", () => {
-    expect(normaliseSearchText("Property & casualty insurance")).toBe(
+    expect(normaliseSearchText("Property & Casualty Insurance")).toBe(
       "property and casualty insurance",
     );
-    expect(matchesSearch("property and casualty", "Property & casualty insurance")).toBe(true);
+    expect(matchesSearch("property and casualty", "Property & Casualty Insurance")).toBe(true);
     // `p & c` and `p and c` are the same query once normalised, and both reach the row
     // through its authored term rather than its label — an initialism is not a
     // substring of the words it stands for.
     expect(
-      matchesSearch("p & c", "Property & casualty insurance", SUB_INDUSTRY_TERMS["fin-insurance-pc"]),
+      matchesSearch("p & c", "Property & Casualty Insurance", SUB_INDUSTRY_TERMS["fin-insurance-pc"]),
     ).toBe(true);
     expect(
-      matchesSearch("p and c", "Property & casualty insurance", SUB_INDUSTRY_TERMS["fin-insurance-pc"]),
+      matchesSearch("p and c", "Property & Casualty Insurance", SUB_INDUSTRY_TERMS["fin-insurance-pc"]),
     ).toBe(true);
   });
 });
@@ -142,7 +142,7 @@ describe("matchesTokens", () => {
   });
 
   it("requires EVERY token, so a second word narrows rather than widens", () => {
-    const haystack = searchHaystack("Payments & financial infrastructure", [
+    const haystack = searchHaystack("Payments & Financial Infrastructure", [
       "payment gateway",
     ]);
     expect(matchesTokens(searchTokens("payment"), haystack)).toBe(true);
@@ -176,8 +176,8 @@ describe("matchesTokens", () => {
    */
   it("treats a token of three characters or fewer as a whole word", () => {
     expect(matchesSearch("ai", "Retail")).toBe(false);
-    expect(matchesSearch("ai", "AI & machine learning platform")).toBe(true);
-    expect(matchesSearch("si", "Business process outsourcing")).toBe(false);
+    expect(matchesSearch("ai", "AI & Machine Learning Platform")).toBe(true);
+    expect(matchesSearch("si", "Business Process Outsourcing")).toBe(false);
     const aiRows = hits("ai").filter((row) => row.kind === "sub-industry");
     expect(aiRows.length).toBeLessThanOrEqual(3);
   });

@@ -60,47 +60,55 @@ import type { MetricFunction } from "@/data/schema";
    ========================================================================== */
 
 /**
- * What `gccStatus` still branches, and now the only thing it branches.
+ * `gccStatus` branched into a close, **kept, unit-tested on all three values, and
+ * RENDERED BY NOTHING.**
  *
- * It used to carry a `title` and a `lead` as well — the screen's `h2` and the
- * paragraph under it — which is where `project.md`'s "five visible strings" came
- * from. That was wrong twice over: the lead was one shared constant that did not
- * branch at all, so it was four, and both are gone now, so it is three.
+ * It used to carry a `title` and a `lead` as well — the screen's `h2` and the paragraph
+ * under it — which is where `project.md`'s "five visible strings" came from. That was
+ * wrong twice over: the lead was one shared constant that did not branch at all, so it
+ * was four, and both went with the screen's own explanation.
  *
- * **Three is still enough to make the field load-bearing, and it is the only thing
- * standing between `gccStatus` and someone deleting it.** Screen 1's own branch,
- * `framing()`, has no caller; this one does. "Could this work", "is what we run
- * competitive" and "what does the next function cost" are different conversations
- * over identical national figures, and the close is where the tool asks for one.
+ * **What unrendered it is that the close stopped depending on the visitor.** Its copy is
+ * supplied, fixed, and identical on both screens — one heading, one line, one label in
+ * `CLOSE_COPY` — so there is nothing left for a status to select. Screen 1's equivalent
+ * (`peerClosing`) is deleted rather than kept, because this one already carries the
+ * branch and a second unrendered copy of it would be two things to keep in step for no
+ * reader.
+ *
+ * **So `gccStatus` is once again a field nothing draws, and that is a recorded state
+ * rather than a defect.** Do not delete it on the strength of this: `framing()` on
+ * Screen 1 and this function are both exported and tested on all three values, and the
+ * unit suite is the only place the field can be varied at all — the form does not ask.
+ * Restoring a branched close is one prop.
+ *
+ * The shape is `ClosingCopy`'s two fields rather than its own declaration with the same
+ * names, which is the drift worth avoiding — two files describing one component's copy,
+ * free to fall out of step. `ctaLabel` is gone: three labels of the form "Talk to ANSR
+ * about {verb} your India GCC" each restated the heading above them.
  */
 export interface FunctionFraming {
   ctaHeading: string;
   ctaBody: string;
-  ctaLabel: string;
 }
 
 export function functionFraming(input: PeerViewInput): FunctionFraming {
   switch (input.gccStatus) {
     case "operating":
       return {
-        ctaHeading: "Where you sit against these",
+        ctaHeading: "Which of these you are beating",
         ctaBody:
-          "ANSR runs these functions for global companies at every scale on this page. A conversation is the quickest way to see which of these numbers you are already beating.",
-        ctaLabel: "Talk to ANSR about your India GCC",
+          "That depends on your roles, your cities and how you staff them.",
       };
     case "expanding":
       return {
-        ctaHeading: "Costing the next function",
-        ctaBody:
-          "ANSR has stood up each of these functions from a first hire. A conversation turns these benchmarks into a plan for the one you are adding — including the figures held back above.",
-        ctaLabel: "Talk to ANSR about scaling your India GCC",
+        ctaHeading: "What the next function costs",
+        ctaBody: "That depends on the roles you add and where you add them.",
       };
     case "evaluating":
       return {
-        ctaHeading: "What this looks like for your roles",
+        ctaHeading: "What these mean for your roles",
         ctaBody:
-          "These are national figures. Yours depend on the roles you would move, the cities you would pick and the country you are hiring from — which is a conversation, not a page.",
-        ctaLabel: "Talk to ANSR about building your India GCC",
+          "The national picture narrows once the roles and the cities are yours.",
       };
   }
 }
@@ -349,109 +357,25 @@ export const OPS_SECTIONS = {
   supporting: "Scale and connectivity",
 } as const;
 
-/**
- * The supporting note under a summary figure, where the DATA cannot supply one.
- *
- * **Three of the four cells take their note from the part they draw, and that is the
- * rule rather than a convenience.** A summary figure lifted out of a breakdown is one
- * of that breakdown's parts, and the part's own label names the population it was
- * measured over — "At a Grade A campus with N+1 backup" is exactly the caveat the
- * uptime figure needs, and it is admin-editable data rather than a sentence in this
- * file that could drift away from the figure beside it.
- *
- * The disruption cell is the one that cannot work that way: it states the extent of the
- * whole set rather than one part of it, so no single entry label describes it. Hence one
- * entry here, and it deliberately does not count the cities — "the four cities assessed"
- * would be a claim about cardinality that an admin adding a fifth city would falsify
- * silently.
- */
-export const OPS_SUMMARY_NOTES: Record<string, string> = {
-  "ops-disruption-days": "Across the cities assessed",
-};
-
 /* --------------------------------------------------------------------------
-   The held group
+   The held group — DELETED
+
+   **The sealed group is gone from the HR and finance tabs at ANSR's request, and every
+   string it needed went with it.** `HR_HELD_LEAD`, `HR_HELD_AVAILABILITY`,
+   `HR_HELD_VARIES`, `HR_RATIO_MODELS`, `HELD_LOCK_LABEL`, `HELD_MATRIX_ROW_PREFIX` and
+   `HELD_MATRIX_COLUMN_PREFIX` were all authored for that one composition; with nothing
+   drawing it they are deleted rather than kept exported, because none of them carries a
+   CLAIM the page can no longer make — the removal is of the whole statement, not of a
+   sentence that said it. Git holds them.
+
+   `OPS_SUMMARY_NOTES` went in the same pass: a summary cell is one line under its figure
+   now, so there is nowhere for a note to go, and the scope a lifted figure must not lose
+   is authored into the metric's own title instead. See `SummaryFigure.title`.
+
+   The GATE is untouched. `publicMetric` still has no field a withheld figure could travel
+   in, and `heldHeading`, `HELD_CHIP` and `heldShapeNote` below still serve the derived
+   path and the operations tab.
    -------------------------------------------------------------------------- */
-
-/**
- * **`HR_HELD_HEADING` was here and is gone: its wording moved into `heldHeading`, which
- * every tab already used.** It existed because the HR composition asked for "shaped by"
- * where the shared function said "depend on", and one constant per tab is how one screen
- * came to head the same group two ways. ANSR's wording won and the count came with it —
- * a group of one is a real state, and this tab's pair being fixed by the catalogue today
- * is not a reason for the string to be unable to say so.
- */
-
-/**
- * **Kept, and rendered nowhere.** It sat directly under a heading reading "Figures
- * shaped by your roles and cities", above two cards each naming what its own figure
- * varies with, above a line saying when both become available — four statements of one
- * idea inside 200px. The heading carries the claim and `HR_HELD_AVAILABILITY` carries
- * the one thing none of the others says, so nothing is now unstated. One prop to
- * restore.
- */
-export const HR_HELD_LEAD =
-  "These measures depend on the roles, levels and Indian locations selected for your GCC.";
-
-/**
- * When the two figures arrive.
- *
- * **A statement of a condition, not a promise and not a control.** The composition
- * asked for an "Update roles & cities" action beside this line and there is nothing
- * for it to open: the tool asks five questions and none of them is a role, a level or
- * a city, so the button would name a destination that does not exist — which is the
- * exact defect the four chevroned answer pills were rebuilt to remove. The sentence
- * states the condition truthfully and asserts nothing about who satisfies it or when.
- * The ask is on `handoff.md`'s blocked list.
- */
-export const HR_HELD_AVAILABILITY =
-  "Both become available once roles, levels and Indian cities are selected.";
-
-/**
- * What each withheld card varies WITH, per metric.
- *
- * Keyed by id for the same reason `HR_METRIC_NOTES` is. This is the one thing a sealed
- * card can honestly add to its own title: not the figure, not its shape, but which
- * decision moves it. Everything else on the card — the cardinality note, the lock, the
- * hatched blocks — is already drawn rather than said.
- */
-export const HR_HELD_VARIES: Record<string, string> = {
-  "hr-cost-per-employee-served":
-    "Varies by operating model and employee population",
-  "hr-fully-loaded-cost": "Varies by role family, level and city",
-};
-
-/**
- * The two operating models the support-ratio card compares.
- *
- * **These are not the withheld structure's entry names, and they could not be.**
- * `publicMetric` drops a gated metric's labels along with its values, so
- * "Once running at scale" and "During the build phase" never reach the browser. What
- * crosses is the metric's own `question`, which already names both models in public —
- * "once the centre is running, against while it is still being built" — so naming them
- * on the card leaks nothing that is not already permitted across the gate.
- *
- * They are drawn over EQUAL numbers of person glyphs, uniformly muted. The ratio is
- * the withheld figure; drawing one group larger than the other would be the placeholder
- * inventing the answer, which is the whole thing `.gcc-held` exists to avoid.
- */
-export const HR_RATIO_MODELS = ["High touch", "Scaled"] as const;
-
-/** The accessible name for a sealed card's lock. The chip's job, said once. */
-export const HELD_LOCK_LABEL = "Held back";
-
-/**
- * Generic scaffolding for the withheld matrix preview.
- *
- * **Ordinals, because the real names are withheld and cardinality is not.** The gate
- * drops the row and column names — a row label beside a visible axis can imply the
- * answer — and leaves five rows across five columns. `Role family 1` and `L1` say
- * exactly that and nothing more: they carry the metric's own title, which does cross
- * ("Fully loaded cost by role family and level"), plus a position in a list. Neither
- * names a role family, and neither states what any level is.
- */
-export const HELD_MATRIX_ROW_PREFIX = "Role family";
-export const HELD_MATRIX_COLUMN_PREFIX = "L";
 
 /* ==========================================================================
    Kept, tested, and rendered nowhere

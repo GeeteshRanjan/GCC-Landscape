@@ -28,7 +28,7 @@ const TABS = [
   // The hero copy and the impact figures. Named for the surface it edits rather
   // than for the dataset key behind it — an admin is looking for "the headline on
   // the first page", not for `siteContent`.
-  { href: "/admin/entry-point", label: "Entry point" },
+  { href: "/admin/entry-point", label: "Site copy" },
   { href: "/admin/publish", label: "Publish" },
 ] as const;
 

@@ -251,6 +251,12 @@ const SECTOR = [
   "legal-services",
   "staffing-workforce",
   "outsourcing-bpo",
+  /** Localization, translation, editorial and data-annotation: human effort
+   *  applied to language and content, not software engineering. Rare enough
+   *  inside Software & Internet to separate a content shop from a systems
+   *  integrator. Also carried by BPO, whose content-moderation and document
+   *  work is the same kind of labour. */
+  "content-language-services",
   "education-services",
 
   // Movement of goods and people

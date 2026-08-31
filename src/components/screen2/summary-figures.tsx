@@ -1,6 +1,5 @@
 import { figureParts, type ShownMetric } from "@/data/screen2";
 import { cn } from "@/lib/utils";
-import { FLOOR_NOTE } from "./copy";
 
 /**
  * The row of national figures every function tab opens on.
@@ -60,10 +59,21 @@ export interface SummaryFigure {
    * the real set because there is no single figure in the data. See `ops-view.tsx`.
    */
   high?: string;
+  /**
+   * The ONE line under the figure, and the only one.
+   *
+   * **A cell used to carry up to three: the metric's title, its unit, and a note naming
+   * the population it was measured over.** Three lines of different lengths under five
+   * figures is what made the row read as ragged rather than as a set, and two of the
+   * three were usually saying one thing between them ("Grade A office stock" / "million
+   * sq ft"). So the title is authored to explain the figure on its own — it carries the
+   * unit where the figure cannot be read without one, and the scope where the figure is
+   * one part of a larger set — and the other two lines are gone.
+   *
+   * `title` rather than `label` because it is still the metric's own title, verbatim,
+   * and it is still the cell's heading. Nothing here composes or re-letters it.
+   */
   title: string;
-  unit?: string;
-  /** What population the figure was measured over, or how to read its `+`. */
-  note?: string;
 }
 
 /**
@@ -98,42 +108,24 @@ export function SummaryFigures({
   heading,
   headingId,
   cells,
-  note,
 }: {
-  /** What the figures are properties OF. See `FIGURES_HEADING`. */
+  /** What the figures are properties OF. See `FIGURES_HEADING`. Not drawn — `sr-only`. */
   heading: string;
   headingId: string;
   cells: readonly SummaryFigure[];
-  /**
-   * A note for the whole row, where one applies to more than one cell.
-   *
-   * Technology is the case: two of its five figures carry a floor, so a per-cell note
-   * rendered the same sentence twice inside one row. Everywhere else the note is the
-   * cell's own and travels on `SummaryFigure.note`.
-   */
-  note?: string;
 }) {
   if (cells.length === 0) return null;
 
   return (
     <section aria-labelledby={headingId} className="flex flex-col gap-5 md:gap-6">
-      {/* **An eyebrow, not a section heading, and that is the hierarchy fix.** All
-          four tabs set this at the size and weight of every analytical section heading
-          below it, so the tab's opening object announced itself as loudly as the
-          charts it introduces — and nothing distinguished a row of national context
-          from a section of evidence. Screen 1 sets the same kind of line as a 12px
-          caps eyebrow above its snapshot, on the reasoning that on that surface the
-          FIGURES are the subject and the heading names the class they belong to. The
-          semantic level and the visual weight are allowed to disagree.
-
-          `text-accent-warm` rather than `text-action`: the brand orange is 2.63:1 on
-          the mint ground a zone may put this on and 3.35:1 on white, neither of which
-          is legible at 12px; `--ansr-accent-warm` is 6.53:1 on white and 5.14:1 on the
-          mint. Orange gets darker as the type gets smaller. */}
-      <h2
-        id={headingId}
-        className="text-xs font-semibold tracking-caps text-accent-warm uppercase"
-      >
+      {/* **The heading is `sr-only` now, at ANSR's request.** The four subject lines
+          ("India's technology talent", and the three others) were removed from the
+          visible page — the figures open the tab directly, as the peer view's snapshot
+          does. It stays in the accessibility tree because the band points its
+          `aria-labelledby` here and a `<section>` with no accessible name is not a
+          `region`; hidden with `sr-only` it is absolutely positioned, so it is not a
+          flex item and adds no gap above the figures. */}
+      <h2 id={headingId} className="sr-only">
         {heading}
       </h2>
       {/* A `ul` of `li`s, which is the counting contract the whole browser suite
@@ -170,22 +162,14 @@ export function SummaryFigures({
                   ) : null}
                 </span>
               </p>
-              {/* **The snapshot's size and weight, and its one deviation is the ink.**
-                  That strip sets its label muted, because a snapshot cell has exactly
-                  one line under its figure and nothing for it to outrank. These have up
-                  to three — the title, the unit and a note — so the title takes
-                  `--ansr-text` and the two under it stay muted, which is this screen's
-                  standing rule: muted grey-teal is for units and qualifiers, and the
-                  title is the reading of the figure above it.
-
-                  **No reserved height on the group, which reverses what the row it
-                  replaces did.** It carried `min-h-16` so every cell's bottom edge
-                  landed on one line whatever its title's length. On a bordered grid that
-                  is worth paying for; on bare cells it buys alignment nobody can see —
-                  there is no edge to be out of line with — at the cost of up to 24px of
-                  declared empty space in three cells out of five, to tidy the one whose
-                  title wraps. The fixed FIGURE box above is kept, because that one lands
-                  every label on one line, which is the alignment a reader does see.
+              {/* **ONE line under the figure, which is the whole change here.** A cell
+                  carried up to three — the metric's title, its unit, and a note naming
+                  the population the figure covered — so five cells put between five and
+                  fifteen lines of different lengths under five figures, and the row read
+                  as ragged rather than as a set. The titles are authored to explain their
+                  own figure now: each carries the unit where the figure cannot be read
+                  without one, and the scope where the figure is one part of a larger set.
+                  See `SummaryFigure.title`.
 
                   `h3`, under this section's own `h2`. A level is an outline rather than
                   a size, and skipping one leaves a screen-reader user with a broken
@@ -196,17 +180,10 @@ export function SummaryFigures({
               >
                 {cell.title}
               </h3>
-              {cell.unit ? (
-                <p className="text-xs text-text-muted">{cell.unit}</p>
-              ) : null}
-              {cell.note ? (
-                <p className="text-xs text-text-muted">{cell.note}</p>
-              ) : null}
             </li>
           );
         })}
       </ul>
-      {note ? <p className="text-xs text-text-muted">{note}</p> : null}
     </section>
   );
 }
@@ -234,14 +211,12 @@ function Unit({ children }: { children: React.ReactNode }) {
  * one PART of a breakdown rather than a metric of their own, and which part is a
  * decision that belongs in one readable place; see `summaryCells` there.
  *
- * `floor` is where the plus is explained. `cell` puts it on the figure that declares
- * one, which is right where a tab has exactly one; `row` hands it back to the caller
- * for the whole row, which is what technology needs with two.
+ * **The floor is no longer explained in words.** The trailing `+` on a figure stays —
+ * it is authored on the metric and applied in `screen2.ts` — but the sentence spelling
+ * it out ("+ indicates a floor…") was removed from every tab at ANSR's request, so no
+ * cell carries a note about it.
  */
-export function scalarCells(
-  figures: readonly ShownMetric[],
-  { floor = "cell" }: { floor?: "cell" | "row" } = {},
-): SummaryFigure[] {
+export function scalarCells(figures: readonly ShownMetric[]): SummaryFigure[] {
   return figures.flatMap((shown) =>
     shown.shape === "scalar"
       ? [
@@ -249,9 +224,6 @@ export function scalarCells(
             id: shown.metric.id,
             figure: shown.figure,
             title: shown.metric.title,
-            unit: shown.metric.unit,
-            note:
-              floor === "cell" && shown.metric.atLeast ? FLOOR_NOTE : undefined,
           },
         ]
       : [],

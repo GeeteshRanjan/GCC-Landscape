@@ -17,6 +17,13 @@ session. Read on demand, and add to it whenever something costs more than one at
   `.next/dev/logs/next-development.log`, and the process does not recover on its own. Recovery is kill
   the `next dev` AND its `next-server` child, `rm -rf .next`, restart. Cost a full round of
   debugging once, presenting as a working tree that had suddenly stopped serving.
+- **`next build` while a `next start` is holding the port serves STALE CHUNKS that 500.** The old server
+  keeps answering, so the HTML is 200 and looks fine, but every JS chunk it references was replaced by the
+  build — so React never hydrates and the page renders perfectly with zero interactivity. The tell is a
+  console full of `500` on resources and `EADDRINUSE` at the bottom of the new server's log, meaning the
+  restart never happened. Same presentation as the `127.0.0.1` trap above and a different cause. Kill
+  `next start` AND `next-server`, `rm -rf .next`, rebuild, then start. Cost a false "the dropdown stopped
+  opening" diagnosis.
 - **`sr-only` text is reported by `innerText` and Playwright counts it visible** — its box is 1×1, not
   zero. Assert the geometry, or a "not in visible text" check passes whether the change happened or not.
 - **`getByRole("combobox", { name })`, never `getByLabel`**, which matches the open tree. Industry rows
@@ -45,12 +52,34 @@ session. Read on demand, and add to it whenever something costs more than one at
   in Inter including the `h1` lockup. `project.md`'s architecture map explains why it is set once.
 - **`.gcc-*` blocks in `globals.css` and `tokens.css` are UNLAYERED** and outrank Tailwind utilities.
   A Tailwind class cannot be interpolated: `lg:col-span-${n}` generates nothing.
+- **The consequence, and it fails SILENTLY: a utility loses to any `.gcc-*` rule that sets the same
+  property.** `text-accent-teal` on a `.gcc-select-row` rendered `rgb(0, 0, 0)`, because that class sets
+  `color`. Nothing warns — the element carries the class and paints the base value. `font-medium` on the
+  same element worked, purely because the rule sets no `font-weight`, so a half-working pair looks like a
+  colour-token problem rather than a cascade one. If a `.gcc-*` class owns the property, set the variant
+  there too; do not reach for `!important`. Same shape as `outline-none` on the filter input.
 - **Content inside the card is inset three times** — container gutter, card, zone padding — so both
   content surfaces are on `md:px-8`. The result band's ornaments are SWAPPED at `lg`, not layered, and
   the tab bar takes its corners from `.gcc-result-card`'s radius and must never get one of its own.
 - **The land's dot pattern and the blur are coupled.** `filter: blur()` on `.gcc-map-land` above the dot
   spacing merges the field into a flat fill, so the texture silently disappears.
 - **`brand_lint.py` rejects a raw hex inside a COMMENT.** Name the token, never quote its value.
+
+- **A gap that has to survive a BLUR must exceed the blur radius.** The close's tile grid at `gap-4`
+  (16px) under a 10px blur merged its two rows into one tall panel per column, so an eight-tile grid
+  rendered as four columns and read as stripes. `gap-6 md:gap-8` fixed it. Same arithmetic applies to any
+  separation behind a filter — a hairline between blurred things does not exist.
+- **Putting a DARK band at the foot of `.gcc-result-card` exposes its white hairline ring.** The card
+  draws `0 0 0 1px` at 9% white as its edge against the teal-deep page ground, which is invisible while
+  the last zone is white or mint. The close is dark, and a blurred bright graphic behind that ring read
+  as light seeping out of the card's bottom corners. The ring is not the bug; the fix is to fade the
+  band's own graphic before its edges. Anything dark added at the card's foot inherits this.
+- **A backdrop's `transform: scale()` pushes its BRIGHTEST content into the corners.** It is the obvious
+  way to hide a blur's feathered edge and it moves the problem to wherever the container is rounded or
+  clipped. A mask that fades the layer before its edges does the same job without relocating the glow.
+- **`preserveAspectRatio="none"` scales the stroke width with the geometry.** A `polyline` came out
+  thinner on one axis than the other and vanished into a blur. `vectorEffect="non-scaling-stroke"` is the
+  fix, and it is needed on any stretched SVG whose stroke has to stay a constant weight.
 
 ## Data and the catalogue
 

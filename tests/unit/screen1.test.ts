@@ -24,6 +24,7 @@ import {
 import {
   formatCount,
   formatProfessionals,
+  formatRevenueBand,
   formatShare,
 } from "@/components/public/primitives";
 import { parseDataset, type Dataset } from "@/data/schema";
@@ -857,15 +858,6 @@ describe("the snapshot", () => {
         cells.length,
       );
 
-      // Every figure is a property of the INDUSTRY, not of the five-company set our
-      // own matching chose, so the two count labels name the industry.
-      //
-      // **The first cell is a SHARE, where it used to be the industry count.** The
-      // count appeared four times on the surface in three framings — this cell, the
-      // industry card's lead, the containment chart's middle layer and the denominator
-      // of the peer count line — so the cell that is meant to remove reconciliation
-      // work was creating it. The share is the one figure the chart draws and never
-      // states.
       // **No label names the industry any more, and the SECTION HEADING does instead.**
       // Three of the four interpolated it, which put one label at 34 characters against
       // another at 24 under four figures that align perfectly, and said the same word
@@ -880,13 +872,21 @@ describe("the snapshot", () => {
       // "GCCs", never "GCC's", which ANSR asked never to appear anywhere.
       expect(snapshotHeading(view), industry).not.toMatch(/GCC's/);
 
-      expect(cells[0]!.label, industry).toBe("Of every GCC in India");
+      /**
+       * **The first cell is a COUNT of comparable centres, where it was the industry's
+       * share of the national base**, at ANSR's request. Both branches are asserted, and
+       * they are asserted as a pair: the cell is scoped to the visitor's sub-industry when
+       * they gave one and to their industry when they did not, so a change that dropped
+       * the fallback would leave the strip with a hole for the majority of visitors.
+       *
+       * These views carry no sub-industry — see `input` — so this loop exercises the
+       * industry branch; the sub-industry branch is asserted below.
+       */
+      expect(cells[0]!.label, industry).toBe("GCCs in your industry");
       expect(cells[0]!.kind, industry).toBe("figure");
-      // **The `%` travels as `suffix`, not inside `value`.** The cell sets it a step
-      // smaller than the numeral, and splitting it in the component would mean a
-      // component parsing its own data — `<1%` has a symbol at each end.
-      expect(cells[0]!.value, industry).toMatch(/^(<1|\d+)$/);
-      expect(cells[0]!.suffix, industry).toBe("%");
+      // A grouped count and no unit, where the share carried "%" as its `suffix`.
+      expect(cells[0]!.value, industry).toMatch(/^[\d,]+$/);
+      expect(cells[0]!.suffix, industry).toBeUndefined();
       // The city cell is the one `place` on the strip. It must never take the figure
       // treatment — a city name in a numeral slot, letter-spaced for digits, was the
       // loudest element on the page and the visible seam of a filled template.
@@ -898,6 +898,29 @@ describe("the snapshot", () => {
       expect(cells[2]!.label, industry).toBe("Indian cities with a GCC");
       expect(cells[3]!.label, industry).toBe("Leading GCC city");
     }
+  });
+
+  it("scopes the opening cell to the sub-industry when one was given", () => {
+    /**
+     * The other half of the pair asserted in the loop above.
+     *
+     * **The figure is the population the PEERS were drawn from** — everything above the
+     * similarity floor — and not the companies carrying the visitor's exact business type.
+     * It has to be that population or the cell disagrees with the five cards beneath it:
+     * counting the exact type gave Nike "one other sportswear brand" directly above five
+     * named apparel companies. `exactTypeCount` exists for `data:verify`, and this asserts
+     * the cell is not reading it.
+     */
+    const view = buildPeerView(
+      dataset,
+      input({ industry: "Retail", businessTypeId: "ret-apparel" }),
+    );
+    const cells = signals(view);
+    expect(cells[0]!.label).toBe("GCCs in your sub-industry");
+    expect(view.industry.businessType).not.toBeNull();
+    expect(cells[0]!.value).toBe(formatCount(view.industry.businessType!.count));
+    // Scoped below the industry, which is what makes the cell worth scoping at all.
+    expect(view.industry.businessType!.count).toBeLessThan(view.industry.total);
   });
 
   it("states the mean headcount as an average, rounded, and never as a total", () => {
@@ -1218,6 +1241,36 @@ describe("the shared formatters", () => {
     expect(formatShare(483 / 2000)).toBe("24%");
     expect(formatShare(0)).toBe("0%");
     expect(formatShare(1)).toBe("100%");
+  });
+
+  /**
+   * `formatRevenueBand` is a RULE over the stored band strings, where a company name
+   * gets a lookup table — so unlike the table, it can be wrong about a row nobody
+   * thought about. That is what this pins: every one of the seven bands, by its output,
+   * read out of the live taxonomy rather than typed in.
+   *
+   * The band is not renamed in the DATA. `taxonomy.revenueBands` order is the
+   * peer-matching contract and the strings are the keys 1834 companies carry, so this is
+   * presentation applied at the three places a visitor sees a band — the dropdown and
+   * each result screen's answer pill. Admin still shows the stored strings, correctly,
+   * because admin edits the datum.
+   */
+  it("spells a revenue band out for a visitor without touching the stored value", () => {
+    // The two ends of the set were asymmetrical in the data — one spelled out, one an
+    // operator — and this is where that stops being visible.
+    expect(formatRevenueBand("< $100 Mn")).toBe("Under 100 Mn");
+    expect(formatRevenueBand("Above $20 Bn")).toBe("Above 20 Bn");
+    expect(formatRevenueBand("$1 Bn – $5 Bn")).toBe("1 Bn – 5 Bn");
+
+    // No `$` survives anywhere, no `<` or `>` survives at the start, and nothing else
+    // about a band changes — including the en dash, which is the separator the data uses.
+    for (const band of BANDS) {
+      const shown = formatRevenueBand(band);
+      expect(shown, band).not.toContain("$");
+      expect(shown, band).not.toMatch(/^[<>]/);
+      expect(shown, band).toBe(shown.trim());
+      expect(band.includes("–") ? shown.includes("–") : true, band).toBe(true);
+    }
   });
 });
 

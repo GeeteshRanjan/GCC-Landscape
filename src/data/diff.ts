@@ -2,6 +2,7 @@ import type {
   BusinessType,
   Company,
   Dataset,
+  CloseCopy,
   HeroCopy,
   ImpactStat,
   Metric,
@@ -88,7 +89,7 @@ export interface MetricsDiff {
  *
  * Separate for a sharper reason than the metrics case: a change here re-scores
  * every peer set in the industry the type belongs to. Adding a tag to
- * "Apparel & footwear brand" silently changes who Nike sees, with no company row
+ * "Apparel & Footwear Brand" silently changes who Nike sees, with no company row
  * touched — so a diff that reported only company changes would show "no changes"
  * for an edit that reshapes the product.
  */
@@ -120,6 +121,17 @@ export interface BusinessTypesDiff {
  */
 export interface SiteContentDiff {
   hero: Array<{ field: keyof HeroCopy; before: string; after: string }>;
+  /**
+   * The close's two strings, reported exactly like the hero's.
+   *
+   * **It is in this category and not left out of the diff, which is the whole reason the
+   * category exists.** The close is on both RESULT screens rather than the entry point, so
+   * it is not literally the first thing every visitor reads — but it is the tool's only
+   * call to action, and a publish that silently changed the words on it would be the same
+   * defect as a silently changed headline. A field list rather than a keyed collection,
+   * because there are two fields and both are prose worth reading before approving.
+   */
+  close: Array<{ field: keyof CloseCopy; before: string; after: string }>;
   impactStats: {
     added: Array<Pick<ImpactStat, "id" | "value" | "label">>;
     removed: Array<Pick<ImpactStat, "id" | "value" | "label">>;
@@ -300,6 +312,7 @@ function metricsCount(diff: MetricsDiff): number {
 }
 
 const HERO_FIELDS: ReadonlyArray<keyof HeroCopy> = ["title", "lead"];
+const CLOSE_FIELDS: ReadonlyArray<keyof CloseCopy> = ["body", "ctaLabel"];
 const IMPACT_FIELDS: ReadonlyArray<keyof ImpactStat> = ["value", "label"];
 
 function diffSiteContent(
@@ -314,6 +327,13 @@ function diffSiteContent(
     after: next.hero[field],
   }));
 
+  const close = CLOSE_FIELDS.filter(
+    (field) => next.close[field] !== previous.close[field],
+  ).map((field) => ({
+    field,
+    before: previous.close[field],
+    after: next.close[field],
+  }));
   const before = new Map(previous.impactStats.map((stat) => [stat.id, stat]));
   const after = new Map(next.impactStats.map((stat) => [stat.id, stat]));
 
@@ -347,12 +367,13 @@ function diffSiteContent(
       next.impactStats.map((stat) => stat.id),
     );
 
-  return { hero, impactStats: { added, removed, changed, reordered } };
+  return { hero, close, impactStats: { added, removed, changed, reordered } };
 }
 
 function siteContentCount(diff: SiteContentDiff): number {
   return (
     diff.hero.length +
+    diff.close.length +
     diff.impactStats.added.length +
     diff.impactStats.removed.length +
     diff.impactStats.changed.length +
@@ -391,6 +412,7 @@ export function diffDatasets(
         // both fields as "changed" would be a diff against nothing. The impact
         // rows are listed because they genuinely are new rows.
         hero: [],
+        close: [],
         impactStats: {
           added: next.siteContent.impactStats.map((s) => ({
             id: s.id,
@@ -673,6 +695,13 @@ export function renderDiffText(diff: DatasetDiff): string {
      list would tell them the headline changed without telling them to what. */
   for (const change of diff.siteContent.hero) {
     lines.push(`  hero ${change.field}:`);
+    lines.push(`    - ${change.before}`);
+    lines.push(`    + ${change.after}`);
+  }
+  // The close, spelled out for the same reason the hero is: it is prose, and a reviewer
+  // needs to read what it became rather than be told a field changed.
+  for (const change of diff.siteContent.close) {
+    lines.push(`  close ${change.field}:`);
     lines.push(`    - ${change.before}`);
     lines.push(`    + ${change.after}`);
   }

@@ -71,7 +71,7 @@ test("cascades each industry's own sub-industries, and nobody else's", async ({
   const retail = tree.getByRole("treeitem", { name: "Retail", exact: true }).first();
   await expect(retail).toHaveAttribute("aria-expanded", "false");
   await expect(
-    page.getByRole("treeitem", { name: "Apparel & footwear brand", exact: true }),
+    page.getByRole("treeitem", { name: "Apparel & Footwear Brand", exact: true }),
   ).toHaveCount(0);
 
   await retail.click();
@@ -90,12 +90,12 @@ test("cascades each industry's own sub-industries, and nobody else's", async ({
   // sub-industry cannot be here — the nesting is per industry, and a company may
   // only carry a business type scoped to its own.
   const sub = page
-    .getByRole("treeitem", { name: "Apparel & footwear brand", exact: true })
+    .getByRole("treeitem", { name: "Apparel & Footwear Brand", exact: true })
     .first();
   await expect(sub).toBeVisible();
   await expect(sub).toHaveAttribute("aria-level", "2");
   await expect(
-    page.getByRole("treeitem", { name: "Retail & commercial banking", exact: true }),
+    page.getByRole("treeitem", { name: "Retail & Commercial Banking", exact: true }),
   ).toHaveCount(0);
 });
 
@@ -113,15 +113,28 @@ test("opening a cascade does not change the panel's height", async ({ page }) =>
   await page.goto("/");
   await page.getByLabel(INDUSTRY).click();
 
-  const tree = page.getByRole("tree");
+  /**
+   * **Measured on the PANEL, where it used to be measured on the tree.** The tree
+   * element is now the multi-column region inside the first pane, and its own height
+   * genuinely does change when a branch opens — the list re-flows from two columns into
+   * one to give the pane the trailing half, so the same rows stack taller. That reflow
+   * is the design (see `.gcc-select-cols--single`), and asserting against it would be
+   * asserting the list never gets columns.
+   *
+   * The panel is what the invariant was always about: a popup overhanging the form card
+   * must not grow further into the customer-logo strip, and its height must not change
+   * under the pointer mid-interaction. The fixed-height body is what guarantees it, and
+   * this is the assertion that catches the next reach for the simpler nesting.
+   */
+  const panel = page.locator(".gcc-select-panel");
   // `clientHeight`, not a bounding box. The panel arrives on a 180ms entrance that
-  // scales it from 0.98, so a box measured on open is 250.88 rather than 256 and the
+  // scales it from 0.98, so a box measured on open is short by a few pixels and the
   // comparison fails on the animation rather than on the layout. Layout size is what
   // this test is about.
-  const height = () => tree.evaluate((node) => node.clientHeight);
+  const height = () => panel.evaluate((node) => node.clientHeight);
 
   const before = await height();
-  await tree.getByRole("treeitem", { name: "Retail", exact: true }).first().click();
+  await page.getByRole("treeitem", { name: "Retail", exact: true }).first().click();
   await expect(page.getByRole("treeitem", { name: "All of Retail" })).toBeVisible();
 
   expect(await height()).toBe(before);
@@ -130,16 +143,18 @@ test("opening a cascade does not change the panel's height", async ({ page }) =>
 /**
  * The pane's two shapes, and the one way this geometry can break the page.
  *
- * It opens on the TRAILING side, so it extends past the form card toward the window
- * edge — and the room there is `layoutWidth / 2 − 400` above 1280, which is not enough
- * below 1320px. Above that threshold the widths are hardcoded from a measured table
- * (see `.gcc-select-pane`), because clamping them at runtime would mean reading the
- * viewport and the iframe forbids that. So the failure mode is a pane that overruns the
- * window and gives the framed document a horizontal scrollbar — which the parent page
- * cannot fix, since it sizes the frame's height and not its width.
+ * It opens on the TRAILING side — parent left, child right — and it now does so INSIDE
+ * the panel, which itself widens to the whole form grid from `md`. The two panes split
+ * that box in half. Nothing is positioned outside the panel any more, so the pane's
+ * width is derived from the field's rather than from a table of room measurements: the
+ * threshold is `md`, where the form grid gains its second column, and below it the pane
+ * covers the first pane as a drill-in because half a field's width is unusable.
  *
- * Below the threshold the pane covers the parent list as a drill-in. Both shapes are
- * asserted here because nothing else in the suite runs the form at more than one width.
+ * The failure mode being guarded is still the same one and it is still worth guarding at
+ * every width: anything in this popup that overruns the window gives the framed document
+ * a horizontal scrollbar, which the parent page cannot fix because it sizes the frame's
+ * height and not its width. Both shapes are asserted here because nothing else in the
+ * suite runs the form at more than one width.
  */
 test.describe("the cascade fits the width it is given", () => {
   const widths = [390, 1024, 1280, 1366, 1440, 1536, 1920] as const;
@@ -206,18 +221,19 @@ test.describe("the cascade fits the width it is given", () => {
     };
 
     // Narrow: the pane covers the list it came out of, so it starts where that list
-    // starts. It covers the filter row too, which is what a drill-in is. Asserted at a
-    // phone width AND just under the threshold, because 1366 taking the drill-in is a
-    // deliberate choice rather than a width nobody thought about.
-    for (const width of [390, 1366]) {
+    // starts. It covers the BODY rather than the whole panel, so the filter row above it
+    // stays reachable — a visitor drilled into a branch can still narrow the list.
+    // Only below `md`, which is a phone: that is where half the panel is unusable.
+    for (const width of [390, 720]) {
       await open(width);
       const narrow = await edges();
       expect(narrow.pane, `${width}px should drill in`).toBe(narrow.listStart);
     }
 
-    // Wide: it clears the list's trailing edge entirely, which is the whole claim of
-    // opening on the trailing side. Both steps, since each has its own width.
-    for (const width of [1440, 1536]) {
+    // Wide: it clears the first pane's trailing edge entirely, which is the whole claim
+    // of opening on the trailing side. Asserted from `md` up, including at the two
+    // laptop widths that used to drill in — the widened panel is what gave them room.
+    for (const width of [768, 1280, 1366, 1440]) {
       await open(width);
       const wide = await edges();
       expect(wide.pane, `${width}px should sit beside the panel`).toBeGreaterThanOrEqual(
@@ -251,7 +267,7 @@ test.describe("the cascade fits the width it is given", () => {
 test("choosing a sub-industry answers the industry with it", async ({ page }) => {
   await page.goto("/");
 
-  await chooseSubIndustry(page, "Retail", "Apparel & footwear brand");
+  await chooseSubIndustry(page, "Retail", "Apparel & Footwear Brand");
 
   /*
     A custom combobox carries its answer as the trigger's LABEL, not a `value`
@@ -264,7 +280,7 @@ test("choosing a sub-industry answers the industry with it", async ({ page }) =>
   */
   const control = page.getByLabel(INDUSTRY);
   await expect(control).toContainText("Retail");
-  await expect(control).toContainText("Apparel & footwear brand");
+  await expect(control).toContainText("Apparel & Footwear Brand");
 });
 
 test("switching industry drops a sub-industry chosen under the old one", async ({
@@ -272,9 +288,9 @@ test("switching industry drops a sub-industry chosen under the old one", async (
 }) => {
   await page.goto("/");
 
-  await chooseSubIndustry(page, "Retail", "Apparel & footwear brand");
+  await chooseSubIndustry(page, "Retail", "Apparel & Footwear Brand");
   const control = page.getByLabel(INDUSTRY);
-  await expect(control).toContainText("Apparel & footwear brand");
+  await expect(control).toContainText("Apparel & Footwear Brand");
 
   // Retail's sub-industries cannot exist under another industry, so the selection has
   // to go. Left in place the server rejects it — correctly, since ignoring it would
@@ -327,7 +343,7 @@ test("choosing it narrows the peer set to the same sub-industry", async ({
   page,
 }) => {
   await page.goto("/");
-  await submit(page, { industry: "Retail", businessType: "Apparel & footwear brand" });
+  await submit(page, { industry: "Retail", businessType: "Apparel & Footwear Brand" });
 
   await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
 
@@ -405,7 +421,7 @@ test("choosing it narrows the peer set to the same sub-industry", async ({
  */
 test("the peer block's lead describes the set under it", async ({ page }) => {
   await page.goto("/");
-  await submit(page, { industry: "Retail", businessType: "Apparel & footwear brand" });
+  await submit(page, { industry: "Retail", businessType: "Apparel & Footwear Brand" });
 
   const peers = page.locator("#peers");
   await expect(peers).toBeVisible();
@@ -479,7 +495,7 @@ test("the peer block's lead is true with no sub-industry given", async ({ page }
 
 test("the tag vocabulary never reaches the browser", async ({ page }) => {
   await page.goto("/");
-  await submit(page, { industry: "Retail", businessType: "Apparel & footwear brand" });
+  await submit(page, { industry: "Retail", businessType: "Apparel & Footwear Brand" });
 
   await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
 

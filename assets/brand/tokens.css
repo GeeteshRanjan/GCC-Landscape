@@ -525,6 +525,38 @@
   --ansr-shadow-lg: 0 12px 32px color-mix(in oklab, var(--ansr-teal-deep) 14%, transparent),
                     0 2px 6px color-mix(in oklab, var(--ansr-teal-deep) 8%, transparent);
 
+  /* ---- Occlusion -------------------------------------------------------
+     How far back a frosted layer pushes what is behind it. Part of elevation
+     rather than a filter effect: these are the three distances at which a
+     surface reads as veiled, as sealed, or as absent.
+
+     **The numbers are set by what each one has to DESTROY, not chosen for
+     feel.** The smallest numeral either public screen sets is 12px
+     (`--ansr-text-xs`), whose stroke lands around 1px; a Gaussian blur stops a
+     glyph being resolvable at roughly 3x its stroke width, and stops it being
+     GUESSABLE from its silhouette at roughly 8x. So:
+
+       `sm`  — a veil. Edges soften, a figure stays legible. For depth behind
+               live content, never for concealment.
+       `md`  — sealed. No numeral at any size these screens use survives it,
+               and neither does the digit COUNT, which is the part a silhouette
+               would otherwise leak.
+       `lg`  — absent. What the shape was is no longer recoverable either.
+
+     **None of these is a concealment MECHANISM and none may be used as one.**
+     A blur is a paint-time effect over content the browser already has, so
+     anything withheld is withheld on the server — see `publicMetric`. These
+     exist so a surface that is genuinely empty can be DRAWN as withheld.
+
+     One consumer today: the close's backdrop takes `md`. It is a field of
+     authored blocks rather than text, so what set the step there was how much
+     STRUCTURE has to survive — at `lg` the lattice smears to an even wash and
+     the band reads as flat. `sm` and `lg` are the two ends of the same scale and
+     are kept so the next placement picks a step rather than a number. */
+  --ansr-blur-sm:  4px;
+  --ansr-blur-md: 10px;
+  --ansr-blur-lg: 18px;
+
   --ansr-z-base:    0;
   --ansr-z-raised:  10;
   --ansr-z-sticky:  100;

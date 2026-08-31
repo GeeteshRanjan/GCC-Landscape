@@ -980,9 +980,20 @@ an oversight.
 **The panel is not a plain white rectangle, and the four things that make it read as software
 are all cheap.** Rows are **inset chips** — held back 4px and rounded to `md` — because a fill
 that runs to the panel's own edges makes the box read as a table with a highlighted row, and
-the same fill inset reads as a target. A **check glyph in the accent** is the second signal on a
-selected row beside its weight, since the fill is already spoken for by the keyboard's position
-and a state sharing a signal with another state is not a state. The tier headings carry a
+the same fill inset reads as a target. A selected row is **Medium weight in the heading teal**,
+since the fill is already spoken for by the keyboard's position and a state sharing a signal
+with another state is not a state.
+
+**A check glyph in the accent was that second signal and it has been removed, at ANSR's
+request.** It cost the whole panel its alignment to restate one answer: a mark that appears only
+on the selected row would shift that row's label by 22px, so the space had to be reserved on
+every row — all 24 industries and all 201 countries — which pushed every label 22px inside the
+tier heading and the hint line above it, and forced the heading's own inset to be a `calc`
+reaching past it. What it bought was a tick on the one row the visitor had already chosen, which
+the trigger directly above the panel is also displaying in full. Weight from Light 300 to Medium
+500 is a 200-unit jump and reads clearly; the teal takes over the colour the glyph was carrying,
+so the pair still survives greyscale on the weight, and `aria-selected` was always what the
+assistive reading used. The tier headings carry a
 **hairline above** rather than extra space: two tiers separated by space alone read as two lists
 in one box, and the rule is what makes them read as one list in two parts. And a **count** on a
 branching row says both that a branch exists and how deep it is, which a bare chevron does not —
@@ -1048,9 +1059,11 @@ and `scrollIntoView` reads nothing, reports nothing, and is inert inside a frame
 content, which is also the one case where the panel could not be cut off anyway. The panel's own
 "keep the active row in view" effect has always used the same call.
 
-Three details it took a measurement to get right. The target is the **PANE** when a branch is
-open, because at 1440 and up the pane is positioned outside the panel's border box, so revealing
-the panel says nothing about whether the pane beside it fits. `block: "nearest"` scrolls by the
+Three details it took a measurement to get right. The target used to be the **PANE** when a branch
+was open, and had to be keyed on `branch` as well as `open`, because the pane was then positioned
+outside the panel's border box and could extend past whatever the browser had just revealed. The
+pane is a flex sibling inside a fixed-height body now, so the panel's rectangle is the whole popup
+at every state and one call on `open` covers it. `block: "nearest"` scrolls by the
 minimum and does nothing when the panel already fits, so it cannot move the page under someone who
 did not need it. And **`scroll-margin-block-end: var(--ansr-space-6)` is load-bearing, not air**:
 the scroll happens on the frame the panel mounts, when the entrance keyframe still has it at
@@ -1089,39 +1102,149 @@ drawn beside it fixes all three — **the panel is now exactly as tall open as c
 browser spec asserts it, because the simpler nesting is what anyone would reach for next.
 
 **It opens on the TRAILING side — parent left, child right.** ANSR's call, and the direction a
-cascade reads in. What it costs is width. This control is the form's right-hand column at every
-viewport, so the room for the pane is whatever is left between the card's inner edge and the
-window edge:
+cascade reads in. It now does so INSIDE the panel, as a flex sibling of the first pane, and the
+two split the body in half.
+
+**The version this replaced was positioned OUTSIDE the panel, and the whole of what follows is
+the reasoning that is now dead.** The pane had to fit between the card's inner edge and the window
+edge, so its widths came from a measured table:
 
 | layout width | 768 | 1024 | 1280 | 1366 | 1440 | 1536 | 1920 |
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | room (px) | 88 | 112 | 240 | 283 | 320 | 336 | 560 |
 
 Above 1280 that is exactly `layoutWidth / 2 − 400`, because the container caps at 1280 and the
-card is centred in it. **Nothing may clamp the pane to that number at runtime** — reading the
-viewport is what the iframe forbids — so the widths are taken FROM the table: 16rem from 1440,
-18rem from 1536, each leaving at least 56px for the window edge and a classic scrollbar.
-Re-measure the table if the card, the container or the grid changes; every value depends on all
-three. A browser spec asserts no horizontal scrolling at seven widths, because a pane that
-overruns the window gives the framed document a scrollbar the parent page cannot fix.
+card is centred in it. Nothing could clamp the pane to that number at runtime — reading the
+viewport is what the iframe forbids — so 16rem was taken from the table at 1440 and 18rem at 1536,
+and **below 1440 the pane became a drill-in** because there was no room beside it. Every value
+depended on the card width, the container cap AND the grid all staying put, none of it could be
+checked by a test, and the two laptop widths most visitors are on drilled in.
 
-**Below 1440 the same pane becomes a drill-in**, covering the parent list with its own header as
-the way back. One element and two shapes rather than a second component that can drift from the
-first. **The threshold is 1440 rather than the narrowest width that fits anything**: a 13rem pane
-does fit from about 1320 and was tried, and at that width nearly every sub-industry wraps to two
-lines beside a 388px list. The full-width drill-in gives each name one line, so it is the better
-shape there rather than a fallback — 1280 and 1366 laptops drill in on purpose.
+Widening the panel deleted all of it. The pane splits a box whose width is the form grid's, so
+there is nothing left to measure: the side-by-side shape works from `md` instead of from 1440, and
+at the `lg` body's 800px each half is 400px — one line for every industry name and every
+sub-industry name in the taxonomy, where the 16rem pane wrapped or truncated most of them. The
+browser spec that asserted the two shapes now asserts the drill-in at 390 and 720 and the split
+from 768 up, and the no-horizontal-scrolling sweep at seven widths stays exactly as it was,
+because a popup that overruns the window still gives the framed document a scrollbar the parent
+page cannot fix.
 
-**Re-opening the control does NOT re-open the visitor's branch.** Tried, and worse: below 1440 the
-pane covers the whole panel, filter included, so a visitor coming back to change their industry
-found the list and the filter both behind a pane they had not asked for. It loses nothing — the
-trigger already reads "Retail · Apparel & footwear brand" — and the keyboard lands on the industry
-that owns the answer.
+**Below `md` it is still a drill-in**, covering the first pane with its own header as the way
+back, because there the panel is one field wide and two halves of it are unusable. One element and
+two shapes rather than a second component that can drift from the first. It now covers the BODY
+rather than the whole panel, so the filter stays reachable while a visitor is inside a branch —
+which was a real fault in the old shape, not a refinement.
+
+**Opening a branch drops the first pane from two columns to one.** The body's box does not change
+— same width, same height — so nothing moves around the panel; the list re-flows into the half it
+still has. That reflow is visible and is the accepted cost of parent-left/child-right at this
+width. The alternative was two columns of 255px, where two thirds of the industry names wrap; a
+reserved empty pane was also tried and is worse, because 272px of prompt beside the list is dead
+space at the moment a visitor is scanning 24 rows. The row that was pressed keeps its fill and its
+leading rule, so the reflow has an anchor.
+
+**Re-opening the control does NOT re-open the visitor's branch.** Tried, and worse: a visitor
+coming back to this control is usually there to change the INDUSTRY, and pre-opening a branch puts
+the industry list behind a pane below `md` and into a single column above it — narrowing, in both
+cases, the exact thing they came back for. It loses nothing — the trigger already reads
+"Retail · Apparel & Footwear Brand" — and the keyboard lands on the industry that owns the answer.
+
+### The panel is wider than the field, and the options are in columns
+
+**The failure this fixes is findability, and findability is this control's real failure mode.**
+A popup one form field wide showed eight rows of 24 industries in a 16rem scrollport, so a visitor
+was deciding between industries without seeing the set they were deciding within. One who cannot
+find their own row takes the broad answer instead, and the peer set loses its primary ordering
+signal — 0.9-plus coherence with a sub-industry against 0.13 without one in Manufacturing, measured
+in `docs/data-audit.md`. No amount of scoring work recovers that; only the control can.
+
+**The widening is expressed in the FIELD's own width, never the viewport's.** The form grid is two
+equal columns with a 24px gap, so the sibling column is `100% + 24px` of this field, and a negative
+inline-start margin of exactly that against `inset-inline: 0` gives a panel spanning the grid — a
+percentage margin resolves against the containing block's inline size, and the containing block is
+the field's own wrapper. Nothing measures the card, the container or the window. Gated on `md`,
+where the grid gains its second column; below that there is no sibling to widen into and the panel
+is field-width with one column, which on a phone is the only shape available anyway. Measured, for
+the two widths the column counts are fitted to: the grid is **592px at `md` and 800px from `lg`**.
+
+**It is LEADING-side, which is why `wide` is a per-control prop rather than derived from the option
+count.** Only a field in the grid's trailing column can widen this way — industry and headquarters
+are, revenue band is not — and a count-based rule would eventually widen the leading column's panel
+off the card.
+
+**Columns are CSS multi-column, and that is a keyboard decision as much as a layout one.** Content
+flows down column one and then down column two, which is the order the keyboard walks — so
+ArrowDown moves down the column under the pointer and steps to the top of the next at the bottom,
+with no separately-derived navigation order to fall out of step with what is drawn. A grid with
+`grid-auto-flow: row` would have filled left-to-right and put the keyboard order across the columns.
+Two traps came with it, both now written into the CSS: **a multi-column box with a definite height
+becomes a fragmentainer**, so height goes on a wrapper and the columns run at height auto, or content
+past the height adds columns and overflows sideways instead of scrolling; and **tier headings need
+`column-span: all`**, or the two tiers interleave down one column and a heading lands mid-column with
+its hairline cutting across two rows of the same tier. Spanning is also what makes the columns
+symmetrical per tier rather than balanced across the whole list.
+
+**Two columns for industry, three for countries, and the counts are measurements.** The taxonomy's
+longest industry name is 41 characters, which at 14px needs about 290px of label — so at 800px two
+columns give 400px each and every name stays on one line, while three would give 267px and wrap two
+thirds of them. A country name is short, so the list that gains most from density is also the one
+that can afford it.
+
+**The body is a FIXED height on a wide panel and a CEILING otherwise.** The fixed height is what the
+cascade exists for. The ceiling is for revenue band: given a height it drew seven rows at the top of
+a 416px box with 230px of nothing under them, which reads as a list that failed to load rather than
+as a short list. Heights are fitted to the industry list, the longest thing that has to fit whole —
+24 industries in two tiers at a 26px row is 364px, so 26rem from `lg` shows the entire taxonomy with
+no scrolling at all.
+
+### The type came down, and the fills came off the chrome
+
+**A row is 14px on `--ansr-leading-snug` at 4px of block padding — 26px, where it was 40.** Every
+pixel of row height is a row not on screen: at the old measurements 24 industries needed 960px and
+had 256. **16px was never a legibility floor here.** The floor that matters is on the TRIGGER, where
+iOS zooms the viewport for anything smaller, and the trigger keeps 16px for it; a row in an already
+open popup is not a text input and cannot trigger that behaviour. `sm` is also the size this project
+already sets dense evidence at, so the popup is now in step with the tables rather than a step above
+them. `--ansr-leading-snug` rather than `normal` because a wrapped two-line label has to read as ONE
+row, and at 1.5 two lines of one row are hard to tell from two rows.
+
+**Row fills are diluted into `--ansr-surface-pale` rather than into white**, at ANSR's request: the
+fill is the tint that marks India's column in the technology capability grid, one step up so it can
+carry a hover. Diluting into white drove the mix toward a neutral as it lightened; diluting into
+`teal-50` keeps the mint in it at every strength. 45% rather than the India tint neat, because
+`teal-50` is ~2% off white — a band marker on a table, and invisible as a hover state on a white
+list. **Matte is carried by what is absent**: one flat fill, no gradient, no inner shadow, no border,
+no ring, and the row's only other change on hover is its cue's ink.
+
+**Nothing in the panel's chrome is tinted.** The filter row, the hint line and the pane header were
+all on `surface-pale` and all three are now on `surface`, separated by one hairline. With the hover
+wash and the branch row both in the mint family, a tinted chrome strip put the panel's loudest mint
+where nothing was happening — and stacked three coloured bands to read past before the first
+choosable option. **The hint is a supporting note, not a strip**: 12px Medium in
+`--ansr-text-muted`, with the same padding above as below. Medium rather than the brand's Light 300,
+which is right for a paragraph and is too little ink at 12px in grey beside a 14px option list, and
+this line has to be noticed once.
+
+### The revenue band is spelled out for a visitor and never renamed in the data
+
+`< $100 Mn` is drawn as **Under 100 Mn**. Two changes, both ANSR's: a mathematical operator in a list
+a CFO reads is a glyph that has to be decoded where the word is not — and it makes the two ends of
+the set symmetrical, since "Above $20 Bn" was already spelled out — and the currency mark comes off
+all seven rows to be stated once in the panel's hint, because up to two `$` a row is fourteen marks
+saying one thing and crowding the figures that differ.
+
+**The data is untouched.** `taxonomy.revenueBands` order is the peer-matching contract and the
+strings are the keys 1834 companies carry, so renaming would cascade into every company, move the
+`data:verify` profile, and put a taxonomy migration behind a typographic decision. `formatRevenueBand`
+is presentation, applied at the three places a visitor sees a band; **admin keeps showing the stored
+strings, which is correct, because admin edits the datum.** The pill has no hint to carry the unit so
+its LABEL does — "Revenue band (USD)" — and both result screens use the same one, because a band read
+one way in the control and another in the echo of the visitor's own answer is two answers.
 
 **Choosing an industry does not close the panel.** It commits the industry — the trigger
 updates, so the answer visibly took — and opens its branch, because that is the only moment a
 visitor learns a narrower answer is available. The branch's leading row is **`All of {industry}`,
-already checked**, which is both the way out and the statement of what happens if they take it;
+already marked as the answer**, which is both the way out and the statement of what happens if they take it;
 a Done button would have left them to work out what they were agreeing to. Pressing an
 already-open branch row commits and closes, so a visitor who pressed "Retail" twice has said
 what they mean. Four exits, none of them a dead end: that row, a sub-industry, Escape, or a
@@ -1137,7 +1260,7 @@ Four details, each with a wrong version that looks fine:
   industry followed by every row in the pane it had just opened — a screen reader would announce
   the whole cascade as the name of the row that opened it. Found by four specs failing to locate
   a row called "Retail".
-- **The trigger shows both halves** — "Retail · Apparel & footwear brand". The field is labelled
+- **The trigger shows both halves** — "Retail · Apparel & Footwear Brand". The field is labelled
   "Industry", so a trigger reading only the sub-industry would leave the industry answered and
   invisible.
 - **The tier headings are `role="presentation"` in tree mode.** A tree's only legal grouping is
@@ -2024,6 +2147,11 @@ announced nothing would be the dishonest version.
 
 ### The page ends at the evidence strip
 
+**Superseded in part — the close is back on both screens. See "The close comes back, as a paywall
+band" at the end of this file.** The evidence strip is still the last EVIDENCE and still terminates the
+argument; what follows it now is the ask. Everything else this pass removed stayed removed, which is why
+the close's return is one band of three elements rather than the five things listed here.
+
 Removed at ANSR's request: the closing CTA card, the "Talk to ANSR" panel, the review-profile action,
 the sunburst, and the methodology, coverage and privacy links. There is no footer. The one compact
 source line the page carries is inside the strip that terminates it — the disclaimer, the band-midpoint
@@ -2686,10 +2814,6 @@ when both were on the trailing edge at the same time.
 
 ### Still open after this pass
 
-- **The card's foot on Screen 2 dissolves into the page ground.** Its closing CTA is a dark band and
-  the ground behind it is the same family, so only the hairline ring separates them. Screen 1 has no
-  such problem, its last zone being white. Either the CTA takes a different dark step or the page
-  ground does; it is one token either way and it needs ANSR's eye rather than a guess.
 - **The lockup's registered mark reads as a dot at 24px.** It is part of `ansr-logo-on-dark.svg` and
   therefore part of the literal-use exception, but it is visually close to the typed period that was
   just removed. A version of the file without the ® would settle it, and that is an asset request.
@@ -3428,9 +3552,17 @@ appears once — rather than by subtracting an intersection. Arithmetic in `docs
 
 ### Copy that named the arithmetic instead of the claim
 
-- **"Of every GCC in India"**, where the label said "Share of India's GCCs". The old one named the
-  operation, and "India's GCCs" reads as a possessive that could be India's share of something. "Share
-  of" is also the one phrase a reader can infer from the `%` beside it.
+- **"GCCs in your sub-industry"**, and the share this label belonged to is gone. Two moves, both at
+  ANSR's request. The cell went from `industry.shareOfIndia` back to a COUNT — of `businessType.count`
+  where a sub-industry was given, `industry.total` where it was not — on the ground that a percentage of
+  every GCC in India describes the market's composition while a visitor arrives wanting to know how many
+  companies like theirs are already here. And the label lost the word "Comparable". What the share was
+  solving is still real and is recorded above under the arithmetic: the count is a number the reader also
+  meets on the containment chart's middle layer and as the denominator of the peer count line. Two
+  consequences: the `<1%` special case for a thin industry is gone, a count needing no such branch, and the
+  sub-industry label reads marginally wider than what it counts, since the figure is the population above
+  the similarity floor rather than everything sharing one label. Accepted because the cell and the five
+  cards below it are drawn from the same population, which is the disagreement that mattered.
 - **"Snapshot of {industry} GCCs in India"** as the section heading, at ANSR's wording. Never "GCC's".
 - **"Inside India's GCC base"** for the containment card. "Your industry within India's GCC base" is 37
   characters and set on two lines at 20px Bold in a ~393px card, which pushes the chart down far enough
@@ -4355,25 +4487,34 @@ note is the disruption cell's, which describes the whole set and therefore has n
 take — and it deliberately does not count the cities ("across the cities assessed", not "the four
 cities assessed"), because an admin adding a fifth city would falsify a count silently.
 
-### The refusal: "0 days" is not in this dataset
+### The refusal that was overruled: "0 days" is not in this dataset
 
 The composition asks the fourth cell to read **0 days**, noted as the lowest recorded across the
 cities assessed. The four cities are 4, 2, 3 and 6 days, and the metric's own note puts the national
 figure at 3–6. There is no zero.
 
-Three options and why the third won:
+Three options were on the table:
 
 - **0** — an invented figure, on a screen whose entire argument is that nothing on it is invented.
-  Not available at any price.
 - **2** — truthful, and the best case presented as the fact. The label says "Days lost to disruption",
   not "in the best city"; the note would carry the scope and the 36px numeral would carry the claim.
 - **2 – 6** — both real ends. It states no best case, and it preserves the one thing removing the
   by-city section would otherwise have thrown away, which is how far the cities differ.
 
-Drawn as the display figures with a spaced en dash, `aria-hidden`, and `sr-only` "to" beside it, so
-the cell is announced as "2 to 6" rather than as one run of digits. Both the presence of the extent
-and the ABSENCE of a zero are asserted by a browser spec, so if ANSR confirms a real zero it becomes a
-dataset edit with a visible test change rather than a number somebody typed into a component.
+**The extent shipped, and the project owner then instructed the cell to read 0, explicitly overriding
+this.** So the cell now states a figure the dataset cannot evidence. What the reversal changed and what
+it did not:
+
+- The literal lives in `ops-view.tsx` as `DISRUPTION_FIGURE`, never in the metric. `ops-disruption-days`
+  still holds only supplied values, admin still edits real ones, and the fabrication is one constant in
+  one file rather than a number in the data.
+- The four city figures are not on the tab, so nothing on screen contradicts the 0.
+- The browser spec that asserted the ABSENCE of a zero now asserts its presence, and says in its own
+  comment that it is the reversal. Without that, the next pass over this file reads the 0 as a bug and
+  restores the extent.
+- `extentOf` is deleted rather than parked. Nothing on this tab reduces a breakdown to a pair now, and
+  the en-dash-plus-`sr-only`-"to" rendering in `summary-figures.tsx` (`SummaryFigure.high`) has no
+  caller — kept, because it is the shape any future extent would take.
 
 ### The summary cards carry no glyph, unlike HR's
 
@@ -4519,6 +4660,16 @@ things make that legible rather than merely honest, and the first was found by r
 - **Both ends of the rail are labelled — "0" and the base's own figure.** Without them two marks at 75%
   and 100% of a zero-based track render as a short segment floating at the right, which is the exact
   defect `RangeBar` was rebuilt to fix. The first render had the ticks missing and looked unfinished.
+- **The comparator's mark carries its own figure beneath it — 75, 85, 81 — added at ANSR's request.** It
+  is the third appearance of that number on one card: the pair of figures above, this label, and the delta
+  beside the heading as a difference from 100. Normally the repetition this screen removes; kept because
+  the rail is where a reader looks to see WHERE the cheaper option sits, and a positioned mark with no
+  number on it sends them back up to the pair to work out which of the two it is. Centred on the mark and
+  `whitespace-nowrap`, so it never wraps and drags the row's height; the base needs no such label, the rail
+  ending at it. What it has to clear is that end tick — at 85 against 100 the two sit 15% of the rail
+  apart, about 30px on the narrowest card this draws in, which is enough for two two-digit labels. The
+  browser spec that reads positioned marks out of the `aria-hidden` wrapper now expects three per card
+  rather than two.
 - **The difference is stated in text**, as the signed delta beside each card's own name — "−25 vs Tier 1
   cities". Index POINTS, not a percentage: the base is 100 so the two coincide, but writing "%" would be
   a component adding a unit the data does not carry.
@@ -4531,18 +4682,26 @@ things make that legible rather than merely honest, and the first was found by r
   table. The argument is what the reader is doing: four functions against five locations is twenty
   figures compared DOWN a column as much as along a row, and a row of dots cannot be read down.
 
-Four decisions inside the table:
+**The bars and the emphasised row are gone, at ANSR's request, and the table is figures alone.** Four
+decisions are deleted with them and are recorded here because each was measured, so restoring either mark
+means restoring the reasoning rather than re-deriving it: the base column carried no bar (India is the
+same figure in every row, so a bar on it would be four identical marks encoding the axis — sixteen bars,
+not twenty); the bars were bare and shared one maximum, the grid's largest cell at 367, which is the
+self-labelling exemption that licenses dropping a track; `teal-500` measured 5.14:1 on white and 4.04:1 on
+the emphasised row's own tint, both clear of the 3:1 floor 1.4.11 asks of a non-text graphic; and where the
+tinted column and the tinted row crossed, the ROW won, because two tints of one value draw an L that breaks
+in a single cell and a row whose fill stops in the middle reads as a rendering fault.
 
-- **The base column carries no bar.** India is the same figure in every row by definition, so a bar on it
-  would be four identical marks encoding the axis rather than a value. Sixteen bars, not twenty.
-- **The bars are bare and share one maximum** — the grid's largest cell, 367. Every cell's bar starts at
-  the same inset with the same width available, and the longest bar in the grid carries its own figure,
-  which is the self-labelling exemption that licenses dropping a track.
-- **`teal-500` at 5.14:1 on white and 4.04:1 on the emphasised row's tint**, both clear of the 3:1 floor
-  1.4.11 asks of a non-text graphic. Measured, because the emphasised row puts a mark on a tint.
-- **Where the tinted column and the tinted row cross, the ROW wins.** Two tints of one value would draw
-  an L that breaks in one cell; the row is the reader's own function, and a row whose fill stops in the
-  middle reads as a rendering fault. The column's header still marks it.
+What the removal cost, stated plainly: the bars were this card's only encoding of magnitude, so twenty
+indices are now compared as numbers. Defensible at four rows by five columns and not at a wider grid.
+What it bought: the figures are one element per cell, so they align on each column's own start edge, the
+table needs no minimum width and only a phone scrolls it — and with no emphasised row, `IndexTable` reads
+no admin-editable string at all, which returns `metric-card.tsx`'s capability grid to being the only place
+on this screen that does.
+
+**The India column keeps its fill and its heading-teal figures**, which is what the instruction asked to
+keep. It is the base every other figure is read against, so it is the one thing in the grid still marked —
+and with the row emphasis gone it runs unbroken, so the crossing rule above has nothing left to arbitrate.
 
 ### The shared legend became a per-figure key
 
@@ -5006,3 +5165,165 @@ quarters. HR refuses an "Update roles & cities" button, the tool asking five que
 role, a level or a city — the exact defect the chevroned answer pills were rebuilt to remove. Operations'
 promotion of three breakdowns to summary figures is lossy and stays honest only because each cell's note
 is the part's own LABEL; `ops-grade-a-office-stock` loses its vacant figure, accepted by the project owner.
+
+
+## The close comes back, as a paywall band
+
+**Restored on both result screens at the project owner's decision**, having been removed twice at
+ANSR's request — Screen 1's on the page-end instruction, Screen 2's in the zone rebuild. Restored
+together, because a close on one screen only is the largest possible version of the drift the shared
+component exists to prevent. `project.md` carries the rules; this is what was tried and rejected on the
+way, in the order it happened.
+
+**The shape is a blurred content field with the ask centred on it.** The instruction was a
+"blurred-background paywall / premium upsell overlay", against a reference where a grid of real content
+sits out of focus under a centred lockup, heading, body and buttons.
+
+**What is blurred is authored, and this is the one line in the whole feature that cannot move.** The
+obvious build — render the four gated metrics and put a filter over them — is a leak, not a style
+choice: a paint-time filter is reversible from markup the browser already holds. It is also impossible
+here, which is the useful part: `publicMetric`'s gated branch has no `value` and no `structure` field,
+so there is nothing to render. So `TILES` in `closing-cta.tsx` is a hand-written field of
+chart panels that reads nothing from the data, `aria-hidden` in full, and a spec on each screen
+asserts the layer's text is empty. Deriving the block sizes from the real metrics was considered for
+about a minute and rejected: it would make an ornament a function of figures that must not cross the
+gate.
+
+**Five attempts at the field. Each failure is worth keeping because each was a different mistake.**
+
+1. **Blur `lg` (18px), blocks at 22%, backdrop opacity 0.55, scrim ellipse 78% wide.** Invisible. Three
+   compounding errors: at 18px the field smeared to an even wash, 22% of teal-300 composited to within a
+   couple of RGB values of the ground, and the scrim was a horizontal falloff so it covered the middle of
+   the band at full strength — where all the content was.
+2. **Brighter blocks, blur `md`, scrim widened to 120% so the falloff is vertical.** Still nearly
+   invisible, because the columns' own `justify-center` put everything in the middle, which the scrim was
+   solid over BY DESIGN. The top and bottom strips — the only places it cleared — held nothing but padding.
+3. **Columns at `justify-between` over the full height.** The field finally showed. It was also four
+   copies of one shape, which read as a pattern rather than as content.
+4. **Six tile kinds, flat 78% veil.** The vignette went, and the field went dim with it — a flat veil dims
+   everywhere, so its weight is set by the FAINTEST ink on the band, and 78% is what a muted body line
+   needs. At 78% the tiles stop being distinguishable, which is the whole point of them. Two of the six
+   kinds were also redundant: ranked rows and a small table both blurred to the same thing as each other
+   and as the figure tile's label rows.
+5. **Four kinds, tile panel fills, 180-degree rotational symmetry, veil at 58%, white body copy.** This is
+   the one that works, and the four changes are one decision each:
+
+   - **A faint panel fill behind every tile.** The single biggest win. Blocks on the bare ground are
+     scattered marks; the same blocks on eight faint cards are a dashboard. "Randomly placed" was an
+     accurate description of the version without it.
+   - **Rotational symmetry rather than mirrored.** Read row one left to right and row two right to left
+     and the kinds are in the same order, so every tile has a partner diagonally opposite and the field is
+     balanced about the centre where the copy sits. A mirror was tried first and puts identical shapes
+     side by side across the centre line, which is the repeated-pattern problem again.
+   - **A grid gap WIDER THAN THE BLUR RADIUS.** At `gap-4` (16px) under a 10px blur the two rows merged
+     into one tall panel per column and the grid read as four columns, not eight tiles. `gap-6 md:gap-8`
+     is the fix and the rule generalises: any gap that has to survive a blur has to exceed its radius.
+   - **White body copy, which is what bought the veil back down to 58%.** With the binding ink at
+     8.08:1 instead of 4.77:1 there are twenty points of veil to spend on the field. The band is
+     white-ink-only for the same class of reason `ask-hero.tsx` is, and hierarchy is carried by size and
+     weight instead of a colour step.
+
+**The donut is drawn as a swept arc, not a plain ring.** A full ring blurs to an even annulus and reads as
+a bevelled hole; a visible sweep reads as a share of something. One element — a `conic-gradient` for the
+sweep, a `radial-gradient` mask for the hole — because an arc drawn as a border plus an overlay to cover
+the middle is two shapes that have to stay concentric through a blur, and they do not. It is the only
+round thing in the field and the largest single shape in it, both deliberately: it is what stops the field
+reading as one repeated motif.
+
+**The sparkline needs `non-scaling-stroke`.** `preserveAspectRatio="none"` is what keeps it a sparkline at
+any column width, and it scales the two axes differently — which takes the stroke width with it, so the
+line came out thinner vertically than horizontally and vanished into the blur.
+
+**A real defect came out of this and is worth remembering as a class.** The backdrop carried
+`transform: scale(1.06)`, to push the blur's feathered edge off the band. What it actually did was push the
+field's BRIGHTEST content into the band's corners — and the close is the card's last band, so those are the
+card's bottom corners, where `.gcc-result-card` draws a 9%-white hairline ring against the teal-deep page
+ground. Bright blur behind a light ring on a dark ground read as light seeping out of the card's foot. The
+ring was not the bug and was not touched: **putting a dark band at the foot of a card whose edge treatment
+was designed against light content is what exposed it.** The fix is a mask that fades the field before the
+band's own edges, longer at the bottom where the radius is, which also stopped the field looking cropped
+mid-panel. It is not the vignette that was removed — that was a radial spotlight on the axis the reader
+looks along; this does nothing behind the text.
+
+**On a phone the field is faint and that is the correct trade.** Two columns in a short band under a
+scrim sized to protect three lines of copy leaves very little showing. The alternative — dropping the
+backdrop below `lg`, which is what the header band does with its map — loses the paywall signal
+entirely, and a faint field says more than a flat one.
+
+**`--ansr-surface-inverse-soft`, not the inverse teal, and it is structural.** The card floats on flat
+teal-deep, so an inverse band at the card's foot is the same value as the ground it is lifted off and
+the card loses its bottom edge — the edge that makes the whole surface one object. Teal-800 exists for
+this and its token note says so. It also can take no warm ink, which is why the band's one orange role
+is the button and nothing else, and why the eyebrow — while it existed — was teal-bright.
+
+**Three elements were built, shipped and cut, in this order.**
+
+- **A bordered panel NAMING each withheld metric**, beside the ask on a 7/5 split, with frosted glass over
+  an empty slot per row. Honest — a gated title crosses the gate and may contain no digits, and the slots
+  were empty in the DOM — and cut as too much band for a close. It took `withheldTitles`, the prop that
+  carried the names from `page.tsx`, `.gcc-close-sealed` / `-slot` / `-frost`, and `--ansr-blur-sm`. The
+  blur tokens survive because the backdrop uses `md`.
+- **A "NEXT STEP" eyebrow.** A label for the band over a heading that is itself the next step.
+- **Per-status branched copy.** See below.
+
+**The copy was rewritten four times and ended up SUPPLIED, FIXED and EDITABLE.** First restoration: two
+sentences per body, the industry interpolated, and a `ctaLabel` per branch — "Talk to ANSR about building
+your India GCC" and two variants, on each screen, so one sentence had six forms and the longest wrapped
+inside a pill on a phone. Second: one line per body, no interpolation, one shared label. Third: a supplied
+heading, line and label, identical on both screens. Fourth: the heading deleted and the two survivors moved
+into `siteContent`.
+
+**That third step unrendered `gccStatus` again, and it is a trade rather than a loss.** Branching a close on
+a field the form does not ask for was up to eighteen authored sentences for a band with three elements in
+it — and the two screens' headings had already converged once by accident, which is the thing the branch was
+supposed to make impossible. Screen 1 said "See what this looks like for your roles" against Screen 2's
+"What this looks like for your roles"; a visitor met the difference by pressing a tab. One shared constant
+makes that unreachable, which is a better answer than the test written to catch it. `functionFraming` stays
+exported and tested on all three values; `peerClosing` was deleted rather than kept, because a second
+unrendered copy of one branch is two things to keep in step for no reader.
+
+**The HEADING is gone and the supporting line took its place rather than its size.** "Unlock the full GCC
+landscape" over "Access the complete dataset, deeper benchmarks and detailed cost structures" was the same
+thing said twice at two sizes — a promise, then the specific version of it. Cutting the promise leaves the
+sentence worth reading. The heading's words survive as the band's `aria-label`, which is where they are
+still doing real work: with no heading the section needs an accessible name or it is not a `region`, and
+`aria-label` is how `#function-metrics` already solves exactly this. An `sr-only` `h2` was the alternative
+and is worse — an invisible level in the outline, with the test-suite costs `docs/traps.md` records.
+
+**Promoting the line to the heading's old display scale was wrong and was reverted the same session.** At
+24/30/38 with `tracking-display` a 98-character sentence is three lines of display type, and the band stops
+being a close and starts being a second hero — "too big and looks bad" was the accurate verdict. It sits at
+18/20px Light with reading leading: one step up from where it was as a subordinate line, three steps down
+from the promotion. The button went 48px/`text-base` to 56px/`text-lg` and back to 48px with one extra step
+of horizontal padding. **The close is the last thing on a long page of evidence and should ask quietly.**
+
+**The band admits WHITE INK ONLY and that survived the size reversal, because it was never about
+prominence.** `--ansr-text-inverse-muted` measures 3.93:1 over the field's brightest possible pixel, which
+fails AA at any size this line uses; the only way to make it legal is raising the veil to 78%, where the
+tiles stop being distinguishable. At 18px Light 300 white reads as quietly as the muted token would and
+clears AA with room. Same class of constraint as `ask-hero.tsx`.
+
+**The two strings are `siteContent.close`, which makes the close the only editable band on the RESULT
+screens.** The test it had to pass is the one `project.md` sets for the hero: everything else on these
+screens is an argument about the dataset and belongs beside the logic making the argument, while the close
+is positioning and an offer on ANSR's own schedule. Same category, same treatment. What came with it:
+`closeCopySchema` defaulted so an older dataset still reads (the `metrics` precedent), a `close` field list
+in `SiteContentDiff` so an edit is REPORTED — the whole reason that diff category exists — the draft
+`STORAGE_KEY` bumped to v5, and the admin tab renamed from "Entry point" to "Site copy" because it is no
+longer only the entry point. **There is deliberately no heading FIELD**: a field an admin can fill that
+nothing draws is worse than no field.
+
+**No public spec names the button's words.** The label is editable copy now, so locating the CTA by its
+text would make an ANSR wording change break a public spec — the same failure twenty band locators had when
+they were keyed to heading text. The band id is the contract and the link is found by role inside it.
+
+**`Zone` gained two things and both are for this band.** `inverse-soft` is the one ground exempt from
+the strict white/mint alternation: the tabs have different section counts, so the last content zone is
+white on one and mint on another, and a close that had to alternate with whatever preceded it would need
+its ground derived per tab. `behind` is a full-bleed slot under the padded container, because the
+backdrop has to reach the card's edges — inside the container it stopped at the gutter and read as a
+rectangle parked in the band.
+
+**`.gcc-close-streaks` is deleted**, and with it the last use of `public/brand/close-streaks.svg`. The
+cropped diagonal texture was the old close's depth; the backdrop is now that, and two textures on one
+band compete. The derived SVG is left in `public/brand/` as reproducible output with no consumer.

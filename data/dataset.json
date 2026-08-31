@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generatedAt": "2026-08-31T09:51:40.138Z",
+  "generatedAt": "2026-08-31T19:18:05.080Z",
   "source": "Consolidated_GCC_India_Database_2026_New.xlsx",
   "taxonomy": {
     "industries": [
@@ -844,7 +844,7 @@
       "id": "air-liquide",
       "name": "Air Liquide",
       "hqCountry": "France",
-      "industry": "Manufacturing",
+      "industry": "Chemicals & Materials",
       "revenueBand": "Above $20 Bn",
       "establishedYear": 1992,
       "cities": [
@@ -857,7 +857,9 @@
       },
       "fortuneGlobal500": false,
       "forbesGlobal2000": true,
-      "businessTypes": []
+      "businessTypes": [
+        "chem-industrial-gases"
+      ]
     },
     {
       "id": "air-products-and-chemicals",
@@ -1790,7 +1792,7 @@
       "fortuneGlobal500": false,
       "forbesGlobal2000": false,
       "businessTypes": [
-        "fin-asset-management"
+        "fin-fund-services"
       ]
     },
     {
@@ -2080,7 +2082,7 @@
       "fortuneGlobal500": false,
       "forbesGlobal2000": false,
       "businessTypes": [
-        "fin-asset-management"
+        "fin-fund-services"
       ]
     },
     {
@@ -3401,7 +3403,7 @@
       "id": "avnet",
       "name": "Avnet",
       "hqCountry": "USA",
-      "industry": "Manufacturing",
+      "industry": "Wholesale",
       "revenueBand": "$1 Bn – $5 Bn",
       "establishedYear": 1998,
       "cities": [
@@ -3413,7 +3415,9 @@
       },
       "fortuneGlobal500": false,
       "forbesGlobal2000": true,
-      "businessTypes": []
+      "businessTypes": [
+        "whl-industrial-supplies"
+      ]
     },
     {
       "id": "axa-group",
@@ -4972,7 +4976,7 @@
       "id": "brainchip",
       "name": "BrainChip",
       "hqCountry": "USA",
-      "industry": "Software & Internet",
+      "industry": "Semiconductors",
       "revenueBand": "$100 Mn – $500 Mn",
       "establishedYear": 2020,
       "cities": [
@@ -4984,7 +4988,9 @@
       },
       "fortuneGlobal500": false,
       "forbesGlobal2000": false,
-      "businessTypes": []
+      "businessTypes": [
+        "semi-fabless"
+      ]
     },
     {
       "id": "brambles-bxb-digital",
@@ -5464,7 +5470,7 @@
       "id": "calix",
       "name": "Calix",
       "hqCountry": "USA",
-      "industry": "Software & Internet",
+      "industry": "Telecom",
       "revenueBand": "$500 Mn – $1 Bn",
       "establishedYear": 2022,
       "cities": [
@@ -5476,7 +5482,9 @@
       },
       "fortuneGlobal500": false,
       "forbesGlobal2000": false,
-      "businessTypes": []
+      "businessTypes": [
+        "tel-equipment"
+      ]
     },
     {
       "id": "calsoft",
@@ -5768,7 +5776,7 @@
       "id": "carousell-group",
       "name": "Carousell Group",
       "hqCountry": "Singapore",
-      "industry": "Media & Entertainment",
+      "industry": "Software & Internet",
       "revenueBand": "$100 Mn – $500 Mn",
       "establishedYear": 2019,
       "cities": [
@@ -5780,7 +5788,9 @@
       },
       "fortuneGlobal500": false,
       "forbesGlobal2000": false,
-      "businessTypes": []
+      "businessTypes": [
+        "sw-marketplace"
+      ]
     },
     {
       "id": "carraro-group",
@@ -6274,7 +6284,7 @@
       "id": "chamberlain-group",
       "name": "Chamberlain Group",
       "hqCountry": "USA",
-      "industry": "Software & Internet",
+      "industry": "Consumer Electronics",
       "revenueBand": "$1 Bn – $5 Bn",
       "establishedYear": 2024,
       "cities": [
@@ -6286,7 +6296,9 @@
       },
       "fortuneGlobal500": false,
       "forbesGlobal2000": false,
-      "businessTypes": []
+      "businessTypes": [
+        "ce-devices"
+      ]
     },
     {
       "id": "championx",
@@ -6649,7 +6661,7 @@
       "fortuneGlobal500": false,
       "forbesGlobal2000": false,
       "businessTypes": [
-        "fin-asset-management"
+        "fin-fund-services"
       ]
     },
     {
@@ -9011,7 +9023,7 @@
       "id": "detroit-engineered-products",
       "name": "Detroit Engineered Products",
       "hqCountry": "USA",
-      "industry": "Manufacturing",
+      "industry": "Automotive",
       "revenueBand": "< $100 Mn",
       "establishedYear": 2000,
       "cities": [
@@ -9023,7 +9035,9 @@
       },
       "fortuneGlobal500": false,
       "forbesGlobal2000": false,
-      "businessTypes": []
+      "businessTypes": [
+        "auto-engineering-services"
+      ]
     },
     {
       "id": "societe-generale",
@@ -9294,7 +9308,7 @@
       "id": "diversey",
       "name": "Diversey",
       "hqCountry": "USA",
-      "industry": "Software & Internet",
+      "industry": "Chemicals & Materials",
       "revenueBand": "$1 Bn – $5 Bn",
       "establishedYear": 2020,
       "cities": [
@@ -9306,13 +9320,15 @@
       },
       "fortuneGlobal500": false,
       "forbesGlobal2000": false,
-      "businessTypes": []
+      "businessTypes": [
+        "chem-specialty"
+      ]
     },
     {
       "id": "d-matrix",
       "name": "d-Matrix",
       "hqCountry": "USA",
-      "industry": "Software & Internet",
+      "industry": "Semiconductors",
       "revenueBand": "$1 Bn – $5 Bn",
       "establishedYear": 2022,
       "cities": [
@@ -9324,7 +9340,9 @@
       },
       "fortuneGlobal500": false,
       "forbesGlobal2000": false,
-      "businessTypes": []
+      "businessTypes": [
+        "semi-fabless"
+      ]
     },
     {
       "id": "dnv-gl",
@@ -9966,7 +9984,7 @@
       "id": "ecolab",
       "name": "Ecolab",
       "hqCountry": "USA",
-      "industry": "Manufacturing",
+      "industry": "Chemicals & Materials",
       "revenueBand": "$10 Bn – $20 Bn",
       "establishedYear": 2018,
       "cities": [
@@ -9979,7 +9997,9 @@
       },
       "fortuneGlobal500": false,
       "forbesGlobal2000": true,
-      "businessTypes": []
+      "businessTypes": [
+        "chem-specialty"
+      ]
     },
     {
       "id": "e-con-systems",
@@ -11737,7 +11757,7 @@
       "id": "fanatics",
       "name": "Fanatics",
       "hqCountry": "USA",
-      "industry": "Software & Internet",
+      "industry": "Retail",
       "revenueBand": "$1 Bn – $5 Bn",
       "establishedYear": 2018,
       "cities": [
@@ -11749,7 +11769,9 @@
       },
       "fortuneGlobal500": false,
       "forbesGlobal2000": false,
-      "businessTypes": []
+      "businessTypes": [
+        "ret-ecommerce"
+      ]
     },
     {
       "id": "fanuc",
@@ -11917,7 +11939,7 @@
       "id": "fev",
       "name": "FEV",
       "hqCountry": "Germany",
-      "industry": "Manufacturing",
+      "industry": "Automotive",
       "revenueBand": "$500 Mn – $1 Bn",
       "establishedYear": 2006,
       "cities": [
@@ -11930,7 +11952,9 @@
       },
       "fortuneGlobal500": false,
       "forbesGlobal2000": false,
-      "businessTypes": []
+      "businessTypes": [
+        "auto-engineering-services"
+      ]
     },
     {
       "id": "fico",
@@ -12538,7 +12562,7 @@
       "fortuneGlobal500": false,
       "forbesGlobal2000": false,
       "businessTypes": [
-        "fin-asset-management"
+        "fin-fund-services"
       ]
     },
     {
@@ -12809,7 +12833,7 @@
       "fortuneGlobal500": false,
       "forbesGlobal2000": false,
       "businessTypes": [
-        "mfg-hvac-building"
+        "mfg-building-products"
       ]
     },
     {
@@ -13537,7 +13561,7 @@
       "fortuneGlobal500": false,
       "forbesGlobal2000": true,
       "businessTypes": [
-        "fin-asset-management"
+        "fin-fund-services"
       ]
     },
     {
@@ -13951,7 +13975,7 @@
       "id": "h-and-mv-engineering",
       "name": "H&MV Engineering",
       "hqCountry": "Ireland",
-      "industry": "Manufacturing",
+      "industry": "Architecture, Engineering, & Construction",
       "revenueBand": "$500 Mn – $1 Bn",
       "establishedYear": 2025,
       "cities": [
@@ -13963,7 +13987,9 @@
       },
       "fortuneGlobal500": false,
       "forbesGlobal2000": false,
-      "businessTypes": []
+      "businessTypes": [
+        "aec-engineering"
+      ]
     },
     {
       "id": "h-and-r-block",
@@ -14022,7 +14048,7 @@
       "fortuneGlobal500": false,
       "forbesGlobal2000": true,
       "businessTypes": [
-        "hc-pharma"
+        "hc-consumer-health"
       ]
     },
     {
@@ -15076,7 +15102,7 @@
       "id": "idp-education",
       "name": "IDP Education",
       "hqCountry": "Australia",
-      "industry": "Media & Entertainment",
+      "industry": "Education",
       "revenueBand": "$1 Bn – $5 Bn",
       "establishedYear": 2006,
       "cities": [
@@ -15088,7 +15114,9 @@
       },
       "fortuneGlobal500": false,
       "forbesGlobal2000": false,
-      "businessTypes": []
+      "businessTypes": [
+        "edu-institution"
+      ]
     },
     {
       "id": "idrive",
@@ -15292,7 +15320,7 @@
       "fortuneGlobal500": false,
       "forbesGlobal2000": false,
       "businessTypes": [
-        "sw-it-services"
+        "sw-content-services"
       ]
     },
     {
@@ -15556,7 +15584,7 @@
       "id": "ingram-micro",
       "name": "Ingram Micro",
       "hqCountry": "USA",
-      "industry": "Software & Internet",
+      "industry": "Wholesale",
       "revenueBand": "$1 Bn – $5 Bn",
       "establishedYear": 1996,
       "cities": [
@@ -15571,7 +15599,9 @@
       },
       "fortuneGlobal500": true,
       "forbesGlobal2000": true,
-      "businessTypes": []
+      "businessTypes": [
+        "whl-industrial-supplies"
+      ]
     },
     {
       "id": "innocean",
@@ -16953,7 +16983,7 @@
       "fortuneGlobal500": false,
       "forbesGlobal2000": true,
       "businessTypes": [
-        "hc-pharma"
+        "hc-consumer-health"
       ]
     },
     {
@@ -17086,7 +17116,7 @@
       "id": "kion-group",
       "name": "KION Group",
       "hqCountry": "Germany",
-      "industry": "Logistics & Transportation",
+      "industry": "Manufacturing",
       "revenueBand": "$10 Bn – $20 Bn",
       "establishedYear": 2024,
       "cities": [
@@ -17098,7 +17128,9 @@
       },
       "fortuneGlobal500": false,
       "forbesGlobal2000": true,
-      "businessTypes": []
+      "businessTypes": [
+        "mfg-industrial-equipment"
+      ]
     },
     {
       "id": "kirusa",
@@ -17205,7 +17237,7 @@
       "id": "knowles-corporation",
       "name": "Knowles Corporation",
       "hqCountry": "USA",
-      "industry": "Software & Internet",
+      "industry": "Semiconductors",
       "revenueBand": "$1 Bn – $5 Bn",
       "establishedYear": 2014,
       "cities": [
@@ -17217,7 +17249,9 @@
       },
       "fortuneGlobal500": false,
       "forbesGlobal2000": false,
-      "businessTypes": []
+      "businessTypes": [
+        "semi-components"
+      ]
     },
     {
       "id": "kobe-steel",
@@ -17915,7 +17949,7 @@
       "fortuneGlobal500": false,
       "forbesGlobal2000": false,
       "businessTypes": [
-        "sw-it-services"
+        "sw-content-services"
       ]
     },
     {
@@ -18269,7 +18303,7 @@
       "id": "lumen-technologies",
       "name": "Lumen Technologies",
       "hqCountry": "USA",
-      "industry": "Software & Internet",
+      "industry": "Telecom",
       "revenueBand": "$10 Bn – $20 Bn",
       "establishedYear": 2003,
       "cities": [
@@ -18282,7 +18316,9 @@
       },
       "fortuneGlobal500": false,
       "forbesGlobal2000": true,
-      "businessTypes": []
+      "businessTypes": [
+        "tel-operator"
+      ]
     },
     {
       "id": "lutron-electronics",
@@ -20430,7 +20466,7 @@
       "fortuneGlobal500": false,
       "forbesGlobal2000": true,
       "businessTypes": [
-        "fin-asset-management"
+        "fin-fund-services"
       ]
     },
     {
@@ -21074,7 +21110,7 @@
       "fortuneGlobal500": false,
       "forbesGlobal2000": false,
       "businessTypes": [
-        "fin-fintech-lending"
+        "fin-software-services"
       ]
     },
     {
@@ -21930,7 +21966,9 @@
       },
       "fortuneGlobal500": false,
       "forbesGlobal2000": false,
-      "businessTypes": []
+      "businessTypes": [
+        "sw-healthcare"
+      ]
     },
     {
       "id": "omnicom-group",
@@ -23274,7 +23312,9 @@
       },
       "fortuneGlobal500": false,
       "forbesGlobal2000": false,
-      "businessTypes": []
+      "businessTypes": [
+        "fin-asset-management"
+      ]
     },
     {
       "id": "plume",
@@ -23360,7 +23400,7 @@
       "id": "polaris-inc",
       "name": "Polaris Inc",
       "hqCountry": "USA",
-      "industry": "Manufacturing",
+      "industry": "Automotive",
       "revenueBand": "$5 Bn – $10 Bn",
       "establishedYear": 2011,
       "cities": [
@@ -23373,7 +23413,9 @@
       },
       "fortuneGlobal500": false,
       "forbesGlobal2000": false,
-      "businessTypes": []
+      "businessTypes": [
+        "auto-oem"
+      ]
     },
     {
       "id": "portescap",
@@ -25377,7 +25419,7 @@
       "fortuneGlobal500": false,
       "forbesGlobal2000": false,
       "businessTypes": [
-        "sw-it-services"
+        "sw-content-services"
       ]
     },
     {
@@ -25466,7 +25508,7 @@
       "id": "saab-group",
       "name": "Saab Group",
       "hqCountry": "Sweden",
-      "industry": "Automotive",
+      "industry": "Aerospace & Defense",
       "revenueBand": "$5 Bn – $10 Bn",
       "establishedYear": 2011,
       "cities": [
@@ -25478,7 +25520,9 @@
       },
       "fortuneGlobal500": false,
       "forbesGlobal2000": true,
-      "businessTypes": []
+      "businessTypes": [
+        "aero-primes"
+      ]
     },
     {
       "id": "saama-technologies",
@@ -26850,7 +26894,7 @@
       "id": "silicon-labs",
       "name": "Silicon Labs",
       "hqCountry": "USA",
-      "industry": "Software & Internet",
+      "industry": "Semiconductors",
       "revenueBand": "$500 Mn – $1 Bn",
       "establishedYear": 2021,
       "cities": [
@@ -26862,7 +26906,9 @@
       },
       "fortuneGlobal500": false,
       "forbesGlobal2000": false,
-      "businessTypes": []
+      "businessTypes": [
+        "semi-fabless"
+      ]
     },
     {
       "id": "sima-ai",
@@ -27276,7 +27322,7 @@
       "id": "smith-howard",
       "name": "Smith+Howard",
       "hqCountry": "USA",
-      "industry": "Software & Internet",
+      "industry": "Professional Services",
       "revenueBand": "< $100 Mn",
       "establishedYear": 2024,
       "cities": [
@@ -27288,7 +27334,9 @@
       },
       "fortuneGlobal500": false,
       "forbesGlobal2000": false,
-      "businessTypes": []
+      "businessTypes": [
+        "prof-accounting"
+      ]
     },
     {
       "id": "smiths-detection",
@@ -28191,7 +28239,7 @@
       "fortuneGlobal500": false,
       "forbesGlobal2000": false,
       "businessTypes": [
-        "sw-it-services"
+        "sw-content-services"
       ]
     },
     {
@@ -28685,7 +28733,7 @@
       "id": "synaptics",
       "name": "Synaptics",
       "hqCountry": "USA",
-      "industry": "Manufacturing",
+      "industry": "Semiconductors",
       "revenueBand": "$500 Mn – $1 Bn",
       "establishedYear": 2008,
       "cities": [
@@ -28698,7 +28746,9 @@
       },
       "fortuneGlobal500": false,
       "forbesGlobal2000": false,
-      "businessTypes": []
+      "businessTypes": [
+        "semi-fabless"
+      ]
     },
     {
       "id": "synaptris",
@@ -30265,7 +30315,7 @@
       "id": "tomtom",
       "name": "Tomtom",
       "hqCountry": "Netherlands",
-      "industry": "Manufacturing",
+      "industry": "Software & Internet",
       "revenueBand": "$500 Mn – $1 Bn",
       "establishedYear": 1998,
       "cities": [
@@ -30277,7 +30327,9 @@
       },
       "fortuneGlobal500": false,
       "forbesGlobal2000": false,
-      "businessTypes": []
+      "businessTypes": [
+        "sw-data-analytics"
+      ]
     },
     {
       "id": "macquarie-group",
@@ -32358,6 +32410,7 @@
       "fortuneGlobal500": true,
       "forbesGlobal2000": true,
       "businessTypes": [
+        "ret-general-merchandise",
         "ret-grocery"
       ]
     },
@@ -32955,7 +33008,7 @@
       "fortuneGlobal500": true,
       "forbesGlobal2000": true,
       "businessTypes": [
-        "fin-asset-management"
+        "fin-fund-services"
       ]
     },
     {
@@ -33969,7 +34022,7 @@
       "fortuneGlobal500": false,
       "forbesGlobal2000": false,
       "businessTypes": [
-        "sw-it-services"
+        "sw-content-services"
       ]
     },
     {
@@ -34212,7 +34265,7 @@
       "fortuneGlobal500": false,
       "forbesGlobal2000": false,
       "businessTypes": [
-        "fin-asset-management"
+        "fin-fund-services"
       ]
     },
     {
@@ -34779,7 +34832,7 @@
       "fortuneGlobal500": false,
       "forbesGlobal2000": false,
       "businessTypes": [
-        "fin-asset-management"
+        "fin-fund-services"
       ]
     },
     {
@@ -34880,7 +34933,7 @@
       "fortuneGlobal500": false,
       "forbesGlobal2000": false,
       "businessTypes": [
-        "sw-it-services"
+        "sw-content-services"
       ]
     },
     {
@@ -35029,7 +35082,7 @@
       "id": "kongsberg-gruppen",
       "name": "Kongsberg Gruppen",
       "hqCountry": "Norway",
-      "industry": "Software & Internet",
+      "industry": "Aerospace & Defense",
       "revenueBand": "$1 Bn – $5 Bn",
       "establishedYear": 2022,
       "cities": [
@@ -35042,7 +35095,9 @@
       },
       "fortuneGlobal500": false,
       "forbesGlobal2000": true,
-      "businessTypes": []
+      "businessTypes": [
+        "aero-defense-electronics"
+      ]
     },
     {
       "id": "korn-ferry",
@@ -36163,7 +36218,7 @@
       "fortuneGlobal500": false,
       "forbesGlobal2000": false,
       "businessTypes": [
-        "fin-asset-management"
+        "fin-fund-services"
       ]
     },
     {
@@ -36384,7 +36439,7 @@
       "fortuneGlobal500": false,
       "forbesGlobal2000": false,
       "businessTypes": [
-        "hc-pharma"
+        "hc-consumer-health"
       ]
     },
     {
@@ -36411,7 +36466,7 @@
       "id": "orica",
       "name": "Orica",
       "hqCountry": "Australia",
-      "industry": "Manufacturing",
+      "industry": "Chemicals & Materials",
       "revenueBand": "$5 Bn – $10 Bn",
       "establishedYear": 2025,
       "cities": [
@@ -36423,7 +36478,9 @@
       },
       "fortuneGlobal500": false,
       "forbesGlobal2000": false,
-      "businessTypes": []
+      "businessTypes": [
+        "chem-specialty"
+      ]
     },
     {
       "id": "orthofx",
@@ -37573,7 +37630,7 @@
       "fortuneGlobal500": false,
       "forbesGlobal2000": false,
       "businessTypes": [
-        "fin-asset-management"
+        "fin-fund-services"
       ]
     },
     {
@@ -37779,7 +37836,7 @@
     },
     {
       "id": "sw-data-analytics",
-      "name": "Data & analytics platform",
+      "name": "Data & Analytics Platform",
       "industry": "Software & Internet",
       "tags": [
         "software-product",
@@ -37794,7 +37851,7 @@
     },
     {
       "id": "sw-ai-platform",
-      "name": "AI & machine learning platform",
+      "name": "AI & Machine Learning Platform",
       "industry": "Software & Internet",
       "tags": [
         "software-product",
@@ -37809,7 +37866,7 @@
     },
     {
       "id": "sw-cloud-infra",
-      "name": "Cloud & infrastructure software",
+      "name": "Cloud & Infrastructure Software",
       "industry": "Software & Internet",
       "tags": [
         "software-product",
@@ -37825,7 +37882,7 @@
     },
     {
       "id": "sw-devtools",
-      "name": "Developer tools & DevOps",
+      "name": "Developer Tools & DevOps",
       "industry": "Software & Internet",
       "tags": [
         "software-product",
@@ -37840,7 +37897,7 @@
     },
     {
       "id": "sw-erp",
-      "name": "ERP & core business systems",
+      "name": "ERP & Core Business Systems",
       "industry": "Software & Internet",
       "tags": [
         "software-product",
@@ -37854,7 +37911,7 @@
     },
     {
       "id": "sw-crm-cx",
-      "name": "CRM & customer experience software",
+      "name": "CRM & Customer Experience Software",
       "industry": "Software & Internet",
       "tags": [
         "software-product",
@@ -37868,7 +37925,7 @@
     },
     {
       "id": "sw-martech",
-      "name": "Marketing technology",
+      "name": "Marketing Technology",
       "industry": "Software & Internet",
       "tags": [
         "software-product",
@@ -37883,7 +37940,7 @@
     },
     {
       "id": "sw-hr",
-      "name": "HR & workforce software",
+      "name": "HR & Workforce Software",
       "industry": "Software & Internet",
       "tags": [
         "software-product",
@@ -37897,7 +37954,7 @@
     },
     {
       "id": "sw-finance",
-      "name": "Finance, accounting & tax software",
+      "name": "Finance, Accounting & Tax Software",
       "industry": "Software & Internet",
       "tags": [
         "software-product",
@@ -37912,7 +37969,7 @@
     },
     {
       "id": "sw-supply-chain",
-      "name": "Supply chain & procurement software",
+      "name": "Supply Chain & Procurement Software",
       "industry": "Software & Internet",
       "tags": [
         "software-product",
@@ -37927,7 +37984,7 @@
     },
     {
       "id": "sw-collab",
-      "name": "Collaboration & productivity software",
+      "name": "Collaboration & Productivity Software",
       "industry": "Software & Internet",
       "tags": [
         "software-product",
@@ -37942,7 +37999,7 @@
     },
     {
       "id": "sw-design-eng",
-      "name": "Design & engineering software",
+      "name": "Design & Engineering Software",
       "industry": "Software & Internet",
       "tags": [
         "software-product",
@@ -37956,7 +38013,7 @@
     },
     {
       "id": "sw-healthcare",
-      "name": "Healthcare software",
+      "name": "Healthcare Software",
       "industry": "Software & Internet",
       "tags": [
         "software-product",
@@ -37970,7 +38027,7 @@
     },
     {
       "id": "sw-fintech-software",
-      "name": "Banking & financial software",
+      "name": "Banking & Financial Software",
       "industry": "Software & Internet",
       "tags": [
         "software-product",
@@ -37985,7 +38042,7 @@
     },
     {
       "id": "sw-insurance",
-      "name": "Insurance software",
+      "name": "Insurance Software",
       "industry": "Software & Internet",
       "tags": [
         "software-product",
@@ -38000,7 +38057,7 @@
     },
     {
       "id": "sw-retail-tech",
-      "name": "Retail & commerce software",
+      "name": "Retail & Commerce Software",
       "industry": "Software & Internet",
       "tags": [
         "software-product",
@@ -38013,7 +38070,7 @@
     },
     {
       "id": "sw-telecom-software",
-      "name": "Telecom software & network systems",
+      "name": "Telecom Software & Network Systems",
       "industry": "Software & Internet",
       "tags": [
         "software-product",
@@ -38026,7 +38083,7 @@
     },
     {
       "id": "sw-govtech",
-      "name": "Public sector software",
+      "name": "Public Sector Software",
       "industry": "Software & Internet",
       "tags": [
         "software-product",
@@ -38040,7 +38097,7 @@
     },
     {
       "id": "sw-edtech",
-      "name": "Education technology",
+      "name": "Education Technology",
       "industry": "Software & Internet",
       "tags": [
         "software-product",
@@ -38054,7 +38111,7 @@
     },
     {
       "id": "sw-construction-tech",
-      "name": "Construction & real estate software",
+      "name": "Construction & Real Estate Software",
       "industry": "Software & Internet",
       "tags": [
         "software-product",
@@ -38069,7 +38126,7 @@
     },
     {
       "id": "sw-logistics-tech",
-      "name": "Logistics & mobility software",
+      "name": "Logistics & Mobility Software",
       "industry": "Software & Internet",
       "tags": [
         "software-product",
@@ -38082,7 +38139,7 @@
     },
     {
       "id": "sw-travel-tech",
-      "name": "Travel & hospitality software",
+      "name": "Travel & Hospitality Software",
       "industry": "Software & Internet",
       "tags": [
         "software-product",
@@ -38095,7 +38152,7 @@
     },
     {
       "id": "sw-payments",
-      "name": "Payments & financial infrastructure",
+      "name": "Payments & Financial Infrastructure",
       "industry": "Software & Internet",
       "tags": [
         "software-product",
@@ -38111,7 +38168,7 @@
     },
     {
       "id": "sw-marketplace",
-      "name": "Consumer internet & marketplace",
+      "name": "Consumer Internet & Marketplace",
       "industry": "Software & Internet",
       "tags": [
         "platform-marketplace",
@@ -38124,7 +38181,7 @@
     },
     {
       "id": "sw-gaming",
-      "name": "Gaming & interactive entertainment",
+      "name": "Gaming & Interactive Entertainment",
       "industry": "Software & Internet",
       "tags": [
         "software-product",
@@ -38137,7 +38194,7 @@
     },
     {
       "id": "sw-it-services",
-      "name": "IT & digital engineering services",
+      "name": "IT & Digital Engineering Services",
       "industry": "Software & Internet",
       "tags": [
         "services-firm",
@@ -38150,8 +38207,22 @@
       ]
     },
     {
+      "id": "sw-content-services",
+      "name": "Localization & Content Services",
+      "industry": "Software & Internet",
+      "tags": [
+        "services-firm",
+        "outsourcing-bpo",
+        "content-language-services",
+        "b2b",
+        "enterprise-accounts",
+        "cross-industry",
+        "project-revenue"
+      ]
+    },
+    {
       "id": "sw-media-tech",
-      "name": "Media & content technology",
+      "name": "Media & Content Technology",
       "industry": "Software & Internet",
       "tags": [
         "software-product",
@@ -38163,7 +38234,7 @@
     },
     {
       "id": "sw-legal-compliance",
-      "name": "Legal, contract & compliance software",
+      "name": "Legal, Contract & Compliance Software",
       "industry": "Software & Internet",
       "tags": [
         "software-product",
@@ -38178,7 +38249,7 @@
     },
     {
       "id": "sw-automotive-tech",
-      "name": "Automotive & mobility software",
+      "name": "Automotive & Mobility Software",
       "industry": "Software & Internet",
       "tags": [
         "software-product",
@@ -38191,7 +38262,7 @@
     },
     {
       "id": "mfg-industrial-equipment",
-      "name": "Industrial machinery & equipment",
+      "name": "Industrial Machinery & Equipment",
       "industry": "Manufacturing",
       "tags": [
         "discrete-manufacturing",
@@ -38204,7 +38275,7 @@
     },
     {
       "id": "mfg-automation",
-      "name": "Industrial automation & controls",
+      "name": "Industrial Automation & Controls",
       "industry": "Manufacturing",
       "tags": [
         "discrete-manufacturing",
@@ -38217,7 +38288,7 @@
     },
     {
       "id": "mfg-electrical-equipment",
-      "name": "Electrical equipment & power systems",
+      "name": "Electrical Equipment & Power Systems",
       "industry": "Manufacturing",
       "tags": [
         "discrete-manufacturing",
@@ -38230,7 +38301,7 @@
     },
     {
       "id": "mfg-test-measurement",
-      "name": "Test & measurement instruments",
+      "name": "Test & Measurement Instruments",
       "industry": "Manufacturing",
       "tags": [
         "discrete-manufacturing",
@@ -38243,7 +38314,7 @@
     },
     {
       "id": "mfg-conglomerate",
-      "name": "Diversified industrial conglomerate",
+      "name": "Diversified Industrial Conglomerate",
       "industry": "Manufacturing",
       "tags": [
         "discrete-manufacturing",
@@ -38256,7 +38327,7 @@
     },
     {
       "id": "mfg-hvac-building",
-      "name": "HVAC & building systems",
+      "name": "HVAC & Building Systems",
       "industry": "Manufacturing",
       "tags": [
         "discrete-manufacturing",
@@ -38269,7 +38340,7 @@
     },
     {
       "id": "mfg-packaging",
-      "name": "Packaging manufacturing",
+      "name": "Packaging Manufacturing",
       "industry": "Manufacturing",
       "tags": [
         "process-manufacturing",
@@ -38281,7 +38352,7 @@
     },
     {
       "id": "mfg-metals",
-      "name": "Steel, metals & mining",
+      "name": "Steel, Metals & Mining",
       "industry": "Manufacturing",
       "tags": [
         "process-manufacturing",
@@ -38295,7 +38366,7 @@
     },
     {
       "id": "mfg-building-products",
-      "name": "Building products & materials",
+      "name": "Building Products & Materials",
       "industry": "Manufacturing",
       "tags": [
         "discrete-manufacturing",
@@ -38307,7 +38378,7 @@
     },
     {
       "id": "mfg-tools",
-      "name": "Tools & hardware",
+      "name": "Tools & Hardware",
       "industry": "Manufacturing",
       "tags": [
         "discrete-manufacturing",
@@ -38320,7 +38391,7 @@
     },
     {
       "id": "mfg-agricultural-equipment",
-      "name": "Agricultural, construction & mining equipment",
+      "name": "Agricultural, Construction & Mining Equipment",
       "industry": "Manufacturing",
       "tags": [
         "discrete-manufacturing",
@@ -38334,7 +38405,7 @@
     },
     {
       "id": "mfg-electronics-components",
-      "name": "Electronics & components manufacturing",
+      "name": "Electronics & Components Manufacturing",
       "industry": "Manufacturing",
       "tags": [
         "discrete-manufacturing",
@@ -38347,7 +38418,7 @@
     },
     {
       "id": "mfg-motion-control",
-      "name": "Motion, flow & control components",
+      "name": "Motion, Flow & Control Components",
       "industry": "Manufacturing",
       "tags": [
         "discrete-manufacturing",
@@ -38361,7 +38432,7 @@
     },
     {
       "id": "mfg-print-imaging",
-      "name": "Printing, imaging & document systems",
+      "name": "Printing, Imaging & Document Systems",
       "industry": "Manufacturing",
       "tags": [
         "discrete-manufacturing",
@@ -38373,7 +38444,7 @@
     },
     {
       "id": "fin-retail-bank",
-      "name": "Retail & commercial banking",
+      "name": "Retail & Commercial Banking",
       "industry": "BFSI",
       "tags": [
         "balance-sheet-risk",
@@ -38386,7 +38457,7 @@
     },
     {
       "id": "fin-investment-bank",
-      "name": "Investment banking & capital markets",
+      "name": "Investment Banking & Capital Markets",
       "industry": "BFSI",
       "tags": [
         "balance-sheet-risk",
@@ -38400,7 +38471,7 @@
     },
     {
       "id": "fin-insurance-pc",
-      "name": "Property & casualty insurance",
+      "name": "Property & Casualty Insurance",
       "industry": "BFSI",
       "tags": [
         "balance-sheet-risk",
@@ -38412,7 +38483,7 @@
     },
     {
       "id": "fin-insurance-life",
-      "name": "Life & health insurance",
+      "name": "Life & Health Insurance",
       "industry": "BFSI",
       "tags": [
         "balance-sheet-risk",
@@ -38424,7 +38495,7 @@
     },
     {
       "id": "fin-asset-management",
-      "name": "Asset & investment management",
+      "name": "Asset & Investment Management",
       "industry": "BFSI",
       "tags": [
         "asset-management",
@@ -38436,8 +38507,21 @@
       ]
     },
     {
+      "id": "fin-fund-services",
+      "name": "Fund Administration & Asset Servicing",
+      "industry": "BFSI",
+      "tags": [
+        "services-firm",
+        "outsourcing-bpo",
+        "capital-markets",
+        "regulated",
+        "b2b",
+        "asset-light"
+      ]
+    },
+    {
       "id": "fin-payments",
-      "name": "Payment processing & gateways",
+      "name": "Payment Processing & Gateways",
       "industry": "BFSI",
       "tags": [
         "payments-processing",
@@ -38450,7 +38534,7 @@
     },
     {
       "id": "fin-card-network",
-      "name": "Card networks & schemes",
+      "name": "Card Networks & Schemes",
       "industry": "BFSI",
       "tags": [
         "payments-processing",
@@ -38463,7 +38547,7 @@
     },
     {
       "id": "fin-money-transfer",
-      "name": "Money transfer & remittance",
+      "name": "Money Transfer & Remittance",
       "industry": "BFSI",
       "tags": [
         "payments-processing",
@@ -38476,7 +38560,7 @@
     },
     {
       "id": "fin-expense-cards",
-      "name": "Commercial & expense cards",
+      "name": "Commercial & Expense Cards",
       "industry": "BFSI",
       "tags": [
         "payments-processing",
@@ -38489,7 +38573,7 @@
     },
     {
       "id": "fin-fintech-lending",
-      "name": "Fintech & digital lending",
+      "name": "Fintech & Digital Lending",
       "industry": "BFSI",
       "tags": [
         "fintech",
@@ -38502,7 +38586,7 @@
     },
     {
       "id": "fin-market-data",
-      "name": "Financial data & credit information",
+      "name": "Financial Data & Credit Information",
       "industry": "BFSI",
       "tags": [
         "credit-data",
@@ -38515,7 +38599,7 @@
     },
     {
       "id": "fin-exchange",
-      "name": "Exchanges & trading venues",
+      "name": "Exchanges & Trading Venues",
       "industry": "BFSI",
       "tags": [
         "capital-markets",
@@ -38527,7 +38611,7 @@
     },
     {
       "id": "fin-insurance-broker",
-      "name": "Insurance broking & claims services",
+      "name": "Insurance Broking & Claims Services",
       "industry": "BFSI",
       "tags": [
         "services-firm",
@@ -38540,7 +38624,7 @@
     },
     {
       "id": "fin-software-services",
-      "name": "Financial technology & processing services",
+      "name": "Financial Technology & Processing Services",
       "industry": "BFSI",
       "tags": [
         "software-product",
@@ -38569,6 +38653,20 @@
       ]
     },
     {
+      "id": "hc-consumer-health",
+      "name": "Consumer Health & OTC",
+      "industry": "Healthcare & Lifescience",
+      "tags": [
+        "process-manufacturing",
+        "brand-owner",
+        "pharmaceutical",
+        "personal-care",
+        "regulated",
+        "supply-chain-heavy",
+        "b2c"
+      ]
+    },
+    {
       "id": "hc-biotech",
       "name": "Biotechnology",
       "industry": "Healthcare & Lifescience",
@@ -38583,7 +38681,7 @@
     },
     {
       "id": "hc-medical-devices",
-      "name": "Medical devices",
+      "name": "Medical Devices",
       "industry": "Healthcare & Lifescience",
       "tags": [
         "discrete-manufacturing",
@@ -38598,7 +38696,7 @@
     },
     {
       "id": "hc-diagnostics",
-      "name": "Diagnostics & laboratory services",
+      "name": "Diagnostics & Laboratory Services",
       "industry": "Healthcare & Lifescience",
       "tags": [
         "services-firm",
@@ -38612,7 +38710,7 @@
     },
     {
       "id": "hc-provider",
-      "name": "Hospitals & care delivery",
+      "name": "Hospitals & Care Delivery",
       "industry": "Healthcare & Lifescience",
       "tags": [
         "services-firm",
@@ -38625,7 +38723,7 @@
     },
     {
       "id": "hc-cro",
-      "name": "Clinical research & development services",
+      "name": "Clinical Research & Development Services",
       "industry": "Healthcare & Lifescience",
       "tags": [
         "services-firm",
@@ -38640,7 +38738,7 @@
     },
     {
       "id": "hc-life-science-tools",
-      "name": "Life sciences tools & instruments",
+      "name": "Life Sciences Tools & Instruments",
       "industry": "Healthcare & Lifescience",
       "tags": [
         "discrete-manufacturing",
@@ -38653,7 +38751,7 @@
     },
     {
       "id": "hc-pharma-distribution",
-      "name": "Pharmaceutical distribution",
+      "name": "Pharmaceutical Distribution",
       "industry": "Healthcare & Lifescience",
       "tags": [
         "wholesale-distribution",
@@ -38665,7 +38763,7 @@
     },
     {
       "id": "hc-payer",
-      "name": "Health insurance & benefits management",
+      "name": "Health Insurance & Benefits Management",
       "industry": "Healthcare & Lifescience",
       "tags": [
         "balance-sheet-risk",
@@ -38678,7 +38776,7 @@
     },
     {
       "id": "hc-health-it",
-      "name": "Health information & care platforms",
+      "name": "Health Information & Care Platforms",
       "industry": "Healthcare & Lifescience",
       "tags": [
         "software-product",
@@ -38692,7 +38790,7 @@
     },
     {
       "id": "auto-oem",
-      "name": "Vehicle manufacturer (OEM)",
+      "name": "Vehicle Manufacturer (OEM)",
       "industry": "Automotive",
       "tags": [
         "discrete-manufacturing",
@@ -38706,7 +38804,7 @@
     },
     {
       "id": "auto-commercial-oem",
-      "name": "Commercial vehicle & truck manufacturer",
+      "name": "Commercial Vehicle & Truck Manufacturer",
       "industry": "Automotive",
       "tags": [
         "discrete-manufacturing",
@@ -38719,7 +38817,7 @@
     },
     {
       "id": "auto-ev",
-      "name": "Electric vehicle manufacturer",
+      "name": "Electric Vehicle Manufacturer",
       "industry": "Automotive",
       "tags": [
         "discrete-manufacturing",
@@ -38732,7 +38830,7 @@
     },
     {
       "id": "auto-components",
-      "name": "Automotive components (Tier 1)",
+      "name": "Automotive Components (Tier 1)",
       "industry": "Automotive",
       "tags": [
         "discrete-manufacturing",
@@ -38746,7 +38844,7 @@
     },
     {
       "id": "auto-software",
-      "name": "In-vehicle software & electronics",
+      "name": "In-Vehicle Software & Electronics",
       "industry": "Automotive",
       "tags": [
         "software-product",
@@ -38759,7 +38857,7 @@
     },
     {
       "id": "auto-engineering-services",
-      "name": "Automotive engineering services",
+      "name": "Automotive Engineering Services",
       "industry": "Automotive",
       "tags": [
         "services-firm",
@@ -38772,7 +38870,7 @@
     },
     {
       "id": "tel-operator",
-      "name": "Telecom network operator",
+      "name": "Telecom Network Operator",
       "industry": "Telecom",
       "tags": [
         "network-operator",
@@ -38786,7 +38884,7 @@
     },
     {
       "id": "tel-equipment",
-      "name": "Telecom & networking equipment",
+      "name": "Telecom & Networking Equipment",
       "industry": "Telecom",
       "tags": [
         "hardware-product",
@@ -38799,7 +38897,7 @@
     },
     {
       "id": "tel-satellite",
-      "name": "Satellite & space communications",
+      "name": "Satellite & Space Communications",
       "industry": "Telecom",
       "tags": [
         "network-operator",
@@ -38813,7 +38911,7 @@
     },
     {
       "id": "tel-cpaas",
-      "name": "Communications platforms & APIs",
+      "name": "Communications Platforms & APIs",
       "industry": "Telecom",
       "tags": [
         "saas",
@@ -38827,7 +38925,7 @@
     },
     {
       "id": "tel-infrastructure",
-      "name": "Network infrastructure & managed services",
+      "name": "Network Infrastructure & Managed Services",
       "industry": "Telecom",
       "tags": [
         "services-firm",
@@ -38841,7 +38939,7 @@
     },
     {
       "id": "semi-fabless",
-      "name": "Fabless chip design",
+      "name": "Fabless Chip Design",
       "industry": "Semiconductors",
       "tags": [
         "fabless-design",
@@ -38855,7 +38953,7 @@
     },
     {
       "id": "semi-foundry",
-      "name": "Semiconductor manufacturing & foundry",
+      "name": "Semiconductor Manufacturing & Foundry",
       "industry": "Semiconductors",
       "tags": [
         "process-manufacturing",
@@ -38867,7 +38965,7 @@
     },
     {
       "id": "semi-equipment",
-      "name": "Semiconductor equipment & materials",
+      "name": "Semiconductor Equipment & Materials",
       "industry": "Semiconductors",
       "tags": [
         "discrete-manufacturing",
@@ -38880,7 +38978,7 @@
     },
     {
       "id": "semi-ip",
-      "name": "Semiconductor IP & design tools",
+      "name": "Semiconductor IP & Design Tools",
       "industry": "Semiconductors",
       "tags": [
         "semiconductor",
@@ -38894,7 +38992,7 @@
     },
     {
       "id": "semi-analog",
-      "name": "Analog, power & mixed-signal semiconductors",
+      "name": "Analog, Power & Mixed-Signal Semiconductors",
       "industry": "Semiconductors",
       "tags": [
         "semiconductor",
@@ -38907,7 +39005,7 @@
     },
     {
       "id": "semi-components",
-      "name": "Electronic components & photonics",
+      "name": "Electronic Components & Photonics",
       "industry": "Semiconductors",
       "tags": [
         "electronic-components",
@@ -38919,7 +39017,7 @@
     },
     {
       "id": "ret-apparel",
-      "name": "Apparel & footwear brand",
+      "name": "Apparel & Footwear Brand",
       "industry": "Retail",
       "tags": [
         "brand-owner",
@@ -38934,7 +39032,7 @@
     },
     {
       "id": "ret-sportswear",
-      "name": "Sportswear & athletic brand",
+      "name": "Sportswear & Athletic Brand",
       "industry": "Retail",
       "tags": [
         "brand-owner",
@@ -38950,7 +39048,7 @@
     },
     {
       "id": "ret-luxury",
-      "name": "Luxury & premium brand",
+      "name": "Luxury & Premium Brand",
       "industry": "Retail",
       "tags": [
         "brand-owner",
@@ -38965,7 +39063,7 @@
     },
     {
       "id": "ret-grocery",
-      "name": "Grocery & convenience retail",
+      "name": "Grocery & Convenience Retail",
       "industry": "Retail",
       "tags": [
         "retail-operator",
@@ -38978,7 +39076,7 @@
     },
     {
       "id": "ret-home-improvement",
-      "name": "Home improvement & furnishings retail",
+      "name": "Home Improvement & Furnishings Retail",
       "industry": "Retail",
       "tags": [
         "retail-operator",
@@ -38991,7 +39089,7 @@
     },
     {
       "id": "ret-general-merchandise",
-      "name": "Department store & general merchandise",
+      "name": "Department Store & General Merchandise",
       "industry": "Retail",
       "tags": [
         "retail-operator",
@@ -39003,7 +39101,7 @@
     },
     {
       "id": "ret-ecommerce",
-      "name": "E-commerce & online retail",
+      "name": "E-Commerce & Online Retail",
       "industry": "Retail",
       "tags": [
         "retail-operator",
@@ -39017,7 +39115,7 @@
     },
     {
       "id": "ret-specialty",
-      "name": "Specialty retail",
+      "name": "Specialty Retail",
       "industry": "Retail",
       "tags": [
         "retail-operator",
@@ -39030,7 +39128,7 @@
     },
     {
       "id": "ret-consumer-brand",
-      "name": "Consumer products brand",
+      "name": "Consumer Products Brand",
       "industry": "Retail",
       "tags": [
         "brand-owner",
@@ -39043,7 +39141,7 @@
     },
     {
       "id": "ret-auto-parts",
-      "name": "Automotive parts retail & distribution",
+      "name": "Automotive Parts Retail & Distribution",
       "industry": "Retail",
       "tags": [
         "retail-operator",
@@ -39056,7 +39154,7 @@
     },
     {
       "id": "med-broadcast",
-      "name": "Broadcasting & studios",
+      "name": "Broadcasting & Studios",
       "industry": "Media & Entertainment",
       "tags": [
         "content-ip-owner",
@@ -39069,7 +39167,7 @@
     },
     {
       "id": "med-publishing",
-      "name": "Publishing & news",
+      "name": "Publishing & News",
       "industry": "Media & Entertainment",
       "tags": [
         "content-ip-owner",
@@ -39082,7 +39180,7 @@
     },
     {
       "id": "med-advertising",
-      "name": "Advertising & marketing services",
+      "name": "Advertising & Marketing Services",
       "industry": "Media & Entertainment",
       "tags": [
         "services-firm",
@@ -39095,7 +39193,7 @@
     },
     {
       "id": "med-adtech",
-      "name": "Advertising technology & measurement",
+      "name": "Advertising Technology & Measurement",
       "industry": "Media & Entertainment",
       "tags": [
         "software-product",
@@ -39110,7 +39208,7 @@
     },
     {
       "id": "med-gaming",
-      "name": "Gaming & esports",
+      "name": "Gaming & Esports",
       "industry": "Media & Entertainment",
       "tags": [
         "content-ip-owner",
@@ -39123,7 +39221,7 @@
     },
     {
       "id": "med-gambling",
-      "name": "Online gambling & betting",
+      "name": "Online Gambling & Betting",
       "industry": "Media & Entertainment",
       "tags": [
         "platform-marketplace",
@@ -39135,7 +39233,7 @@
     },
     {
       "id": "med-information-services",
-      "name": "Information & research services",
+      "name": "Information & Research Services",
       "industry": "Media & Entertainment",
       "tags": [
         "services-firm",
@@ -39149,7 +39247,7 @@
     },
     {
       "id": "prof-accounting",
-      "name": "Accounting, audit & tax",
+      "name": "Accounting, Audit & Tax",
       "industry": "Professional Services",
       "tags": [
         "services-firm",
@@ -39162,7 +39260,7 @@
     },
     {
       "id": "prof-legal",
-      "name": "Legal services",
+      "name": "Legal Services",
       "industry": "Professional Services",
       "tags": [
         "services-firm",
@@ -39175,7 +39273,7 @@
     },
     {
       "id": "prof-consulting",
-      "name": "Management & strategy consulting",
+      "name": "Management & Strategy Consulting",
       "industry": "Professional Services",
       "tags": [
         "services-firm",
@@ -39189,7 +39287,7 @@
     },
     {
       "id": "prof-engineering-consulting",
-      "name": "Engineering & technical consulting",
+      "name": "Engineering & Technical Consulting",
       "industry": "Professional Services",
       "tags": [
         "services-firm",
@@ -39202,7 +39300,7 @@
     },
     {
       "id": "prof-staffing",
-      "name": "Staffing & workforce services",
+      "name": "Staffing & Workforce Services",
       "industry": "Professional Services",
       "tags": [
         "services-firm",
@@ -39215,11 +39313,12 @@
     },
     {
       "id": "prof-bpo",
-      "name": "Business process outsourcing",
+      "name": "Business Process Outsourcing",
       "industry": "Professional Services",
       "tags": [
         "services-firm",
         "outsourcing-bpo",
+        "content-language-services",
         "staffing-workforce",
         "cross-industry",
         "project-revenue",
@@ -39229,7 +39328,7 @@
     },
     {
       "id": "prof-market-research",
-      "name": "Market research & consumer intelligence",
+      "name": "Market Research & Consumer Intelligence",
       "industry": "Professional Services",
       "tags": [
         "services-firm",
@@ -39241,7 +39340,7 @@
     },
     {
       "id": "prof-facilities",
-      "name": "Facilities & real estate services",
+      "name": "Facilities & Real Estate Services",
       "industry": "Professional Services",
       "tags": [
         "services-firm",
@@ -39253,7 +39352,7 @@
     },
     {
       "id": "prof-marketing-services",
-      "name": "Advertising & marketing services",
+      "name": "Advertising & Marketing Services",
       "industry": "Professional Services",
       "tags": [
         "services-firm",
@@ -39266,7 +39365,7 @@
     },
     {
       "id": "prof-compliance",
-      "name": "Regulatory & compliance services",
+      "name": "Regulatory & Compliance Services",
       "industry": "Professional Services",
       "tags": [
         "services-firm",
@@ -39280,7 +39379,7 @@
     },
     {
       "id": "chem-specialty",
-      "name": "Specialty chemicals",
+      "name": "Specialty Chemicals",
       "industry": "Chemicals & Materials",
       "tags": [
         "process-manufacturing",
@@ -39293,7 +39392,7 @@
     },
     {
       "id": "chem-commodity",
-      "name": "Commodity & petrochemicals",
+      "name": "Commodity & Petrochemicals",
       "industry": "Chemicals & Materials",
       "tags": [
         "process-manufacturing",
@@ -39305,7 +39404,7 @@
     },
     {
       "id": "chem-coatings",
-      "name": "Paints & coatings",
+      "name": "Paints & Coatings",
       "industry": "Chemicals & Materials",
       "tags": [
         "process-manufacturing",
@@ -39318,7 +39417,7 @@
     },
     {
       "id": "chem-agrochemicals",
-      "name": "Agrochemicals & seeds",
+      "name": "Agrochemicals & Seeds",
       "industry": "Chemicals & Materials",
       "tags": [
         "process-manufacturing",
@@ -39331,7 +39430,7 @@
     },
     {
       "id": "chem-industrial-gases",
-      "name": "Industrial gases",
+      "name": "Industrial Gases",
       "industry": "Chemicals & Materials",
       "tags": [
         "process-manufacturing",
@@ -39343,7 +39442,7 @@
     },
     {
       "id": "chem-flavours",
-      "name": "Flavours, fragrances & ingredients",
+      "name": "Flavours, Fragrances & Ingredients",
       "industry": "Chemicals & Materials",
       "tags": [
         "process-manufacturing",
@@ -39355,7 +39454,7 @@
     },
     {
       "id": "chem-packaging",
-      "name": "Industrial packaging materials",
+      "name": "Industrial Packaging Materials",
       "industry": "Chemicals & Materials",
       "tags": [
         "process-manufacturing",
@@ -39367,7 +39466,7 @@
     },
     {
       "id": "enr-oil-gas",
-      "name": "Integrated oil & gas",
+      "name": "Integrated Oil & Gas",
       "industry": "Energy & Utilities",
       "tags": [
         "process-manufacturing",
@@ -39380,7 +39479,7 @@
     },
     {
       "id": "enr-oilfield-services",
-      "name": "Oilfield & energy services",
+      "name": "Oilfield & Energy Services",
       "industry": "Energy & Utilities",
       "tags": [
         "services-firm",
@@ -39392,7 +39491,7 @@
     },
     {
       "id": "enr-power-generation",
-      "name": "Power generation",
+      "name": "Power Generation",
       "industry": "Energy & Utilities",
       "tags": [
         "power-generation",
@@ -39405,7 +39504,7 @@
     },
     {
       "id": "enr-renewables",
-      "name": "Renewable energy",
+      "name": "Renewable Energy",
       "industry": "Energy & Utilities",
       "tags": [
         "power-generation",
@@ -39418,7 +39517,7 @@
     },
     {
       "id": "enr-utilities",
-      "name": "Utilities & grid operations",
+      "name": "Utilities & Grid Operations",
       "industry": "Energy & Utilities",
       "tags": [
         "network-operator",
@@ -39431,7 +39530,7 @@
     },
     {
       "id": "enr-energy-equipment",
-      "name": "Energy equipment & technology",
+      "name": "Energy Equipment & Technology",
       "industry": "Energy & Utilities",
       "tags": [
         "discrete-manufacturing",
@@ -39445,7 +39544,7 @@
     },
     {
       "id": "log-freight",
-      "name": "Freight forwarding & third-party logistics",
+      "name": "Freight Forwarding & Third-Party Logistics",
       "industry": "Logistics & Transportation",
       "tags": [
         "services-firm",
@@ -39458,7 +39557,7 @@
     },
     {
       "id": "log-maritime",
-      "name": "Shipping & maritime transport",
+      "name": "Shipping & Maritime Transport",
       "industry": "Logistics & Transportation",
       "tags": [
         "network-operator",
@@ -39471,7 +39570,7 @@
     },
     {
       "id": "log-express",
-      "name": "Express & parcel delivery",
+      "name": "Express & Parcel Delivery",
       "industry": "Logistics & Transportation",
       "tags": [
         "network-operator",
@@ -39484,7 +39583,7 @@
     },
     {
       "id": "log-rail",
-      "name": "Rail & surface transport",
+      "name": "Rail & Surface Transport",
       "industry": "Logistics & Transportation",
       "tags": [
         "network-operator",
@@ -39497,7 +39596,7 @@
     },
     {
       "id": "log-ports",
-      "name": "Ports & terminal operations",
+      "name": "Ports & Terminal Operations",
       "industry": "Logistics & Transportation",
       "tags": [
         "network-operator",
@@ -39510,7 +39609,7 @@
     },
     {
       "id": "aec-engineering",
-      "name": "Engineering & design services",
+      "name": "Engineering & Design Services",
       "industry": "Architecture, Engineering, & Construction",
       "tags": [
         "services-firm",
@@ -39523,7 +39622,7 @@
     },
     {
       "id": "aec-construction",
-      "name": "Construction & contracting",
+      "name": "Construction & Contracting",
       "industry": "Architecture, Engineering, & Construction",
       "tags": [
         "services-firm",
@@ -39537,7 +39636,7 @@
     },
     {
       "id": "aec-construction-equipment",
-      "name": "Construction equipment & materials",
+      "name": "Construction Equipment & Materials",
       "industry": "Architecture, Engineering, & Construction",
       "tags": [
         "discrete-manufacturing",
@@ -39549,7 +39648,7 @@
     },
     {
       "id": "aec-shipbuilding",
-      "name": "Shipbuilding & marine engineering",
+      "name": "Shipbuilding & Marine Engineering",
       "industry": "Architecture, Engineering, & Construction",
       "tags": [
         "discrete-manufacturing",
@@ -39563,7 +39662,7 @@
     },
     {
       "id": "ce-devices",
-      "name": "Consumer electronics & devices",
+      "name": "Consumer Electronics & Devices",
       "industry": "Consumer Electronics",
       "tags": [
         "hardware-product",
@@ -39576,7 +39675,7 @@
     },
     {
       "id": "ce-computing",
-      "name": "Computing hardware & servers",
+      "name": "Computing Hardware & Servers",
       "industry": "Consumer Electronics",
       "tags": [
         "hardware-product",
@@ -39590,7 +39689,7 @@
     },
     {
       "id": "ce-storage",
-      "name": "Enterprise storage & data centre hardware",
+      "name": "Enterprise Storage & Data Centre Hardware",
       "industry": "Consumer Electronics",
       "tags": [
         "hardware-product",
@@ -39603,7 +39702,7 @@
     },
     {
       "id": "ce-appliances",
-      "name": "Home appliances",
+      "name": "Home Appliances",
       "industry": "Consumer Electronics",
       "tags": [
         "discrete-manufacturing",
@@ -39616,7 +39715,7 @@
     },
     {
       "id": "cpg-food",
-      "name": "Packaged food",
+      "name": "Packaged Food",
       "industry": "Consumer Packaged Goods",
       "tags": [
         "process-manufacturing",
@@ -39630,7 +39729,7 @@
     },
     {
       "id": "cpg-beverages",
-      "name": "Beverages & brewing",
+      "name": "Beverages & Brewing",
       "industry": "Consumer Packaged Goods",
       "tags": [
         "process-manufacturing",
@@ -39643,7 +39742,7 @@
     },
     {
       "id": "cpg-personal-care",
-      "name": "Personal care & beauty",
+      "name": "Personal Care & Beauty",
       "industry": "Consumer Packaged Goods",
       "tags": [
         "process-manufacturing",
@@ -39657,7 +39756,7 @@
     },
     {
       "id": "cpg-home-care",
-      "name": "Household & home care products",
+      "name": "Household & Home Care Products",
       "industry": "Consumer Packaged Goods",
       "tags": [
         "process-manufacturing",
@@ -39669,7 +39768,7 @@
     },
     {
       "id": "cpg-diversified",
-      "name": "Diversified consumer goods",
+      "name": "Diversified Consumer Goods",
       "industry": "Consumer Packaged Goods",
       "tags": [
         "process-manufacturing",
@@ -39684,7 +39783,7 @@
     },
     {
       "id": "aero-components",
-      "name": "Aerospace components & systems",
+      "name": "Aerospace Components & Systems",
       "industry": "Aerospace & Defense",
       "tags": [
         "discrete-manufacturing",
@@ -39697,7 +39796,7 @@
     },
     {
       "id": "aero-primes",
-      "name": "Aerospace & defense primes",
+      "name": "Aerospace & Defense Primes",
       "industry": "Aerospace & Defense",
       "tags": [
         "discrete-manufacturing",
@@ -39711,7 +39810,7 @@
     },
     {
       "id": "aero-engines",
-      "name": "Aircraft engines & propulsion",
+      "name": "Aircraft Engines & Propulsion",
       "industry": "Aerospace & Defense",
       "tags": [
         "discrete-manufacturing",
@@ -39725,7 +39824,7 @@
     },
     {
       "id": "aero-defense-electronics",
-      "name": "Defense electronics & systems",
+      "name": "Defense Electronics & Systems",
       "industry": "Aerospace & Defense",
       "tags": [
         "discrete-manufacturing",
@@ -39738,7 +39837,7 @@
     },
     {
       "id": "trv-hotels",
-      "name": "Hotels & hospitality operations",
+      "name": "Hotels & Hospitality Operations",
       "industry": "Travel & Hospitality",
       "tags": [
         "services-firm",
@@ -39751,7 +39850,7 @@
     },
     {
       "id": "trv-agency",
-      "name": "Travel services & booking",
+      "name": "Travel Services & Booking",
       "industry": "Travel & Hospitality",
       "tags": [
         "platform-marketplace",
@@ -39763,7 +39862,7 @@
     },
     {
       "id": "trv-mobility",
-      "name": "Car rental & ride hailing",
+      "name": "Car Rental & Ride Hailing",
       "industry": "Travel & Hospitality",
       "tags": [
         "platform-marketplace",
@@ -39776,7 +39875,7 @@
     },
     {
       "id": "agr-food-processing",
-      "name": "Food processing",
+      "name": "Food Processing",
       "industry": "Agribusiness & Food Processing",
       "tags": [
         "process-manufacturing",
@@ -39790,7 +39889,7 @@
     },
     {
       "id": "agr-agribusiness",
-      "name": "Agribusiness & commodities",
+      "name": "Agribusiness & Commodities",
       "industry": "Agribusiness & Food Processing",
       "tags": [
         "agriculture",
@@ -39803,7 +39902,7 @@
     },
     {
       "id": "avi-airline",
-      "name": "Airline operations",
+      "name": "Airline Operations",
       "industry": "Aviation",
       "tags": [
         "network-operator",
@@ -39817,7 +39916,7 @@
     },
     {
       "id": "avi-services",
-      "name": "Aviation services & maintenance",
+      "name": "Aviation Services & Maintenance",
       "industry": "Aviation",
       "tags": [
         "services-firm",
@@ -39830,7 +39929,7 @@
     },
     {
       "id": "edu-institution",
-      "name": "Education & training provider",
+      "name": "Education & Training Provider",
       "industry": "Education",
       "tags": [
         "services-firm",
@@ -39842,7 +39941,7 @@
     },
     {
       "id": "edu-edtech",
-      "name": "Education technology & e-learning",
+      "name": "Education Technology & E-Learning",
       "industry": "Education",
       "tags": [
         "saas",
@@ -39855,7 +39954,7 @@
     },
     {
       "id": "whl-industrial-supplies",
-      "name": "Industrial supplies distribution",
+      "name": "Industrial Supplies Distribution",
       "industry": "Wholesale",
       "tags": [
         "wholesale-distribution",
@@ -39867,7 +39966,7 @@
     },
     {
       "id": "whl-building-materials",
-      "name": "Building materials distribution",
+      "name": "Building Materials Distribution",
       "industry": "Wholesale",
       "tags": [
         "wholesale-distribution",
@@ -39879,7 +39978,7 @@
     },
     {
       "id": "rst-qsr",
-      "name": "Quick service restaurants",
+      "name": "Quick Service Restaurants",
       "industry": "Restaurant & Food Service",
       "tags": [
         "restaurant-operations",
@@ -39892,7 +39991,7 @@
     },
     {
       "id": "rst-dining",
-      "name": "Restaurant chains & food service",
+      "name": "Restaurant Chains & Food Service",
       "industry": "Restaurant & Food Service",
       "tags": [
         "restaurant-operations",
@@ -39906,7 +40005,7 @@
     },
     {
       "id": "ele-electrical-products",
-      "name": "Electrical products & components",
+      "name": "Electrical Products & Components",
       "industry": "Electrical & Electronics",
       "tags": [
         "discrete-manufacturing",
@@ -39922,7 +40021,7 @@
       "id": "tech-bench-strength",
       "functionArea": "tech",
       "lens": "supply",
-      "title": "Bench strength",
+      "title": "Technology professionals",
       "question": "How many people with the skills we need are available today?",
       "unit": "professionals",
       "format": "number",
@@ -39960,7 +40059,7 @@
       "id": "tech-leadership-depth",
       "functionArea": "tech",
       "lens": "supply",
-      "title": "Leadership depth",
+      "title": "Professionals with 10+ years",
       "question": "Is there a senior layer here we could hire our leadership from?",
       "unit": "professionals with 10+ years of experience",
       "format": "number",
@@ -39978,7 +40077,7 @@
       "id": "tech-graduate-pipeline",
       "functionArea": "tech",
       "lens": "supply",
-      "title": "Graduate talent relevant to technology",
+      "title": "Graduate pipeline into technology",
       "question": "Will the talent pool still be deep enough tomorrow, as we grow?",
       "unit": "graduates a year",
       "format": "number",
@@ -39987,7 +40086,7 @@
         "kind": "breakdown",
         "entries": [
           "Engineering, other disciplines",
-          "Management and MBA graduates"
+          "Management & MBA graduates"
         ]
       },
       "value": {
@@ -40003,7 +40102,7 @@
       "id": "tech-ecosystem-size",
       "functionArea": "tech",
       "lens": "supply",
-      "title": "Technology ecosystem by specialism",
+      "title": "Talent depth by specialism",
       "question": "Is the depth spread across the specialisms we need, or concentrated in one?",
       "unit": "professionals",
       "format": "number",
@@ -40039,7 +40138,7 @@
       "id": "tech-gcc-scale-count",
       "functionArea": "tech",
       "lens": "supply",
-      "title": "GCCs operating above 100 technology FTEs",
+      "title": "GCCs above 100 tech FTEs",
       "question": "How many centres have already grown past the size we are aiming for?",
       "unit": "GCCs",
       "format": "number",
@@ -40057,7 +40156,7 @@
       "id": "tech-open-source-signal",
       "functionArea": "tech",
       "lens": "supply",
-      "title": "Open-source contribution",
+      "title": "Developers on GitHub",
       "question": "Are engineers here building in the open, or only inside their employers?",
       "unit": "developers on GitHub",
       "format": "number",
@@ -40075,7 +40174,7 @@
       "id": "tech-capability-comparison",
       "functionArea": "tech",
       "lens": "supply",
-      "title": "Capability compared with other delivery locations",
+      "title": "Capability against other GCC hubs",
       "question": "Where does India lead the alternatives we are also considering, and where is it merely level?",
       "format": "rating",
       "ratingScale": [
@@ -40142,7 +40241,7 @@
       "id": "ops-bench-strength",
       "functionArea": "operations",
       "lens": "supply",
-      "title": "Bench strength",
+      "title": "Technology professionals",
       "question": "How many people with the skills we need are available today?",
       "unit": "professionals",
       "format": "number",
@@ -40173,7 +40272,6 @@
           "Computer science and IT",
           "Electronics and communication",
           "Mathematics and statistics",
-          "Other sciences",
           "Commerce",
           "Management and MBA",
           "Finance and accounting",
@@ -40187,7 +40285,6 @@
           300000,
           250000,
           200000,
-          350000,
           600000,
           450000,
           250000,
@@ -40270,7 +40367,7 @@
       "id": "ops-grade-a-office-stock",
       "functionArea": "operations",
       "lens": "supply",
-      "title": "Grade A office stock",
+      "title": "Grade A stock, top 7 cities, mn sq ft",
       "question": "Is there space we could move into at the quality our people expect?",
       "unit": "million sq ft",
       "format": "number",
@@ -40296,7 +40393,7 @@
       "id": "ops-power-uptime",
       "functionArea": "operations",
       "lens": "place",
-      "title": "Power and connectivity uptime",
+      "title": "Uptime at a Grade A campus",
       "question": "Can we run a shift here without planning around outages?",
       "format": "percent",
       "note": "Split because the campus figure and the grid figure answer different worries, and a single number would hide the weaker one.",
@@ -40349,7 +40446,7 @@
       "id": "ops-disruption-days",
       "functionArea": "operations",
       "lens": "place",
-      "title": "Days lost to disruption",
+      "title": "Working days lost a year, by city",
       "question": "How many working days a year does the city actually lose?",
       "unit": "days a year",
       "format": "duration",
@@ -40378,7 +40475,7 @@
       "id": "hr-bench-strength",
       "functionArea": "hr",
       "lens": "supply",
-      "title": "Bench strength",
+      "title": "Technology professionals",
       "question": "How many people with the skills we need are available today?",
       "unit": "professionals",
       "format": "number",
@@ -40397,7 +40494,7 @@
       "id": "hr-leadership-depth",
       "functionArea": "hr",
       "lens": "supply",
-      "title": "Leadership depth",
+      "title": "Professionals with 10+ years",
       "question": "Is there a senior layer here we could hire our leadership from?",
       "unit": "professionals with 10+ years of experience",
       "format": "number",
@@ -40427,7 +40524,6 @@
           "Computer science and IT",
           "Electronics and communication",
           "Mathematics and statistics",
-          "Other sciences",
           "Commerce",
           "Management and MBA",
           "Finance and accounting",
@@ -40441,7 +40537,6 @@
           300000,
           250000,
           200000,
-          350000,
           600000,
           450000,
           250000,
@@ -40665,7 +40760,7 @@
       "id": "fin-cost-growth",
       "functionArea": "finance",
       "lens": "cost",
-      "title": "India wage growth year on year",
+      "title": "India wage growth, year on year",
       "question": "Is the cost of the same person here rising faster than we can plan for?",
       "format": "percent",
       "note": "India only. It used to sit beside US and UK wage growth and a 'the advantage narrowing' line, which turned one readable number into a three-way comparison a finance leader has to reconcile — and the narrowing figure was a derived opinion rather than a measurement. The gap is still 55–65% and is held to be durable to around 2032; that belongs in the conversation, not on a bar.",
@@ -40682,7 +40777,7 @@
       "id": "fin-operating-cost-growth",
       "functionArea": "finance",
       "lens": "cost",
-      "title": "Operating cost growth year on year",
+      "title": "Operating cost growth, year on year",
       "question": "Is the cost of running the centre — utilities, transport, facilities management, local support — rising faster than the wage bill?",
       "format": "percent",
       "note": "PLACEHOLDER at 10% — a demo figure, not a measurement. The operating-cost third of the brief's cost-durability metric; the compensation third is fin-cost-growth at 9.8%. Nothing supplied covers this one: the tier spread is a LEVEL difference between tier 1 and tier 2 rather than a movement over time, and no year-on-year operating figure exists in the supplied data. Deliberately not derived from the wage figure — the two move on different drivers, which is why the brief asks for them separately. Replace with a real rate before publication.",
@@ -40699,7 +40794,7 @@
       "id": "fin-workplace-cost-growth",
       "functionArea": "finance",
       "lens": "cost",
-      "title": "Workplace cost growth year on year",
+      "title": "Workplace cost growth, year on year",
       "question": "Is the cost of the space itself rising, and by enough to change a five-year plan?",
       "format": "percent",
       "note": "PLACEHOLDER at 10% — a demo figure, not a measurement. The workplace third of the brief's cost-durability metric. The nearest supplied figures are a 15.5% vacancy rate across the top seven cities and the Bengaluru sub-market rent card behind fin-workplace-cost-gradient — both a position at one moment, neither a rate of change, and a gradient across sub-markets is not a movement over time. Rent growth is the figure to ask for, national or Bengaluru, stated as a percentage. Replace before publication.",
@@ -40784,7 +40879,7 @@
       "id": "fin-india-vs-hubs",
       "functionArea": "finance",
       "lens": "cost",
-      "title": "India compared with other delivery locations",
+      "title": "Cost against other GCC hubs",
       "question": "For the same work, how does India sit against the alternatives?",
       "format": "index",
       "indexBaseline": "India = 100. Higher is more expensive.",
@@ -40944,6 +41039,10 @@
         "value": "$2.5B+",
         "label": "Capital investment created"
       }
-    ]
+    ],
+    "close": {
+      "body": "Access the complete dataset, deeper benchmarks and detailed cost structures behind your results.",
+      "ctaLabel": "Unlock full intelligence"
+    }
   }
 }

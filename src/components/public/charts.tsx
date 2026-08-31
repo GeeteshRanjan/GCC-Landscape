@@ -255,6 +255,7 @@ export interface BarRow {
 export function RankedBars({
   rows,
   axisNote,
+  quantityHeader,
   reference,
   dense = false,
   inline = false,
@@ -263,6 +264,21 @@ export function RankedBars({
   rows: readonly BarRow[];
   /** What full width is. Omitted only when the section states it already. */
   axisNote?: string;
+  /**
+   * What the figure column COUNTS, named once above it rather than under the chart.
+   *
+   * **This is Screen 1's device, and it is what a unit should have been doing here all
+   * along.** The peer view's largest-centres ranking names its quantity in one small-caps
+   * column header over the figures ("GCC headcount"); this chart put the same information
+   * in an `axisNote` at the FOOT of the card, where a reader meets it after the seven
+   * figures it was supposed to be qualifying — so the numerals were unlabelled at the
+   * moment they were read, and the word sat in the position a caveat sits in.
+   *
+   * Aligned to the trailing edge, over the figure column it names, and only offered on
+   * the `inline` layout because that is the layout with a figure column to head. A caller
+   * passes this OR `axisNote`, never both: they are the same string in two positions.
+   */
+  quantityHeader?: string;
   /**
    * A comparator drawn across the whole chart — the average a set of growth
    * rates is spread around, say. This is the thing that turns a list of numbers
@@ -301,8 +317,45 @@ export function RankedBars({
    */
   bareTrack?: boolean;
 }) {
+  /**
+   * **One figure track for the whole chart, and without it the bars did not share an
+   * axis.** An inline row is its own grid, so a `max-content` figure column was sized by
+   * THAT row's own figure — which made the bar column a different width in every row. On
+   * the latency breakdown ("8", "40", "110", "180") the four tracks ended 16px apart, so
+   * four bars measured against four different full widths, which is the one thing a shared
+   * axis is for. The figures still right-aligned, so it read as bars stopping short at
+   * random.
+   *
+   * The width is the longest figure in `ch`, which is exact rather than approximate:
+   * every figure is set in `tabular-nums`, so a digit is exactly 1ch, and the non-digit
+   * characters a figure can carry (`.`, `%`, `M`, `K`, `+`) are all narrower than one —
+   * so a character count in `ch` is an over-estimate by construction and cannot clip.
+   * The surplus lands to the LEFT of a right-aligned figure, where it is gap.
+   *
+   * A layout measure taken from the strings, not arithmetic on the data: nothing here
+   * reads a value, and the figures were formatted by the view model.
+   */
+  const figureChars = rows.reduce(
+    (longest, row) => Math.max(longest, row.figure.length),
+    1,
+  );
+
   return (
-    <div className="flex flex-col gap-3">
+    <div
+      className="flex flex-col gap-3"
+      style={{ "--gcc-figure-track": `${figureChars}ch` } as React.CSSProperties}
+    >
+      {/* The figure column's own header, at the trailing edge above the numerals it
+          names. `justify-end` rather than a grid matching the rows: the rows' figure
+          column is `max-content`, so a header laid out in the same grid would be as wide
+          as the longest figure and would centre over it rather than sit at the edge the
+          figures are aligned to. Small caps and muted, which is the register Screen 1's
+          own column header uses — it is chrome naming a quantity, not evidence. */}
+      {quantityHeader && inline ? (
+        <p className="flex justify-end text-xs font-semibold tracking-caps text-text-muted uppercase">
+          {quantityHeader}
+        </p>
+      ) : null}
       <div className="relative">
         {reference ? (
           <div
@@ -348,10 +401,13 @@ export function RankedBars({
                  * teal bar with no track behind it reads at 4px as an underline of the
                  * text above rather than as a quantity.
                  */
+                /* The figure track is the chart's, not the row's — see
+                   `--gcc-figure-track` above. `max-content` here is what let every row
+                   size its own bar column differently. */
                 className={cn(
                   "grid items-center gap-x-4 gap-y-2",
-                  "grid-cols-[minmax(0,1fr)_max-content]",
-                  "sm:grid-cols-[minmax(0,1fr)_30%_max-content]",
+                  "grid-cols-[minmax(0,1fr)_var(--gcc-figure-track)]",
+                  "sm:grid-cols-[minmax(0,1fr)_30%_var(--gcc-figure-track)]",
                 )}
               >
                 <dt
@@ -2415,6 +2471,24 @@ export function IndexSpread({
             the truncated domain the reference asks for could be refused. */}
         <div className="relative h-4 text-xs text-text-muted tabular-nums">
           <span className="absolute start-0">0</span>
+          {/* **The comparator's own figure, under its marker, at ANSR's request.** It is
+              the third place the same number appears on one card — the figure above, this
+              label, and the delta beside the heading as a difference from 100 — which is
+              the repetition this screen usually removes. Asked for because the rail is
+              where a reader looks to see WHERE the cheaper option sits, and a positioned
+              mark with no number on it sends them back up to the pair of figures to work
+              out which of the two it is.
+
+              Centred on the mark, and the base's end label is what it has to clear: at 85
+              against 100 the two sit 15% of the rail apart, which is 30px on the narrowest
+              card this draws in and enough for two two-digit labels. `whitespace-nowrap`
+              so a centred label never wraps into two lines and drags the row's height. */}
+          <span
+            className="absolute -translate-x-1/2 font-semibold whitespace-nowrap text-accent-teal"
+            style={{ insetInlineStart: `${comparator.share * 100}%` }}
+          >
+            {comparator.figure}
+          </span>
           <span className="absolute end-0">{base.figure}</span>
         </div>
       </div>
@@ -2431,34 +2505,42 @@ export function IndexSpread({
    locations is twenty figures that are compared DOWN a column as much as along a row,
    and a plot per row cannot be read down. A table can.
 
-   Four things make it a table rather than a grid of boxes:
+   Three things make it a table rather than a grid of boxes:
 
      - **Every cell states its exact index**, so nothing is encoded only by length.
-     - **The bar beside a figure is bare and every cell's is the same length available
-       at the same inset**, which is what makes "one shared maximum" legible. The
-       longest bar in the grid IS the maximum and carries its own figure, which is the
-       self-labelling exemption `project.md` grants — the same one that licenses a
-       ranked list dropping its track.
-     - **The base column carries no bar at all.** It is the same figure in every row by
-       definition, so a bar on it would be four identical marks encoding the axis rather
-       than a value.
+       Which is now the ONLY encoding — see below.
+     - **The base column is the one thing marked**, by a fill and by its figures in the
+       heading teal. It is the same figure in every row by definition, so it is the
+       reference the other four are read against rather than a value competing with them.
      - **Row separators and nothing else.** No boxed cells: a border around every cell
        would draw twenty rectangles over twenty numbers.
+
+   **THE BARS ARE GONE, AND SO IS THE EMPHASISED ROW, both at ANSR's request.** Each
+   non-base cell drew a bare teal bar beside its figure, all sixteen against the grid's
+   own largest cell, and the reader's own function was filled a step to mark the row they
+   were on. Two things came off with them and are worth knowing before either is
+   restored. The bars were this card's only visual encoding of magnitude, so a reader now
+   compares twenty numbers as numbers — which is defensible for a small index grid and
+   would not be for a wider one. And the emphasised row was the one place this screen read
+   an admin-editable string; with it gone, `IndexTable` reads none, and `DeliveryLocations`
+   no longer needs to know which tab it is on.
+
+   The alignment is a consequence rather than a separate decision: with no bar to sit
+   beside, a cell is one element, so the figures line up on each column's own start edge
+   and the table no longer needs a minimum width wider than its card.
    ========================================================================== */
 
 export interface IndexTableRow {
   label: string;
-  /**
-   * The row the reader is on, filled a step.
-   *
-   * The caller decides which, and gets it wrong safely: nothing about the figures or
-   * the axis depends on it, so an unmatched row simply leaves the table unemphasised.
-   */
-  emphasis?: boolean;
   cells: ReadonlyArray<{
     column: string;
     figure: string;
-    /** 0 to 1 against the axis shared by the whole grid. */
+    /**
+     * 0 to 1 against the axis shared by the whole grid.
+     *
+     * **Unread here now the bars are gone**, and kept because it is the view model's own
+     * shape — `IndexLollipop` draws the same rows on a derived tab and does read it.
+     */
     share: number;
     /** The index base column. Exactly one per row. */
     anchor: boolean;
@@ -2487,7 +2569,12 @@ export function IndexTable({
       role="group"
       aria-labelledby={labelledBy}
     >
-      <table className="w-full min-w-2xl border-collapse text-sm">
+      {/* **No `min-w-2xl` any more.** The minimum was what the bars needed: sixteen
+          tracks each wanting enough width to be a comparison forced the table wider than
+          its own card at every breakpoint. Six columns of digits fit a desktop card
+          unaided, so the table sizes to its content and only a phone scrolls it — the
+          container stays because a phone still does. */}
+      <table className="w-full border-collapse text-sm">
         <thead>
           <tr>
             <th
@@ -2509,22 +2596,10 @@ export function IndexTable({
         </thead>
         <tbody>
           {rows.map((row) => (
-            <tr
-              key={row.label}
-              className={cn(
-                "border-t border-border-subtle",
-                // The reader's own function. Tint plus weight, because this palette
-                // cannot separate two categories by hue and a fill alone is a weak
-                // signal on a light ground — see the row header below.
-                row.emphasis ? "bg-surface-tint" : undefined,
-              )}
-            >
+            <tr key={row.label} className="border-t border-border-subtle">
               <th
                 scope="row"
-                className={cn(
-                  "py-3 pe-4 text-start align-middle text-sm whitespace-nowrap text-text",
-                  row.emphasis ? "font-bold" : "font-medium",
-                )}
+                className="py-3 pe-4 text-start align-middle text-sm font-medium whitespace-nowrap text-text"
               >
                 {row.label}
               </th>
@@ -2534,46 +2609,32 @@ export function IndexTable({
                   className={cn(
                     "py-3 pe-4 ps-4 align-middle",
                     /**
-                     * **The base column, filled — except where the emphasised row
-                     * crosses it.** Two tints of the same value would draw an L that
-                     * breaks in one cell, and the row is the more important of the two
-                     * readings: it is the reader's own function, and a row whose fill
-                     * stops in the middle reads as a rendering fault. So the column
-                     * yields, and its header still marks it.
+                     * **The base column, filled — and now the only fill in the table.**
+                     * It used to yield to the emphasised row, because two tints of one
+                     * value drew an L that broke in a single cell; with the row emphasis
+                     * gone the column runs unbroken and the branch that handled the
+                     * crossing goes with it.
+                     *
+                     * `surface-pale`, matching the technology capability grid's anchor
+                     * column — the mint `surface-tint` read too dark and too blue on this
+                     * tab at ANSR's request. Pale is ~2% off white, so it reads as a band
+                     * rather than a fill, and the figures' own ink carries the rest.
                      */
-                    cell.anchor && !row.emphasis ? "bg-surface-tint" : undefined,
+                    cell.anchor ? "bg-surface-pale" : undefined,
                   )}
                 >
-                  <div className="flex items-center gap-3">
-                    <span
-                      className={cn(
-                        "shrink-0 tabular-nums",
-                        cell.anchor
-                          ? "font-bold text-accent-teal"
-                          : row.emphasis
-                            ? "font-semibold text-text"
-                            : "text-text",
-                      )}
-                    >
-                      {cell.figure}
-                    </span>
-                    {/* The base carries no bar. See the block comment. */}
-                    {cell.anchor ? null : (
-                      <span
-                        aria-hidden="true"
-                        className="hidden h-1 min-w-0 flex-1 sm:block"
-                      >
-                        {/* `teal-500`: 5.14:1 on white and 4.04:1 on the emphasised
-                            row's own tint, both clear of the 3:1 floor WCAG 1.4.11 asks
-                            of a non-text graphic. No track behind it — the shared inset
-                            and the shared available width ARE the axis. */}
-                        <span
-                          className="block h-full bg-teal-500"
-                          style={{ width: `${Math.max(cell.share * 100, 2)}%` }}
-                        />
-                      </span>
+                  {/* One element per cell, which is what aligns the columns. The flex row
+                      that held a figure beside a bar is gone with the bar. */}
+                  <span
+                    className={cn(
+                      "tabular-nums",
+                      cell.anchor
+                        ? "font-bold text-accent-teal"
+                        : "font-normal text-text",
                     )}
-                  </div>
+                  >
+                    {cell.figure}
+                  </span>
                 </td>
               ))}
             </tr>

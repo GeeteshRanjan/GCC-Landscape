@@ -1,5 +1,4 @@
-import { METRIC_FUNCTION_LABELS } from "@/data/metrics";
-import type { FunctionAreaView, LaidOutHeld, ShownMetric } from "@/data/screen2";
+import type { FunctionAreaView, ShownMetric } from "@/data/screen2";
 import { Panel } from "@/components/public/primitives";
 import {
   IndexSpread,
@@ -15,11 +14,8 @@ import {
   FIN_FIGURES_QUALIFIER,
   FIN_LEADS,
   FIN_TABLE_ROW_HEADER,
-  FLOOR_NOTE,
-  heldHeading,
   indexedNote,
 } from "./copy";
-import { HeldMetricCard } from "./metric-card";
 import { scalarCells, SummaryFigures } from "./summary-figures";
 import { TabZones } from "./zones";
 
@@ -146,16 +142,19 @@ export function FinPanel({ area }: { area: FunctionAreaView }) {
         shown={hubs}
         columns={hubs.grid.columns}
         rows={hubs.grid.rows}
-        functionArea={area.functionArea}
       />,
     );
   }
   if (leftovers.length > 0) {
     sections.push(<Leftovers key="leftovers" metrics={leftovers} />);
   }
-  if (area.heldCards.length > 0) {
-    sections.push(<HeldGroup key="held" cards={area.heldCards} />);
-  }
+  /**
+   * **The sealed group is DELETED at ANSR's request, so this tab renders nothing for a
+   * gated metric.** `area.heldCards` still exists and the gate is untouched —
+   * `publicMetric` has no field a withheld figure could travel in — so the workplace
+   * gradient and the cost-versus-depth grid are simply not drawn: no heading, no
+   * placeholder, no chip. The HR tab lost its equivalent in the same pass.
+   */
 
   return <TabZones sections={sections} />;
 }
@@ -321,24 +320,23 @@ function TierSpread({
    itself: four functions against five locations is read DOWN a column as much as along a
    row, and a row of dots cannot be read down.
 
-   **The visitor's own function is the emphasised row**, matched against the tab's own
-   public label. That reads an admin-editable row name, which every other rule on this
-   screen is forbidden from doing — licensed here by what happens when it is wrong: a
-   renamed row loses a tint, and no figure, axis or ordering depends on it.
+   **The emphasised row is GONE at ANSR's request, and with it the one place this screen
+   read an admin-editable string.** The Finance row was filled a step, matched against the
+   tab's own public label — licensed by what happened when it was wrong, which was that a
+   renamed row lost a tint and nothing else. It is now unmarked, so this component no
+   longer needs to know which tab it is on, and the only fill left in the table is the
+   India column's. The bars came off in the same pass; see `IndexTable`.
    ========================================================================== */
 
 function DeliveryLocations({
   shown,
   columns,
   rows,
-  functionArea,
 }: {
   shown: ShownMetric;
   columns: readonly string[];
   rows: readonly IndexTableRow[];
-  functionArea: FunctionAreaView["functionArea"];
 }) {
-  const own = METRIC_FUNCTION_LABELS[functionArea].toLowerCase();
   return (
     <Panel
       id={`metric-${shown.metric.id}`}
@@ -351,10 +349,7 @@ function DeliveryLocations({
     >
       <IndexTable
         columns={columns}
-        rows={rows.map((row) => ({
-          ...row,
-          emphasis: row.label.toLowerCase() === own,
-        }))}
+        rows={rows}
         rowHeader={FIN_TABLE_ROW_HEADER}
         labelledBy={`metric-${shown.metric.id}-heading`}
       />
@@ -407,40 +402,5 @@ function Leftovers({ metrics }: { metrics: readonly ShownMetric[] }) {
         </Panel>
       ))}
     </div>
-  );
-}
-
-/* ==========================================================================
-   The held group — the workplace gradient and the cost-versus-depth grid
-
-   Drawn with the DERIVED tab's components and heading, exactly as the operations tab
-   does it. HR's sealed pair is a hand-built preview authored against the two metrics
-   that tab holds; there is nothing equivalent authored for these two, and the generic
-   placeholder is what every other tab shows.
-   ========================================================================== */
-
-function HeldGroup({ cards }: { cards: readonly LaidOutHeld[] }) {
-  const headingId = "fin-held-heading";
-  return (
-    <section
-      id="fin-held"
-      aria-labelledby={headingId}
-      className="flex flex-col gap-6"
-    >
-      <h2
-        id={headingId}
-        className="text-xl leading-snug font-bold tracking-display text-text md:text-2xl"
-      >
-        {heldHeading(cards.length)}
-      </h2>
-      {/* Twelve columns, because `HeldMetricCard` carries its own `lg:col-span-*` from
-          the width `heldWidth` gave it — already packed by `layoutArea`, so no row can
-          be left part-empty. */}
-      <div className="grid grid-cols-1 items-start gap-6 lg:grid-cols-12">
-        {cards.map(({ held, width }) => (
-          <HeldMetricCard key={held.metric.id} held={held} width={width} />
-        ))}
-      </div>
-    </section>
   );
 }

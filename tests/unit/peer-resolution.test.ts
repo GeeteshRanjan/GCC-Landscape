@@ -187,6 +187,226 @@ describe("each payments type leads with its own members where they exist", () =>
 });
 
 /* ────────────────────────────────────────────────────────────────────────────
+ * The asset-management split: managers vs the servicers behind them
+ * ──────────────────────────────────────────────────────────────────────────── */
+
+describe("asset & investment management is split from fund administration & servicing", () => {
+  it("defines fin-fund-services in BFSI alongside fin-asset-management", () => {
+    for (const id of ["fin-asset-management", "fin-fund-services"]) {
+      const type = typeById.get(id);
+      expect(type, id).toBeDefined();
+      expect(type!.industry).toBe("BFSI");
+    }
+  });
+
+  it("gives fund-services the servicer atoms an asset manager lacks", () => {
+    const fund = new Set<string>(typeById.get("fin-fund-services")!.tags);
+    const mgr = new Set<string>(typeById.get("fin-asset-management")!.tags);
+    // The distinguishers: a servicer is a services firm running outsourced back
+    // office; an asset manager is neither.
+    for (const atom of ["services-firm", "outsourcing-bpo"]) {
+      expect(fund.has(atom), `fin-fund-services must carry ${atom}`).toBe(true);
+      expect(mgr.has(atom), `fin-asset-management must NOT carry ${atom}`).toBe(false);
+    }
+    // And the reverse: `asset-management` is what an asset-management visitor holds
+    // and a servicer lacks, so a manager still ranks above a servicer for that visitor.
+    expect(mgr.has("asset-management")).toBe(true);
+    expect(fund.has("asset-management"), "fin-fund-services must NOT carry asset-management").toBe(false);
+  });
+
+  it("keeps a shared core on both, so each stays a secondary peer above the floor", () => {
+    for (const id of ["fin-asset-management", "fin-fund-services"]) {
+      const tags = new Set<string>(typeById.get(id)!.tags);
+      for (const core of ["capital-markets", "regulated", "b2b", "asset-light"]) {
+        expect(tags.has(core), `${id} must keep ${core}`).toBe(true);
+      }
+    }
+  });
+
+  it("leads an asset-management visitor with managers, not servicers", () => {
+    const peers = matchPeers(dataset, {
+      companyName: "An asset manager",
+      industry: "BFSI",
+      revenueBand: "$1 Bn – $5 Bn",
+      hqCountry: "USA",
+      businessTypeId: "fin-asset-management",
+    }).peers;
+    expect(peers).toHaveLength(DEFAULT_PEER_LIMIT);
+    // The servicers that used to pollute this set must be gone from the top five.
+    const names = peers.map((p) => p.name);
+    expect(names).not.toContain("Apex Group Ltd");
+    expect(names).not.toContain("FNZ Group");
+    for (const peer of peers) {
+      expect(peer.businessTypes, `${peer.name} should be an asset manager`).toContain("fin-asset-management");
+    }
+  });
+
+  it("leads a fund-services visitor with its own members at their band", () => {
+    const peers = matchPeers(dataset, {
+      companyName: "A fund administrator",
+      industry: "BFSI",
+      revenueBand: "$1 Bn – $5 Bn",
+      hqCountry: "USA",
+      businessTypeId: "fin-fund-services",
+    }).peers;
+    const own = peers.filter((p) => p.businessTypes.includes("fin-fund-services")).length;
+    expect(own).toBeGreaterThanOrEqual(3);
+  });
+});
+
+/* ────────────────────────────────────────────────────────────────────────────
+ * The IT-services split: systems integrators vs localization & content services
+ * ──────────────────────────────────────────────────────────────────────────── */
+
+describe("IT & digital engineering services is split from localization & content services", () => {
+  it("defines sw-content-services in Software & Internet alongside sw-it-services", () => {
+    for (const id of ["sw-it-services", "sw-content-services"]) {
+      const type = typeById.get(id);
+      expect(type, id).toBeDefined();
+      expect(type!.industry).toBe("Software & Internet");
+    }
+  });
+
+  it("gives content-services the one atom an integrator lacks, on a second carrier too", () => {
+    const content = new Set<string>(typeById.get("sw-content-services")!.tags);
+    const integrator = new Set<string>(typeById.get("sw-it-services")!.tags);
+    // The distinguisher a localization visitor holds and a systems integrator does not.
+    expect(content.has("content-language-services")).toBe(true);
+    expect(
+      integrator.has("content-language-services"),
+      "sw-it-services must NOT carry content-language-services",
+    ).toBe(false);
+    // The atom is not dead: at least two types carry it (the >= 2 rule), and no
+    // OTHER Software & Internet type does, so it stays rare where it must reorder.
+    const carriers = dataset.businessTypes.filter((t) => t.tags.includes("content-language-services"));
+    expect(carriers.length).toBeGreaterThanOrEqual(2);
+    const swCarriers = carriers.filter((t) => t.industry === "Software & Internet");
+    expect(swCarriers.map((t) => t.id)).toEqual(["sw-content-services"]);
+  });
+
+  it("keeps the shared services core on both, so each stays a secondary peer above the floor", () => {
+    for (const id of ["sw-it-services", "sw-content-services"]) {
+      const tags = new Set<string>(typeById.get(id)!.tags);
+      for (const core of ["services-firm", "outsourcing-bpo", "b2b", "enterprise-accounts", "cross-industry", "project-revenue"]) {
+        expect(tags.has(core), `${id} must keep ${core}`).toBe(true);
+      }
+    }
+  });
+
+  it("leads a localization visitor with content firms, not systems integrators", () => {
+    const peers = matchPeers(dataset, {
+      companyName: "A localization shop",
+      industry: "Software & Internet",
+      revenueBand: "$1 Bn – $5 Bn",
+      hqCountry: "USA",
+      businessTypeId: "sw-content-services",
+    }).peers;
+    const own = peers.filter((p) => p.businessTypes.includes("sw-content-services")).length;
+    expect(own).toBeGreaterThanOrEqual(3);
+    const names = peers.map((p) => p.name);
+    expect(names).toContain("Lionbridge Technologies");
+    expect(names).toContain("Straive");
+  });
+
+  it("no longer leads the integrator visitor with content firms", () => {
+    // Before the split, Lionbridge / Straive / Centific filled three of the top
+    // five for an sw-it-services visitor at this band. Now the integrator's own
+    // members lead and content firms are pushed to the tail.
+    const peers = matchPeers(dataset, {
+      companyName: "A systems integrator",
+      industry: "Software & Internet",
+      revenueBand: "$1 Bn – $5 Bn",
+      hqCountry: "USA",
+      businessTypeId: "sw-it-services",
+    }).peers;
+    const ownIntegrators = peers.filter((p) => p.businessTypes.includes("sw-it-services")).length;
+    expect(ownIntegrators).toBeGreaterThanOrEqual(3);
+  });
+});
+
+/* ────────────────────────────────────────────────────────────────────────────
+ * The pharma split: innovator/prescription pharma vs consumer health & OTC
+ * ──────────────────────────────────────────────────────────────────────────── */
+
+describe("pharmaceuticals is split from consumer health & OTC", () => {
+  it("defines hc-consumer-health in Healthcare & Lifescience alongside hc-pharma", () => {
+    for (const id of ["hc-pharma", "hc-consumer-health"]) {
+      const type = typeById.get(id);
+      expect(type, id).toBeDefined();
+      expect(type!.industry).toBe("Healthcare & Lifescience");
+    }
+  });
+
+  it("gives consumer-health the consumer atoms an innovator lacks, rare within the industry", () => {
+    const consumer = new Set<string>(typeById.get("hc-consumer-health")!.tags);
+    const pharma = new Set<string>(typeById.get("hc-pharma")!.tags);
+    // The distinguishers a consumer-health visitor holds and an innovator does not.
+    for (const atom of ["brand-owner", "personal-care"]) {
+      expect(consumer.has(atom), `hc-consumer-health must carry ${atom}`).toBe(true);
+      expect(pharma.has(atom), `hc-pharma must NOT carry ${atom}`).toBe(false);
+    }
+    // `brand-owner` and `personal-care` are carried by NO other Healthcare type, so
+    // they stay maximally rare — and heavily IDF-weighted — where they must reorder.
+    for (const atom of ["brand-owner", "personal-care"] as const) {
+      const hcCarriers = dataset.businessTypes.filter(
+        (t) => t.industry === "Healthcare & Lifescience" && t.tags.includes(atom),
+      );
+      expect(hcCarriers.map((t) => t.id)).toEqual(["hc-consumer-health"]);
+      // Still alive globally: the >= 2 rule holds through the retail / CPG carriers.
+      expect(
+        dataset.businessTypes.filter((t) => t.tags.includes(atom)).length,
+      ).toBeGreaterThanOrEqual(2);
+    }
+    // And the reverse: the innovator atoms an innovator visitor holds and a
+    // consumer-health business lacks, so a drug maker still ranks above OTC brands.
+    for (const atom of ["clinical-research", "r-and-d-intensive", "biotech"]) {
+      expect(pharma.has(atom), `hc-pharma must carry ${atom}`).toBe(true);
+      expect(consumer.has(atom), `hc-consumer-health must NOT carry ${atom}`).toBe(false);
+    }
+  });
+
+  it("keeps the shared pharma core on both, so each stays a secondary peer above the floor", () => {
+    for (const id of ["hc-pharma", "hc-consumer-health"]) {
+      const tags = new Set<string>(typeById.get(id)!.tags);
+      for (const core of ["process-manufacturing", "pharmaceutical", "regulated", "supply-chain-heavy"]) {
+        expect(tags.has(core), `${id} must keep ${core}`).toBe(true);
+      }
+    }
+  });
+
+  it("no longer leads a pharma visitor with OTC brands", () => {
+    // Before the split the $10-20 Bn top five were Viatris, Kenvue, Regeneron, Teva,
+    // Haleon — Kenvue and Haleon are OTC self-care, not drug makers.
+    const peers = matchPeers(dataset, {
+      companyName: "A drug maker",
+      industry: "Healthcare & Lifescience",
+      revenueBand: "$10 Bn – $20 Bn",
+      hqCountry: "USA",
+      businessTypeId: "hc-pharma",
+    }).peers;
+    expect(peers).toHaveLength(DEFAULT_PEER_LIMIT);
+    const names = peers.map((p) => p.name);
+    expect(names).not.toContain("Kenvue");
+    expect(names).not.toContain("Haleon");
+    for (const peer of peers) {
+      expect(peer.businessTypes, `${peer.name} should be a pharma peer`).toContain("hc-pharma");
+    }
+  });
+
+  it("leads a consumer-health visitor with its own members at their band", () => {
+    const peers = matchPeers(dataset, {
+      companyName: "An OTC brand",
+      industry: "Healthcare & Lifescience",
+      revenueBand: "$10 Bn – $20 Bn",
+      hqCountry: "USA",
+      businessTypeId: "hc-consumer-health",
+    }).peers;
+    const own = peers.filter((p) => p.businessTypes.includes("hc-consumer-health")).length;
+    expect(own).toBeGreaterThanOrEqual(3);
+  });
+});
+
+/* ────────────────────────────────────────────────────────────────────────────
  * The general design fact that makes conflation matter
  * ──────────────────────────────────────────────────────────────────────────── */
 

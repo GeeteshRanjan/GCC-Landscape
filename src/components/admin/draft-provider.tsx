@@ -15,6 +15,7 @@ import type {
   BusinessType,
   Company,
   Dataset,
+  CloseCopy,
   HeroCopy,
   ImpactStat,
   Metric,
@@ -54,7 +55,7 @@ import { slugify, uniqueSlug } from "@/data/normalize";
  *
  * `tests/browser/helpers.ts` owns `DRAFT_STORAGE_KEY` and must move with it.
  */
-const STORAGE_KEY = "gcc-admin-draft-v4";
+const STORAGE_KEY = "gcc-admin-draft-v5";
 const AUTOSAVE_DEBOUNCE_MS = 800;
 
 /** Everything the admin can edit. Metadata is server-owned. */
@@ -117,6 +118,8 @@ interface DraftContextValue {
    * numbers re-fitted to it must be one edit.
    */
   updateHeroCopy: (patch: Partial<HeroCopy>) => void;
+  /** The close's copy, patched the same way and for the same reason as the hero's. */
+  updateCloseCopy: (patch: Partial<CloseCopy>) => void;
   /** Returns the id of the new row, so the caller can focus it. */
   addImpactStat: () => string;
   updateImpactStat: (id: string, patch: Partial<Omit<ImpactStat, "id">>) => void;
@@ -510,6 +513,16 @@ export function DraftProvider({
     }));
   }, [applyEdit]);
 
+  const updateCloseCopy = useCallback((patch: Partial<CloseCopy>) => {
+    applyEdit((current) => ({
+      ...current,
+      siteContent: {
+        ...current.siteContent,
+        close: { ...current.siteContent.close, ...patch },
+      },
+    }));
+  }, [applyEdit]);
+
   /**
    * A new row starts empty apart from its id, and the id is generated rather
    * than typed.
@@ -751,6 +764,7 @@ export function DraftProvider({
       addBusinessType,
       updateBusinessType,
       removeBusinessType,
+      updateCloseCopy,
       addCompany,
       updateCompany,
       deleteCompany,

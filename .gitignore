@@ -61,3 +61,15 @@ test-results/
 # critique section where its conclusions belong.
 Customer Logos/
 Critic and Suggestions.md
+
+# Local working handover, not the steering one. `.kiro/steering/handoff.md` is the
+# tracked, bounded handoff; this is a long-form scratch copy kept on disk only.
+docs/handover.md
+
+# Commercial font binaries. Moderat is licensed per-project and the licence for an
+# embedded tool is unsettled — committing the files is the redistribution decision
+# git history makes permanent, exactly as with the vendored skills above. The pair
+# on disk is also Light + Regular only, so every Bold heading would be synthesised;
+# the Hanken Grotesk stand-in has real weights and is the better render until a
+# licensed woff2 set with Medium and Bold arrives. See handoff, blocked item 8.
+public/fonts/

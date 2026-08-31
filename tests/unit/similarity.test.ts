@@ -65,7 +65,7 @@ function company(overrides: Partial<Company> = {}): Company {
 function type(overrides: Partial<BusinessType> = {}): BusinessType {
   return {
     id: "ret-apparel",
-    name: "Apparel & footwear brand",
+    name: "Apparel & Footwear Brand",
     industry: "Retail",
     tags: ["brand-owner", "apparel", "footwear"],
     ...overrides,

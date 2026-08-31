@@ -216,19 +216,61 @@ test.describe("getting there and back", () => {
     await page.getByRole("button", { name: "See my results" }).click();
     await page.getByRole("tab", { name: /Function Metrics/ }).click();
     /**
-     * **The close is GONE, so the tool now has no call to action on either screen.**
-     * Screen 1's went first on the page-end instruction and this one followed at
-     * ANSR's request. What ends the page is the evidence and then one attribution line
-     * under the card. Both halves are asserted, because either coming back alone is a
-     * half-restored decision: no outbound link anywhere, and the source line present.
+     * **The close is BACK, on both screens, at the project owner's decision.** It was
+     * removed from Screen 1 on the page-end instruction and from this screen in the
+     * pass that rebuilt its zones. Both halves are asserted, because either one
+     * arriving alone is a half-restored decision: exactly one outbound link, and the
+     * source line still under the card after it.
+     *
+     * ONE link rather than "at least one". The band is the tool's single call to
+     * action, and the thing worth catching is a second one appearing somewhere else.
      */
-    await expect(page.getByRole("link")).toHaveCount(0);
-    await expect(page.getByText(/Talk to ANSR/)).toHaveCount(0);
+    await expect(page.getByRole("link")).toHaveCount(1);
+    // By role inside the band, not by its words — the label is admin-editable copy.
+    await expect(band(page, "close").getByRole("link")).toBeVisible();
     await expect(page.getByText("Source: ANSR Research")).toBeVisible();
 
-    // No second form, and no lead capture anywhere in this codebase.
+    // No form, and no lead capture anywhere in this codebase. Unchanged by the close
+    // coming back — it links out and asks for nothing.
     expect(await page.locator('input[type="email"]').count()).toBe(0);
     expect(await page.locator("select").count()).toBe(0);
+  });
+
+  /**
+   * The close, on the screen whose own metrics are the gated ones.
+   *
+   * `0-screen1.spec.ts` tests the band's guarantee in full. This asserts it HERE too,
+   * because this is the screen where the gated metrics live and therefore the screen
+   * where a regression in `publicMetric` would surface first — and because the two
+   * screens' closes must not diverge, which is a thing only a test on both can hold.
+   */
+  test("closes on the same band, over a field that carries no data", async ({
+    page,
+  }) => {
+    await openFunctionView(page);
+
+    await expectBand(page, "close");
+    const close = band(page, "close");
+    await expect(close).toBeVisible();
+    await expect(close.getByRole("link")).toBeVisible();
+
+    // One line and a button, no heading and no eyebrow. Same two as Screen 1.
+    await expect(close.getByRole("heading")).toHaveCount(0);
+    await expect(close.locator("p")).toHaveCount(1);
+
+    /**
+     * **Nothing in the blurred layer, on the tab whose figures are the withheld ones.**
+     * The gated branch of `publicMetric` has no field a value could travel in, so this
+     * asserts the compiler's guarantee end to end rather than trusting it.
+     */
+    const backdrop = page.locator(".gcc-close-backdrop");
+    await expect(backdrop).toHaveCount(1);
+    await expect(backdrop).toHaveAttribute("aria-hidden", "true");
+    expect(
+      await backdrop.evaluate((el) => (el as HTMLElement).innerText.trim()),
+    ).toBe("");
+    // And the band as a whole states no figure: the copy names a limit, not a number.
+    expect(await close.innerText()).not.toMatch(/\d/);
   });
 });
 
@@ -252,7 +294,7 @@ test.describe("the four functions", () => {
     await expect(
       page.getByRole("tabpanel").getByRole("heading", {
         level: 2,
-        name: "Technology ecosystem by specialism",
+        name: "Talent depth by specialism",
       }),
     ).toBeVisible();
 
@@ -266,25 +308,25 @@ test.describe("the four functions", () => {
       "true",
     );
     /**
-     * An operations-EXCLUSIVE heading, which is what this assertion needs and what
-     * "Grade A office stock" used to be. That card is gone: the figure is a summary cell
-     * at the head of the composed tab and its section was removed at ANSR's request.
-     * `VELOCITY_HEADING` would not do — it is a shared constant and the HR tab carries
-     * it too, so it would pass on the wrong panel.
+     * An operations-EXCLUSIVE card title, which is what this assertion needs. The
+     * "Scale and connectivity" section heading it used to use was removed at ANSR's
+     * request (the composed tabs no longer carry group headings), and a shared metric
+     * such as the scale milestones would pass on the wrong panel because the HR tab
+     * carries it too. "Network latency to cloud regions" is operations-only.
      */
     await expect(
       page.getByRole("tabpanel").getByRole("heading", {
         level: 2,
-        name: "Scale and connectivity",
+        name: "Network latency to cloud regions",
       }),
     ).toBeVisible();
 
     // One panel at a time: the previous tab's content is unmounted, not hidden
     // behind the new one. Asserted on a card that belongs to the technology tab
-    // alone — "Bench strength" is on three tabs by design, so it would still be
-    // present after the switch and would prove nothing.
+    // alone — "Technology professionals" is on three tabs by design, so it would still
+    // be present after the switch and would prove nothing.
     await expect(
-      page.getByRole("heading", { level: 2, name: "Technology ecosystem by specialism" }),
+      page.getByRole("heading", { level: 2, name: "Talent depth by specialism" }),
     ).toHaveCount(0);
   });
 
@@ -300,7 +342,7 @@ test.describe("the four functions", () => {
      * would notice first if it were not.
      */
     const shared: Array<[string, string]> = [
-      ["Bench strength", "8.7M+"],
+      ["Technology professionals", "8.7M+"],
       ["Time to backfill a role", "35"],
       ["Time to first hire", "7"],
       ["Time to reach each scale milestone", "6"],
@@ -334,24 +376,25 @@ test.describe("the four functions", () => {
     }
   });
 
-  test("shows the whole catalogue and no empty tab", async ({ page }) => {
+  test("shows every OPEN metric and no empty tab", async ({ page }) => {
     await openFunctionView(page);
 
     /**
-     * Technology is 8 since `tech-community-events` was deleted at ANSR's request and
-     * `tech-graduate-output` was replaced by the two-part `tech-graduate-pipeline` —
-     * nine became eight, not seven. HR is 10: workforce diversity is still deleted, and
-     * `hr-graduate-output` is back at ANSR's request after one pass without it.
-     * Finance is 8: six open and two held, the open six including both
-     * cost-durability additions —
-     * whose figures are placeholders at 10%, flagged in their notes and pinned by
-     * `tests/unit/metrics.test.ts`.
+     * **The counts are the OPEN metrics per tab now, because a gated one is drawn
+     * nowhere.** The sealed group was deleted from the HR and finance tabs at ANSR's
+     * request, so HR draws 8 of its 10 and finance 6 of its 8 — the four gated metrics
+     * (two HR, two finance) have no placeholder, no heading and no chip. The gate itself
+     * is unchanged and is asserted separately.
+     *
+     * Technology is 8 since `tech-community-events` was deleted and
+     * `tech-graduate-output` was replaced by the two-part `tech-graduate-pipeline`.
+     * Operations is 9, all open.
      */
     const expected: Array<[string, number]> = [
       ["Technology", 8],
       ["Operations", 9],
-      ["HR", 10],
-      ["Finance", 8],
+      ["HR", 8],
+      ["Finance", 6],
     ];
 
     for (const [name, cards] of expected) {
@@ -361,8 +404,8 @@ test.describe("the four functions", () => {
        * **Counted in two places now, because a tab is two kinds of object.** Every bare
        * scalar is a cell in the figure row — a `<li>` — and everything that draws a mark
        * is a `Panel`, which is a `<section>` with an accessible name rather than a list
-       * item. Summing them is the assertion that every metric on the tab is somewhere:
-       * a metric that fell out of the split entirely would leave this short.
+       * item. Summing them is the assertion that every OPEN metric on the tab is
+       * somewhere: one that fell out of the split entirely would leave this short.
        */
       const figures = await band.locator("ul > li").count();
       const panels = await band.locator('section[id^="metric-"]').count();
@@ -375,12 +418,12 @@ test.describe("the four functions", () => {
      * The promoted structure, on all four tabs. A bare scalar leaves the card grid for
      * the figure row; everything that draws a mark stays a bordered card.
      *
-     * The counts are the catalogue's, so a change to it is a visible test change rather
-     * than a silently different screen. They match `screen2.test.ts`'s own table, and
-     * the held cards are the difference between these and the totals above.
+     * The counts are the catalogue's OPEN metrics, so a change to it is a visible test
+     * change rather than a silently different screen. Nothing here counts a gated metric:
+     * the sealed group was deleted from HR and finance, and the other two tabs have none.
      */
     const expected: Array<[string, number, number]> = [
-      // tab, figure-row cells, metric sections (open + held)
+      // tab, figure-row cells, metric sections
       ["Technology", 5, 3],
       /**
        * **Operations is 4 and 5, and like HR these are not `layoutArea`'s numbers** —
@@ -392,15 +435,16 @@ test.describe("the four functions", () => {
        */
       ["Operations", 4, 5],
       /**
-       * **HR is 3 and 7, and like operations these are not `layoutArea`'s own numbers.**
+       * **HR is 3 and 5, and like operations these are not `layoutArea`'s own numbers.**
        * The tab is composed rather than derived: `HrPanel` places the three scalars as
-       * summary cards in a `ul` — still figure-row cells, still `li`s — and the remaining
-       * five open metrics plus the two held ones as seven `metric-*` sections. It was 3
-       * and 6 until `hr-graduate-output` was restored at ANSR's request. The total is
-       * still every metric on the tab, which is what this pair of counts is for.
+       * figure-row cells and its five open metrics as `metric-*` sections. It was 3 and 7
+       * while the two gated metrics drew sealed cards; that group is deleted, so they draw
+       * nothing.
        */
-      ["HR", 3, 7],
-      ["Finance", 3, 5],
+      ["HR", 3, 5],
+      // Finance was 3 and 5 for the same reason: its two gated metrics are no longer
+      // drawn, leaving the three growth rates and three charts.
+      ["Finance", 3, 3],
     ];
 
     await openFunctionView(page);
@@ -609,7 +653,7 @@ test.describe("the four functions", () => {
      */
     const card = page
       .locator('section[id^="metric-"]')
-      .filter({ hasText: "Capability compared with other delivery locations" });
+      .filter({ hasText: "Capability against other GCC hubs" });
     /**
      * **The key is DRAWN, not listed.** It was four words separated by middots, which
      * states the order of the steps and nothing about which fill count is which — so a
@@ -794,7 +838,13 @@ test.describe("the four functions", () => {
     // The gap, already formatted by the view model, with a real minus sign rather
     // than a hyphen.
     await expect(card.getByText("\u221215")).toBeVisible();
-    await expect(card.getByText("85", { exact: true })).toBeVisible();
+    /**
+     * The Tier 2 index itself, as the card's own figure. Located as the `dd` rather than
+     * by text: the comparator's figure is now drawn a second time under its marker on the
+     * rail, at ANSR's request, so "85" is two elements on this card and an exact-text
+     * match is ambiguous. The `dd` is the reading; the rail label is the second one.
+     */
+    await expect(card.locator("dd", { hasText: /^85$/ })).toBeVisible();
 
     // An index says what it is indexed on, and which way is better. One with no
     // stated base is unreadable; one with no stated direction leaves the reader to
@@ -807,73 +857,40 @@ test.describe("the four functions", () => {
 });
 
 test.describe("the gate", () => {
-  test("shows a held metric as a shape and nothing else", async ({ page }) => {
+  test("draws a gated metric nowhere at all", async ({ page }) => {
+    /**
+     * **The sealed group is DELETED from the HR and finance tabs at ANSR's request**, so a
+     * gated metric now has no placeholder, no heading, no lock and no chip — it is simply
+     * absent from the page. This replaces the test that asserted the shape-only card, and
+     * it asserts the stronger property: nothing about the four gated metrics is drawn.
+     *
+     * The GATE is untouched and is still what makes this safe rather than cosmetic —
+     * `publicMetric` has no field a withheld figure could travel in. The next test asserts
+     * that from the document side.
+     */
     await openFunctionView(page);
-    await page.getByRole("tab", { name: "HR", exact: true }).click();
 
-    /**
-     * **The reason is in the heading and the paragraph under it is gone.** `HELD_BODY`
-     * said why, and then said three more times in prose what the sealed card, its chip
-     * and its cardinality note each already draw — "so the shape is here and the
-     * figures are not". Only the reason needed words, and a heading holds it in nine.
-     *
-     * **Located by id, not by heading text.** Every tab now heads this group with
-     * `heldHeading` — "Figures shaped by your roles and cities", ANSR's wording, where the
-     * HR tab had a constant of its own saying it one way and the other three said it
-     * another. Twenty specs in this suite once located a band by its wording and one copy
-     * pass broke all twenty; the id is the contract, and `expectBand` still asserts the
-     * landmark itself.
-     */
-    const group = band(page, "hr-held");
-    await expectBand(page, "hr-held");
-    await expect(
-      page.getByText(/would mislead more than it would inform/),
-    ).toHaveCount(0);
+    for (const tab of ["HR", "Finance"]) {
+      await page.getByRole("tab", { name: tab, exact: true }).click();
+      const metrics = band(page, "function-metrics");
 
-    // Sealed cards are `Panel`s too — `tone="sealed"` — so they are sections rather
-    // than list items, and they share the open cards' radius, padding and heading
-    // scale by construction instead of by two files agreeing.
-    const cards = group.locator('section[id^="metric-"]');
-    await expect(cards).toHaveCount(2);
-    /**
-     * **"Held back" twice, and on this tab the words are inside a lock rather than a
-     * chip.** The derived tabs put them in a `Chip` beside the heading; the HR
-     * composition asks for a padlock disc, so they moved into `sr-only` text on the disc.
-     * They are still in the document exactly twice, which is the assertion worth having —
-     * a decorative padlock with nothing announced would leave a screen-reader user with a
-     * card that simply appears to have no content.
-     */
-    await expect(group.getByText("Held back")).toHaveCount(2);
-
-    // Cardinality is all the gate leaves, so cardinality is what the card says.
-    await expect(group.getByText("5 rows across 5 columns.")).toBeVisible();
-    await expect(group.getByText("2 parts.")).toBeVisible();
-
-    /**
-     * The 5x5 grid is drawn true: 25 slots, plus one per operating model on the
-     * support-ratio card.
-     *
-     * **The two models' blocks are drawn IDENTICALLY, and that is a gate assertion rather
-     * than a layout one.** The reference composition draws five dark figures against four
-     * pale ones, which is a ratio — a number, drawn, for a metric whose number never left
-     * the server. Equal blocks state that there are two models and that each has a ratio,
-     * and assert nothing whatever about how the two compare.
-     */
-    const held = group.locator(".gcc-held");
-    expect(await held.count()).toBeGreaterThanOrEqual(25);
-    const ratio = group
-      .locator("#metric-hr-cost-per-employee-served")
-      .locator(".gcc-held");
-    await expect(ratio).toHaveCount(2);
-    const widths = await ratio.evaluateAll((nodes) =>
-      nodes.map((node) => Math.round(node.getBoundingClientRect().width)),
-    );
-    expect(new Set(widths).size, "the two models are drawn identically").toBe(1);
-
-    // Every slot is empty. A blur over real text would be a leak; there is no
-    // text here to blur.
-    for (const text of await held.allTextContents()) {
-      expect(text.trim()).toBe("");
+      // No sealed group, on either tab.
+      await expect(page.locator("#hr-held")).toHaveCount(0);
+      await expect(page.locator("#fin-held")).toHaveCount(0);
+      await expect(metrics.getByText("Figures shaped by your roles and cities")).toHaveCount(0);
+      await expect(metrics.getByText("Held back")).toHaveCount(0);
+      // No hatched placeholder blocks and no cardinality note anywhere.
+      await expect(metrics.locator(".gcc-held")).toHaveCount(0);
+      await expect(metrics.getByText(/rows across \d+ columns\./)).toHaveCount(0);
+      // And no card for any of the four gated metrics.
+      for (const id of [
+        "metric-hr-cost-per-employee-served",
+        "metric-hr-fully-loaded-cost",
+        "metric-fin-workplace-cost-gradient",
+        "metric-fin-cost-vs-ecosystem-depth",
+      ]) {
+        await expect(page.locator(`#${id}`)).toHaveCount(0);
+      }
     }
   });
 
@@ -1025,7 +1042,7 @@ test.describe("the technology composition", () => {
     await expect(card.getByText("1.5M", { exact: true })).toBeVisible();
     await expect(card.getByText("450K", { exact: true })).toBeVisible();
     await expect(card.getByText("Engineering, other disciplines")).toBeVisible();
-    await expect(card.getByText("Management and MBA graduates")).toBeVisible();
+    await expect(card.getByText("Management & MBA graduates")).toBeVisible();
 
     // Disjoint boxes: the smaller starts after the larger ends. A nested drawing would
     // put one inside the other's bounds.
@@ -1055,21 +1072,30 @@ test.describe("the technology composition", () => {
     expect(text).not.toMatch(/with an? MBA|with engineering|overlap/i);
   });
 
-  test("gives the figure row an eyebrow, no glyph and no divider", async ({
+  test("names the figure row for a screen reader but shows no heading, no glyph and no divider", async ({
     page,
   }) => {
     await openFunctionView(page);
     const band = page.locator("#function-metrics");
     const row = band.locator("ul").first();
-    await expect(
-      band.getByRole("heading", {
-        level: 2,
-        name: "India's technology talent",
-      }),
-    ).toBeVisible();
-    // "at a glance" went from all four headings when the line became a 12px caps
-    // eyebrow: eleven characters of caps padding on a line whose job is to name a
-    // subject is what stops it reading as a label.
+    /**
+     * **The subject line is `sr-only` now, at ANSR's request.** "India's technology
+     * talent" (and its three siblings) were removed from the visible page — the figures
+     * open the tab directly. It stays in the accessibility tree because the section
+     * points its `aria-labelledby` at it, so it is present as a heading but clipped to
+     * a 1px box rather than shown.
+     */
+    const heading = band.getByRole("heading", {
+      level: 2,
+      name: "India's technology talent",
+    });
+    await expect(heading).toBeAttached();
+    const headingSize = await heading.evaluate((el) => {
+      const rect = el.getBoundingClientRect();
+      return Math.max(rect.width, rect.height);
+    });
+    expect(headingSize).toBeLessThanOrEqual(1);
+    // "at a glance" is nowhere on the tab either.
     expect(await band.innerText()).not.toMatch(/at a glance/i);
 
     /**
@@ -1196,11 +1222,23 @@ test.describe("the technology composition", () => {
       source.boundingBox(),
     ]);
     expect(sourceBox!.y).toBeGreaterThan(cardBox!.y + cardBox!.height - 1);
-    // The last zone's ground runs to the card's foot: nothing between the evidence and
-    // the edge.
-    const lastZone = band(page, "function-metrics").locator(".gcc-zone").last();
+    /**
+     * **The last zone's ground runs to the card's foot: nothing between it and the
+     * edge.** The property is unchanged and the LOCATOR moved, which is the whole
+     * correction — this measured the last zone inside `#function-metrics`, and with the
+     * close restored the card's final band is the close's zone rather than a metrics
+     * zone. Scoped to the card, so it asserts what it always meant: the card ends on a
+     * ground, never on padding.
+     *
+     * That the close is the last band is asserted separately, and on both screens.
+     */
+    const lastZone = card.locator(".gcc-zone").last();
     const zoneBox = (await lastZone.boundingBox())!;
     expect(Math.abs(zoneBox.y + zoneBox.height - (cardBox!.y + cardBox!.height))).toBeLessThanOrEqual(2);
+    // And that final zone is the close's, not a metrics zone that happens to be last.
+    expect(
+      await lastZone.evaluate((el) => el.querySelector("#close") !== null),
+    ).toBe(true);
   });
 });
 
@@ -1246,61 +1284,32 @@ test.describe("the copy strip", () => {
     }
   });
 
-  test("keeps the plus explained once per row, not once per figure", async ({
+  test("no longer spells out the plus, but keeps the marker", async ({
     page,
   }) => {
     /**
-     * `SCREEN_PROVENANCE`'s surviving half, and it has moved twice for the same reason.
-     *
-     * It explained the trailing plus once at the foot of every tab, for five metrics out
-     * of thirty-five — so four tabs each ended on a caveat about a marker most of their
-     * cards did not have. It became per-card, which was right for a grid of cards and
-     * wrong the moment the scalars became one row: technology's floor metrics are bench
-     * strength and managers-and-above, so the same sentence rendered TWICE inside one
-     * row, roughly 400px apart, with nothing saying it referred to two different figures.
-     *
-     * It is now once for the figure row, derived from whether any figure in the row
-     * carries a floor. The `+` itself is still on each figure that has one, which is what
-     * makes the note unambiguous without repeating it.
+     * **The floor sentence is gone from every tab, at ANSR's request, and the `+` on
+     * the figure carries it unexplained.** It used to explain the trailing plus once at
+     * the foot of a tab, then per card, then once per figure row — every version was a
+     * caveat about a marker most cards did not have. It is removed now; the marker
+     * stays, because it is authored on the metric and applied in `screen2.ts`.
      */
     await openFunctionView(page);
     const band = page.locator("#function-metrics");
 
-    // Technology has two floor figures in the row and one note under the row.
-    /**
-     * Scoped to the ROW, not to the band: "1.4M+" is also a specialism figure two zones
-     * down — embedded and ER&D — so a band-wide locator now resolves to two elements.
-     * That is a consequence of the abbreviation, which made two figures from different
-     * metrics render as the same five characters where "1.4 million+" and "1,400,000+"
-     * did not.
-     */
+    // The marker is still on the figures that declare a floor.
     const row = band.locator("ul").first();
     await expect(row.getByText("8.7M+", { exact: true })).toBeVisible();
     await expect(row.getByText("1.4M+", { exact: true })).toBeVisible();
-    // Scoped to the row's own wrapper, not to the band: a card that carries a floor
-    // still gets its own note, which is the half of the rule that did not change.
-    // The row's own section, which now carries a heading as well as the note. Located
-    // from the `ul` upward rather than by class, so it survives a class change.
-    const figureRow = band.locator("ul").first().locator("..");
-    await expect(
-      figureRow.getByText(FLOOR_NOTE, { exact: true }),
-      "once for the row, not once per figure",
-    ).toHaveCount(1);
 
-    // A figure with no plus gets no note of its own.
-    const plain = band.locator("ul > li").filter({ hasText: "Leadership depth" });
-    await expect(plain.getByText("800K")).toBeVisible();
-    await expect(plain.getByText(FLOOR_NOTE, { exact: true })).toHaveCount(0);
-
-    /**
-     * Still per-CARD where a card carries a floor, which is the half of the rule that
-     * did not change: the ecosystem breakdown's parts are all floors, and its note sits
-     * on it rather than on the row above.
-     */
-    const ecosystem = band
-      .locator('section[id^="metric-"]')
-      .filter({ hasText: "Technology ecosystem by specialism" });
-    await expect(ecosystem.getByText(FLOOR_NOTE, { exact: true })).toHaveCount(1);
+    // But the sentence explaining it is nowhere, on any tab.
+    for (const name of ["Technology", "Operations", "HR", "Finance"]) {
+      await page.getByRole("tab", { name, exact: true }).click();
+      await expect(
+        band.getByText(FLOOR_NOTE, { exact: true }),
+        `${name}: the floor note is gone`,
+      ).toHaveCount(0);
+    }
   });
 
   test("leaves a real heading outline with no level skipped", async ({ page }) => {
@@ -1448,72 +1457,72 @@ test.describe("the operations composition", () => {
     }
 
     /**
-     * **The supporting note under a lifted figure is the PART'S OWN LABEL**, from the
-     * data rather than from a sentence in `copy.ts`. It is what stops the uptime cell
-     * claiming for the Tier 1 grid a figure that is only true of a Grade A campus —
-     * the metric is deliberately split so the weaker of the two is not hidden, and
-     * showing one part alone is exactly what would hide it.
+     * **A cell is ONE line under its figure now, and the SCOPE a lifted figure must not
+     * lose is inside that line.** Three of these four are the leading part of a breakdown
+     * whose own section was removed, so the cell has to say what population its figure
+     * covers — 99.95% is true of a Grade A campus and not of the Tier 1 grid, and the
+     * metric is deliberately split so the weaker of the two is not hidden. It used to be
+     * carried by a second line holding the part's own label; the titles state it
+     * themselves now, which is one authored string instead of two that have to agree.
      */
     await expect(
-      cells.nth(1).getByText("At a Grade A campus with N+1 backup"),
+      cells.nth(1).getByRole("heading", { name: "Uptime at a Grade A campus" }),
     ).toBeVisible();
     await expect(
-      cells.nth(2).getByText("Total Grade A stock, top seven cities"),
+      cells
+        .nth(2)
+        .getByRole("heading", { name: "Grade A stock, top 7 cities, mn sq ft" }),
     ).toBeVisible();
-    // And the floor note is on the one cell that declares a floor, not on the row.
-    await expect(cells.getByText(FLOOR_NOTE, { exact: true })).toHaveCount(1);
-    await expect(
-      cells.filter({ hasText: "8.7M+" }).getByText(FLOOR_NOTE, { exact: true }),
-    ).toBeVisible();
+    // Exactly one line under each figure: no unit line and no note line beside it.
+    for (const index of [0, 1, 2, 3]) {
+      await expect(cells.nth(index).locator("p")).toHaveCount(1);
+    }
+    // The floor sentence is gone from every tab at ANSR's request; the `+` on the
+    // workforce figure carries it unexplained.
+    await expect(cells.getByText(FLOOR_NOTE, { exact: true })).toHaveCount(0);
+    await expect(cells.filter({ hasText: "8.7M+" })).toBeVisible();
 
     /**
      * **No mark on any of them, at ANSR's instruction and for a reason.** A gauge behind
      * 99.95% would be a part-to-whole claim about a figure that is not part of anything,
-     * and a bar behind a single number invents a scale it has no axis for. This tab's
-     * summary carries no glyph either, unlike HR's — so a cell holds a figure, a label, a
-     * unit and a note, and nothing else.
+     * and a bar behind a single number invents a scale it has no axis for. So a cell holds
+     * a figure and one label, and nothing else.
      */
     await expect(summary.locator("svg")).toHaveCount(0);
     await expect(summary.locator(".gcc-held")).toHaveCount(0);
   });
 
-  test("states the disruption extent rather than the zero the composition asked for", async ({
+  test("states the disruption figure the project owner asked for, and states it once", async ({
     page,
   }) => {
     /**
-     * **A refusal, asserted in both directions, and the most important test on this
-     * tab.** The supplied composition asks for "0 days", noted as the lowest recorded
-     * across the cities assessed. There is no zero in this dataset: the four cities are
-     * 4, 2, 3 and 6 days, and the metric's own note puts the national figure at 3–6. A
-     * card reading 0 would be an invented figure on a screen whose entire argument is
-     * that nothing on it is invented.
+     * **This test previously asserted the OPPOSITE and the reversal is the point of the
+     * comment.** The cell stated the real extent, "2 – 6", because there is no zero in
+     * this dataset: the four cities are 4, 2, 3 and 6 days and the metric's own note puts
+     * the national figure at 3–6. The project owner instructed the cell to read 0, in
+     * full knowledge of that, so the assertion now runs the other way — a figure this
+     * page cannot evidence has to be pinned somewhere, or the next pass over
+     * `ops-view.tsx` reads it as a bug and quietly restores the extent.
      *
-     * The lowest single city — 2 — would be truthful and would be the best case shown as
-     * the fact. The extent is neither: it states both real ends, and it preserves the one
-     * thing removing the by-city section would otherwise have thrown away, which is how
-     * far the cities differ.
-     *
-     * The conflict is on `handoff.md`'s blocked list to be shown to ANSR. If they confirm
-     * a real zero, it becomes a dataset edit and this test changes with it — which is the
-     * point of asserting the absence as well as the presence.
+     * What is still asserted: the literal is confined to the summary cell. The four city
+     * figures behind it are not on the tab, so nothing on screen contradicts the 0, and
+     * the extent's second figure is gone rather than left beside it.
      */
     await openOps(page);
     const cell = page
       .locator("#function-metrics ul")
       .first()
       .locator("li")
-      .filter({ hasText: "Days lost to disruption" });
+      .filter({ hasText: "Working days lost a year, by city" });
     await expect(cell).toHaveCount(1);
-    await expect(cell.getByText("Across the cities assessed")).toBeVisible();
-    // Both ends of the real set, with "to" in the accessibility tree so the pair is not
-    // announced as one run of digits.
+    // The label carries the unit and the by-city scope itself, the cell being one line
+    // under its figure — the "Across the cities assessed" note went with the second line.
     const text = ((await cell.textContent()) ?? "").replace(/\s+/g, " ");
-    expect(text).toMatch(/2\s*–\s*to\s*6/);
-    expect(text).toContain("days a year");
-    // And no zero, in the cell or anywhere on the tab.
-    expect(text).not.toMatch(/\b0\b/);
+    expect(text).toMatch(/^0/);
+    // One figure, not a pair: no en dash and no `sr-only` "to" bridging two numerals.
+    expect(text).not.toMatch(/–/);
+    expect(text).not.toMatch(/\bto\b/);
     const tab = await band(page, "function-metrics").innerText();
-    expect(tab).not.toMatch(/\b0 days\b/);
     expect(tab).not.toMatch(/Lowest recorded/);
   });
 
@@ -1565,21 +1574,21 @@ test.describe("the operations composition", () => {
     await expect(card.getByText("graduates a year")).toBeVisible();
 
     /**
-     * Two `dl`s, four rows then five, in the catalogue's own order — so the engineering
-     * and science streams lead and the commerce, management, finance and HR streams
-     * follow. Nothing is sorted by value, here or anywhere on this screen.
+     * Two `dl`s, four rows each, in the catalogue's own order — so the engineering and
+     * science streams lead and the commerce, management, finance and HR streams follow.
+     * Nothing is sorted by value, here or anywhere on this screen. "Other sciences" was
+     * removed from the split at ANSR's request, taking it from nine parts to eight.
      */
     const lists = card.locator("dl");
     await expect(lists).toHaveCount(2);
     await expect(lists.nth(0).locator("dt")).toHaveCount(4);
-    await expect(lists.nth(1).locator("dt")).toHaveCount(5);
+    await expect(lists.nth(1).locator("dt")).toHaveCount(4);
     const labels = await card.locator("dt").allInnerTexts();
     expect(labels.map((label) => label.trim())).toEqual([
       "Engineering, other disciplines",
       "Computer science and IT",
       "Electronics and communication",
       "Mathematics and statistics",
-      "Other sciences",
       "Commerce",
       "Management and MBA",
       "Finance and accounting",
@@ -1610,12 +1619,12 @@ test.describe("the operations composition", () => {
           return track > 0 && bar ? bar.getBoundingClientRect().width / track : 0;
         }),
       );
-    expect(fills).toHaveLength(9);
+    expect(fills).toHaveLength(8);
     expect(fills[0]).toBeCloseTo(1, 2);
-    expect(fills[8]).toBeCloseTo(45_000 / 1_500_000, 2);
+    expect(fills[7]).toBeCloseTo(45_000 / 1_500_000, 2);
     // The track stays: the set is not sorted by its own quantity, so nothing else states
     // where full width is.
-    expect(fills[4]).toBeCloseTo(350_000 / 1_500_000, 2);
+    expect(fills[4]).toBeCloseTo(600_000 / 1_500_000, 2);
   });
 
   test("carries no glyph in the function navigation", async ({ page }) => {
@@ -1670,20 +1679,24 @@ test.describe("the HR composition", () => {
     await expectBand(page, "hr-velocity");
   }
 
-  test("holds the five sections in the composed order", async ({ page }) => {
+  test("holds the four sections in the composed order", async ({ page }) => {
     await openHr(page);
     /**
      * Market, then velocity, then scale and cost, then the graduate supply all three of
-     * those stand on, then what depends on the visitor. That order is an argument — it is
-     * what a reader asks in sequence — rather than a consequence of how wide each chart
-     * is, which is what decides it on the technology tab. So the order itself is the
-     * assertion.
+     * those stand on. That order is an argument — it is what a reader asks in sequence —
+     * rather than a consequence of how wide each chart is, which is what decides it on the
+     * technology tab. So the order itself is the assertion.
      *
-     * The graduate card is not in this loop because it is a bare `Panel` under the
-     * metric's own title rather than a `Block` wrapping cards — the same shape it takes on
-     * the operations tab, and located by the same `metric-` id below.
+     * **The sealed group was the fifth and is deleted at ANSR's request**, so the tab ends
+     * on the graduate card. The graduate card is not in the loop below because it is a bare
+     * `Panel` under the metric's own title rather than a section wrapping cards — the same
+     * shape it takes on the operations tab, and located by the same `metric-` id.
+     *
+     * The two grouped sections carry `aria-label` rather than a visible heading now: the
+     * group headings went at ANSR's request, and `expectBand` accepts either naming
+     * mechanism while still refusing a band with neither.
      */
-    for (const id of ["hr-velocity", "hr-analysis", "hr-held"]) {
+    for (const id of ["hr-velocity", "hr-analysis"]) {
       await expectBand(page, id);
     }
     // The market summary is named by its own heading rather than by a section id, because
@@ -1698,7 +1711,6 @@ test.describe("the HR composition", () => {
         "hr-velocity",
         "hr-analysis",
         "metric-hr-graduate-output",
-        "hr-held",
       ].map((id) => document.getElementById(id)?.getBoundingClientRect().top ?? -1),
     );
     expect(tops.every((top) => top > 0)).toBe(true);
@@ -1725,22 +1737,17 @@ test.describe("the HR composition", () => {
     await expect(summary.locator("svg[aria-hidden] + svg")).toHaveCount(0);
   });
 
-  test("attaches the floor note to the one figure that declares a floor", async ({
+  test("shows the floor marker but no longer spells it out", async ({
     page,
   }) => {
     await openHr(page);
     const cells = page.locator("#function-metrics ul").first().locator("li");
     /**
-     * **Per-card here, where the derived tabs state it once per row**, and both are the
-     * same rule rather than two. The note goes wherever it is unambiguous: technology
-     * has TWO floor figures in one row, so a per-card note rendered the same sentence
-     * twice 400px apart; HR has exactly one, so the card is where it belongs — and on a
-     * card it reads as a note about its own figure rather than a caveat about all three.
+     * The floor sentence was removed from every tab at ANSR's request; the `+` on the
+     * bench-strength figure carries it unexplained.
      */
-    await expect(cells.getByText(FLOOR_NOTE, { exact: true })).toHaveCount(1);
-    await expect(
-      cells.filter({ hasText: "8.7M+" }).getByText(FLOOR_NOTE, { exact: true }),
-    ).toBeVisible();
+    await expect(cells.getByText(FLOOR_NOTE, { exact: true })).toHaveCount(0);
+    await expect(cells.filter({ hasText: "8.7M+" })).toBeVisible();
   });
 
   test("draws each hiring range as two labelled endpoints on a zeroed rail", async ({
@@ -1915,92 +1922,51 @@ test.describe("the HR composition", () => {
     const ops = await readCard("ops-graduate-output");
 
     expect(hr).toEqual(ops);
-    // Nine disciplines in the catalogue's own family order, never sorted by value, with
-    // the counts abbreviated exactly as `formatCompact` leaves them.
+    // Eight disciplines in the catalogue's own family order, never sorted by value, with
+    // the counts abbreviated exactly as `formatCompact` leaves them. "Other sciences" was
+    // removed at ANSR's request, taking the split from nine parts to eight.
     expect(hr.slice(0, 4)).toEqual([
       "Engineering, other disciplines",
       "1.5M",
       "Computer science and IT",
       "300K",
     ]);
-    expect(hr).toHaveLength(18);
+    expect(hr).toHaveLength(16);
     expect(hr).toContain("Human resources");
     expect(hr).toContain("45K");
   });
 
-  test("puts the sealed pair on its own ground and states the condition, not an action", async ({
-    page,
-  }) => {
-    await openHr(page);
-    const held = band(page, "hr-held");
+  test("draws nothing for its two gated metrics", async ({ page }) => {
     /**
-     * **`HR_HELD_LEAD` is gone, and it is asserted absent rather than simply not
-     * asserted.** It sat under a heading reading "Figures shaped by your roles and
-     * cities", above two cards each naming what its own figure varies with, above the
-     * availability line — four statements of one idea inside 200px. Kept exported and
-     * unit-tested, on the blocked list, one prop to restore.
+     * **The sealed group is DELETED at ANSR's request.** It was the tab's fifth section: a
+     * heading, two `tone="sealed"` cards, a lock disc each, a hatched placeholder and a
+     * line stating when the figures become available. All of it is gone, so the tab ends on
+     * the graduate card and a gated metric is drawn nowhere.
+     *
+     * Asserted here as well as in the gate block because this is the composition's own
+     * shape: a spec that only counted cards would pass with the heading left behind.
      */
+    await openHr(page);
+    const metrics = band(page, "function-metrics");
+
+    await expect(page.locator("#hr-held")).toHaveCount(0);
+    await expect(metrics.getByText("Figures shaped by your roles and cities")).toHaveCount(0);
+    await expect(metrics.getByText("Held back")).toHaveCount(0);
+    await expect(metrics.locator(".gcc-held")).toHaveCount(0);
+    // The availability line and the lead went with the section.
     await expect(
-      held.getByText(
+      metrics.getByText(
+        "Both become available once roles, levels and Indian cities are selected.",
+      ),
+    ).toHaveCount(0);
+    await expect(
+      metrics.getByText(
         "These measures depend on the roles, levels and Indian locations selected for your GCC.",
       ),
     ).toHaveCount(0);
-    /**
-     * **A ground of its own, which is now a consequence of the alternation rather than a
-     * meaning.** Every section on every tab sits in its own zone and the grounds strictly
-     * alternate, exactly as they do on the peer view; the sealed pair happens to land on
-     * the mint here. What carries "withheld" is the firmer border, the lock and the chip
-     * — the ground was always the fourth of the four signals.
-     */
-    const grounds = await page.evaluate(() => {
-      const section = document.getElementById("hr-held");
-      let node: HTMLElement | null = section;
-      const seen: string[] = [];
-      while (node) {
-        seen.push(getComputedStyle(node).backgroundColor);
-        node = node.parentElement;
-      }
-      return seen;
-    });
-    // Something between the section and the document root paints a non-transparent
-    // ground, which is the zone.
-    expect(
-      grounds.some(
-        (colour) => colour !== "rgba(0, 0, 0, 0)" && colour !== "transparent",
-      ),
-    ).toBe(true);
-
-    /**
-     * **A condition, and deliberately NOT a control.** The composition asked for an
-     * "Update roles & cities" action here; the tool asks five questions and none of them
-     * is a role, a level or a city, so the button would name a destination that does not
-     * exist — the exact defect the four chevroned answer pills were rebuilt to remove.
-     */
-    await expect(
-      held.getByText(
-        "Both become available once roles, levels and Indian cities are selected.",
-      ),
-    ).toBeVisible();
-    await expect(held.getByRole("button")).toHaveCount(0);
-    await expect(held.getByRole("link")).toHaveCount(0);
-  });
-
-  test("labels the withheld matrix with ordinals rather than the names it withholds", async ({
-    page,
-  }) => {
-    await openHr(page);
-    const matrix = band(page, "hr-held").locator("#metric-hr-fully-loaded-cost");
-    // Generic scaffolding: the metric's own title says the columns are levels, and the
-    // shape says there are five of them. Neither states what any level IS.
-    for (const column of ["L1", "L2", "L3", "L4", "L5"]) {
-      await expect(matrix.getByText(column, { exact: true })).toBeVisible();
-    }
-    await expect(matrix.getByText("Role family 1", { exact: true })).toBeVisible();
-    await expect(matrix.getByText("Role family 5", { exact: true })).toBeVisible();
-    // And none of the real column names, which is the gate assertion the whole section
-    // exists under.
-    for (const withheld of ["Analyst", "Senior manager", "Director"]) {
-      await expect(matrix.getByText(withheld)).toHaveCount(0);
+    // And the ordinal scaffolding the withheld matrix used to draw.
+    for (const label of ["Role family 1", "L1", "L5", "High touch", "Scaled"]) {
+      await expect(metrics.getByText(label, { exact: true })).toHaveCount(0);
     }
   });
 
@@ -2051,20 +2017,22 @@ test.describe("the finance composition", () => {
 
   test("holds the sections in the composed order", async ({ page }) => {
     await openFinance(page);
-    await expectBand(page, "fin-held");
     /**
-     * Overview, then where the advantage comes from, then what a cheaper city saves,
-     * then how India sits against the alternatives, then what depends on the visitor.
-     * That order is an argument — it is the sequence a CFO asks in — rather than a
-     * consequence of how wide each chart is, which is what decides it on a derived tab.
+     * Overview, then where the advantage comes from, then what a cheaper city saves, then
+     * how India sits against the alternatives. That order is an argument — it is the
+     * sequence a CFO asks in — rather than a consequence of how wide each chart is, which
+     * is what decides it on a derived tab.
+     *
+     * **The sealed group was the fifth and is deleted at ANSR's request**, so the tab ends
+     * on the location comparison and its two gated metrics are drawn nowhere.
      */
+    await expect(page.locator("#fin-held")).toHaveCount(0);
     const tops = await page.evaluate(() =>
       [
         "figures-finance-heading",
         "metric-fin-cost-composition",
         "metric-fin-tier-cost-spread",
         "metric-fin-india-vs-hubs",
-        "fin-held",
       ].map((id) => document.getElementById(id)?.getBoundingClientRect().top ?? -1),
     );
     expect(tops.every((top) => top > 0)).toBe(true);
@@ -2095,7 +2063,7 @@ test.describe("the finance composition", () => {
     // Titles verbatim, because shortening one would mean parsing an admin-editable
     // string to find the part to drop.
     await expect(
-      cells.nth(0).getByRole("heading", { name: "India wage growth year on year" }),
+      cells.nth(0).getByRole("heading", { name: "India wage growth, year on year" }),
     ).toBeVisible();
     const row = await page.locator("#function-metrics ul").first().innerText();
     expect(row).not.toMatch(/vs last year/i);
@@ -2184,7 +2152,24 @@ test.describe("the finance composition", () => {
         // end labels, which carry no inline position.
         nodes.map((node) => node.style.insetInlineStart).filter(Boolean),
       );
-    expect(marks).toEqual(["75%", "100%", "85%", "100%", "81%", "100%"]);
+    /**
+     * Three positioned elements per card now, in DOM order: the comparator's mark, the
+     * base's mark, then the comparator's own FIGURE under its mark — added at ANSR's
+     * request, and positioned rather than placed at an end, which is why it lands in this
+     * list at all. The base needs no such label: the rail ends at it, so the end tick is
+     * its figure.
+     */
+    expect(marks).toEqual([
+      "75%",
+      "100%",
+      "75%",
+      "85%",
+      "100%",
+      "85%",
+      "81%",
+      "100%",
+      "81%",
+    ]);
     // Both ends of the axis, labelled, which is what says the track starts at zero.
     await expect(card.getByText("0", { exact: true })).toHaveCount(3);
     // And no truncated domain anywhere on the card.
@@ -2244,36 +2229,43 @@ test.describe("the finance composition", () => {
     );
 
     /**
-     * **The reader's own function is the emphasised row.** It reads an admin-editable row
-     * label, which every other rule on this screen is forbidden from doing — licensed
-     * here because a renamed row loses a tint and nothing else: no figure, axis or
-     * ordering depends on it.
+     * **NO ROW IS EMPHASISED, and this assertion is the reversal of the one it replaces.**
+     * The reader's own function — Finance, on this tab — was filled a step, which was the
+     * one place this screen read an admin-editable string. Removed at ANSR's request, so
+     * every row is on the card's own ground and the only fill left in the table is the
+     * India column's.
      */
-    const emphasised = await table.locator("tbody tr").evaluateAll((rows) =>
+    const grounds = await table.locator("tbody tr").evaluateAll((rows) =>
       rows.map((row) => ({
         label: (row.querySelector("th")?.textContent ?? "").trim(),
         ground: getComputedStyle(row).backgroundColor,
       })),
     );
-    const finance = emphasised.find((row) => row.label === "Finance");
-    expect(finance?.ground).not.toBe("rgba(0, 0, 0, 0)");
-    for (const row of emphasised.filter((row) => row.label !== "Finance")) {
+    for (const row of grounds) {
       expect(row.ground, row.label).toBe("rgba(0, 0, 0, 0)");
     }
 
     /**
-     * **One maximum across the whole grid, and the base column carries no bar.** Sixteen
-     * bars rather than twenty: India is the same figure in every row by definition, so a
-     * bar on it would be four identical marks encoding the axis rather than a value. The
-     * widths are against the grid's own largest cell — the United States at 367 — which
-     * is what makes a Philippines row and a Poland row comparable at a glance.
+     * **AND NO BARS, which is the other half of the same instruction.** Each non-base cell
+     * drew a bare teal bar beside its figure, all sixteen against the grid's own largest
+     * cell. They were this card's only encoding of magnitude, so what is asserted here is
+     * that twenty numbers are now compared as numbers — and that the removal took the
+     * whole mark rather than leaving an empty track behind.
      */
-    const bars = await table
-      .locator("td span[aria-hidden] > span")
-      .evaluateAll((nodes) => nodes.map((node) => Number.parseFloat(node.style.width)));
-    expect(bars).toHaveLength(16);
-    expect(bars[0]).toBeCloseTo((122 / 367) * 100, 1);
-    expect(bars[3]).toBeCloseTo(100, 1);
+    await expect(table.locator("td span[aria-hidden]")).toHaveCount(0);
+
+    /**
+     * The India column keeps its fill and its ink, which is what the instruction asked to
+     * KEEP: it is the base every other figure is read against, so it is the one thing in
+     * the grid still marked.
+     */
+    const anchor = await table
+      .locator("tbody tr td:first-of-type")
+      .evaluateAll((cells) =>
+        cells.map((cell) => getComputedStyle(cell).backgroundColor),
+      );
+    expect(anchor).toHaveLength(4);
+    for (const ground of anchor) expect(ground).not.toBe("rgba(0, 0, 0, 0)");
 
     // The index base and its direction, as the card's subtitle rather than a foot note.
     await expect(
@@ -2303,10 +2295,15 @@ test.describe("the finance composition", () => {
     // Three columns of unsourced bullets.
     expect(text).not.toMatch(/deep dive/i);
     expect(text).not.toMatch(/what'?s cheaper in india/i);
-    // And the call to action, which is gone from the whole tool rather than from this tab.
+    // And the composition's own "Book a conversation" card, which this tab does not
+    // draw. **The tool has a close again, so the assertion is scoped to the TAB rather
+    // than to the page** — which is what it always meant, and what the three assertions
+    // above it are already scoped to. The screen's one call to action is the shared
+    // close below the tabs, asserted in its own test; what is refused here is a second
+    // one inside the finance tab, where the reference put it.
     expect(text).not.toMatch(/book a conversation/i);
     expect(text).not.toMatch(/closer look/i);
-    await expect(page.getByRole("link")).toHaveCount(0);
+    await expect(band(page, "function-metrics").getByRole("link")).toHaveCount(0);
     /**
      * **No selector either.** The reference puts "View by: Total operating cost" at the
      * table's upper right; there is one view of this metric, so the control would have

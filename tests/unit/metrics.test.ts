@@ -645,10 +645,13 @@ describe("the seeded catalogue", () => {
     }
 
     const shared = [...byTitle.entries()].filter(([, group]) => group.length > 1);
+    // "Bench strength" and "Leadership depth" were retitled to explain their own figure
+    // on one line in the summary row — see `SummaryFigure.title`. Both are still one
+    // shared definition spread across tabs, which is what this invariant is about.
     expect(shared.map(([title]) => title).sort()).toEqual([
-      "Bench strength",
       "Graduate output by discipline",
-      "Leadership depth",
+      "Professionals with 10+ years",
+      "Technology professionals",
       "Time to backfill a role",
       "Time to first hire",
       "Time to reach each scale milestone",

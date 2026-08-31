@@ -1,10 +1,9 @@
 import type {
   FunctionAreaView,
   LaidOutHeld,
-  MetricPart,
   ShownMetric,
 } from "@/data/screen2";
-import { Block, Panel } from "@/components/public/primitives";
+import { Panel } from "@/components/public/primitives";
 import {
   MilestoneTrack,
   RangeBenchmark,
@@ -13,11 +12,9 @@ import {
 } from "@/components/public/charts";
 import {
   FIGURES_HEADING,
-  FLOOR_NOTE,
   heldHeading,
   METRIC_NOTES,
   OPS_SECTIONS,
-  OPS_SUMMARY_NOTES,
 } from "./copy";
 import { GraduateOutput } from "./graduate-card";
 import { HeldMetricCard } from "./metric-card";
@@ -57,16 +54,18 @@ import { TabZones } from "./zones";
  *     to "could we move in now". Nothing on the tab replaces it; it is on
  *     `handoff.md`'s blocked list.
  *
- * **The disruption cell states an EXTENT, and that is a refusal.** The supplied
- * composition asks for "0 days", noted as the lowest recorded across the cities
- * assessed. There is no zero in this dataset: the four cities are 4, 2, 3 and 6 days,
- * and the metric's own note puts the national figure at 3–6. A card reading 0 would be
- * an invented figure on a screen whose entire argument is that nothing here is invented.
- * The lowest single city — 2 — would be truthful and would be the best case presented as
- * the fact. The extent is neither: it states both ends of the real set, so it also
- * preserves the one thing removing the by-city section would otherwise have thrown away,
- * which is how far the cities differ. The conflict is on the blocked list to be shown to
- * ANSR, not to be undone.
+ * **The disruption cell states "0", at the project owner's explicit instruction, and it
+ * is the one figure on this screen that the data does not support.** The metric's four
+ * cities are 4, 2, 3 and 6 days and its own note puts the national figure at 3–6, so
+ * there is no zero anywhere in the dataset. This cell previously stated the real extent
+ * ("2 – 6") precisely because a nought is not a measurement that exists here; that
+ * refusal was overruled on instruction, so the figure is now a literal.
+ *
+ * Two consequences to know before touching it. The figure is written HERE rather than
+ * into the metric, so `ops-disruption-days` still holds only supplied values and admin
+ * still edits real ones — the fabrication is confined to this one cell and is visible in
+ * one place. And the browser spec that asserted the absence of a zero on this tab now
+ * asserts its presence, which is the record that the change was deliberate.
  *
  * **Nothing here draws a mark that the derived tab did not, and two things it drew are
  * gone.** The nested office-stock bar and the two-figure uptime pair went with their
@@ -142,25 +141,14 @@ function pick(shown: readonly ShownMetric[], id: string): ShownMetric | undefine
  */
 
 /**
- * The lowest and highest part of a breakdown, by share.
+ * What the disruption cell states, verbatim.
  *
- * Selection, not reduction: both figures are returned verbatim as the strings the view
- * model formatted. Collapses to a single figure where the set has one distinct value,
- * so a one-city dataset would read "4 days" rather than "4 – 4".
+ * **Supplied by the project owner and not derived from the metric.** The extent this
+ * replaced was selected by comparing parts' `share`, which is why `extentOf` is gone
+ * along with it — nothing on this tab reduces a breakdown to a pair any more. See the
+ * file header for what the literal costs and why it is confined to this constant.
  */
-function extentOf(parts: readonly MetricPart[]): { figure: string; high?: string } | null {
-  const first = parts[0];
-  if (!first) return null;
-  let low = first;
-  let high = first;
-  for (const part of parts) {
-    if (part.share < low.share) low = part;
-    if (part.share > high.share) high = part;
-  }
-  return low.figure === high.figure
-    ? { figure: low.figure }
-    : { figure: low.figure, high: high.figure };
-}
+const DISRUPTION_FIGURE = "0";
 
 function summaryCells(shown: readonly ShownMetric[]): SummaryFigure[] {
   const cells: SummaryFigure[] = [];
@@ -171,20 +159,24 @@ function summaryCells(shown: readonly ShownMetric[]): SummaryFigure[] {
       id: bench.metric.id,
       figure: bench.figure,
       title: bench.metric.title,
-      unit: bench.metric.unit,
-      // The floor is what this cell's note says; the others' notes name the population
-      // their figure was measured over. One field, because a cell has one note.
-      note: bench.metric.atLeast ? FLOOR_NOTE : undefined,
     });
   }
 
   /**
-   * The leading part of each of these two, with the part's own label as the note.
+   * The leading part of each of these two.
    *
    * The leading part is the one the composition asks for in both cases — total stock
    * rather than vacant, the Grade A campus rather than the Tier 1 grid — and it is the
    * catalogue's own first entry, so nothing here reorders or chooses between parts on a
    * criterion of its own.
+   *
+   * **The part's own label used to ride along as the cell's note, and the SCOPE it was
+   * carrying now lives in the metric's title instead.** A cell is one line under its
+   * figure, so there is nowhere for a second string to go — and the reason the label was
+   * there at all was that a lifted part must not claim its parent's population: 99.95% is
+   * true of a Grade A campus and not of the Tier 1 grid. Both titles state that
+   * themselves now ("Uptime at a Grade A campus", "Grade A stock, mn sq ft, top 7
+   * cities"), which is one authored string rather than two strings that have to agree.
    */
   for (const id of [UPTIME_ID, OFFICE_ID]) {
     const metric = pick(shown, id);
@@ -195,25 +187,18 @@ function summaryCells(shown: readonly ShownMetric[]): SummaryFigure[] {
       id,
       figure: lead.figure,
       title: metric.metric.title,
-      unit: metric.metric.unit,
-      note: metric.metric.atLeast ? FLOOR_NOTE : lead.label,
     });
   }
 
+  // Still gated on the metric being present, so removing it from the catalogue removes
+  // the cell rather than leaving a figure with nothing behind it at all.
   const disruption = pick(shown, DISRUPTION_ID);
   if (disruption?.shape === "breakdown") {
-    const extent = extentOf(disruption.parts);
-    if (extent) {
-      cells.push({
-        id: DISRUPTION_ID,
-        ...extent,
-        title: disruption.metric.title,
-        unit: disruption.metric.unit,
-        note: disruption.metric.atLeast
-          ? FLOOR_NOTE
-          : OPS_SUMMARY_NOTES[DISRUPTION_ID],
-      });
-    }
+    cells.push({
+      id: DISRUPTION_ID,
+      figure: DISRUPTION_FIGURE,
+      title: disruption.metric.title,
+    });
   }
 
   return cells;
@@ -313,7 +298,11 @@ function OperationsSummary({ cells }: { cells: readonly SummaryFigure[] }) {
 
 function Velocity({ ranges }: { ranges: readonly ShownMetric[] }) {
   return (
-    <Block id="ops-velocity" title={OPS_SECTIONS.velocity}>
+    <section
+      id="ops-velocity"
+      aria-label={OPS_SECTIONS.velocity}
+      className="flex min-w-0 flex-col"
+    >
       {/* `items-stretch` and a centring body, exactly as the HR tab draws this same
           section — see the comment there. A reader crossing between the two tabs must not
           be able to tell that two files drew it. */}
@@ -324,7 +313,6 @@ function Velocity({ ranges }: { ranges: readonly ShownMetric[] }) {
               key={shown.metric.id}
               id={`metric-${shown.metric.id}`}
               title={shown.metric.title}
-              headingLevel={3}
               bodyClassName="flex flex-col grow justify-center"
             >
               <div className="flex flex-col gap-4">
@@ -346,7 +334,7 @@ function Velocity({ ranges }: { ranges: readonly ShownMetric[] }) {
           ) : null,
         )}
       </div>
-    </Block>
+    </section>
   );
 }
 
@@ -372,15 +360,23 @@ function Supporting({
   latency?: ShownMetric;
 }) {
   return (
-    <Block id="ops-supporting" title={OPS_SECTIONS.supporting}>
-      <div className="grid grid-cols-1 items-start gap-6 lg:grid-cols-2 lg:gap-8">
+    <section
+      id="ops-supporting"
+      aria-label={OPS_SECTIONS.supporting}
+      className="flex min-w-0 flex-col"
+    >
+      {/* `items-stretch` and centring bodies, exactly as the HR tab draws its own
+          analysis row and as the velocity section above already does — the milestone track
+          is shorter than the latency ranking beside it, and at `items-start` the surplus
+          was bare zone under the shorter card. */}
+      <div className="grid grid-cols-1 items-stretch gap-6 lg:grid-cols-2 lg:gap-8">
         {milestones?.shape === "breakdown" ? (
           <Panel
             id={`metric-${milestones.metric.id}`}
             title={milestones.metric.title}
             // "months, median" — the unit once, rather than under each of four circles.
             lead={milestones.metric.unit}
-            headingLevel={3}
+            bodyClassName="flex flex-col grow justify-center"
           >
             {/* **`MilestoneTrack`, which is what the HR tab draws, replacing `Journey`.**
                 Both read the same `parts` — a part's `share` is its value over the
@@ -404,7 +400,7 @@ function Supporting({
             title={latency.metric.title}
             // "milliseconds", once, rather than after each of four figures.
             lead={latency.metric.unit}
-            headingLevel={3}
+            bodyClassName="flex flex-col grow justify-center"
           >
             {/* **Inline rows, and the grey track STAYS.** The track is what tells a
                 reader where full width is, and only a set sorted by the quantity its own
@@ -426,7 +422,7 @@ function Supporting({
           </Panel>
         ) : null}
       </div>
-    </Block>
+    </section>
   );
 }
 

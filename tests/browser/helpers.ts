@@ -1,5 +1,7 @@
 import { expect, type Page } from "@playwright/test";
 
+import { formatRevenueBand } from "@/components/public/primitives";
+
 /**
  * Waits until the draft has actually been written to localStorage.
  *
@@ -44,9 +46,27 @@ export async function choose(
   const filter = page.getByLabel(/^Filter/);
   if (await filter.count()) await filter.fill(value);
 
+  /**
+   * **The revenue control is the one field whose visible label is not its value**, so
+   * the translation lives here rather than in every caller.
+   *
+   * A band is STORED as `"Above $20 Bn"` — that string is the peer-matching key 1834
+   * companies carry, and the order of the array it sits in is the adjacent-band
+   * contract — and it is DRAWN as `"Above 20 Bn"`, because the panel states the currency
+   * once in its own hint instead of on all seven rows. Specs go on naming a band by the
+   * value, which is what identifies it; `formatRevenueBand` is the same single definition
+   * the control and both result screens use, so a spec cannot drift from the rendering.
+   *
+   * Keyed on the LABEL rather than sniffed from the value: the label is a literal the
+   * caller passes, so the exception is visible at the one place it applies. Admin's band
+   * control is a native `<select>` on the stored strings and is driven by `selectOption`,
+   * which is right — admin edits the datum.
+   */
+  const shown = /revenue/i.test(String(label)) ? formatRevenueBand(value) : value;
+
   // `exact`, because "India" is a substring of "Indonesia" and "Retail" of several
   // industry names. A non-exact match here picks whichever came first.
-  await selectItem(page, value).click();
+  await selectItem(page, shown).click();
 
   /**
    * **An industry that carries sub-industries does not close the panel**, and that
@@ -171,7 +191,7 @@ export async function discardEverything(page: Page): Promise<void> {
  * `page.evaluate` callbacks cannot close over Node values, so this is passed in as
  * an argument rather than read from the enclosing scope.
  */
-export const DRAFT_STORAGE_KEY = "gcc-admin-draft-v4";
+export const DRAFT_STORAGE_KEY = "gcc-admin-draft-v5";
 
 /* ==========================================================================
    The public screens' bands

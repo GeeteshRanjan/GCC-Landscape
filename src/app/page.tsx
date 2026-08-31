@@ -70,16 +70,19 @@ export default async function Page() {
     ]),
   );
 
+  const functionView = buildFunctionView(dataset);
+
   return (
     <GccLandscapeTool
       industries={industryOptions(dataset)}
       revenueBands={dataset.taxonomy.revenueBands}
       hqCountries={hqCountryOptions(dataset)}
       businessTypesByIndustry={businessTypesByIndustry}
-      functionView={buildFunctionView(dataset)}
+      functionView={functionView}
       heroCopy={dataset.siteContent.hero}
       impactStats={dataset.siteContent.impactStats}
       ctaHref={CTA_HREF}
+      closeCopy={dataset.siteContent.close}
     />
   );
 }

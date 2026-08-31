@@ -823,7 +823,7 @@ export const COMPANY_TO_TYPES: Readonly<Record<string, readonly string[]>> = {
   "Software & Internet||C&R Software": ["sw-fintech-software"],
   "Software & Internet||Calsoft": ["sw-it-services"],
   "Software & Internet||Casepoint": ["sw-legal-compliance"],
-  "Software & Internet||Centific": ["sw-it-services"],
+  "Software & Internet||Centific": ["sw-content-services"],
   "Software & Internet||Chetu": ["sw-it-services"],
   "Software & Internet||Civica": ["sw-govtech"],
   "Software & Internet||Coursera": ["sw-edtech"],
@@ -858,7 +858,7 @@ export const COMPANY_TO_TYPES: Readonly<Record<string, readonly string[]>> = {
   "Software & Internet||Investis Digital (IDX)": ["sw-martech"],
   "Software & Internet||Ivalua": ["sw-supply-chain"],
   "Software & Internet||Jivox": ["sw-martech"],
-  "Software & Internet||Jouve": ["sw-it-services"],
+  "Software & Internet||Jouve": ["sw-content-services"],
   "Software & Internet||Kaleris": ["sw-logistics-tech"],
   "Software & Internet||Kaseya": ["sw-devtools", "sw-security"],
   "Software & Internet||Kasmo": ["sw-it-services"],
@@ -872,7 +872,7 @@ export const COMPANY_TO_TYPES: Readonly<Record<string, readonly string[]>> = {
   "Software & Internet||Labvantage": ["sw-healthcare"],
   "Software & Internet||Levadata": ["sw-supply-chain"],
   "Software & Internet||Linedata": ["sw-fintech-software"],
-  "Software & Internet||Lionbridge Technologies": ["sw-it-services"],
+  "Software & Internet||Lionbridge Technologies": ["sw-content-services"],
   "Software & Internet||Logile": ["sw-retail-tech"],
   "Software & Internet||Lytx": ["sw-logistics-tech"],
   "Software & Internet||MRI Software": ["sw-construction-tech"],
@@ -928,7 +928,7 @@ export const COMPANY_TO_TYPES: Readonly<Record<string, readonly string[]>> = {
   "Software & Internet||Quark": ["sw-media-tech"],
   "Software & Internet||QuinStreet": ["sw-martech"],
   "Software & Internet||Qvantel": ["sw-telecom-software"],
-  "Software & Internet||RWS Group": ["sw-it-services"],
+  "Software & Internet||RWS Group": ["sw-content-services"],
   "Software & Internet||Rackspace Technology": ["sw-cloud-infra"],
   "Software & Internet||Radware": ["sw-security"],
   "Software & Internet||Raksul": ["sw-marketplace"],
@@ -968,7 +968,7 @@ export const COMPANY_TO_TYPES: Readonly<Record<string, readonly string[]>> = {
   "Software & Internet||Software AG": ["sw-devtools"],
   "Software & Internet||SoftwareONE": ["sw-it-services"],
   "Software & Internet||Storable": ["sw-construction-tech"],
-  "Software & Internet||Straive": ["sw-it-services"],
+  "Software & Internet||Straive": ["sw-content-services"],
   "Software & Internet||Strategy (MicroStrategy)": ["sw-data-analytics"],
   "Software & Internet||Stratogent": ["sw-it-services"],
   "Software & Internet||Suki AI": ["sw-healthcare"],
@@ -1015,7 +1015,7 @@ export const COMPANY_TO_TYPES: Readonly<Record<string, readonly string[]>> = {
   "Software & Internet||Zendesk": ["sw-crm-cx"],
   "Software & Internet||blueBriX": ["sw-healthcare"],
   "Software & Internet||eSentire": ["sw-security"],
-  "Software & Internet||i-Merit": ["sw-it-services"],
+  "Software & Internet||i-Merit": ["sw-content-services"],
   "Software & Internet||iMedX": ["sw-it-services"],
   "Software & Internet||ilantus": ["sw-security"],
   "Software & Internet||lastminute.com": ["sw-travel-tech"],
@@ -1023,7 +1023,7 @@ export const COMPANY_TO_TYPES: Readonly<Record<string, readonly string[]>> = {
   "Software & Internet||smartShift Technologies": ["sw-devtools"],
 
   /* ---- BFSI — 141 companies ---- */
-  "BFSI||AMICORP": ["fin-asset-management"],
+  "BFSI||AMICORP": ["fin-fund-services"], // corporate & fund services — not a principal
   "BFSI||ANZ": ["fin-retail-bank"],
   "BFSI||AON": ["fin-insurance-broker"],
   "BFSI||AXA Group": ["fin-insurance-pc", "fin-insurance-life"],
@@ -1031,11 +1031,11 @@ export const COMPANY_TO_TYPES: Readonly<Record<string, readonly string[]>> = {
   "BFSI||Adyen": ["fin-payments"], // merchant acquirer/gateway — processing
   "BFSI||Allianz SE": ["fin-insurance-pc", "fin-insurance-life"],
   "BFSI||Allstate": ["fin-insurance-pc"],
-  "BFSI||Alter Domus": ["fin-asset-management"],
+  "BFSI||Alter Domus": ["fin-fund-services"], // fund administration
   "BFSI||American Express": ["fin-card-network"],
   "BFSI||American International Group (AIG)": ["fin-insurance-pc"],
   "BFSI||Ameriprise Financial": ["fin-asset-management"],
-  "BFSI||Apex Group Ltd": ["fin-asset-management"],
+  "BFSI||Apex Group Ltd": ["fin-fund-services"], // fund administration
   "BFSI||Arch Capital Group": ["fin-insurance-pc"],
   "BFSI||Assurant": ["fin-insurance-pc"],
   "BFSI||BMS Group": ["fin-insurance-broker"],
@@ -1043,7 +1043,7 @@ export const COMPANY_TO_TYPES: Readonly<Record<string, readonly string[]>> = {
   "BFSI||BRIT Insurance": ["fin-insurance-pc"],
   "BFSI||Banca Sella (Centrico India)": ["fin-retail-bank"],
   "BFSI||Bank of America": ["fin-retail-bank", "fin-investment-bank"],
-  "BFSI||Bank of New York (BNY)": ["fin-asset-management"],
+  "BFSI||Bank of New York (BNY)": ["fin-fund-services"], // custody & asset servicing
   "BFSI||Barclays": ["fin-retail-bank", "fin-investment-bank"],
   "BFSI||Berkadia": ["fin-retail-bank"],
   "BFSI||Blackhawk Network": ["fin-expense-cards"], // gift/incentive card programmes
@@ -1057,6 +1057,7 @@ export const COMPANY_TO_TYPES: Readonly<Record<string, readonly string[]>> = {
   "BFSI||Capital One": ["fin-retail-bank"],
   "BFSI||Charles Schwab": ["fin-exchange", "fin-asset-management"],
   "BFSI||Chubb": ["fin-insurance-pc"],
+  "BFSI||Citco": ["fin-fund-services"], // fund administration & corporate services
   "BFSI||Citigroup": ["fin-retail-bank", "fin-investment-bank"],
   "BFSI||Citizens Bank (Citizens Financial Group)": ["fin-retail-bank"],
   "BFSI||Commonwealth Bank of Australia": ["fin-retail-bank"],
@@ -1078,6 +1079,8 @@ export const COMPANY_TO_TYPES: Readonly<Record<string, readonly string[]>> = {
   "BFSI||Finzly": ["fin-software-services"],
   "BFSI||First American": ["fin-insurance-pc"],
   "BFSI||First Citizens Bank (Silicon Valley Bank)": ["fin-retail-bank"],
+  "BFSI||FNZ Group": ["fin-fund-services"], // fund platform & administration
+  "BFSI||Formidium": ["fin-fund-services"], // fund administration
   "BFSI||Gallagher": ["fin-insurance-broker"],
   "BFSI||Genworth Financial": ["fin-insurance-life"],
   "BFSI||GoldenSource Corp": ["fin-software-services"],
@@ -1088,6 +1091,7 @@ export const COMPANY_TO_TYPES: Readonly<Record<string, readonly string[]>> = {
   "BFSI||HSBC": ["fin-retail-bank", "fin-investment-bank"],
   "BFSI||IG Group Holdings plc": ["fin-exchange"],
   "BFSI||Intercontinental Exchange Inc (ICE)": ["fin-exchange", "fin-market-data"],
+  "BFSI||IQ-EQ": ["fin-fund-services"], // fund & corporate services (two rows share this key)
   "BFSI||IronFX": ["fin-exchange"],
   "BFSI||JPMorgan Chase": ["fin-retail-bank", "fin-investment-bank"],
   "BFSI||Julius Baer": ["fin-asset-management"],
@@ -1115,6 +1119,7 @@ export const COMPANY_TO_TYPES: Readonly<Record<string, readonly string[]>> = {
   "BFSI||NatWest Group": ["fin-retail-bank"],
   "BFSI||Nationwide": ["fin-insurance-pc", "fin-insurance-life"],
   "BFSI||Network International": ["fin-payments"], // merchant acquirer — processing
+  "BFSI||Northern Trust": ["fin-fund-services"], // custody & asset servicing
   "BFSI||OakNorth": ["fin-fintech-lending"],
   "BFSI||OneSavings Bank": ["fin-retail-bank"],
   "BFSI||Onity Group Inc. (Ocwen Financials)": ["fin-retail-bank"],
@@ -1137,6 +1142,7 @@ export const COMPANY_TO_TYPES: Readonly<Record<string, readonly string[]>> = {
   "BFSI||Smartstream": ["fin-software-services"],
   "BFSI||Societe Generale": ["fin-retail-bank", "fin-investment-bank"],
   "BFSI||Standard Chartered": ["fin-retail-bank", "fin-investment-bank"],
+  "BFSI||State Street": ["fin-fund-services"], // custody & asset servicing
   "BFSI||StoneX Group": ["fin-exchange"],
   "BFSI||Stout": ["fin-investment-bank"],
   "BFSI||Sumitomo Mitsui Banking Corporation": ["fin-retail-bank", "fin-investment-bank"],
@@ -1200,7 +1206,7 @@ export const COMPANY_TO_TYPES: Readonly<Record<string, readonly string[]>> = {
   "Manufacturing||Fluidra": ["mfg-hvac-building"],
   "Manufacturing||Fortive": ["mfg-test-measurement"],
   "Manufacturing||Freudenberg": ["mfg-conglomerate"],
-  "Manufacturing||Future Pipe Industries": ["mfg-hvac-building"],
+  "Manufacturing||Future Pipe Industries": ["mfg-building-products"], // GRP/GRE composite pipe systems for water & infrastructure — a building material, not HVAC
   "Manufacturing||GEA Group": ["mfg-industrial-equipment"],
   "Manufacturing||Garrett": ["mfg-motion-control"],
   "Manufacturing||Giesecke & Devrient": ["mfg-print-imaging"],
@@ -1296,10 +1302,15 @@ export const COMPANY_TO_TYPES: Readonly<Record<string, readonly string[]>> = {
   "Healthcare & Lifescience||Evolent Health": ["hc-health-it"],
   "Healthcare & Lifescience||Finthrive": ["hc-health-it"],
   "Healthcare & Lifescience||Global Healthcare Exchange (GHX)": ["hc-health-it"],
+  // Consumer-health / OTC, split out of hc-pharma (source Sub-Industry reads the
+  // catch-all "Pharmaceuticals"). Branded self-care businesses, not innovator drug
+  // makers — see docs/business-types.md.
+  "Healthcare & Lifescience||Haleon": ["hc-consumer-health"],
   "Healthcare & Lifescience||Harrison.ai Radiology": ["hc-health-it"],
   "Healthcare & Lifescience||IKS Health": ["hc-health-it"],
   "Healthcare & Lifescience||Inspirata": ["hc-health-it"],
   "Healthcare & Lifescience||Kaiser Permanente": ["hc-provider", "hc-payer"],
+  "Healthcare & Lifescience||Kenvue": ["hc-consumer-health"],
   "Healthcare & Lifescience||LabCorp": ["hc-diagnostics"],
   "Healthcare & Lifescience||MedExpert": ["hc-health-it"],
   "Healthcare & Lifescience||Medline": ["hc-pharma-distribution"],
@@ -1307,6 +1318,7 @@ export const COMPANY_TO_TYPES: Readonly<Record<string, readonly string[]>> = {
   "Healthcare & Lifescience||ModMed": ["hc-health-it"],
   "Healthcare & Lifescience||Modivcare": ["hc-provider"],
   "Healthcare & Lifescience||Novozymes": ["hc-biotech"],
+  "Healthcare & Lifescience||Opella Healthcare": ["hc-consumer-health"],
   "Healthcare & Lifescience||PerkinElmer, Inc.": ["hc-life-science-tools"],
   "Healthcare & Lifescience||Providence": ["hc-provider"],
   "Healthcare & Lifescience||Signant Health": ["hc-health-it"],
@@ -1466,19 +1478,130 @@ export const COMPANY_TO_TYPES: Readonly<Record<string, readonly string[]>> = {
   "Wholesale||Winsupply": ["whl-building-materials"],
   "Wholesale||HD Supply (Home Depot)": ["whl-industrial-supplies", "whl-building-materials"],
 
+  /* ---- Peer-quality pass — 28 companies ------------------------------------
+   *
+   * Two kinds of correction, both from real-world knowledge of what each company
+   * actually does. Reviewed independently; every one is an ANSR sign-off point.
+   *
+   *  (a) Two suspects that carried a WRONG tag — a mass-merchant read as a grocer,
+   *      a mortgage-servicing SaaS read as a lender.
+   *  (b) Companies that were UNTAGGED because the source filed them under the wrong
+   *      industry (the prior pass refused to tag inside a wrong industry, which was
+   *      correct). Each now carries a `COMPANY_INDUSTRY_FIXES` entry that moves it
+   *      to its real industry, so THIS key is written against the CORRECTED
+   *      industry — the importer applies the industry fix before this lookup.
+   *
+   * Genuinely unidentifiable small private firms, and companies whose correct
+   * industry is not in the taxonomy (real-estate developers), stay in
+   * DELIBERATELY_UNTAGGED below.
+   */
+
+  // (a) wrong tag corrected, industry unchanged
+  "Retail||Walmart": ["ret-general-merchandise", "ret-grocery"], // mass-merchant hypermarket, not grocery alone
+  "BFSI||Sagent": ["fin-software-services"], // mortgage-servicing SaaS, not a lender
+
+  // newly identified, industry unchanged
+  "BFSI||Plug and Play LLC": ["fin-asset-management"], // global VC & startup-accelerator fund
+  "Software & Internet||Omnicell": ["sw-healthcare"], // medication-management platform for health systems
+
+  // re-homed via COMPANY_INDUSTRY_FIXES, then tagged in the corrected industry
+  "Aerospace & Defense||Saab Group": ["aero-primes"], // defence & aerospace prime (Gripen), mis-filed under Automotive
+  "Manufacturing||KION Group": ["mfg-industrial-equipment"], // forklifts & warehouse automation (Linde/STILL/Dematic), mis-filed under Logistics
+  "Chemicals & Materials||Air Liquide": ["chem-industrial-gases"], // industrial gases, mis-filed under Manufacturing
+  "Wholesale||Avnet": ["whl-industrial-supplies"], // electronic-component distribution, mis-filed under Manufacturing
+  "Automotive||Detroit Engineered Products": ["auto-engineering-services"], // automotive CAE / product-engineering services
+  "Chemicals & Materials||Ecolab": ["chem-specialty"], // water-treatment & hygiene specialty chemicals, mis-filed under Manufacturing
+  "Automotive||FEV": ["auto-engineering-services"], // automotive powertrain engineering services
+  "Architecture, Engineering, & Construction||H&MV Engineering": ["aec-engineering"], // high-voltage electrical engineering & EPC
+  "Chemicals & Materials||Orica": ["chem-specialty"], // commercial explosives & blasting systems for mining, mis-filed under Manufacturing
+  "Automotive||Polaris Inc": ["auto-oem"], // powersports vehicle OEM (ATV/snowmobile/motorcycle), mis-filed under Manufacturing
+  "Semiconductors||Synaptics": ["semi-fabless"], // fabless mixed-signal / HMI chips, mis-filed under Manufacturing
+  "Software & Internet||Tomtom": ["sw-data-analytics"], // location, mapping & geospatial data, mis-filed under Manufacturing
+  "Software & Internet||Carousell Group": ["sw-marketplace"], // consumer classifieds marketplace, mis-filed under Media
+  "Education||IDP Education": ["edu-institution"], // student placement & IELTS testing, mis-filed under Media
+  "Semiconductors||BrainChip": ["semi-fabless"], // neuromorphic AI inference chips, mis-filed under Software
+  "Telecom||Calix": ["tel-equipment"], // broadband access equipment & software for telcos, mis-filed under Software
+  "Consumer Electronics||Chamberlain Group": ["ce-devices"], // smart access / garage devices (myQ, LiftMaster), mis-filed under Software
+  "Semiconductors||d-Matrix": ["semi-fabless"], // fabless AI-inference silicon, mis-filed under Software
+  "Chemicals & Materials||Diversey": ["chem-specialty"], // institutional cleaning & hygiene chemicals, mis-filed under Software
+  "Retail||Fanatics": ["ret-ecommerce"], // licensed sports-merchandise commerce, mis-filed under Software
+  "Wholesale||Ingram Micro": ["whl-industrial-supplies"], // global IT-products distribution, mis-filed under Software
+  "Semiconductors||Knowles Corporation": ["semi-components"], // MEMS microphones & acoustic components, mis-filed under Software
+  "Aerospace & Defense||Kongsberg Gruppen": ["aero-defense-electronics"], // defence & maritime systems, mis-filed under Software
+  "Telecom||Lumen Technologies": ["tel-operator"], // fibre & telecom carrier (ex-CenturyLink), mis-filed under Software
+  "Semiconductors||Silicon Labs": ["semi-fabless"], // fabless wireless / IoT SoCs, mis-filed under Software
+  "Professional Services||Smith+Howard": ["prof-accounting"], // accounting, tax & advisory firm, mis-filed under Software
+
+};
+
+/**
+ * Per-company INDUSTRY corrections, keyed `${sourceIndustry}||${name}` -> the
+ * correct industry.
+ *
+ * The seed spreadsheet files a number of companies under an industry that is
+ * plainly wrong — a fabless chip designer under Software, a defence prime under
+ * Automotive, an industrial-gas major under Manufacturing. Correcting the tag
+ * alone is not possible, because a business type must belong to the company's
+ * own industry (enforced by the schema), so the company would stay untagged and
+ * band-match against the wrong pool. Moving the industry is the real fix.
+ *
+ * Applied in the importer BEFORE the business-type lookup and before the company
+ * record is built, so the corrected industry flows into the slug, the taxonomy,
+ * the peer pool and the `COMPANY_TO_TYPES` key alike — the same reason
+ * `canonicalIndustry` corrects a spelling in exactly one place.
+ *
+ * A table, never a rule, and every entry is world knowledge — an ANSR sign-off
+ * point. The target industry must already exist in the taxonomy; where a
+ * company's real industry has no home here (real-estate developers), it stays in
+ * DELIBERATELY_UNTAGGED instead of being forced somewhere close.
+ *
+ * Names are matched after collapsing whitespace and folding case, exactly as
+ * `COMPANY_TO_TYPES` is.
+ */
+export const COMPANY_INDUSTRY_FIXES: Readonly<Record<string, string>> = {
+  "Automotive||Saab Group": "Aerospace & Defense",
+  "Logistics & Transportation||KION Group": "Manufacturing",
+  "Manufacturing||Air Liquide": "Chemicals & Materials",
+  "Manufacturing||Avnet": "Wholesale",
+  "Manufacturing||Detroit Engineered Products": "Automotive",
+  "Manufacturing||Ecolab": "Chemicals & Materials",
+  "Manufacturing||FEV": "Automotive",
+  "Manufacturing||H&MV Engineering": "Architecture, Engineering, & Construction",
+  "Manufacturing||Orica": "Chemicals & Materials",
+  "Manufacturing||Polaris Inc": "Automotive",
+  "Manufacturing||Synaptics": "Semiconductors",
+  "Manufacturing||Tomtom": "Software & Internet",
+  "Media & Entertainment||Carousell Group": "Software & Internet",
+  "Media & Entertainment||IDP Education": "Education",
+  "Software & Internet||BrainChip": "Semiconductors",
+  "Software & Internet||Calix": "Telecom",
+  "Software & Internet||Chamberlain Group": "Consumer Electronics",
+  "Software & Internet||d-Matrix": "Semiconductors",
+  "Software & Internet||Diversey": "Chemicals & Materials",
+  "Software & Internet||Fanatics": "Retail",
+  "Software & Internet||Ingram Micro": "Wholesale",
+  "Software & Internet||Knowles Corporation": "Semiconductors",
+  "Software & Internet||Kongsberg Gruppen": "Aerospace & Defense",
+  "Software & Internet||Lumen Technologies": "Telecom",
+  "Software & Internet||Silicon Labs": "Semiconductors",
+  "Software & Internet||Smith+Howard": "Professional Services",
 };
 
 /**
  * Companies deliberately left untagged, and the reason each one is a judgement
  * rather than an oversight.
  *
- * Two kinds. Some are genuinely unidentifiable — small private firms whose
- * business could not be established with confidence, where a plausible guess
- * would put a wrong "comparable company" in front of a CIO. The rest are
- * MIS-FILED at source: a fabless chip designer sitting under Software, a defence
- * group under Automotive, a real-estate developer under Manufacturing. Correcting
- * a company's INDUSTRY is a separate data decision, so rather than force a wrong
- * type inside a wrong industry, these stay untagged.
+ * The clearly mis-filed ones a prior pass parked here — the fabless chip
+ * designers, the defence primes, the industrial-gas major — are now CORRECTED
+ * in `COMPANY_INDUSTRY_FIXES` above and tagged in their real industry. What is
+ * left is two kinds that stay untagged on purpose:
+ *
+ *  (a) Genuinely unidentifiable small private firms whose business could not be
+ *      established with confidence, where a plausible guess would put a wrong
+ *      "comparable company" in front of a CIO.
+ *  (b) Companies whose real industry has no home in this taxonomy (real-estate
+ *      developers), or that are too diversified to place with one honest type
+ *      (a biometric-identity group spanning cards, government ID and security).
  *
  * Untagged is a safe state by design: the company still appears as a peer through
  * industry-level matching, exactly as it did before any of this existed. Listing
@@ -1486,62 +1609,35 @@ export const COMPANY_TO_TYPES: Readonly<Record<string, readonly string[]>> = {
  * "decided not to" and "never got to" legible in six months.
  */
 export const DELIBERATELY_UNTAGGED: readonly string[] = [
-  "Automotive||Saab Group",
   "BFSI||Encore Capital Group",
   "BFSI||N2G Worldwide",
   "BFSI||Nvayo global",
-  "BFSI||Plug and Play LLC",
   "BFSI||Prgx",
   "BFSI||Transparent Value",
   "BFSI||Vervent",
   "BFSI||World Bank",
   "Logistics & Transportation||ARS Traffic & Transport Technology",
   "Logistics & Transportation||Efkon",
-  "Logistics & Transportation||KION Group",
   "Manufacturing||Aatmunn",
-  "Manufacturing||Air Liquide",
-  "Manufacturing||Avnet",
   "Manufacturing||Coats Group plc (Coats Digital)",
   "Manufacturing||DAMAC",
-  "Manufacturing||Detroit Engineered Products",
   "Manufacturing||Diebold",
-  "Manufacturing||Ecolab",
   "Manufacturing||Everi Holdings",
-  "Manufacturing||FEV",
-  "Manufacturing||H&MV Engineering",
   "Manufacturing||HID Global",
   "Manufacturing||Haworth",
-  "Manufacturing||Orica",
-  "Manufacturing||Polaris Inc",
   "Manufacturing||Prysm",
   "Manufacturing||Sling Media",
   "Manufacturing||Sonny",
-  "Manufacturing||Synaptics",
-  "Manufacturing||Tomtom",
-  "Media & Entertainment||Carousell Group",
-  "Media & Entertainment||IDP Education",
   "Software & Internet||Amtech Software",
-  "Software & Internet||BrainChip",
-  "Software & Internet||Calix",
-  "Software & Internet||Chamberlain Group",
   "Software & Internet||Cion Digital",
-  "Software & Internet||Diversey",
   "Software & Internet||EverestLabs",
-  "Software & Internet||Fanatics",
   "Software & Internet||IDEMIA",
-  "Software & Internet||Ingram Micro",
   "Software & Internet||Jean Martin Inc. (JMI)",
-  "Software & Internet||Knowles Corporation",
-  "Software & Internet||Kongsberg Gruppen",
   "Software & Internet||Ladera Technology",
-  "Software & Internet||Lumen Technologies",
-  "Software & Internet||Omnicell",
   "Software & Internet||Omnitaas",
   "Software & Internet||SOBIS",
   "Software & Internet||SPAN",
   "Software & Internet||Shield",
-  "Software & Internet||Silicon Labs",
-  "Software & Internet||Smith+Howard",
   "Software & Internet||Stabilix",
   "Software & Internet||Syneriq Global",
   "Software & Internet||TGR Screen",
@@ -1551,5 +1647,4 @@ export const DELIBERATELY_UNTAGGED: readonly string[] = [
   "Software & Internet||UCC Environmental",
   "Software & Internet||Waveaxis",
   "Software & Internet||Workplace Options",
-  "Software & Internet||d-Matrix",
 ];

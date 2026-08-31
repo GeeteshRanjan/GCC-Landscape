@@ -187,11 +187,11 @@ function findType(industry: string, needle: string) {
 
 const VISITORS = [
   // Nike's real row: Retail / Above $20 Bn / USA / ret-apparel.
-  { label: 'Nike — Retail / "Apparel & footwear brand"', industry: "Retail", needle: "apparel", band: "Above $20 Bn", hq: "USA", companyName: "Nike" },
-  { label: "Mid-size BFSI insurer — $1–5 Bn", industry: "BFSI", needle: "Life & health insurance", band: "$1 Bn – $5 Bn", hq: "USA" },
+  { label: 'Nike — Retail / "Apparel & Footwear Brand"', industry: "Retail", needle: "apparel", band: "Above $20 Bn", hq: "USA", companyName: "Nike" },
+  { label: "Mid-size BFSI insurer — $1–5 Bn", industry: "BFSI", needle: "Life & Health Insurance", band: "$1 Bn – $5 Bn", hq: "USA" },
   // There is no "SaaS" type: the vocabulary is by domain, not delivery model.
-  // ERP & core business systems is the closest thing to enterprise SaaS.
-  { label: "Enterprise SaaS — ERP & core business systems, $1–5 Bn", industry: "Software & Internet", needle: "ERP", band: "$1 Bn – $5 Bn", hq: "USA" },
+  // ERP & Core Business Systems is the closest thing to enterprise SaaS.
+  { label: "Enterprise SaaS — ERP & Core Business Systems, $1–5 Bn", industry: "Software & Internet", needle: "ERP", band: "$1 Bn – $5 Bn", hq: "USA" },
 ];
 
 for (const v of VISITORS) {

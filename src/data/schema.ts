@@ -576,6 +576,32 @@ export const impactStatSchema = z.object({
   label: nonEmpty.max(64),
 });
 
+/**
+ * The close's copy — the one band on the RESULT screens that is editable data.
+ *
+ * **It is here for the same reason the hero is, and that reason is the test any future
+ * addition has to pass.** Every other public string is an argument about the dataset and
+ * lives beside the logic making the argument, so moving it into data would separate a
+ * claim from the thing that justifies it. The close makes no claim about the dataset: it
+ * is positioning and an offer, on ANSR's own schedule rather than the data's. Same
+ * category as the hero, so it gets the same treatment.
+ *
+ * **Two fields, because the band renders two strings.** There is no heading — the band's
+ * accessible name is an `aria-label` in the component, and a heading field nothing draws
+ * would be a field asked for and never consumed. If a heading comes back it is a schema
+ * addition and a component change together, which is the right amount of friction.
+ *
+ * The caps are the render limits rather than editorial taste. `body` is the band's display
+ * line, set large and centred at the lead measure: past roughly 140 characters it runs to
+ * four lines and the button falls out of the first screenful on a phone. `ctaLabel` sits
+ * in a pill that must not wrap — 28 characters is what fits at 390 with the pill's own
+ * padding, measured rather than guessed.
+ */
+export const closeCopySchema = z.object({
+  body: nonEmpty.max(140),
+  ctaLabel: nonEmpty.max(28),
+});
+
 export const siteContentSchema = z.object({
   hero: heroCopySchema,
   /**
@@ -584,7 +610,27 @@ export const siteContentSchema = z.object({
    * that makes a figure read as a figure. Five is what ANSR supplied.
    */
   impactStats: z.array(impactStatSchema).max(6),
+  /**
+   * **Defaulted rather than required, and that is a compatibility decision with a
+   * precedent.** `metrics` was defaulted to `[]` for exactly this reason: the fs store
+   * refuses an unrecognised `version`, so requiring a new key would turn a compatible
+   * addition into a broken read of every dataset written before it existed — including
+   * the one committed in `data/`. With a default, an older file reads and publishes
+   * forward.
+   */
+  close: closeCopySchema.default(() => DEFAULT_CLOSE_COPY),
 });
+
+/**
+ * Held separately from `DEFAULT_SITE_CONTENT` so the schema's own `.default()` can name it
+ * without forward-referencing the larger object it is a member of.
+ */
+export const DEFAULT_CLOSE_COPY: CloseCopy = {
+  body:
+    "Access the complete dataset, deeper benchmarks and detailed cost " +
+    "structures behind your results.",
+  ctaLabel: "Unlock full intelligence",
+};
 
 /**
  * What ships when the key is absent, and what `--reseed-site-content` restores.
@@ -620,10 +666,12 @@ export const DEFAULT_SITE_CONTENT: SiteContent = {
     { id: "years-experience", value: "20+", label: "Years of experience" },
     { id: "capital-created", value: "$2.5B+", label: "Capital investment created" },
   ],
+  close: DEFAULT_CLOSE_COPY,
 };
 
 export type HeroCopy = z.infer<typeof heroCopySchema>;
 export type ImpactStat = z.infer<typeof impactStatSchema>;
+export type CloseCopy = z.infer<typeof closeCopySchema>;
 export type SiteContent = z.infer<typeof siteContentSchema>;
 
 export type MetricStructure = z.infer<typeof metricStructureSchema>;

@@ -666,12 +666,13 @@ describe("resolving a value", () => {
      * is exact, and K needs a whole number of thousands at 10,000 or above — which is
      * why 45,000 abbreviates and 1,250 elsewhere does not.
      */
+    // "Other sciences" (350K) was removed from the discipline split at ANSR's request,
+    // on the technology, operations and HR tabs.
     expect(shown.parts.map((part) => part.figure)).toEqual([
       "1.5M",
       "300K",
       "250K",
       "200K",
-      "350K",
       "600K",
       "450K",
       "250K",
@@ -1206,10 +1207,13 @@ describe("the tab structure", () => {
    was "covered in screen2.test.ts", and it was not. Two things are pinned here.
 
    The three branches of the close, because `gccStatus` is otherwise a field with no
-   test behind it and it is the only reason the input survives. And the three
-   sentences that are exported and rendered nowhere, because the governing rule for
-   the removal pass is "kept exported and unit-tested but unrendered" — a sentence
-   with no test is a sentence that quietly rots until nobody dares restore it.
+   test behind it and it is the only reason the input survives. **`functionFraming` is
+   RENDERED BY NOTHING again** — the close's copy is supplied, fixed and identical on
+   both screens, so there is nothing left for a status to select — which makes this the
+   only place the field can be varied at all and moves it into the same category as the
+   sentences below it. And those three sentences, because the governing rule for the
+   removal pass is "kept exported and unit-tested but unrendered": a sentence with no
+   test is a sentence that quietly rots until nobody dares restore it.
    ========================================================================== */
 
 describe("the close, and the sentences kept for ANSR", () => {
@@ -1221,24 +1225,28 @@ describe("the close, and the sentences kept for ANSR", () => {
     gccStatus,
   });
 
-  it("branches all three closing fields on gccStatus, and nothing else", () => {
+  it("branches both closing fields on gccStatus, and nothing else", () => {
     const framings = GCC_STATUSES.map((status) => functionFraming(input(status)));
-    for (const field of ["ctaHeading", "ctaBody", "ctaLabel"] as const) {
+    for (const field of ["ctaHeading", "ctaBody"] as const) {
       const values = framings.map((framing) => framing[field]);
       expect(new Set(values).size, field).toBe(GCC_STATUSES.length);
       for (const value of values) expect(value.trim()).not.toBe("");
     }
     /**
-     * **Three fields, not five.** It used to carry a `title` and a `lead` as well, and
-     * `project.md` recorded that as five branching strings — wrong even then, because
-     * the lead was one shared constant that did not branch. Both are gone with the
-     * screen's `h2` and the paragraph under it, so what keeps `gccStatus` load-bearing
-     * is the close alone.
+     * **TWO fields, not three, and not the five `project.md` once recorded.** It carried
+     * a `title` and a `lead` as well — both gone with the screen's `h2` and the paragraph
+     * under it — and then a `ctaLabel`, which is now one constant in the shared component:
+     * three labels of the form "Talk to ANSR about {verb} your India GCC" each restated
+     * the heading directly above them, and Screen 1 had the same three, so one sentence
+     * had six variants.
+     *
+     * The key list is asserted rather than the count, so a field coming BACK has to be
+     * declared here — which is the only way a fourth string can be added deliberately
+     * rather than by drift.
      */
     expect(Object.keys(framings[0] ?? {}).sort()).toEqual([
       "ctaBody",
       "ctaHeading",
-      "ctaLabel",
     ]);
   });
 

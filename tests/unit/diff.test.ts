@@ -80,6 +80,10 @@ describe("diffDatasets — site content", () => {
       { id: "hired", value: "225K+", label: "Professionals hired" },
       { id: "centers", value: "210+", label: "Centres established" },
     ],
+    // The close's copy. Defaulted in the schema so an older dataset still reads, but
+    // REQUIRED on the parsed type — so a fixture that omits it is a compile error rather
+    // than a silent `undefined` reaching the diff.
+    close: { body: "Access the complete dataset.", ctaLabel: "Unlock full intelligence" },
     ...overrides,
   });
 
@@ -599,7 +603,7 @@ describe("formatMetricFieldValue", () => {
 describe("diffDatasets — business types", () => {
   const apparel: BusinessType = {
     id: "ret-apparel",
-    name: "Apparel & footwear brand",
+    name: "Apparel & Footwear Brand",
     industry: "Retail",
     tags: ["brand-owner", "apparel", "footwear"],
   };

@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import { fetchPeerView } from "@/app/actions";
-import type { HeroCopy, ImpactStat } from "@/data/schema";
+import type { CloseCopy, HeroCopy, ImpactStat } from "@/data/schema";
 import type { TieredOptions } from "@/components/screen1/input-panel";
 import type { PeerView, PeerViewInput } from "@/data/screen1";
 import type { FunctionView } from "@/data/screen2";
@@ -62,16 +62,26 @@ export interface GccLandscapeToolProps {
   heroCopy: HeroCopy;
   impactStats: readonly ImpactStat[];
   /**
-   * Where a closing CTA would send the visitor. **Nothing reads it.**
+   * Where the close sends the visitor. **Both result screens read it now.**
    *
-   * Both screens' closes are removed at ANSR's request — Screen 1's on the page-end
-   * instruction, Screen 2's in the pass that rebuilt its zones — so the tool has no
-   * call to action and no outbound link. Kept threaded from `page.tsx` because
-   * restoring one is a component and a prop rather than an environment variable and a
-   * redeploy, and `NEXT_PUBLIC_GCC_CTA_URL` is unset in production anyway. Deleting it
-   * is a decision to take with ANSR, not a tidy-up.
+   * The two closes were removed at ANSR's request — Screen 1's on the page-end
+   * instruction, Screen 2's in the pass that rebuilt its zones — and are restored at
+   * the project owner's decision. The prop survived that whole period threaded and
+   * unread, on the recorded argument that restoring a link out is a component and a
+   * prop rather than an environment variable and a redeploy. That turned out to be
+   * exactly what it took.
+   *
+   * `NEXT_PUBLIC_GCC_CTA_URL` is unset in production, so this resolves to the
+   * fallback in `page.tsx` — ansr.com itself. It is now a live path rather than a
+   * dormant one, which makes setting that variable a real deployment step.
    */
   ctaHref: string;
+  /**
+   * The close's two strings, from `siteContent.close`. Admin-editable and threaded from
+   * `page.tsx` for the same reason `heroCopy` is: it does not depend on the visitor, so a
+   * server action for it could only ever return one answer.
+   */
+  closeCopy: CloseCopy;
 }
 
 type Phase =
@@ -88,6 +98,7 @@ export function GccLandscapeTool({
   heroCopy,
   impactStats,
   ctaHref,
+  closeCopy,
 }: GccLandscapeToolProps) {
   useFrameHeight();
 
@@ -321,6 +332,8 @@ export function GccLandscapeTool({
           view={phase.view}
           onChangeDetails={backToAsk}
           onOpenFunctions={openFunctions}
+          ctaHref={ctaHref}
+          closeCopy={closeCopy}
         />
       ) : null}
 
@@ -331,6 +344,8 @@ export function GccLandscapeTool({
           onBack={backToPeers}
           onEditProfile={backToAsk}
           panelRef={functionsPanelRef}
+          ctaHref={ctaHref}
+          closeCopy={closeCopy}
         />
       ) : null}
     </main>

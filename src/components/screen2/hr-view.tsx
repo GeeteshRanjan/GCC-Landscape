@@ -1,7 +1,5 @@
-import { Lock, UserRound } from "lucide-react";
-
-import type { FunctionAreaView, HeldMetric, ShownMetric } from "@/data/screen2";
-import { Block, Panel } from "@/components/public/primitives";
+import type { FunctionAreaView, ShownMetric } from "@/data/screen2";
+import { Panel } from "@/components/public/primitives";
 import {
   MilestoneTrack,
   RangeBenchmark,
@@ -10,17 +8,8 @@ import {
   type BarTone,
 } from "@/components/public/charts";
 import { TabZones } from "./zones";
-import { cn } from "@/lib/utils";
 import {
   FIGURES_HEADING,
-  HELD_LOCK_LABEL,
-  HELD_MATRIX_COLUMN_PREFIX,
-  HELD_MATRIX_ROW_PREFIX,
-  heldHeading,
-  heldShapeNote,
-  HR_HELD_AVAILABILITY,
-  HR_HELD_VARIES,
-  HR_RATIO_MODELS,
   HR_SECTIONS,
   METRIC_NOTES,
 } from "./copy";
@@ -191,9 +180,14 @@ export function HrPanel({ area }: { area: FunctionAreaView }) {
   if (leftovers.length > 0) {
     sections.push(<Leftovers key="leftovers" metrics={leftovers} />);
   }
-  if (area.held.length > 0) {
-    sections.push(<HeldGroup key="held" held={area.held} />);
-  }
+  /**
+   * **The sealed group is DELETED at ANSR's request, so this tab renders nothing for a
+   * gated metric.** `area.held` still exists and the gate is untouched — `publicMetric`
+   * has no field a withheld figure could travel in — so the two gated HR metrics are
+   * simply not drawn: no heading, no placeholder, no lock, no chip. The finance tab lost
+   * its equivalent in the same pass. The derived path and the operations tab still have a
+   * held branch; see `function-view.tsx`.
+   */
 
   return <TabZones sections={sections} />;
 }
@@ -243,7 +237,11 @@ function MarketSummary({ figures }: { figures: readonly ShownMetric[] }) {
 
 function Velocity({ ranges }: { ranges: readonly ShownMetric[] }) {
   return (
-    <Block id="hr-velocity" title={HR_SECTIONS.velocity}>
+    <section
+      id="hr-velocity"
+      aria-label={HR_SECTIONS.velocity}
+      className="flex min-w-0 flex-col"
+    >
       {/* **`items-stretch` and a centring body, which is the peer view's own fix for this
           exact row.** One of these two cards carries endpoint labels and a caveat and the
           other carries neither, so at `items-start` the shorter one ended ~70px above its
@@ -259,8 +257,9 @@ function Velocity({ ranges }: { ranges: readonly ShownMetric[] }) {
               key={shown.metric.id}
               id={`metric-${shown.metric.id}`}
               title={shown.metric.title}
-              // Under this section's `h2`.
-              headingLevel={3}
+              // `h2`: the section's own group heading was removed at ANSR's request, so
+              // a card is a top-level section of the tab now, exactly as on the derived
+              // technology tab. A level down would skip from the sr-only summary `h2`.
               bodyClassName="flex flex-col grow justify-center"
             >
               <div className="flex flex-col gap-4">
@@ -285,7 +284,7 @@ function Velocity({ ranges }: { ranges: readonly ShownMetric[] }) {
           ) : null,
         )}
       </div>
-    </Block>
+    </section>
   );
 }
 
@@ -310,8 +309,16 @@ function Analysis({
   salary?: ShownMetric;
 }) {
   return (
-    <Block id="hr-analysis" title={HR_SECTIONS.analysis}>
-      <div className="grid grid-cols-1 items-start gap-6 lg:grid-cols-2 lg:gap-8">
+    <section
+      id="hr-analysis"
+      aria-label={HR_SECTIONS.analysis}
+      className="flex min-w-0 flex-col"
+    >
+      {/* `items-stretch` and centring bodies, which is what the velocity section above
+          already does: the milestone track is 60px shorter than the salary ranking beside
+          it, and at `items-start` that surplus was a band of bare zone under the shorter
+          card — the gap ANSR reported after the scale milestones. */}
+      <div className="grid grid-cols-1 items-stretch gap-6 lg:grid-cols-2 lg:gap-8">
         {milestones?.shape === "breakdown" ? (
           <Panel
             id={`metric-${milestones.metric.id}`}
@@ -319,7 +326,7 @@ function Analysis({
             // "months, median" — the unit, once, rather than under each of four
             // circles. `MilestoneTrack` deliberately does not repeat it.
             lead={milestones.metric.unit}
-            headingLevel={3}
+            bodyClassName="flex flex-col grow justify-center"
           >
             {/* `parts` rather than `legs`. Both carry the same fraction — a leg's
                 `share` is its cumulative value over the last waypoint, and a part's is
@@ -343,7 +350,7 @@ function Analysis({
             // "Base salary growth, year on year" — what every figure measures, under
             // the heading that names the finding. See the metric's own comment.
             lead={salary.metric.unit}
-            headingLevel={3}
+            bodyClassName="flex flex-col grow justify-center"
           >
             {/* **Inline rows on a bare track, and both are earned rather than
                 chosen.** The entries are authored in descending order, so
@@ -366,7 +373,7 @@ function Analysis({
           </Panel>
         ) : null}
       </div>
-    </Block>
+    </section>
   );
 }
 
@@ -389,7 +396,6 @@ function Leftovers({ metrics }: { metrics: readonly ShownMetric[] }) {
           id={`metric-${shown.metric.id}`}
           title={shown.metric.title}
           lead={shown.metric.unit}
-          headingLevel={3}
           /**
            * **An odd last card takes the whole measure**, which is `packWidths`'s rule
            * applied to the one grid on this tab whose length is not known in advance. It
@@ -425,198 +431,5 @@ function Leftovers({ metrics }: { metrics: readonly ShownMetric[] }) {
         </Panel>
       ))}
     </div>
-  );
-}
-
-/* ==========================================================================
-   4 — Figures shaped by your roles and cities
-
-   The two withheld metrics, on the mint.
-
-   **The ground is the one place colour carries meaning on this tab.** Everything on it
-   is held back, which is why the sealed group gets a boundary the three analytical
-   sections do not: the reader needs to know they have crossed from what the page can
-   tell them to what it cannot.
-
-   Four things carry the withholding, and each rules something out:
-
-     - **A lock, and it has an accessible name.** The chip the other tabs use says
-       "Held back" in text beside the heading; the composition asks for a lock disc
-       instead, so the words move into `sr-only` text on the disc. A decorative padlock
-       with nothing announced would leave a screen-reader user with a card that is
-       simply missing its content.
-     - **Uniform hatched blocks, never a varying width.** A loading skeleton varies its
-       widths to imitate text and animates to say "wait". These do neither. See
-       `.gcc-held`.
-     - **The cardinality is real and stated in words.** Five rows across five columns is
-       exactly what the gate leaves, and `heldShapeNote` says it.
-     - **Nothing is dimmed.** Dimming says unavailable; a firmer edge says closed. That
-       is `tone="sealed"`.
-   ========================================================================== */
-
-function HeldGroup({ held }: { held: readonly HeldMetric[] }) {
-  return (
-    /* **No lead, and `HR_HELD_LEAD` is kept exported and unrendered.** It said "These
-       measures depend on the roles, levels and Indian locations selected for your GCC."
-       directly under a heading reading "Figures shaped by your roles and cities", above
-       two cards each stating what its own figure varies with, above a line saying when
-       both become available. Four statements of one idea inside 200px. The heading keeps
-       the claim, the per-card lines keep the specificity, and the availability line
-       keeps the one thing none of them says — see `HR_HELD_AVAILABILITY`. */
-    <Block id="hr-held" title={heldHeading(held.length)}>
-      <div className="flex flex-col gap-6">
-        <div className="grid grid-cols-1 items-start gap-6 lg:grid-cols-2 lg:gap-8">
-          {held.map((metric) => (
-            <HeldPreview key={metric.metric.id} held={metric} />
-          ))}
-        </div>
-        {/* **A condition, aligned to the leading edge, and not a control.** The
-            composition asked for an "Update roles & cities" button here; the tool asks
-            five questions and none of them is a role, a level or a city, so the button
-            would name a destination that does not exist. See `HR_HELD_AVAILABILITY`. */}
-        <p className="text-sm text-text-muted">{HR_HELD_AVAILABILITY}</p>
-      </div>
-    </Block>
-  );
-}
-
-function HeldPreview({ held }: { held: HeldMetric }) {
-  const { metric } = held;
-  return (
-    <Panel
-      id={`metric-${metric.id}`}
-      title={metric.title}
-      lead={HR_HELD_VARIES[metric.id]}
-      tone="sealed"
-      headingLevel={3}
-    >
-      {/* Preview and lock on one row, the lock at the trailing edge and vertically
-          centred against whatever the preview's height turns out to be. `items-center`
-          rather than `items-start`, because the lock is a property of the whole card
-          rather than of its first line. */}
-      <div className="flex items-center gap-5">
-        <div className="flex min-w-0 flex-1 flex-col gap-3">
-          {metric.shape.kind === "matrix" ? (
-            <MatrixPreview rows={metric.shape.rows} columns={metric.shape.columns} />
-          ) : (
-            <RatioPreview />
-          )}
-          <p className="text-xs text-text-muted">{heldShapeNote(metric.shape)}</p>
-        </div>
-        <LockDisc />
-      </div>
-    </Panel>
-  );
-}
-
-function LockDisc() {
-  return (
-    <span className="flex size-12 shrink-0 items-center justify-center rounded-full bg-surface-tint text-accent-teal">
-      <Lock aria-hidden="true" strokeWidth={1.5} className="size-5" />
-      {/* The chip's words, kept. A padlock alone is a picture; this is the card's
-          status, and it has to be readable by something other than the eye. */}
-      <span className="sr-only">{HELD_LOCK_LABEL}</span>
-    </span>
-  );
-}
-
-/**
- * The support ratio, as two named operating models with the quantity withheld.
- *
- * **Both groups are identical, which is the whole discipline of it.** The reference
- * composition draws five dark figures against four pale ones, and that is a ratio — a
- * number, drawn, for a metric whose number never left the server. So each model gets one
- * person glyph and one hatched block of the same size: the card states that there are
- * two models and that each has a ratio, and asserts nothing whatever about how the two
- * compare.
- *
- * The two names are not the withheld structure's entries — those never cross. See
- * `HR_RATIO_MODELS`.
- */
-function RatioPreview() {
-  return (
-    <div className="grid grid-cols-2 gap-4">
-      {HR_RATIO_MODELS.map((model) => (
-        <div key={model} className="flex flex-col gap-2">
-          <span className="w-fit rounded-full bg-surface-tint px-3 py-1 text-xs font-semibold text-accent-teal">
-            {model}
-          </span>
-          <div aria-hidden="true" className="flex items-center gap-2">
-            {/* The subject of the ratio, drawn once. One glyph rather than a cluster:
-                a cluster is a count. */}
-            <UserRound
-              strokeWidth={1.5}
-              className="size-5 shrink-0 text-text-muted"
-            />
-            <span className="gcc-held block h-6 flex-1" />
-          </div>
-        </div>
-      ))}
-    </div>
-  );
-}
-
-/**
- * The cost matrix, at its real size, with generic ordinals for labels.
- *
- * The gate drops the row and column names — a row label beside a visible axis can imply
- * the answer — and leaves five rows across five columns. `Role family 1` and `L1` carry
- * the metric's own title, which does cross, plus a position in a list. Neither names a
- * role family and neither states what a level is. See `HELD_MATRIX_ROW_PREFIX`.
- */
-function MatrixPreview({
-  rows,
-  columns,
-}: {
-  rows: number;
-  columns: number;
-}) {
-  return (
-    // Hidden wholesale: `heldShapeNote` says the same thing in words, and a grid of
-    // empty cells announced one at a time is noise with no content in it.
-    <div
-      aria-hidden="true"
-      className="grid gap-x-3 gap-y-2"
-      style={{
-        gridTemplateColumns: `max-content repeat(${columns}, minmax(0, 1fr))`,
-      }}
-    >
-      <span />
-      {Array.from({ length: columns }, (_, column) => (
-        <span
-          key={`column-${column}`}
-          className="text-center text-xs font-semibold text-text-muted tabular-nums"
-        >
-          {HELD_MATRIX_COLUMN_PREFIX}
-          {column + 1}
-        </span>
-      ))}
-      {Array.from({ length: rows }, (_, row) => (
-        <Row key={`row-${row}`} index={row} columns={columns} />
-      ))}
-    </div>
-  );
-}
-
-/**
- * One row of the matrix preview.
- *
- * A fragment rather than a wrapper element, because the grid's columns have to be the
- * grid's own — a `div` per row would make every row a single cell and the column
- * headers would line up with nothing.
- */
-function Row({ index, columns }: { index: number; columns: number }) {
-  return (
-    <>
-      <span className="text-xs whitespace-nowrap text-text-muted">
-        {HELD_MATRIX_ROW_PREFIX} {index + 1}
-      </span>
-      {Array.from({ length: columns }, (_, column) => (
-        <span
-          key={column}
-          className={cn("gcc-held block h-4 w-full rounded-sm")}
-        />
-      ))}
-    </>
   );
 }

@@ -14,7 +14,7 @@ import { RankedBars, type BarRow } from "@/components/public/charts";
  * `VELOCITY_HEADING` being a constant rather than the same words typed twice, and as both
  * composed tabs drawing the scale curve through `MilestoneTrack`.
  *
- * Nine disciplines at the full measure, as two columns of compact rows.
+ * Eight disciplines at the full measure, as two columns of compact rows.
  *
  * **A bare `Panel` rather than a section wrapping a card**, because the metric's own
  * title is the only heading this block needs — a `Block` above it would state the same
@@ -43,8 +43,8 @@ export function GraduateOutput({
 }: {
   shown: ShownMetric & { shape: "breakdown" };
 }) {
-  // Floor rather than ceiling, so nine parts read four then five: the taller column is
-  // the trailing one, which is the direction a wrapped list already reads in.
+  // Floor rather than ceiling, so an odd count puts the taller column trailing, which
+  // is the direction a wrapped list already reads in. Eight parts split four and four.
   const split = Math.floor(shown.parts.length / 2);
   const columns = [shown.parts.slice(0, split), shown.parts.slice(split)];
 

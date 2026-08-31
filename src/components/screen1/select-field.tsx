@@ -1,6 +1,6 @@
 "use client";
 
-import { Check, ChevronDown, ChevronLeft, ChevronRight, Search } from "lucide-react";
+import { ChevronDown, ChevronLeft, ChevronRight, Search } from "lucide-react";
 import { useEffect, useId, useMemo, useRef, useState } from "react";
 
 import { matchesTokens, searchHaystack, searchTokens } from "@/data/search";
@@ -54,31 +54,64 @@ import { cn } from "@/lib/utils";
  * columns. They are one control now: an industry may carry sub-industries, and
  * choosing one answers both questions at once.
  *
- * **The second level is a SECOND PANEL beside the first, not an indent inside it**,
+ * **The second level is a SECOND PANE beside the first, not an indent inside it**,
  * and the indent it replaces had three problems that were all the same problem. It
  * grew the panel by up to nine rows on expand, so a popup already overhanging the
  * card ran a third of the way into the customer-logo strip below it; the panel's
  * height changed under the pointer mid-interaction; and two levels of one list at
  * 24px of indent read as an outline rather than as a choice within a choice. A
- * fixed-height parent list with the branch drawn beside it fixes all three: the
- * panel is now exactly as tall open as closed, whatever is expanded.
+ * fixed-height body with the branch drawn beside it fixes all three: the panel is
+ * exactly as tall open as closed, whatever is expanded.
  *
- * **The branch opens on the TRAILING side — parent left, child right — which is
- * ANSR's call and the direction a cascade reads in. What it costs is width.** This
- * control is the form's right-hand column at every viewport, so the room for the pane
- * is whatever is left between the card and the window edge: measured, that is
- * `layoutWidth / 2 − 400` above 1280, and 88px at `md`. The pane cannot be clamped to
- * it at runtime — that would mean measuring the viewport, which is the thing the
- * iframe forbids — so its widths are taken from that formula at two breakpoints and
- * written down in `.gcc-select-pane`, where the measurements are.
+ * ## The panel is WIDER than the field, and that is what makes the list readable
  *
- * **Below 1440px the same pane becomes a drill-in**, covering the parent list with its
- * own header as the way back. One element, two shapes, rather than a second component
- * that can drift from the first. A pane does technically fit from about 1320 at 13rem,
- * and the drill-in is better there rather than a fallback: at that width nearly every
- * sub-industry wraps to two lines, while the drill-in gives each one a full line. So a
- * 1280 or 1366 laptop drills in. That is the price of opening trailing-side rather than
- * an oversight — leading-side had room from `md` up and reads backwards.
+ * **A popup the width of one form field is the wrong container for 24 industries.**
+ * It showed eight rows of 24 in a 16rem scrollport, so a visitor deciding between
+ * industries could not see the set they were deciding within — which is the failure
+ * mode that matters here, because a visitor who cannot find their own row takes a
+ * broader answer and the peer set loses its primary ordering signal. Findability, not
+ * scoring, is what this control is for.
+ *
+ * So `wide` widens the panel to the whole form grid and lays the options out in
+ * COLUMNS. Two things make that legal inside a frame:
+ *
+ *   - **The widening is expressed in the FIELD's own width, never the viewport's.**
+ *     The form grid is two equal columns with a 24px gap, so the sibling column is
+ *     `100% + 24px` of this field — a negative inline-start margin of exactly that
+ *     against `inset-inline: 0` gives a panel spanning the grid. Nothing measures the
+ *     card, the container or the window, so there is no room table to re-measure and
+ *     nothing to clamp at runtime. This replaced a table of pane widths fitted to
+ *     `layoutWidth / 2 − 400` at four breakpoints, every value of which depended on
+ *     the card, the container AND the grid all staying put.
+ *   - **Columns are CSS multi-column, so DOM order is column order.** Content flows
+ *     down column one and then down column two, which is the order the keyboard walks
+ *     — so ArrowDown moves down the column under the pointer and steps to the top of
+ *     the next at the bottom, with no separately-derived navigation order to fall out
+ *     of step with what is drawn. A grid with `grid-auto-flow: row` would have filled
+ *     left-to-right and put the keyboard order across the columns instead.
+ *
+ * Group headings take `column-span: all`, so each tier balances into its own columns
+ * under a full-width label rather than the two tiers interleaving down one column.
+ *
+ * **The branch opens on the TRAILING side — parent left, child right — which is ANSR's
+ * call and the direction a cascade reads in.** It is now a flex sibling INSIDE the
+ * panel rather than a box positioned outside it, which is what the widening bought:
+ * the pane no longer has to fit between the card and the window edge, so it works from
+ * `md` up instead of only from 1440, and the two panes split the body in half. At the
+ * card's full width that is 400px each, which is one line for every industry name and
+ * every sub-industry name in the taxonomy — the previous 16rem pane truncated or
+ * wrapped most of them.
+ *
+ * **Opening a branch drops the first pane from two columns to one.** The body's box is
+ * unchanged — same width, same height — so nothing moves around the panel; the list
+ * inside it re-flows into the half it still has. That is a visible reflow and it is the
+ * accepted cost of parent-left/child-right at this width: the alternative is two
+ * columns of 255px, where two thirds of the industry names wrap. The row that was
+ * pressed keeps its fill and its leading rule, so the reflow has an anchor.
+ *
+ * **Below `md` the pane is a drill-in**, covering the first pane with its own header as
+ * the way back, because there the panel is one field wide and two halves of it are
+ * unusable. One element, two shapes, rather than a second component that can drift.
  *
  * So `option.children` turns the popup from a `listbox` into a `tree`. That is the
  * correct ARIA pairing rather than a clever one — a combobox may own a listbox, a
@@ -186,6 +219,8 @@ export function SelectField({
    * is not: three of the four controls have no second level at all.
    */
   childLabel,
+  wide,
+  columns,
   disabled,
   invalid,
   describedBy,
@@ -200,6 +235,29 @@ export function SelectField({
   placeholder: string;
   hint?: string;
   childLabel?: string;
+  /**
+   * Widen the panel to the whole form grid and lay the options out in columns.
+   *
+   * **Set per control rather than derived from the option count, because widening is
+   * a statement about where the field sits in the grid.** The panel widens on its
+   * LEADING side, which is only correct for a control in the grid's trailing column —
+   * industry and headquarters are, revenue band is not. A count-based rule would
+   * eventually widen the wrong field off the leading edge of the card.
+   *
+   * Revenue band declines it for a second reason as well: seven options fit a
+   * single column, and a panel three times the width of its own field for seven rows
+   * reads as a rendering fault rather than as room.
+   */
+  wide?: boolean;
+  /**
+   * How many columns the first pane takes at the widened width. Two by default.
+   *
+   * Three is for a list of SHORT labels — countries. The industry taxonomy's longest
+   * name is 41 characters, which needs the full half of an 800px body to stay on one
+   * line, so a third column there buys density by wrapping two thirds of the rows.
+   * Ignored entirely when `wide` is unset, and ignored while a branch is open.
+   */
+  columns?: 2 | 3;
   disabled?: boolean;
   invalid?: boolean;
   describedBy?: string;
@@ -472,13 +530,13 @@ export function SelectField({
    * current answer is read through a ref instead.
    *
    * **The panel opens with NO branch open, even when the answer is a sub-industry**,
-   * and re-opening the visitor's branch for them was tried and is worse. Below 1320px
-   * the pane is a drill-in covering the whole panel, filter included — so a visitor
-   * returning to change their industry found the industry list and the filter both
-   * behind a pane they had not asked for, with the header as the only way out. It also
-   * loses nothing: the trigger already reads "Retail · Apparel & footwear brand", so
-   * the narrower answer is on screen either way, and the industry it belongs to is
-   * where the keyboard lands.
+   * and re-opening the visitor's branch for them was tried and is worse. A visitor
+   * re-opening this control is usually there to change the INDUSTRY, and pre-opening a
+   * branch puts the industry list behind a pane below `md` and into a single column
+   * above it — in both cases narrowing the thing they came back for. It also loses
+   * nothing: the trigger already reads "Retail · Apparel & Footwear Brand", so the
+   * narrower answer is on screen either way, and the industry it belongs to is where
+   * the keyboard lands.
    */
   useEffect(() => {
     if (!open) return;
@@ -528,21 +586,17 @@ export function SelectField({
    * it. No `behavior: "smooth"`: the panel's own 160ms entrance is the motion for this
    * moment, and a second easing curve running against it reads as the page lurching.
    *
-   * Keyed on `branch` as well as `open`, because at 1440 and up the cascade pane opens
-   * BESIDE the panel and is only as tall as its own list, so committing an industry can
-   * put rows below where the panel ended.
+   * **Keyed on `open` alone, and it used to need `branch` too.** While the cascade pane
+   * was positioned outside the panel's border box it could extend past whatever the
+   * browser had just revealed, so opening a branch had to re-ask — and the reveal had
+   * to target the PANE rather than the panel to mean anything. The pane is a flex
+   * sibling inside the body now and the body's height is fixed, so the panel's
+   * rectangle is the whole popup at every state and one call covers it.
    */
   useEffect(() => {
     if (!open) return;
-    // The pane rather than the panel when one is open, and it has to be this way
-    // round at 1440 and up: there the pane is absolutely positioned OUTSIDE the
-    // panel's border box, so revealing the panel says nothing about whether the pane
-    // beside it fits. Below 1440 the pane covers the panel exactly, so the two
-    // targets are the same rectangle and the distinction costs nothing.
-    const target =
-      panel.current?.querySelector<HTMLElement>(".gcc-select-pane") ?? panel.current;
-    target?.scrollIntoView({ block: "nearest", inline: "nearest" });
-  }, [open, branch]);
+    panel.current?.scrollIntoView({ block: "nearest", inline: "nearest" });
+  }, [open]);
 
   // Keep the active row in view. `block: "nearest"` so it scrolls its pane by the
   // minimum, rather than jumping the row to the middle on every keystroke.
@@ -674,25 +728,41 @@ export function SelectField({
           "gcc-select-row",
           isActive && "gcc-select-row--active",
           isOpenBranch && "gcc-select-row--branch",
-          isSelected ? "font-medium" : "font-light",
+          /**
+           * **Selected is weight plus ink, and there is no longer a check glyph.**
+           *
+           * The check was the second signal beside the weight, and it was removed at
+           * ANSR's request for a reason worth keeping written down: it was reserved on
+           * EVERY row whether it was drawn or not, because a glyph that appears only on
+           * the selected row shifts that row's label by 22px. So all 24 industries and
+           * all 201 countries paid its width, the labels started 22px inside the tier
+           * heading and the hint above them, and what it bought was a mark on the one
+           * row a visitor had already chosen — which the trigger above the panel is
+           * also displaying, in full. It cost alignment everywhere to restate an
+           * answer once.
+           *
+           * **Both signals are in `.gcc-select-row--selected` rather than as utilities
+           * here**, because the utility version silently did not work: `globals.css` is
+           * unlayered and Tailwind's utilities are layered, so `.gcc-select-row`'s own
+           * `color` beat `text-accent-teal` and the row rendered plain black. The weight
+           * worked only because nothing in that rule sets `font-weight`. `aria-selected`
+           * is on every row regardless, so the assistive reading never depended on
+           * either.
+           */
+          isSelected && "gcc-select-row--selected",
         )}
       >
-        {/* The check is the second signal on a selected row, beside the weight. A
-            fill alone would collide with the active row's own fill, and weight
-            alone is easy to miss two panes deep. */}
-        <Check
-          aria-hidden="true"
-          className={cn(
-            "size-4 shrink-0 text-accent-teal",
-            isSelected ? "opacity-100" : "opacity-0",
-          )}
-        />
-        {/* **A pane row WRAPS where a first-level row truncates**, because the pane is
-            13rem at the narrowest width it appears at and "Department store & general
-            merchandise" would lose most of itself to an ellipsis. Two lines in a
-            narrow column costs a little height; a truncated sub-industry costs the
-            visitor the ability to tell two of them apart. */}
-        <span className={cn("min-w-0 flex-1", inPane ? "text-pretty" : "truncate")}>
+        {/* **A row in a COLUMN wraps; a row in a full-width single-column list
+            truncates.** A truncated option costs the visitor the ability to tell two
+            of them apart, which is the whole job here — so an ellipsis is only
+            acceptable where the row has the panel's full width and the label is
+            genuinely exceptional. In a column it is the common case: at `md` the body
+            is 592px, so a half of it is 296px and the three longest industry names and
+            half the sub-industry names run past it. `break-inside: avoid` on the row
+            keeps a wrapped label whole rather than splitting it across a column break. */}
+        <span
+          className={cn("min-w-0 flex-1", inPane || wide ? "text-pretty" : "truncate")}
+        >
           {row.label}
         </span>
         {row.branching ? (
@@ -714,7 +784,7 @@ export function SelectField({
                 appears to the right beside the list, and slides in from the right as a
                 drill-in. It also agrees with ArrowRight, which is what the tree
                 pattern binds to "deeper". */}
-            <ChevronRight aria-hidden="true" className="size-4" />
+            <ChevronRight aria-hidden="true" className="size-3.5" />
           </span>
         ) : null}
       </div>
@@ -787,7 +857,12 @@ export function SelectField({
           // shadow weight it read as PART of the page behind it — the logos beside it
           // at the same height looked like they were showing through. It is opaque
           // and always was; what it lacked was any evidence of being in front.
-          className="gcc-select-panel absolute inset-x-0 top-full z-20 mt-2"
+          className={cn(
+            "gcc-select-panel absolute inset-x-0 top-full z-20 mt-2",
+            // Widens leading-side to the whole form grid from `md`. See the `wide`
+            // prop and `.gcc-select-panel--wide`, where the one measurement is.
+            wide && "gcc-select-panel--wide",
+          )}
         >
           {showFilter ? (
             // `.gcc-select-filter` carries the ground and the focus treatment. The
@@ -810,7 +885,12 @@ export function SelectField({
                 onChange={(event) => setFilter(event.target.value)}
                 onKeyDown={onKeyDown}
                 placeholder="Type to narrow the list"
-                className="h-11 w-full bg-transparent ps-9 pe-3 text-base font-light text-text outline-none"
+                // 40px and 14px, down from 48 and 16. The chrome above the options is
+                // height taken off the options themselves, and this row is a filter
+                // rather than a field a visitor has to fill in — it keeps a 40px
+                // target, which is what a control inside an already-open popup needs
+                // rather than the 44px floor for a control on the page.
+                className="h-10 w-full bg-transparent ps-8 pe-3 text-sm font-light text-text outline-none"
               />
             </div>
           ) : null}
@@ -821,92 +901,111 @@ export function SelectField({
             </p>
           ) : null}
 
-          <div
-            id={listId}
-            role={nested ? "tree" : "listbox"}
-            aria-label={placeholder}
-            aria-describedby={hint ? hintId : undefined}
-            // Bounded so a 201-item list does not run the length of the page. The
-            // panel scrolls; the document does not have to. **And it no longer grows
-            // when a branch opens**, which is the whole reason the second level moved
-            // out of this list and into a pane of its own.
-            className="gcc-select-list max-h-64 overflow-y-auto overscroll-contain rounded-b-lg py-1.5"
-          >
-            {paneAOptions.length === 0 ? (
-              <p className="px-4 py-3 text-sm text-text-muted">
-                Nothing matches “{filter.trim()}”.
-              </p>
-            ) : (
-              paneA.map((row) =>
-                row.kind === "heading" ? (
-                  <p
-                    key={row.rowId}
-                    // Presentational in the tree, because a tree's only legal
-                    // grouping is a `group` under a `treeitem` — and these tiers
-                    // group SIBLINGS. They are a scanning aid rather than
-                    // information: the order they impose is already the order the
-                    // rows are read in.
-                    role="presentation"
-                    className="gcc-select-heading"
-                  >
-                    {row.label}
-                  </p>
-                ) : (
-                  renderRow(row)
-                ),
-              )
-            )}
-          </div>
-
-          {branch && branchMeta ? (
-            // The cascade. A child of the panel so `end-full` resolves against it,
-            // and `inset-0` below `md`, where it covers the parent list instead of
-            // sitting beside it.
-            <div className="gcc-select-pane">
-              {/* A real button, not a decorated div. Focus moving inside the popup is
-                  already the established shape here — the filter input is focusable
-                  and inside the same panel — and a back affordance a touch screen
-                  reader cannot reach would be the only way out of the drill-in for
-                  the visitors least able to guess at one. */}
-              <button
-                type="button"
-                onClick={leaveBranch}
-                className="gcc-select-pane__head"
-                aria-label={`Close ${branchMeta.label} ${childLabel ?? "options"}`}
-              >
-                {/* Drawn only in the drill-in, where this header is the sole way back.
-                    Beside the panel the list it came out of is still on screen, so a
-                    back arrow there would be pointing at something visible. */}
-                <ChevronLeft
-                  aria-hidden="true"
-                  className="gcc-select-pane__back size-4 shrink-0"
-                />
-                <span className="min-w-0 flex-1">
-                  <span className="block truncate font-medium text-text">
-                    {branchMeta.label}
-                  </span>
-                  {childLabel ? (
-                    <span className="block text-xs font-light text-text-muted">
-                      {branchChildren.length} {childLabel}
-                    </span>
-                  ) : null}
-                </span>
-              </button>
+          {/* **The body is a FIXED-HEIGHT flex row, and the fixed height is the
+              invariant.** Both panes stretch to it, so the panel is exactly as tall
+              open as closed — which is what the cascade replaced an expanding indent
+              to get, and what stops a popup already overhanging the card growing
+              further into the logo strip under the pointer. It is also the containing
+              block for the drill-in below `md`. See `.gcc-select-body`. */}
+          <div className="gcc-select-body">
+            {/* The scrollport, separate from the multi-column region inside it. They
+                cannot be one element: a multi-column box with a definite height
+                becomes a fragmentainer and overflows in the INLINE direction, adding
+                columns rather than scrolling. With the height on the wrapper and the
+                columns at height auto, the content balances into equal columns and the
+                wrapper scrolls if the result is taller than the body. */}
+            <div className="gcc-select-scroll">
               <div
-                id={groupId}
-                role="group"
-                aria-label={branchMeta.label}
-                className="gcc-select-list max-h-64 flex-1 overflow-y-auto overscroll-contain rounded-b-lg py-1.5"
+                id={listId}
+                role={nested ? "tree" : "listbox"}
+                aria-label={placeholder}
+                aria-describedby={hint ? hintId : undefined}
+                className={cn(
+                  "gcc-select-cols gcc-select-cols--multi",
+                  columns === 3 && "gcc-select-cols--3",
+                  // A branch takes half the body, so the list beside it is one column.
+                  branch && "gcc-select-cols--single",
+                )}
               >
-                {paneBOptions.length <= 1 && filtering ? (
-                  <p className="px-4 py-3 text-sm text-text-muted">
-                    No {childLabel ?? "options"} match “{filter.trim()}”.
-                  </p>
-                ) : null}
-                {paneB.map((row) => (row.kind === "option" ? renderRow(row) : null))}
+                {paneAOptions.length === 0 ? (
+                  <p className="gcc-select-empty">Nothing matches “{filter.trim()}”.</p>
+                ) : (
+                  paneA.map((row) =>
+                    row.kind === "heading" ? (
+                      <p
+                        key={row.rowId}
+                        // Presentational in the tree, because a tree's only legal
+                        // grouping is a `group` under a `treeitem` — and these tiers
+                        // group SIBLINGS. They are a scanning aid rather than
+                        // information: the order they impose is already the order the
+                        // rows are read in.
+                        role="presentation"
+                        className="gcc-select-heading"
+                      >
+                        {row.label}
+                      </p>
+                    ) : (
+                      renderRow(row)
+                    ),
+                  )
+                )}
               </div>
             </div>
-          ) : null}
+
+            {branch && branchMeta ? (
+              // The cascade. A flex sibling from `md`, taking the trailing half of the
+              // body; an absolute overlay over the first pane below it, where half a
+              // field's width is unusable.
+              <div className="gcc-select-pane">
+                {/* A real button, not a decorated div. Focus moving inside the popup is
+                    already the established shape here — the filter input is focusable
+                    and inside the same panel — and a back affordance a touch screen
+                    reader cannot reach would be the only way out of the drill-in for
+                    the visitors least able to guess at one. */}
+                <button
+                  type="button"
+                  onClick={leaveBranch}
+                  className="gcc-select-pane__head"
+                  aria-label={`Close ${branchMeta.label} ${childLabel ?? "options"}`}
+                >
+                  {/* Drawn only in the drill-in, where this header is the sole way back.
+                      Beside the list it came out of, a back arrow would be pointing at
+                      something still on screen. */}
+                  <ChevronLeft
+                    aria-hidden="true"
+                    className="gcc-select-pane__back size-3.5 shrink-0"
+                  />
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate font-medium text-text">
+                      {branchMeta.label}
+                    </span>
+                    {childLabel ? (
+                      <span className="block text-xs font-light text-text-muted">
+                        {branchChildren.length} {childLabel}
+                      </span>
+                    ) : null}
+                  </span>
+                </button>
+                <div className="gcc-select-scroll">
+                  <div
+                    id={groupId}
+                    role="group"
+                    aria-label={branchMeta.label}
+                    // No `--multi`: the pane is already half the body, so a second
+                    // column inside it would be 148px at `md`.
+                    className="gcc-select-cols"
+                  >
+                    {paneBOptions.length <= 1 && filtering ? (
+                      <p className="gcc-select-empty">
+                        No {childLabel ?? "options"} match “{filter.trim()}”.
+                      </p>
+                    ) : null}
+                    {paneB.map((row) => (row.kind === "option" ? renderRow(row) : null))}
+                  </div>
+                </div>
+              </div>
+            ) : null}
+          </div>
         </div>
       ) : null}
     </div>

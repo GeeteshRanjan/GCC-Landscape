@@ -294,7 +294,7 @@ function summarise(diff: DatasetDiff): string {
   // Named rather than counted, because "1 edit" here can be the headline every
   // visitor reads and the admin should see which surface moved before they read
   // how much of it did.
-  if (diff.counts.siteContent) parts.push("entry point edited");
+  if (diff.counts.siteContent) parts.push("site copy edited");
   return parts.length > 0 ? parts.join(", ") : "No changes";
 }
 
@@ -320,7 +320,7 @@ function DiffView({ diff }: { diff: DatasetDiff }) {
         <Count label="Edited" value={diff.counts.changed} />
         <Count label="Taxonomy lists" value={diff.counts.taxonomy} />
         <Count label="Metrics" value={diff.counts.metrics} />
-        <Count label="Entry point" value={diff.counts.siteContent} />
+        <Count label="Site copy" value={diff.counts.siteContent} />
       </dl>
 
       {diff.counts.siteContent > 0 ? (
@@ -329,12 +329,24 @@ function DiffView({ diff }: { diff: DatasetDiff }) {
            they have answered the form; this changes the first thing all of them
            read. Spelled out in full rather than sampled, because a reviewer has to
            read the before and after of a headline, not count that it moved. */
-        <DiffSection title={`Entry point (${diff.counts.siteContent})`}>
+        <DiffSection title={`Site copy (${diff.counts.siteContent})`}>
           <ul className="divide-y divide-border-subtle">
             {diff.siteContent.hero.map((change) => (
               <li key={change.field} className="px-5 py-3 text-sm">
                 <p className="text-xs uppercase tracking-caps text-text-muted">
                   Hero {change.field}
+                </p>
+                <p className="mt-1 text-text-muted line-through">{change.before}</p>
+                <p className="mt-0.5 text-text">{change.after}</p>
+              </li>
+            ))}
+            {/* The close's copy, beside the hero's and in the same shape. It is the one
+                part of this category that is not on the entry point, which is why the
+                label says so rather than leaving a reviewer to guess which band moved. */}
+            {diff.siteContent.close.map((change) => (
+              <li key={change.field} className="px-5 py-3 text-sm">
+                <p className="text-xs uppercase tracking-caps text-text-muted">
+                  Result close {change.field === "ctaLabel" ? "button" : change.field}
                 </p>
                 <p className="mt-1 text-text-muted line-through">{change.before}</p>
                 <p className="mt-0.5 text-text">{change.after}</p>

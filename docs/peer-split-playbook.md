@@ -34,18 +34,69 @@ never re-do a bucket listed here.
 - **`fin-payments`** → split into `fin-payments` (payment processing & gateways, id kept),
   `fin-card-network`, `fin-money-transfer`, `fin-expense-cards`. Result: a processing visitor gets
   processors not card networks; Adyen rank 16→3 at its band; short sets 154→154, coherence 0.921→0.918.
+- **`fin-asset-management`** → split into `fin-asset-management` (asset managers / PE / wealth, id kept)
+  and `fin-fund-services` (fund administration & asset servicing: Citco, IQ-EQ, Alter Domus, Apex,
+  AMICORP, Formidium, FNZ + custody banks BNY, State Street, Northern Trust). Distinguishers
+  `services-firm`+`outsourcing-bpo` (latter unique in BFSI). Result: a $1–5 Bn asset-management visitor
+  leads with real managers (Invesco/DE Shaw/Vanguard/Julius Baer/EQT) where Apex & FNZ had been top-five;
+  short sets 154→154, coherence 0.9185→0.9188. Finer categories are world knowledge — ANSR sign-off.
+- **`sw-it-services`** → split into `sw-it-services` (IT & Digital Engineering Services, id kept) and
+  `sw-content-services` (Localization & Content Services: Lionbridge, RWS Group, Straive, Jouve,
+  i-Merit, Centific). Needed a NEW atom `content-language-services` — added to `business-tags.ts` with a
+  second carrier `prof-bpo` (BPO content/language labour) so the ">=2 types" rule holds, and rare in
+  Software & Internet where only `sw-content-services` carries it. Distinguisher on the sibling is
+  `billable-hours` (dropped from the content type). Result: a $1–5 Bn localization visitor now leads with
+  Lionbridge / Straive / Centific / RWS where systems integrators had filled the top; the integrator
+  visitor no longer leads with content firms. Short sets 154→154, coherence 0.9188→0.9182 (both round to
+  0.918). Finer categories are world knowledge — ANSR sign-off.
+- **`hc-pharma`** → split into `hc-pharma` (innovator / prescription / generics drug makers, id kept)
+  and `hc-consumer-health` (Consumer Health & OTC: Haleon, Kenvue, Opella Healthcare). Distinguishers
+  `brand-owner` + `personal-care` — carried by NO other Healthcare type, so both are maximally rare
+  inside the industry; consumer-health also drops the innovator atoms (`clinical-research`,
+  `r-and-d-intensive`, `biotech`, `clinical-regulated`, `b2b`). No new atom needed — all three
+  distinguishers (incl. `b2c`) are reused from retail / CPG brands. Shared core kept
+  (`process-manufacturing`, `pharmaceutical`, `regulated`, `supply-chain-heavy`). Result: a $10–20 Bn
+  pharma visitor now leads with Viatris / Regeneron / Teva / Sandoz / Astellas where Kenvue and Haleon
+  (OTC) had been in the top five; a consumer-health visitor leads with Kenvue / Haleon / Opella. Short
+  sets 154→154, coherence 0.9182→0.9163 (the price of three consumer-health sets now carrying pharma
+  only as secondary peers, same tradeoff as payments). Generics stay in `hc-pharma`. Finer categories
+  are world knowledge — ANSR sign-off.
 
 ## Status
 
-- **Queue (finite, judge each by member list first):** `fin-asset-management` (NEXT), then
-  `sw-it-services` (localization vs IT services; likely needs a new atom), then `hc-pharma`
-  (consumer-health), then `auto-components`.
-- **Reviewed — kept as-is, do NOT re-open:** (none yet) — when a session examines a bucket and decides
-  it is genuine peers, it records the id here so no future session reconsiders it.
+- **Queue (finite, judge each by member list first):** empty — every named candidate has been split or
+  reviewed. Only the one-time sweep remains.
+- **Reviewed — kept as-is, do NOT re-open:** when a session examines a bucket and decides it is genuine
+  peers, it records the id here so no future session reconsiders it.
+  - **`auto-components`** (Automotive Components (Tier 1), 51 companies) — NO-GO. The bucket is dominated
+    by large diversified Tier-1 suppliers (Bosch, Denso, Continental, Hyundai Mobis, Valeo, Magna, ZF,
+    Aptiv, Marelli, Adient, Lear, Michelin, Schaeffler, Tenneco, Borgwarner, Dana, GKN, Nexteer, Forvia)
+    that a CIO accepts as peers — they run the same shape of engineering/manufacturing GCC in India. The
+    genuinely distinct niches are small and scattered: pure automotive electronics (Aptiv, Visteon,
+    MobileDrive, Danlaw), tires (Michelin, n=1), bearings (Schaeffler, Timken, Musashi, n=3),
+    seating/interiors. The strongest candidate — electronics via the rare-in-Automotive
+    `electronic-components` atom — fails the lead-own-band guardrail: its four members sit in four
+    non-adjacent revenue bands (`<$100Mn`, `$100–500Mn`, `$1–5Bn`, `$10–20Bn`), so an electronics visitor
+    can never lead with its own members at its band; the split would only reorder within a shared core and
+    add dropdown noise. Over-splitting the rest would separate genuine peers. Left intact.
+  - **`tel-operator`** (Telecom Network Operator, 54 companies) — NO-GO. It mixes true carriers (Verizon,
+    AT&T, Deutsche Telekom, Vodafone, BT, Orange, T-Mobile, Comcast) with networking-hardware, test and
+    infrastructure vendors (Belden, Molex, Netgear, f5, Spirent, EXFO, VIAVI, Equinix). But the stray
+    vendors sit across non-adjacent revenue bands and can never LEAD their own band — the same
+    lead-own-band failure as `auto-components`. The real fix, if any, is per-company re-mapping into the
+    existing `tel-equipment` type: a data decision, not a peer-split into new finer types. Left intact.
 - **One-time sweep, do it LAST:** after the queue is empty, run `analyze-conflation.ts` once over every
   type with ≥15 members; add only the ones that genuinely conflate (see "Do NOT split when"). Mark this
   `sweep: not yet done` / `sweep: done` so it happens exactly once.
-  - `sweep: not yet done`
+  - `sweep: done` — ran `npx tsx scripts/analyze-conflation.ts` over every ≥15-member type and examined
+    each. Split NONE. The large software types (`sw-security`, `sw-data-analytics`, `sw-devtools`,
+    `sw-healthcare`, `sw-fintech-software`, `sw-telecom-software`, `sw-crm-cx`, `sw-martech`,
+    `sw-supply-chain`) each build one shape of software a CIO accepts as peers; the large finance,
+    manufacturing, healthcare and semiconductor types (`fin-retail-bank`, `fin-investment-bank`,
+    `fin-insurance-life`, `semi-fabless`, `mfg-electrical-equipment`, `mfg-industrial-equipment`,
+    `mfg-motion-control`, `mfg-hvac-building`, `hc-medical-devices`, `hc-health-it`, `ce-devices`,
+    `med-advertising`, `enr-oilfield-services`, `ret-apparel`) are likewise genuine peers. `tel-operator`
+    was the one borderline case and is recorded above as a no-go. No code or data changed.
 
 ## When to stop (the effort is DONE when)
 
@@ -79,66 +130,4 @@ LEFT ALONE. Never invent work to keep the loop going.
 
 ## Current batch prompt
 
-> **Task: continue splitting conflated peer-matching business types — one batch, part of an ongoing
-> effort. Read `docs/peer-split-playbook.md` end to end first (especially the Completed log — never redo
-> a bucket listed there) and `docs/business-types.md`, section "Splitting a bucket that conflated
-> distinct businesses".**
->
-> Background: peer ordering *within* a sub-industry is band-then-size, because tags live on the business
-> type, not the company. That is correct when a type groups genuine peers and wrong when it lumps
-> distinct businesses. The fix is to split the conflated type into finer ones. The payments batch is the
-> worked example.
->
-> **This batch: `fin-asset-management` (40 companies).** It conflates:
-> - Asset managers / PE / wealth (keep here): BlackRock, Blackstone, KKR, Apollo, Ares, Goldman Sachs,
->   Morgan Stanley, Vanguard, Invesco, Franklin, Fidelity, Macquarie, Nomura, and similar.
-> - Fund administration / corporate & fund services (split out): Citco, IQ-EQ, Alter Domus, Apex Group,
->   AMICORP, Formidium, FNZ Group.
-> - Custodians (decide: own type or fold into fund-services): BNY, State Street, Northern Trust.
->
-> A fund administrator is a back-office services firm, not a peer of BlackRock. Propose `fin-fund-services`
-> distinguished by `services-firm`/`outsourcing-bpo` (rare in BFSI, so strong); asset managers keep
-> `asset-management`+`capital-markets`.
->
-> **First, a go/no-go.** Inspect the members (step 1) and apply "Do NOT split when". If it does NOT
-> genuinely conflate, do NOT split: record its id under "Reviewed — kept as-is", then rewrite this block
-> for the next Queue item and stop — do not ship a pointless split.
->
-> **Method — do exactly this, in order:**
-> 1. Inspect and baseline: `npx tsx scripts/analyze-conflation.ts fin-asset-management`, then
->    `npx tsx scripts/measure-peers.ts` and `... fin-asset-management "$1 Bn – $5 Bn"`. Record the
->    before numbers.
-> 2. Design finer types: each carries **one atom the siblings lack** (similarity is asymmetric — a
->    company ranks below a peer only if the VISITOR carries a tag it lacks); prefer a **rare-in-industry**
->    distinguisher (`b2c` is too weak); all keep the **shared core** so siblings stay above the 0.20 floor
->    and no set shortens; **reuse existing atoms** so every tag stays on ≥2 types (add a new atom only if
->    unavoidable, with a second carrier). Confirm any near-duplicate pair the match-quality test names
->    still holds.
-> 3. Edit `src/data/business-type-catalogue.ts` (keep an id to avoid churn), re-map companies in
->    `scripts/business-type-map.ts` (`COMPANY_TO_TYPES`), add a `src/data/search-terms.ts` entry for every
->    new type.
-> 4. `npx tsx scripts/import-seed.ts --reseed-business-types --dry-run`, check the diff, then run it
->    without `--dry-run`.
-> 5. Prove **better, not worse**: short sets must not rise, coherence must not drop, the finer-type
->    visitor must lead with its own members at its band. `npm run data:verify` then `-- --accept`. Update
->    `docs/business-types.md` and `docs/data-audit.md` counts, the business-type count assertion in
->    `tests/browser/3-business-types.spec.ts`, and any renamed-row references in `tests/browser/0-search.spec.ts`.
->    Extend `tests/unit/peer-resolution.test.ts` to assert this split.
-> 6. Full gate, all green before stopping: `npx tsc --noEmit`, `npx vitest run`, `npm run test:browser`
->    (rebuilds the fixture — raw `playwright test` does not), `python3 scripts/brand_lint.py`.
->
-> **Constraints:** if a guardrail regresses, stop and reconsider the design rather than shipping. Do only
-> this one bucket. The finer categories are world knowledge, not in the source — flag them for ANSR
-> sign-off. Do not commit unless asked; leave the change set staged in one tree and note it.
->
-> **Before you finish — update `docs/peer-split-playbook.md` (mandatory bookkeeping):**
-> 1. If you split it: APPEND a one-line entry to the **Completed log** (bucket → new types + one-line
->    result), and remove it from the **Queue**. If you kept it: add its id to **Reviewed — kept as-is**
->    and remove it from the **Queue**. If you ran the sweep: flip its marker to `sweep: done` and log any
->    buckets it added.
-> 2. Then apply **When to stop**: if the Queue is empty AND the sweep is done, REPLACE this entire
->    "Current batch prompt" block with exactly `The peer-split effort is complete — no conflated buckets
->    remain.` Otherwise REWRITE this block to target the next Queue item (or the one-time sweep if the
->    Queue is empty but the sweep is not done), carrying forward the method, guardrails, "Do NOT split
->    when", the go/no-go step, and this bookkeeping instruction verbatim.
-> 3. Never invent a candidate to keep the loop alive — empty Queue plus a done sweep means STOP.
+The peer-split effort is complete — no conflated buckets remain.
