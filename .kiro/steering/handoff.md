@@ -8,8 +8,9 @@ visual. Bounded by SHAPE, not length — see the `handoff.md` subsection of "Doc
 
 ## Where we are
 
-- **`main` is pushed and clean at `bd88f70`**, three commits ahead of where the session started, deploying
-  to `gcc-landscape.vercel.app`. Working tree is empty.
+- **`main` is pushed and clean**, four commits ahead of where the editability pass started, deploying to
+  `gcc-landscape.vercel.app`. Working tree is empty. No SHA here on purpose — it goes stale on the next
+  commit, including the one that rewrites this file.
 - **Five collections moved from code into the dataset**, so a wording or list change is a publish rather
   than a deploy: `siteContent.copy` (29 static strings), `commonFunctions`, `logos`,
   `taxonomy.pinnedIndustries`, `taxonomy.cityCoordinates`. Derived sentences and three load-bearing
