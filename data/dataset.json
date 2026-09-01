@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generatedAt": "2026-09-01T04:59:20.403Z",
+  "generatedAt": "2026-09-01T05:01:14.671Z",
   "source": "Consolidated_GCC_India_Database_2026_New.xlsx",
   "taxonomy": {
     "industries": [
@@ -41046,7 +41046,7 @@
       }
     ],
     "close": {
-      "body": "Access the complete dataset, deeper benchmarks and detailed cost structures behind your results.",
+      "body": "Access the complete dataset, deeper benchmarks and detailed cost structures.",
       "ctaLabel": "Unlock Full Intelligence"
     },
     "commonFunctions": [
