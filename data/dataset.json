@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generatedAt": "2026-09-01T02:48:02.773Z",
+  "generatedAt": "2026-09-01T04:59:20.403Z",
   "source": "Consolidated_GCC_India_Database_2026_New.xlsx",
   "taxonomy": {
     "industries": [
@@ -40451,7 +40451,7 @@
       "id": "ops-disruption-days",
       "functionArea": "operations",
       "lens": "place",
-      "title": "Working days lost a year, by city",
+      "title": "Working days lost a year",
       "question": "How many working days a year does the city actually lose?",
       "unit": "days a year",
       "format": "duration",
