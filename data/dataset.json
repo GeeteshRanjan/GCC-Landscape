@@ -40161,9 +40161,9 @@
       "id": "tech-open-source-signal",
       "functionArea": "tech",
       "lens": "supply",
-      "title": "Developers on GitHub",
+      "title": "Active Github Contributors",
       "question": "Are engineers here building in the open, or only inside their employers?",
-      "unit": "developers on GitHub",
+      "unit": "active GitHub contributors",
       "format": "number",
       "note": "Second largest developer population globally, around 13% of global public contributions, with roughly 2.9M new accounts a year. GitLab and Kaggle were seeded parts with no figures and were removed, which makes this a single figure rather than a split.",
       "structure": {
