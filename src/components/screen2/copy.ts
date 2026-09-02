@@ -358,13 +358,65 @@ export const HR_SECTIONS = hrSections(DEFAULT_PUBLIC_COPY);
  * composed tabs both draw it; keying on the id is what makes the caveat travel with the
  * DRAWING rather than with the definition, so the technology tab — which does not carry
  * this metric at all — cannot inherit a note for a card it does not have.
+ *
+ * **Both velocity cards carry one now, and the second one is why.** The two sat side by
+ * side with a caveat under one and nothing under the other, so the shorter card's own
+ * value line floated at a different height from its neighbour's — the asymmetry ANSR
+ * reported across the pair. Backfill's line is not filler bought to level the row: the
+ * metric stores a deliberately wide 35–75 because it collapses a per-FUNCTION split, and
+ * the thing a reader actually needs to know is which END of that span their own vacancy
+ * sits at. That is a seniority question, not a function one, so saying it does not
+ * reintroduce anything the metric exists to collapse.
  */
 export const METRIC_NOTES: Record<string, string> = {
   "hr-time-to-first-hire":
     "Timelines vary by hiring model, role, location and seniority.",
   "ops-time-to-first-hire":
     "Timelines vary by hiring model, role, location and seniority.",
+  // The supplied sub-ranges, as the one thing that tells a reader where in the span to
+  // look: mid-level 35–45 days, specialist 60–75. Stated as the two ends rather than as
+  // four more numerals, because the span is already above it.
+  "hr-backfill-time":
+    "A mid-level seat refills near the lower end; a scarce specialism near the upper.",
+  "ops-backfill-time":
+    "A mid-level seat refills near the lower end; a scarce specialism near the upper.",
+  /**
+   * **`hr-salary-growth` has NO note, and its absence is the decision worth recording.**
+   * The comparator ("All roles", the one orange row) still may not be carried by colour
+   * alone — but its own label is self-descriptive as the all-up baseline, so the label IS
+   * the text carrier and no separate sentence is needed. The sentence that briefly lived
+   * here ("All roles is the market comparator…") was doing double duty: naming the
+   * comparator, and closing the height gap with the scale-milestones card beside it. Three
+   * supplied specialism rows (SDE, Product Management and DevOps / Platform Engineering) do
+   * the second job with data instead, at
+   * the project owner's request, so the editorial line came off. See `hr-view.tsx`.
+   */
 };
+
+/**
+ * What names each rail on the scale curve.
+ *
+ * **Code rather than `siteContent.copy`, and the second one decides it.** A caption that
+ * names a rail asserts nothing about the dataset and would ordinarily be an editable
+ * string — but the ANSR rail's caption is half a drawn wordmark, so the editable part is a
+ * fragment that has to sit in front of a mark and reads as nothing without it. An admin
+ * given "Built with" in a text box can only make the caption worse. The subject rail's
+ * caption goes in the same place for the same reason the pair of them is one decision.
+ *
+ * Neither states a ratio, a percentage or a duration. The figures are on the rails and the
+ * comparison is the drawing; a caption doing the arithmetic would be a claim, and only one
+ * of the two rails has a source behind it.
+ */
+export const MILESTONE_CAPTIONS = {
+  /**
+   * "Typical India GCC", not "the market" or "the average". The metric's own unit already
+   * says "months, median", so this names the SUBJECT of the median rather than restating
+   * the statistic — and "typical" is the word a median supports.
+   */
+  market: "Typical India GCC",
+  /** Set immediately before the ANSR lockup. See `ScaleMilestones`. */
+  ansrPrefix: "Built with",
+} as const;
 
 /* ==========================================================================
    The operations composition

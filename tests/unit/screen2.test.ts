@@ -548,8 +548,8 @@ describe("choosing a chart", () => {
     if (shown.grid.kind !== "dumbbell") return;
 
     const compensation = shown.grid.rows.find((row) => row.label === "Compensation");
-    expect(compensation?.from.column).toBe("Tier 1 cities");
-    expect(compensation?.to.column).toBe("Tier 2 cities");
+    expect(compensation?.from.column).toBe("Tier 1");
+    expect(compensation?.to.column).toBe("Tier 2");
     expect(compensation?.from.figure).toBe("100");
     expect(compensation?.to.figure).toBe("85");
     // A real minus sign, and no arithmetic left for the component.
@@ -702,7 +702,7 @@ describe("resolving a value", () => {
     expect(shown.grid.kind).toBe("numbers");
     if (shown.grid.kind !== "numbers") return;
 
-    expect(shown.grid.columns).toEqual(["Tier 1 cities", "Tier 2 cities"]);
+    expect(shown.grid.columns).toEqual(["Tier 1", "Tier 2"]);
     const compensation = shown.grid.rows.find((row) => row.label === "Compensation");
     expect(compensation?.cells.map((cell) => cell.figure)).toEqual(["100", "85"]);
     expect(compensation?.cells[0]?.share).toBeCloseTo(1);

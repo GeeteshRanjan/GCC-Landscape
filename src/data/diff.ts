@@ -245,6 +245,13 @@ export interface DatasetDiff {
 
 const COMPANY_FIELDS: ReadonlyArray<keyof Company> = [
   "name",
+  /**
+   * Here from the day the field existed, on the `businessTypes` lesson below: a bulk
+   * pass over all 1,834 companies that reported "no company changes" would publish as
+   * a silent no-op. A domain decides which mark a peer card draws, so filling one is a
+   * real change to what a visitor sees.
+   */
+  "domain",
   "hqCountry",
   "industry",
   "revenueBand",

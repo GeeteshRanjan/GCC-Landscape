@@ -236,12 +236,16 @@ export function MetricCard({
         <Dumbbells rows={shown.grid.rows} axisNote={metric.unit} />
       ) : null}
 
+      {/* `shown.grid.anchorColumn` is deliberately NOT passed to `OrdinalGrid`. The
+          subject column's emphasis — the pale band, the teal heading and the deeper
+          segments — was removed at ANSR's request; see the note on `OrdinalGrid`. The
+          view model still derives the column and unit-tests both of its rules, so
+          restoring the emphasis is one prop. */}
       {shown.shape === "grid" && shown.grid.kind === "ratings" ? (
         <OrdinalGrid
           columns={shown.grid.columns}
           steps={shown.grid.steps}
           rows={withRowIcons(shown.grid.rows)}
-          anchorColumn={shown.grid.anchorColumn}
           labelledBy={headingId}
           keyLabel={RATING_KEY_LABEL}
         />

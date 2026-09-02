@@ -313,6 +313,75 @@ test.describe("gated metrics", () => {
   });
 });
 
+test.describe("the couplings an admin cannot otherwise see", () => {
+  /**
+   * The advisory notices in `metric-editor.tsx`. Until now none of the three had a spec,
+   * which the file's own comment admits: the key lists are mirrors of public constants,
+   * copied because importing a public component would pull the public React tree into the
+   * admin bundle, and nothing caught them drifting.
+   *
+   * This covers the one that matters most. The other two warn that something COSMETIC is
+   * about to be lost — a glyph column, a comparator's tone — and the notices say as much.
+   * This one warns that the public card would state something FALSE, and it is the only
+   * check anywhere: the ANSR rail's months are supplied in code rather than held in the
+   * dataset, so the schema, the publish diff and `data:verify` are all blind to the
+   * relationship by construction.
+   */
+  const title = "Time to reach each scale milestone";
+  const heading = "Saving this changes how the public screen draws";
+
+  test("says nothing while the market curve is still slower than the ANSR rail", async ({
+    page,
+  }) => {
+    await page.goto("/admin/metrics");
+    await openMetric(page, title, "HR");
+    // 6, 12, 24, 36 against a supplied 4, 8, 16, 24. Nothing to warn about, and a notice
+    // that fired here would be the kind an admin learns to ignore.
+    await expect(page.getByText(heading)).toHaveCount(0);
+  });
+
+  test("warns when a market figure drops to or below the supplied ANSR month", async ({
+    page,
+  }) => {
+    await page.goto("/admin/metrics");
+    await openMetric(page, title, "HR");
+
+    // Three months to fifty FTEs would put the market curve ahead of a rail captioned
+    // "Built with ANSR", which is drawn at a fixed four.
+    await page.getByLabel("Figure 1").fill("3");
+    const notice = page.getByRole("status").filter({ hasText: heading });
+    await expect(notice).toBeVisible();
+    await expect(notice).toContainText("Built with ANSR");
+    // It names the offending waypoint and its figure, so the admin does not have to work
+    // out which of four rows fired it.
+    await expect(notice).toContainText("50 FTEs (3)");
+    // Advisory, never a validation: this is a decision for a developer, not a typo.
+    await expect(page.getByRole("button", { name: "Save to draft" })).toBeEnabled();
+    await expect(notice.getByRole("alert")).toHaveCount(0);
+
+    // Equal is also wrong — "no faster than" is the claim being guarded, not "slower
+    // than".
+    await page.getByLabel("Figure 1").fill("4");
+    await expect(notice).toBeVisible();
+
+    // And it clears the moment the figure is credible again, so it tracks the form rather
+    // than latching once.
+    await page.getByLabel("Figure 1").fill("6");
+    await expect(page.getByText(heading)).toHaveCount(0);
+  });
+
+  test("warns on the operations copy too, the rail being drawn on both tabs", async ({
+    page,
+  }) => {
+    await page.goto("/admin/metrics");
+    await openMetric(page, title, "Operations");
+    await page.getByLabel("Figure 4").fill("20");
+    await expect(
+      page.getByRole("status").filter({ hasText: heading }),
+    ).toContainText("500 FTEs (20)");
+  });
+});
+
 test("names each copy of a shared metric by its function area", async ({ page }) => {
   await page.goto("/admin/metrics");
 

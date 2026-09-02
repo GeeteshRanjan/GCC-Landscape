@@ -132,6 +132,61 @@ export function cleanText(value: unknown): string {
 }
 
 /**
+ * A registrable domain, as the ONE shape stored: lowercase, no scheme, no `www.`,
+ * no path, no port.
+ *
+ * **The pattern is the guard, not the parser.** `canonicalDomain` below reduces
+ * whatever was supplied to a candidate, and this decides whether the candidate is a
+ * domain at all. Both are needed: the reducer accepts a pasted browser URL, and the
+ * pattern is what stops a company name, an email address or a bare word being stored
+ * as though it were resolvable.
+ *
+ * At least two labels and an alphabetic final label, so `nike` and `nike.c` are both
+ * refused while `nike.com`, `tcs.co.in` and a punycode `xn--` label all pass. The
+ * anchors on each label refuse a leading or trailing hyphen, which is what a
+ * half-cleaned "Wells Fargo -" leaves behind.
+ */
+export const DOMAIN_PATTERN =
+  /^(?!-)[a-z0-9-]{1,63}(?<!-)(?:\.(?!-)[a-z0-9-]{1,63}(?<!-))*\.[a-z]{2,24}$/;
+
+/**
+ * Reduce anything a human might paste to the bare registrable domain.
+ *
+ * **Applied in the same one place the other canonicalisers are, and for the same
+ * reason.** A domain is the key a logo provider is asked for, so two spellings of one
+ * company's domain are two different lookups and one of them silently returns
+ * nothing. `https://www.Nike.com/en-gb?x=1` and `nike.com` have to become the same
+ * stored string or the fallback tier is unreliable in a way nobody can see.
+ *
+ * Idempotent: the output of this function passed back through it is unchanged, which
+ * is what lets the import script re-run over a file it has already cleaned.
+ *
+ * It does NOT validate — an unusable input comes back as a non-matching string or as
+ * `""`, and `DOMAIN_PATTERN` is what rejects it. Keeping the two apart is what makes
+ * the import script able to say "this row was cleaned" separately from "this row is
+ * wrong".
+ */
+export function canonicalDomain(value: unknown): string {
+  let text = cleanText(value).toLowerCase();
+  if (!text) return "";
+
+  // Scheme, including the protocol-relative form a copied link sometimes carries.
+  text = text.replace(/^[a-z][a-z0-9+.-]*:\/\//, "").replace(/^\/\//, "");
+  // Credentials in a pasted URL, before the host.
+  text = text.replace(/^[^@/]*@/, "");
+  // Everything from the first path, query or fragment separator.
+  text = text.split(/[/?#]/, 1)[0] ?? "";
+  // A port.
+  text = text.replace(/:\d+$/, "");
+  // A trailing root dot, and any stray surrounding dots.
+  text = text.replace(/^\.+/, "").replace(/\.+$/, "");
+  // `www.` is not part of the registrable domain and is the commonest paste artefact.
+  text = text.replace(/^www\./, "");
+
+  return text;
+}
+
+/**
  * `2022` and `2022.0` are stored as distinct values in the source, which breaks
  * any grouping by year. Excel readers hand back either a number or a string
  * depending on the cell, so both are handled here.

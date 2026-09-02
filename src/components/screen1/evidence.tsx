@@ -7,6 +7,7 @@ import {
   peerCountLine,
   shortfallLine,
 } from "./copy";
+import { FortuneBadge } from "./fortune-badge";
 import { usePublicCopy } from "@/components/public/copy-context";
 import {
   Chip,
@@ -118,18 +119,27 @@ const SM_SPAN_FULL = "max-lg:sm:col-span-2";
  * one-line ranking row, beside a `sm` Fortune chip — a full-size pill there competes
  * with the company name it qualifies, which is the same reasoning that put the index
  * membership at `sm` on those rows.
+ *
+ * **The ranking's copies now take the `quiet` tone as well as `sm`, at ANSR's request.**
+ * A comparison card gives the city list a labelled row of its own, so a filled grey pill
+ * under black is the right weight for it. On a ranking row the same pill sits between the
+ * company name and its own bar, three or four of them a row, five rows deep — and the
+ * block read as marks arguing with marks. The size step was not enough on its own because
+ * what competes is the ink and the fill, not the type size.
  */
 function CityCells({
   cities,
   size = "md",
+  tone = "neutral",
 }: {
   cities: readonly string[];
   size?: "md" | "sm";
+  tone?: "neutral" | "quiet";
 }) {
   return (
     <span className="flex flex-wrap gap-1.5">
       {cities.map((city) => (
-        <Chip key={city} size={size}>
+        <Chip key={city} size={size} tone={tone}>
           {city}
         </Chip>
       ))}
@@ -363,22 +373,63 @@ export function PeerBlockView({ view }: { view: PeerView }) {
                     What it also removes is a line of small-caps grey above every one
                     of five company names, which was the first thing the eye met on
                     each card and said nothing a reader wanted. */}
-                {/* **No logo, no initial, no monogram and no reserved empty box.**
-                    This dataset holds no company marks: a coloured square with a
-                    letter in it is a fabricated identity, an empty placeholder is a
-                    visible gap, and either one in front of a CIO reading companies
-                    they know is worse than the name alone. */}
+                {/* **A REAL mark when one resolves, the name alone when it does not,
+                    and NOTHING reserved either way.** No initial, no monogram, no
+                    coloured square with a letter, no empty placeholder box — those
+                    were always the banned cases and they stay banned, because each is
+                    a fabricated identity or a visible gap.
+
+                    **The absent case is ROUTINE, not exceptional.** The provider
+                    resolves 86–95% of brands and the tier is off entirely with no
+                    client ID configured, so a row of five mixing marks and bare names
+                    is the normal rendering. That is why there is no `min-h` and no
+                    placeholder here: an unmarked card is a complete card, identical to
+                    how this screen rendered before marks existed.
+
+                    `markUrl` is resolved in `screen1.ts` via `company-mark.ts`. This
+                    component knows no provider, holds no client ID and picks no
+                    source. */}
+                {peer.markUrl ? (
+                  /* eslint-disable-next-line @next/next/no-img-element -- a
+                     third-party origin the optimiser cannot process, and the box is
+                     already fixed by the resolver. */
+                  <img
+                    src={peer.markUrl}
+                    /* **Empty alt, and this is the one case where that is correct.**
+                       The company name is the very next element, as a real heading, so
+                       the mark is a second reading of text already present — naming it
+                       again would make a screen reader say the company twice. Same
+                       reasoning as an `aria-hidden` chart mark. */
+                    alt=""
+                    width={128}
+                    height={40}
+                    /* Both caps plus `object-contain`, the customer strip's treatment.
+                       A fixed height alone renders a 4.9:1 wordmark six times the
+                       optical weight of a 0.8:1 stacked mark, so the row would read as
+                       one company shouting. */
+                    className="h-7 w-auto max-w-28 object-contain object-left md:h-8"
+                    /* A brand the provider does not hold returns 404 by request, so
+                       nothing renders rather than a generic letter tile — which would
+                       be the monogram this card refuses to draw. */
+                    loading="lazy"
+                    decoding="async"
+                  />
+                ) : null}
                 <h3 className="min-w-0 text-base leading-snug font-semibold text-pretty text-text md:text-lg">
                   {peer.name}
                 </h3>
                 {/* The index membership, beside the name it is a fact about. Where every
                     peer carries it, it becomes one line under the grid instead — a badge
-                    every card has is not a badge. */}
+                    every card has is not a badge.
+
+                    **Fortune's own badge rather than an accent chip**, at the project
+                    owner's instruction, including the colour rule it sits outside. It is
+                    sized to the row it sits in rather than to the artwork — see
+                    `FortuneBadge`. The `<span>` is load-bearing: an `<img>` in this flex
+                    column stretches to the card's width without it. */}
                 {showFortune && peer.fortuneGlobal500 ? (
                   <span>
-                    <Chip tone="accent" size="sm">
-                      Fortune Global 500
-                    </Chip>
+                    <FortuneBadge />
                   </span>
                 ) : null}
               </div>
@@ -649,10 +700,16 @@ export function LargestBlockView({ view }: { view: PeerView }) {
                   in your comparison set
                 </span>
               ) : null}
+              {/* **`self-center`, and the wrapper is what carries it.** The row is
+                  `items-baseline`, which is right for the name and the overlap note and
+                  wrong for a replaced element: an image's baseline is its bottom edge, so
+                  the badge would sit ON the name's baseline rather than level with it,
+                  which at cap height reads as a mark that has slipped a line. Centred,
+                  it sits inside the name's own band and the row does not grow at all. */}
               {!allFortune && entry.company.fortuneGlobal500 ? (
-                <Chip tone="accent" size="sm">
-                  Fortune Global 500
-                </Chip>
+                <span className="self-center">
+                  <FortuneBadge />
+                </span>
               ) : null}
             </div>
             {/* **The cities and the year are back, as tags, at ANSR's request — and the
@@ -693,8 +750,14 @@ export function LargestBlockView({ view }: { view: PeerView }) {
             <div className="flex flex-col gap-1">
               <div className="flex flex-wrap items-end justify-between gap-x-4 gap-y-1.5">
                 <div className="flex min-w-0 flex-wrap items-center gap-1.5">
-                  <CityCells cities={entry.company.cities} size="sm" />
-                  <Chip size="sm">
+                  {/* **`quiet` as well as `sm`, at ANSR's request.** These pills are a
+                      qualifier on a row whose subject is the name above them and whose
+                      evidence is the bar below them; at the neutral weight, four filled
+                      grey pills a row over five rows were the heaviest thing in the block
+                      after the figures. See `Chip`'s `quiet` tone for the measurement —
+                      the ink gets lighter and the contrast goes UP. */}
+                  <CityCells cities={entry.company.cities} size="sm" tone="quiet" />
+                  <Chip size="sm" tone="quiet">
                     {copy.peerSinceLabel} {entry.company.establishedYear}
                   </Chip>
                 </div>

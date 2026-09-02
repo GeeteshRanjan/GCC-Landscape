@@ -759,12 +759,22 @@ test.describe("the four functions", () => {
     await expect(curve).toBeVisible();
     await expect(curve.getByText("months, median")).toBeVisible();
 
-    const points = await curve.locator(".gcc-milestones__item").evaluateAll((nodes) =>
-      nodes.map((node) => ({
-        at: getComputedStyle(node).getPropertyValue("--gcc-at").trim(),
-        text: (node.textContent ?? "").replace(/\s+/g, " ").trim(),
-      })),
-    );
+    /**
+     * Two rails now: the market curve and, under it, the ANSR one. Scoped to the first
+     * track, because this test is about the progression's own positions — the second rail
+     * has its own assertions on the HR tab, where the same component draws it.
+     */
+    const tracks = curve.locator(".gcc-milestone-track");
+    await expect(tracks).toHaveCount(2);
+    const points = await tracks
+      .first()
+      .locator(".gcc-milestones__item")
+      .evaluateAll((nodes) =>
+        nodes.map((node) => ({
+          at: getComputedStyle(node).getPropertyValue("--gcc-at").trim(),
+          text: (node.textContent ?? "").replace(/\s+/g, " ").trim(),
+        })),
+      );
     // Milestone then duration, as a `dt`/`dd` pair, so a screen reader announces
     // "50 FTEs, 6" rather than a row of unattached numerals.
     expect(points.map((point) => point.text)).toEqual([
@@ -780,23 +790,24 @@ test.describe("the four functions", () => {
     expect(shares[1]).toBeCloseTo((12 / 36) * 100, 1);
     expect(shares[2]).toBeCloseTo((24 / 36) * 100, 1);
     expect(shares[3]).toBeCloseTo(100, 1);
-    // One rail, however many milestones.
-    await expect(curve.locator(".gcc-milestones__rail")).toHaveCount(1);
+    // One rail per track, however many milestones each has.
+    await expect(tracks.first().locator(".gcc-milestones__rail")).toHaveCount(1);
+    await expect(tracks.last().locator(".gcc-milestones__rail")).toHaveCount(1);
     // And no staircase intervals, anywhere on the tab.
     const tab = await band(page, "function-metrics").innerText();
     expect(tab).not.toMatch(/\+6\b/);
     expect(tab).not.toMatch(/\+12\b/);
 
-    // The counter-example, on the same tab: four destinations, four bars, every one
-    // of them starting at the axis.
+    // The counter-example, on the same tab: a set of destinations, one bar each, every
+    // one of them starting at the axis.
     const latency = page
       .locator('section[id^="metric-"]')
       .filter({ hasText: "Network latency to cloud regions" });
     /**
      * One level deeper than it was: an inline ranked row puts the bar in its own grid
      * cell so it can be the middle column, so the track is a grandchild of the row
-     * rather than a child. The property being asserted is unchanged — four bars, every
-     * one starting at the axis.
+     * rather than a child. The property being asserted is unchanged — one bar per
+     * destination, every one starting at the axis.
      */
     const bars = await latency
       .locator("dl > div > div > div[aria-hidden='true'] > div")
@@ -806,8 +817,34 @@ test.describe("the four functions", () => {
           return Math.round(mark.getBoundingClientRect().left - parent.left);
         }),
       );
-    expect(bars).toHaveLength(4);
+    /**
+     * **Seven destinations, up from four, at ANSR's request** — Middle East, Singapore and
+     * US West added so the card covers the regions a global business runs in, and so this
+     * card is not a third the height of the two-rail scale curve beside it. Three of the
+     * seven are provisional figures and the metric's note names them.
+     */
+    expect(bars).toHaveLength(7);
     for (const start of bars) expect(start).toBeLessThanOrEqual(1);
+    /**
+     * **Ordered OUTWARD BY DISTANCE, which is what keeps the grey track.** A ranking
+     * sorted by the quantity its own bars encode states its axis in row one and may drop
+     * the track; this one is a geography, so it keeps the shared axis every row is
+     * measured against. The two coincide today because latency rises with distance, and
+     * the ORDER is the contract if they ever stop coinciding — asserted as the order
+     * rather than as the sort.
+     */
+    const destinations = await latency
+      .locator("dt")
+      .evaluateAll((nodes) => nodes.map((node) => (node.textContent ?? "").trim()));
+    expect(destinations).toEqual([
+      "Same-city cloud region",
+      "Another India region",
+      "Middle East",
+      "Singapore",
+      "Europe",
+      "US East",
+      "US West",
+    ]);
   });
 
   test("draws a two-column index as a gap, with the difference stated", async ({
@@ -839,10 +876,10 @@ test.describe("the four functions", () => {
     // than a hyphen.
     await expect(card.getByText("\u221215")).toBeVisible();
     /**
-     * The Tier 2 index itself, as the card's own figure. Located as the `dd` rather than
-     * by text: the comparator's figure is now drawn a second time under its marker on the
-     * rail, at ANSR's request, so "85" is two elements on this card and an exact-text
-     * match is ambiguous. The `dd` is the reading; the rail label is the second one.
+     * The Tier 2 index itself, as the card's own figure — which now sits under its own
+     * mark on the rail rather than in a display pair above it. Located as the `dd`, which
+     * is what the point's figure IS: the name is the `dt` beside it, so this asserts the
+     * pairing survived the display figures being deleted.
      */
     await expect(card.locator("dd", { hasText: /^85$/ })).toBeVisible();
 
@@ -850,7 +887,7 @@ test.describe("the four functions", () => {
     // stated base is unreadable; one with no stated direction leaves the reader to
     // guess whether the short mark is the good news.
     await expect(
-      page.getByText("Indexed: Tier 1 cities = 100. Lower is cheaper."),
+      page.getByText("Indexed: Tier 1 = 100. Lower is cheaper."),
     ).toBeVisible();
   });
 
@@ -1140,7 +1177,7 @@ test.describe("the technology composition", () => {
     expect(text).not.toMatch(/million|800,000/);
   });
 
-  test("keeps the capability matrix's India column emphasised and its scale above it", async ({
+  test("draws the capability matrix with every column on equal terms", async ({
     page,
   }) => {
     await openFunctionView(page);
@@ -1158,15 +1195,40 @@ test.describe("the technology composition", () => {
     const markers = table.locator("td span[aria-hidden='true'] > span");
     await expect(markers).toHaveCount(5 * 4 * 4);
 
-    // The subject column is tinted the height of the grid, so the eye finds it before
-    // the three comparators.
-    const indiaCells = table.locator("td").nth(0);
-    const polandCells = table.locator("td").nth(1);
-    const [india, poland] = await Promise.all([
-      indiaCells.evaluate((el) => getComputedStyle(el).backgroundColor),
-      polandCells.evaluate((el) => getComputedStyle(el).backgroundColor),
-    ]);
-    expect(india).not.toBe(poland);
+    /**
+     * **No emphasis on India, at ANSR's request, and asserted in all three of the places
+     * it used to appear.** The subject column carried a `surface-pale` band the height of
+     * the grid, a brand-teal column heading, and filled segments a step darker than the
+     * comparators'. The grid exists to let a reader compare four locations on equal
+     * terms, and a highlight on one of them is a thumb on that scale — the visitor knows
+     * which column is theirs because it is named.
+     *
+     * The column is still derived; `screen2.test.ts` pins `grid.anchorColumn`. What this
+     * asserts is that nothing draws it.
+     */
+    const grounds = await table
+      .locator("td")
+      .evaluateAll((cells) =>
+        cells.map((cell) => getComputedStyle(cell).backgroundColor),
+      );
+    expect(new Set(grounds).size).toBe(1);
+
+    // Skipping the leading corner cell, which holds only the `sr-only` "Capability" and
+    // sets no ink of its own.
+    const headingInks = await table
+      .locator("thead th[scope='col']:not(:first-child)")
+      .evaluateAll((heads) => heads.map((head) => getComputedStyle(head).color));
+    expect(headingInks).toHaveLength(4);
+    expect(new Set(headingInks).size).toBe(1);
+
+    const marks = await table
+      .locator("td span[aria-hidden='true'] > span")
+      .evaluateAll((spans) =>
+        spans.map((span) => getComputedStyle(span).backgroundColor),
+      );
+    // Two fills only across all eighty marks: filled and unfilled. A third would be the
+    // subject column's deeper step.
+    expect(new Set(marks).size).toBe(2);
 
     // Country headings are centred over their own marker group rather than aligned to
     // its first segment.
@@ -1796,16 +1858,40 @@ test.describe("the HR composition", () => {
     // per-function split the shared metric exists to collapse.
     const second = velocity.locator("#metric-hr-backfill-time");
     await expect(second.getByText(/employer of record/)).toHaveCount(0);
+    /**
+     * **It carries a note of its own now, and the two cards' value lines are level.**
+     * ANSR reported the pair as asymmetrical: a caveat under one card and nothing under
+     * the other, with both bodies centred, put "7 – 70 days" and "35 – 75 days" at
+     * different heights. Backfill's line is not filler — the metric stores a deliberately
+     * wide span because it collapses a per-function split, so which END applies is the one
+     * thing a reader needs and it is a seniority question rather than a function one.
+     */
+    await expect(
+      second.getByText(/A mid-level seat refills near the lower end/),
+    ).toBeVisible();
+    const tops = await velocity
+      .locator("section[id^='metric-'] p")
+      .filter({ hasText: /\d+\s*–\s*\d+/ })
+      .evaluateAll((values) =>
+        values.map((value) => Math.round(value.getBoundingClientRect().top)),
+      );
+    expect(tops).toHaveLength(2);
+    expect(Math.abs(tops[0]! - tops[1]!)).toBeLessThanOrEqual(1);
   });
 
-  test("draws the scale curve as one line with proportional milestones", async ({
+  test("draws the scale curve as one line with proportional milestones, beside an ANSR rail", async ({
     page,
   }) => {
     await openHr(page);
     const card = band(page, "hr-analysis").locator("#metric-hr-scale-milestones");
     await expect(card.getByText("months, median")).toBeVisible();
 
-    const points = await card.locator(".gcc-milestones__item").evaluateAll((nodes) =>
+    const tracks = card.locator(".gcc-milestone-track");
+    await expect(tracks).toHaveCount(2);
+    const market = tracks.first();
+    const ansr = tracks.last();
+
+    const points = await market.locator(".gcc-milestones__item").evaluateAll((nodes) =>
       nodes.map((node) => ({
         at: getComputedStyle(node).getPropertyValue("--gcc-at").trim(),
         text: (node.textContent ?? "").replace(/\s+/g, " ").trim(),
@@ -1839,8 +1925,151 @@ test.describe("the HR composition", () => {
     expect(shares[1]).toBeCloseTo((12 / 36) * 100, 1);
     expect(shares[2]).toBeCloseTo((24 / 36) * 100, 1);
     expect(shares[3]).toBeCloseTo(100, 1);
-    // One rail, however many milestones.
-    await expect(card.locator(".gcc-milestones__rail")).toHaveCount(1);
+    // One rail per track, however many milestones each has.
+    await expect(market.locator(".gcc-milestones__rail")).toHaveCount(1);
+    await expect(ansr.locator(".gcc-milestones__rail")).toHaveCount(1);
+
+    /**
+     * **The ANSR rail, COLUMN-ALIGNED with the market one, at ANSR's request.**
+     *
+     * Its figures are SUPPLIED in `milestone-card.tsx` at the project owner's instruction;
+     * the dataset does not hold them, which is why nothing here reads them back out of the
+     * metric.
+     *
+     * What this asserts is the alignment, because it is the property the card's whole
+     * reading depends on and the one that would go wrong silently. Each waypoint sits at
+     * the position of the market waypoint it answers — "500 FTEs" under "500 FTEs" — so a
+     * reader compares straight down a column. The axis is therefore the MILESTONE, not
+     * elapsed time; the first version divided these months by the market curve's largest
+     * value, which put the lower circles between the upper ones rather than under them.
+     * The cost is that a position on this rail is not proportional to the figure beneath
+     * it, which is why the card states no ratio and no "faster" — see the block comment in
+     * `milestone-card.tsx`.
+     */
+    const accelerated = await ansr
+      .locator(".gcc-milestones__item")
+      .evaluateAll((nodes) =>
+        nodes.map((node) => ({
+          at: Number.parseFloat(
+            getComputedStyle(node).getPropertyValue("--gcc-at"),
+          ),
+          text: (node.textContent ?? "").replace(/\s+/g, " ").trim(),
+        })),
+      );
+    expect(accelerated.map((point) => point.text)).toEqual([
+      "50 FTEs4",
+      "100 FTEs8",
+      "300 FTEs16",
+      "500 FTEs24",
+    ]);
+    // Same position, waypoint for waypoint, so the two rails read as two rows of one
+    // table. Compared against the market shares this test already measured rather than
+    // against literals, so it cannot pass by both rails being wrong together.
+    expect(accelerated.map((point) => point.at)).toEqual(shares);
+
+    /**
+     * **Every ANSR figure is lower than the market figure above it, which is the whole
+     * claim the rail makes now that its geometry no longer makes one.** With the positions
+     * borrowed, the numbers are the only thing saying the curve is faster — so this is the
+     * assertion that would catch a supplied figure edited upward past the market's.
+     */
+    const [marketFigures, ansrFigures] = await Promise.all(
+      [market, ansr].map((track) =>
+        track
+          .locator(".gcc-milestones__figure")
+          .evaluateAll((nodes) =>
+            nodes.map((node) => Number.parseInt(node.textContent ?? "", 10)),
+          ),
+      ),
+    );
+    expect(ansrFigures).toEqual([4, 8, 16, 24]);
+    expect(marketFigures).toHaveLength(4);
+    for (const [index, months] of ansrFigures!.entries()) {
+      expect(months).toBeLessThan(marketFigures![index]!);
+    }
+
+    /**
+     * **The full lockup — circular mark and wordmark — at ANSR's request**, where this was
+     * the drawn wordmark alone. It is the only place ANSR is named on this screen below the
+     * `h1`. `alt="ANSR"` carries the caption's accessible reading, so it comes out "Built
+     * with ANSR" rather than as an unnamed graphic.
+     */
+    await expect(ansr.getByText("Built with")).toBeVisible();
+    await expect(ansr.getByRole("img", { name: "ANSR" })).toBeVisible();
+    await expect(ansr.locator("img")).toHaveAttribute(
+      "src",
+      "/brand/ansr-logo.svg",
+    );
+
+    /**
+     * **No ratio, no percentage, no "faster" anywhere on the card.** The comparison is the
+     * drawing. A "40% faster" line would be arithmetic over two sets of numbers only one
+     * of which has a source behind it, which is the reason the second rail is drawn rather
+     * than summarised.
+     */
+    const text = await card.innerText();
+    expect(text).not.toMatch(/%/);
+    expect(text).not.toMatch(/faster|quicker|sooner|\bx\b/i);
+
+    /**
+     * **The two rails are the SAME DRAWING, at ANSR's request, and this is the assertion
+     * that keeps them so.** The lower one had discs where the upper has rings, its figures
+     * in the heading teal, and its waypoint names clipped to a screen reader — all three
+     * reverted, because a rail drawn differently from the rail it is compared with reads as
+     * a different kind of chart, which defeats the comparison.
+     *
+     * Asserted as computed style and box geometry rather than by class name, so the
+     * differentiation cannot come back by another route.
+     */
+    const dots = await card
+      .locator(".gcc-milestones__dot")
+      .evaluateAll((nodes) =>
+        nodes.map((node) => {
+          const style = getComputedStyle(node);
+          return `${style.backgroundColor}|${style.borderColor}|${style.borderWidth}`;
+        }),
+      );
+    expect(dots).toHaveLength(8);
+    expect(new Set(dots).size).toBe(1);
+
+    const figureInks = await card
+      .locator(".gcc-milestones__figure")
+      .evaluateAll((nodes) => nodes.map((node) => getComputedStyle(node).color));
+    expect(figureInks).toHaveLength(8);
+    expect(new Set(figureInks).size).toBe(1);
+
+    // Both rails name their waypoints on screen. Eight visible labels, not four and four
+    // clipped ones.
+    const labelBoxes = await card
+      .locator(".gcc-milestones__label")
+      .evaluateAll((labels) =>
+        labels.map((label) => Math.round(label.getBoundingClientRect().height)),
+      );
+    expect(labelBoxes).toHaveLength(8);
+    for (const box of labelBoxes) expect(box).toBeGreaterThan(1);
+
+    /**
+     * **The caption belongs to the rail under it, so the two tracks sit further apart than
+     * a caption sits from its own chart.** At the first attempt's 20px gap over a 16px
+     * inset the two distances were near enough equal that the lower caption read as a note
+     * on the upper chart — the crowding ANSR reported. Asserted as an inequality rather
+     * than as two pixel values, so the rhythm survives a spacing token moving.
+     */
+    const [firstCaption, secondCaption] = await card
+      .locator(".gcc-milestone-track > p")
+      .evaluateAll((nodes) =>
+        nodes.map((node) => {
+          const rect = node.getBoundingClientRect();
+          return { top: rect.top, bottom: rect.bottom };
+        }),
+      );
+    const firstTrackBottom = await card
+      .locator(".gcc-milestone-track")
+      .first()
+      .evaluate((node) => node.getBoundingClientRect().bottom);
+    const betweenTracks = secondCaption!.top - firstTrackBottom;
+    const captionToOwnChart = firstCaption!.bottom - firstCaption!.top;
+    expect(betweenTracks).toBeGreaterThan(captionToOwnChart);
   });
 
   test("ranks salary pressure with the comparator named in text, not only in colour", async ({
@@ -1848,7 +2077,8 @@ test.describe("the HR composition", () => {
   }) => {
     await openHr(page);
     const card = band(page, "hr-analysis").locator("#metric-hr-salary-growth");
-    await expect(card.getByText("Base salary growth, year on year")).toBeVisible();
+    // "Base pay", not "Base salary" — the title one line above already says salary.
+    await expect(card.getByText("Base pay growth, year on year")).toBeVisible();
 
     const rows = await card.locator("dt").evaluateAll((nodes) =>
       nodes.map((node) => (node.textContent ?? "").trim()),
@@ -1858,25 +2088,57 @@ test.describe("the HR composition", () => {
       "AI and machine learning",
       "Cybersecurity",
       "Cloud",
-      "All roles (reference)",
-      "Non-ER&D roles",
+      "Software Development (SDE)",
+      "Product Management",
+      "DevOps / Platform Engineering",
+      "All roles",
+      "Roles outside engineering R&D",
     ]);
-    for (const figure of ["21.1%", "20%", "16.1%", "9.8%", "7.5%"]) {
+    for (const figure of ["21.1%", "20%", "16.1%", "15%", "14.5%", "14%", "9.8%", "7.5%"]) {
       await expect(card.getByText(figure, { exact: true })).toBeVisible();
     }
 
     /**
-     * **The comparator is orange AND says "(reference)".** Colour is never the only
-     * carrier of a distinction on these screens — this palette cannot separate categories
-     * by hue at all — so the word in the label is what survives greyscale, and the fill is
-     * the second reading. This asserts the word, because the word is the one that has to
-     * be there.
+     * **The comparator is orange AND is named in text — by its own LABEL, not by a
+     * sentence.** Colour is never the only carrier of a distinction on these screens, this
+     * palette being unable to separate categories by hue at all, so something written has
+     * to say the "All roles" row is not another specialism. "All roles (reference)" carried
+     * it and the bracket came off at ANSR's request; the words "All roles" are
+     * self-descriptive as the all-up baseline, so the label itself is the text carrier and
+     * no sentence sits under the chart.
+     *
+     * The bracket coming back and a comparator sentence appearing are BOTH asserted absent,
+     * because either would be a silent regression — the height a sentence bought is now
+     * carried by the three supplied specialism rows above.
      */
-    await expect(card.getByText("All roles (reference)")).toBeVisible();
+    await expect(card.getByText("All roles", { exact: true })).toBeVisible();
+    await expect(card.getByText(/\(reference\)/)).toHaveCount(0);
+    await expect(card.getByText(/Non-ER&D/)).toHaveCount(0);
+    await expect(card.getByText(/market comparator/)).toHaveCount(0);
+
+    /**
+     * **One teal across the ranking, matching the graduate card a section below.** Seven
+     * subject bars in `teal-500` and one comparator in the action orange. The grey `muted`
+     * row and the deeper bare teal both came off at ANSR's request — the grey read as a
+     * third category rather than another measurement, and the deeper teal made this card
+     * and the graduate card look like two kinds of chart. Asserted as two distinct fills
+     * over eight bars rather than by class name.
+     */
+    const fills = await card
+      .locator("dl > div > div > div[aria-hidden='true'] > div")
+      .evaluateAll((bars) =>
+        bars.map((bar) => getComputedStyle(bar).backgroundColor),
+      );
+    expect(fills).toHaveLength(8);
+    expect(new Set(fills).size).toBe(2);
+    // The comparator is the odd one out, and it is the seventh row — the three supplied
+    // specialisms sit fourth, fifth and sixth.
+    expect(fills[6]).not.toBe(fills[0]);
+    expect(fills[7]).toBe(fills[0]);
 
     /**
      * **The bars are scaled to the largest rate, so the ranking is legible.** Against a
-     * 100% axis five growth rates from 7.5% to 21.1% draw as slivers occupying a fifth of
+     * 100% axis eight growth rates from 7.5% to 21.1% draw as slivers occupying a fifth of
      * the track, with four fifths of the card given to a region no value can reach. A
      * percentage scales to 100 where the parts ARE the whole — a stacked bar — and a rate
      * is not a share of anything. See `breakdownScale`.
@@ -1891,9 +2153,9 @@ test.describe("the HR composition", () => {
           return track > 0 ? fill / track : 0;
         }),
       );
-    expect(widths).toHaveLength(5);
+    expect(widths).toHaveLength(8);
     expect(widths[0]).toBeCloseTo(1, 2);
-    expect(widths[4]).toBeCloseTo(7.5 / 21.1, 2);
+    expect(widths[7]).toBeCloseTo(7.5 / 21.1, 2);
   });
 
   test("draws graduate output identically to the operations tab", async ({ page }) => {
@@ -2133,7 +2395,7 @@ test.describe("the finance composition", () => {
       ["Office space", "\u221219"],
     ]) {
       await expect(card.getByRole("heading", { name, level: 3 })).toBeVisible();
-      await expect(card.getByText(`${delta} vs Tier 1 cities`)).toBeVisible();
+      await expect(card.getByText(`${delta} vs Tier 1`)).toBeVisible();
     }
 
     /**
@@ -2146,46 +2408,65 @@ test.describe("the finance composition", () => {
      * these positions assert: 100% for every Tier 1 mark, and 75/85/81 for the three
      * Tier 2 marks.
      */
-    const marks = await card
-      .locator('div[aria-hidden="true"] span')
-      .evaluateAll((nodes) =>
-        // Only the positioned marks. The same hidden wrapper also holds the axis's two
-        // end labels, which carry no inline position.
-        nodes.map((node) => node.style.insetInlineStart).filter(Boolean),
-      );
     /**
-     * Three positioned elements per card now, in DOM order: the comparator's mark, the
-     * base's mark, then the comparator's own FIGURE under its mark — added at ANSR's
-     * request, and positioned rather than placed at an end, which is why it lands in this
-     * list at all. The base needs no such label: the rail ends at it, so the end tick is
-     * its figure.
+     * Every positioned column on the three rails, in DOM order. Each point is one item —
+     * its name, its mark and its figure in a single positioned column — so a card
+     * contributes three: the origin at 0%, the base at 100%, and the comparator at its own
+     * share. The origin is drawn because a cost index has to show its track is not
+     * truncated.
      */
+    /**
+     * **Read from `--gcc-at`, not from `style.insetInlineStart`.** The rail positions each
+     * item through a custom property so `.gcc-index-rail` owns every measurement in one
+     * place — the offset is derived from the reserved label row, and two copies of that
+     * number is how a rail stops meeting its marks. This spec read the inline logical
+     * property and silently got nine empty strings when that moved, which is a stale
+     * READING of a chart that was drawing correctly; the positions asserted below are
+     * unchanged.
+     */
+    const marks = await card
+      .locator(".gcc-index-rail__item")
+      .evaluateAll((nodes) =>
+        nodes.map((node) =>
+          (node as HTMLElement).style.getPropertyValue("--gcc-at").trim(),
+        ),
+      );
     expect(marks).toEqual([
-      "75%",
+      "0%",
       "100%",
       "75%",
-      "85%",
+      "0%",
       "100%",
       "85%",
-      "81%",
+      "0%",
       "100%",
       "81%",
     ]);
-    // Both ends of the axis, labelled, which is what says the track starts at zero.
+    // The origin, labelled, which is what says the track starts at zero.
     await expect(card.getByText("0", { exact: true })).toHaveCount(3);
     // And no truncated domain anywhere on the card.
     const text = await card.innerText();
     expect(text).not.toMatch(/\b125\b/);
 
     /**
-     * **The key is on each card's own figure labels, and there is no legend for the set.**
-     * The composition asks for a shared Tier 1 / Tier 2 legend, which is what a chart needs
-     * when its marks are unlabelled — every card here already names both columns above its
-     * own two figures, so a legend beneath the three made each column name appear FOUR
-     * times in one section. Three, one per card, each with its own marker beside it.
+     * **The two display figures are GONE and the column names are on the marks, at ANSR's
+     * request.** Each index was stated twice — a 30px figure under its column name, and the
+     * same number again under its own mark — on a card whose whole subject is one
+     * difference. What must hold now is that the figures are still REAL TEXT: the rail used
+     * to be `aria-hidden` wholesale, which was correct only while the pair existed above
+     * it. So each point is a `dt`/`dd` pair, six per card, and only the marks and the
+     * origin are hidden.
      */
-    await expect(card.getByText("Tier 2 cities", { exact: true })).toHaveCount(3);
-    await expect(card.locator("dt span[aria-hidden]")).toHaveCount(6);
+    await expect(card.getByText("Tier 2", { exact: true })).toHaveCount(3);
+    await expect(card.locator("dl.gcc-index-rail > div > dt")).toHaveCount(6);
+    await expect(card.locator("dl.gcc-index-rail > div > dd")).toHaveCount(6);
+    for (const figure of ["75", "85", "81"]) {
+      await expect(
+        card.locator("dd").filter({ hasText: new RegExp(`^${figure}$`) }),
+      ).toHaveCount(1);
+    }
+    // And no legend for the set: the marks are labelled, so there is nothing to key.
+    await expect(card.getByText("Tier 1", { exact: true })).toHaveCount(3);
 
     /**
      * And the direction stated once, as the card's subtitle. The reference repeats "Lower
@@ -2194,7 +2475,7 @@ test.describe("the finance composition", () => {
      * this screen keeps removing.
      */
     await expect(
-      card.getByText("Indexed: Tier 1 cities = 100. Lower is cheaper."),
+      card.getByText("Indexed: Tier 1 = 100. Lower is cheaper."),
     ).toBeVisible();
   });
 

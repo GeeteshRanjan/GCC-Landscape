@@ -2,7 +2,6 @@ import type { FunctionAreaView, ShownMetric } from "@/data/screen2";
 import { usePublicCopy } from "@/components/public/copy-context";
 import { Panel } from "@/components/public/primitives";
 import {
-  MilestoneTrack,
   RangeBenchmark,
   RankedBars,
   type BarRow,
@@ -11,6 +10,7 @@ import {
 import { TabZones } from "./zones";
 import { figuresHeadings, hrSections, METRIC_NOTES } from "./copy";
 import { GraduateOutput } from "./graduate-card";
+import { ScaleMilestones } from "./milestone-card";
 import { scalarCells, SummaryFigures } from "./summary-figures";
 
 /**
@@ -109,13 +109,25 @@ function pick(shown: readonly ShownMetric[], id: string): ShownMetric | undefine
  * and it is licensed by what happens when it is wrong.** Every other rule on this
  * screen is forbidden from parsing a label because the consequence is a changed CLAIM.
  * The consequence here is that a renamed row draws in the default teal: the figure is
- * unchanged, the order is unchanged, and the word "(reference)" is in the label itself,
- * which is what actually tells a reader that row is the comparator. Colour is the
- * second carrier, never the only one — see `BarTone`.
+ * unchanged, the order is unchanged, and the words "All roles" are self-descriptive as
+ * the all-up baseline, which is what actually tells a reader that row is the comparator.
+ * Colour is the second carrier, never the only one — see `BarTone`.
  */
 const SALARY_TONES: Record<string, BarTone> = {
-  "All roles (reference)": "reference",
-  "Non-ER&D roles": "muted",
+  "All roles": "reference",
+  /**
+   * **"Roles outside engineering R&D" no longer takes `muted`, at ANSR's request.** It
+   * was `grey-500` — a row deliberately held back from the comparison — and beside four
+   * teal bars and one orange one it read as a third category rather than as a fifth
+   * measurement of the same thing. It is not held back: it is the same quantity for a
+   * different population, and it belongs on the same axis in the same colour as every
+   * other row that is not the comparator.
+   *
+   * The `muted` tone stays in `BarTone` and is now carried by nothing — it is the one
+   * fill available for a row a future chart genuinely does hold back, and `grey-500` is
+   * the only light neutral in the palette that clears the 3:1 floor, so re-deriving it
+   * would be re-doing that measurement.
+   */
 };
 
 /* ==========================================================================
@@ -246,14 +258,22 @@ function Velocity({ ranges }: { ranges: readonly ShownMetric[] }) {
       aria-label={hrSections(copy).velocity}
       className="flex min-w-0 flex-col"
     >
-      {/* **`items-stretch` and a centring body, which is the peer view's own fix for this
-          exact row.** One of these two cards carries endpoint labels and a caveat and the
-          other carries neither, so at `items-start` the shorter one ended ~70px above its
-          neighbour and left a band of bare zone beside it — the gap was between the cards
-          rather than inside either, and it read as a card that had failed to fill. Peer
-          zone 3 does the same thing for the same reason: stretch the card, centre the
-          chart in it, and the leftover room is split above and below the mark, where it
-          reads as padding. */}
+      {/* **`items-stretch` stays; the CENTRING inside each card is gone, at ANSR's
+          request, and the two are separate decisions.**
+          
+          Stretching is what keeps the row to one bottom edge — at `items-start` the
+          shorter card ended ~70px above its neighbour and the surplus was bare zone
+          BETWEEN the cards, which reads as a card that failed to fill.
+          
+          Centring was then added so the surplus was split above and below the mark. That
+          is the right call for a chart whose position carries nothing, and the wrong one
+          here: these two cards are the same chart drawn twice, so a reader compares "7 –
+          70 days" with "35 – 75 days" directly — and centring put the two value lines at
+          different heights whenever the two cards' content differed by a line. Both cards
+          now carry a note (see `METRIC_NOTES`), so the remaining difference is the
+          endpoint-label pair, which only the first-hire card has. Top-aligned, the two
+          values and the two rails line up exactly and the one leftover line sits at the
+          foot of the shorter card, inside its own padding. */}
       <div className="grid grid-cols-1 items-stretch gap-6 lg:grid-cols-2 lg:gap-8">
         {ranges.map((shown) =>
           shown.shape === "range" ? (
@@ -264,7 +284,10 @@ function Velocity({ ranges }: { ranges: readonly ShownMetric[] }) {
               // `h2`: the section's own group heading was removed at ANSR's request, so
               // a card is a top-level section of the tab now, exactly as on the derived
               // technology tab. A level down would skip from the sr-only summary `h2`.
-              bodyClassName="flex flex-col grow justify-center"
+              //
+              // `grow` without a `justify`, so the body fills the stretched card and its
+              // content stays at the top — see the note on the grid above.
+              bodyClassName="flex grow flex-col"
             >
               <div className="flex flex-col gap-4">
                 <RangeBenchmark
@@ -320,50 +343,56 @@ function Analysis({
       aria-label={hrSections(copy).analysis}
       className="flex min-w-0 flex-col"
     >
-      {/* `items-stretch` and centring bodies, which is what the velocity section above
-          already does: the milestone track is 60px shorter than the salary ranking beside
-          it, and at `items-start` that surplus was a band of bare zone under the shorter
-          card — the gap ANSR reported after the scale milestones. */}
+      {/* `items-stretch` and TOP-ALIGNED bodies, which is what the velocity section above
+          now does — see the note there for why the centring came off both rows.
+
+          **The two cards are also much closer in height than they were.** The milestone
+          card used to run about 60px short of the salary ranking, and the surplus was the
+          gap ANSR reported under it. It now carries a second rail, and the ranking carries
+          three supplied specialism rows (SDE, Product Management and DevOps / Platform
+          Engineering), so the ranking is eight rows against the two-rail milestone card.
+          Those rows replaced a comparator sentence that had been doing the same levelling
+          job with editorial copy — see `hr-salary-growth` in the catalogue and the absent
+          note in `copy.ts`. */}
       <div className="grid grid-cols-1 items-stretch gap-6 lg:grid-cols-2 lg:gap-8">
+        {/* **`ScaleMilestones` rather than a `Panel` and a track written out here.** The
+            card now carries a second rail whose figures are supplied in code, and two
+            copies of this markup would be two places to change them — the same call
+            `GraduateOutput` made once this metric was drawn by two tabs. See
+            `milestone-card.tsx` for what the second rail is and is not. */}
         {milestones?.shape === "breakdown" ? (
-          <Panel
-            id={`metric-${milestones.metric.id}`}
-            title={milestones.metric.title}
-            // "months, median" — the unit, once, rather than under each of four
-            // circles. `MilestoneTrack` deliberately does not repeat it.
-            lead={milestones.metric.unit}
-            bodyClassName="flex flex-col grow justify-center"
-          >
-            {/* `parts` rather than `legs`. Both carry the same fraction — a leg's
-                `share` is its cumulative value over the last waypoint, and a part's is
-                its value over the largest, which for a rising duration set is the same
-                number — and `parts` is always present, so there is no fallback branch
-                to get wrong. */}
-            <MilestoneTrack
-              points={milestones.parts.map((part) => ({
-                label: part.label,
-                figure: part.figure,
-                share: part.share,
-              }))}
-            />
-          </Panel>
+          <ScaleMilestones shown={milestones} />
         ) : null}
 
         {salary?.shape === "breakdown" ? (
           <Panel
             id={`metric-${salary.metric.id}`}
             title={salary.metric.title}
-            // "Base salary growth, year on year" — what every figure measures, under
-            // the heading that names the finding. See the metric's own comment.
+            // "Base pay growth, year on year" — what every figure measures, under the
+            // heading that names the finding. See the metric's own comment.
             lead={salary.metric.unit}
-            bodyClassName="flex flex-col grow justify-center"
+            bodyClassName="flex grow flex-col gap-4"
           >
             {/* **Inline rows on a bare track, and both are earned rather than
                 chosen.** The entries are authored in descending order, so
                 `selfLabelling` holds: row one is full width and carries its own
                 figure, which is what states the axis and is the only thing that
                 licenses dropping the grey track. The figures sit directly beside the
-                bars, so there is no axis note either — the unit is the card's lead. */}
+                bars, so there is no axis note either — the unit is the card's lead.
+
+                **The teal is the same teal the graduate card draws, at ANSR's request**,
+                and it took a change in `BARE_FILL` rather than one here: a bare subject
+                bar used to go a step deeper than a tracked one, so this ranking and the
+                graduate ranking one section down were two teals doing one job. Nothing
+                about this call site chose a colour before and nothing does now. */}
+            {/* **The comparator is named in text by its own LABEL, so there is no note
+                under this chart.** The "All roles" row is the one warm mark in a set of
+                teal bars, and a colour may never be the only carrier of a distinction
+                here — but "All roles" is self-descriptive as the all-up baseline, which is
+                the text carrier. The parenthetical "(reference)" that used to do it, and
+                the sentence that briefly replaced it, are both gone; the height the
+                sentence was also buying is now carried by three supplied specialism rows. See
+                `SALARY_TONES` above and the absent `copy.ts` note. */}
             <RankedBars
               rows={salary.parts.map(
                 (part): BarRow => ({

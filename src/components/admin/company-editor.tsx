@@ -19,6 +19,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { fteDisplay, hasTier2Presence } from "@/data/derive";
+import { canonicalDomain, DOMAIN_PATTERN } from "@/data/normalize";
 import { companySchema, type Company } from "@/data/schema";
 
 /**
@@ -34,6 +35,8 @@ import { companySchema, type Company } from "@/data/schema";
 
 type Draft = {
   name: string;
+  /** Held as a string here and emitted as `undefined` when blank; see the submit. */
+  domain: string;
   hqCountry: string;
   industry: string;
   revenueBand: string;
@@ -51,6 +54,7 @@ type Errors = Partial<Record<keyof Draft | "form", string>>;
 
 const EMPTY: Draft = {
   name: "",
+  domain: "",
   hqCountry: "",
   industry: "",
   revenueBand: "",
@@ -66,6 +70,7 @@ const EMPTY: Draft = {
 function toDraft(company: Company): Draft {
   return {
     name: company.name,
+    domain: company.domain ?? "",
     hqCountry: company.hqCountry,
     industry: company.industry,
     revenueBand: company.revenueBand,
@@ -154,7 +159,18 @@ export function CompanyEditor({
     const min = Number(form.fteMin);
     const max = Number(form.fteMax);
 
+    /**
+     * Cleaned BEFORE validating, so a pasted URL is accepted rather than rejected with
+     * a message about a shape the admin never typed. The field-level message names the
+     * cleaned value, because "nike.com/uk is not a domain" is confusing when what was
+     * pasted was a full URL.
+     */
+    const cleanedDomain = canonicalDomain(form.domain);
+
     if (!form.name.trim()) next.name = "A company name is required.";
+    if (cleanedDomain && !DOMAIN_PATTERN.test(cleanedDomain)) {
+      next.domain = `"${cleanedDomain}" is not a domain. Enter the company's own site, e.g. nike.com.`;
+    }
     if (!form.industry) next.industry = "Choose an industry.";
     if (!form.revenueBand) next.revenueBand = "Choose a revenue band.";
     if (!form.hqCountry) next.hqCountry = "Choose an HQ country.";
@@ -182,6 +198,12 @@ export function CompanyEditor({
     const candidate = {
       id: company?.id ?? (previewSlug(form.name) || "company"),
       name: form.name.trim(),
+      /**
+       * Cleaned on the way in, and `undefined` rather than `""` when blank — the
+       * schema's own note explains why those two are not interchangeable. Cleaning
+       * here means an admin may paste a browser URL and get a stored domain.
+       */
+      domain: cleanedDomain || undefined,
       hqCountry: form.hqCountry,
       industry: form.industry,
       revenueBand: form.revenueBand,
@@ -305,6 +327,18 @@ export function CompanyEditor({
               })}
             </div>
           </fieldset>
+
+          {/* Next to the name, because it identifies the same thing the name does.
+              Nothing on the public screens reads it yet — the hint says so, so an
+              admin filling it is not left wondering why no logo appeared. */}
+          <TextField
+            label="Domain"
+            value={form.domain}
+            onChange={(value) => set("domain", value)}
+            error={errors.domain}
+            placeholder="nike.com"
+            hint="The company's own site, for sourcing its logo. Paste a full URL if easier — it will be cleaned. Optional."
+          />
 
           <SelectField
             label="Revenue band"

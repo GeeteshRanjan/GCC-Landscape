@@ -3142,7 +3142,14 @@ select.gcc-field {
     min-height: calc(
       var(--gcc-milestone-label) + var(--gcc-milestone-dot) + var(--ansr-space-8)
     );
-    padding-block-start: var(--ansr-space-4);
+    /* **`space-2`, down from `space-4`, at ANSR's request.** The card draws two of these
+       stacked now, each under its own caption, and at 16px the caption sat almost as far
+       from its own rail as the two rails sat from each other — so the lower caption read
+       as a note on the upper chart rather than as the title of the one beneath it. The
+       chart moves UP toward the line that names it and the separation between tracks is
+       carried by the wrapper's own gap; see `MilestoneTrack`. The label row is
+       bottom-aligned, so nothing collides. */
+    padding-block-start: var(--ansr-space-2);
   }
 
   .gcc-milestones__rail {
@@ -3152,7 +3159,7 @@ select.gcc-field {
     /* The dot's own centre, measured from the first item's top — which is the block
        padding, not zero. */
     top: calc(
-      var(--ansr-space-4) + var(--gcc-milestone-label) +
+      var(--ansr-space-2) + var(--gcc-milestone-label) +
         (var(--gcc-milestone-dot) / 2)
     );
     height: 2px;
@@ -3162,7 +3169,10 @@ select.gcc-field {
 
   .gcc-milestones__item {
     position: absolute;
-    top: var(--ansr-space-4);
+    /* The same inset the block reserves above itself — two copies of one number is how a
+       rail stops meeting its dots, and this is the pair the `--gcc-milestone-*` variables
+       could not absorb because `top` is on a different element from the padding. */
+    top: var(--ansr-space-2);
     inset-inline-start: var(--gcc-at);
     /* Physical rather than logical, which is a known limit: there is no logical
        translate, and the public screens are English-only. The extremes are pinned
@@ -3212,4 +3222,129 @@ select.gcc-field {
     text-align: center;
     padding-block-start: var(--ansr-space-2);
   }
+}
+
+/* **There is no variant class for a second track, and two were tried.** A `--paired`
+   modifier zeroed the reserved label row for a comparison rail whose names were clipped,
+   and a `__dot--filled` gave that rail discs where the first has rings. Both came off at
+   ANSR's request: a rail drawn differently from the rail it is being compared with reads
+   as a different kind of chart, which defeats the comparison. Every track is this one
+   class, and the caption above it is what says which is which. See `MilestoneTrack`. */
+
+/* --------------------------------------------------------------------------
+   Screen 2 — a two-point index on one rail
+
+   The finance tab's tier spread. `IndexSpread` in `components/public/charts.tsx`
+   emits one `dl` and this positions each point ON the rail, its name above the mark
+   and its figure below.
+
+   **The pair of display figures ABOVE the rail is gone at ANSR's request, and this
+   class is what the removal cost.** The card used to state each index twice — once as a
+   32px figure under a column name, once as a small label under its own mark — and
+   removing the pair left the column names with nowhere to be except on the marks
+   themselves. So the geometry is `.gcc-milestones`' geometry, for the same reason: the
+   label, the mark and the figure are one positioned column per point, which is what
+   keeps a name, a mark and a number that belong together in one place in the DOM as
+   well as on screen. The style lock carries what was tried instead.
+
+   **The label row is a FIXED height and the rail's offset is derived from it.** A name
+   long enough to wrap would otherwise push its own mark below the line the other mark
+   sits on. The row is bottom-aligned, so a wrapped second line overflows UPWARD into the
+   card's own padding and the mark does not move — degradation rather than a broken chart,
+   which matters because a column name is admin-editable.
+   -------------------------------------------------------------------------- */
+.gcc-index-rail {
+  /* One line at `text-xs`. Named because the rail's own offset is derived from it, and
+     two copies of that number is how a rail stops meeting its dots. */
+  --gcc-index-label: 1rem;
+  --gcc-index-marker: var(--ansr-space-4);
+
+  position: relative;
+  /* The axis runs zero to the base, so a mark sits at both 0 and 100% of this box. Half a
+     marker at each end is what keeps both wholly inside the card's own measure. */
+  margin-inline: calc(var(--gcc-index-marker) / 2);
+  /* The points are absolutely positioned, so this is the only thing holding the card's
+     body open: the label, the marker, and the figure's line with its own top gap. */
+  min-height: calc(
+    var(--gcc-index-label) + var(--gcc-index-marker) + var(--ansr-space-8)
+  );
+}
+
+/* The axis, drawn behind every point. */
+.gcc-index-rail__line {
+  position: absolute;
+  inset-inline: 0;
+  /* The marker's own centre, measured from the top of the block. */
+  top: calc(var(--gcc-index-label) + (var(--gcc-index-marker) / 2));
+  height: 1px;
+  transform: translateY(-50%);
+  background-color: var(--ansr-border);
+}
+
+/* The gap between the two points, which is what the card is about. Thicker than the axis
+   and in the ramp's own pale step, so it reads as a segment of the line rather than as a
+   third mark on it. */
+.gcc-index-rail__span {
+  position: absolute;
+  top: calc(var(--gcc-index-label) + (var(--gcc-index-marker) / 2));
+  inset-inline-start: var(--gcc-from);
+  inline-size: var(--gcc-span);
+  height: var(--ansr-space-1);
+  transform: translateY(-50%);
+  background-color: var(--ansr-teal-200);
+}
+
+.gcc-index-rail__item {
+  position: absolute;
+  top: 0;
+  inset-inline-start: var(--gcc-at);
+  /* Physical rather than logical, the same known limit `.gcc-milestones__item` carries:
+     there is no logical translate, and the public screens are English-only. */
+  transform: translateX(-50%);
+  display: grid;
+  grid-template-rows: var(--gcc-index-label) var(--gcc-index-marker) auto;
+  justify-items: center;
+  width: max-content;
+  /* Capped so a longer column name wraps rather than running into the other point's. The
+     two marks on this metric sit 15 to 25% of the rail apart, which is the tightest pair
+     the chart is drawn at. */
+  max-inline-size: 5rem;
+}
+
+.gcc-index-rail__label {
+  align-self: end;
+  text-align: center;
+}
+
+/* A ring, and a disc for the base — fill against outline, which is the one distinction
+   that survives greyscale. `--ansr-teal-bright` is the hue the reference asks for and is
+   2.44:1 on white, so it is not available for a mark on a light ground at any size. */
+.gcc-index-rail__dot {
+  align-self: center;
+  inline-size: var(--gcc-index-marker);
+  block-size: var(--gcc-index-marker);
+  border-radius: var(--ansr-radius-pill);
+  background-color: var(--ansr-surface);
+  border: 2px solid var(--ansr-teal-500);
+}
+
+.gcc-index-rail__dot--base {
+  background-color: var(--ansr-accent);
+  border-color: var(--ansr-accent);
+}
+
+/* The origin's mark. A tick rather than a dot, because zero is the axis's own end and not
+   a point being compared — and it is drawn at all because a cost index has to show that
+   its track is not truncated. */
+.gcc-index-rail__tick {
+  align-self: center;
+  inline-size: 1px;
+  block-size: var(--gcc-index-marker);
+  background-color: var(--ansr-border-strong);
+}
+
+.gcc-index-rail__figure {
+  align-self: start;
+  text-align: center;
+  padding-block-start: var(--ansr-space-1);
 }

@@ -1,3 +1,4 @@
+import { resolveCompanyMark } from "./company-mark";
 import { HQ_COUNTRIES } from "./countries";
 import { fteDisplay, fteMidpoint, TIER1_CITIES } from "./derive";
 import { MAP_HEIGHT, MAP_WIDTH, projectCity, type Point } from "./geo";
@@ -433,6 +434,21 @@ export interface PeerCard {
    * disagreeing.
    */
   sizeShare: number;
+  /**
+   * A finished URL for the company's mark, or null to draw the name alone.
+   *
+   * **Resolved here rather than in the component, and `domain` itself is NOT carried.**
+   * The card gets a URL or nothing, so the component holds no knowledge of which
+   * provider is in use, no client ID, and no branch to get wrong — the same division
+   * that keeps `metric-card.tsx` from choosing its own chart. Swapping providers or
+   * adding the uploaded tier is a change in `company-mark.ts` and nowhere else.
+   *
+   * **Null is ROUTINE, not exceptional.** The fallback resolves 86–95% of brands, six
+   * companies carry no domain, and the tier is off entirely when the client ID is
+   * unset. So the name-alone card has to be a complete card at every size, which is
+   * why the mark is an addition to a layout that already worked without it.
+   */
+  markUrl: string | null;
 }
 
 function toCard(company: Company, peak: number): PeerCard {
@@ -444,6 +460,13 @@ function toCard(company: Company, peak: number): PeerCard {
     establishedYear: company.establishedYear,
     fortuneGlobal500: company.fortuneGlobal500,
     sizeShare: peak > 0 ? fteMidpoint(company.fte) / peak : 0,
+    /**
+     * `domain` is read here and dropped from the card, which is the same discipline
+     * `hqCountry` documents above: the field travels only as far as the thing that
+     * uses it. A card carrying a raw domain would invite a second component to build
+     * its own URL from it.
+     */
+    markUrl: resolveCompanyMark(company.domain),
   };
 }
 

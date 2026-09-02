@@ -30,7 +30,27 @@ function fixtureEnv(): Record<string, string> {
         "fixture first, rather than calling playwright directly.",
     );
   }
-  return JSON.parse(readFileSync(FIXTURE, "utf8")) as Record<string, string>;
+  return {
+    ...(JSON.parse(readFileSync(FIXTURE, "utf8")) as Record<string, string>),
+    /**
+     * **The company-mark tier is forced OFF for the suite, and this is not a
+     * convenience.** `next build` reads `.env.local`, so a developer who set a
+     * Brandfetch client ID to see marks locally silently turned the browser suite into
+     * a test that makes five third-party image requests per peer render.
+     *
+     * Measured: the public project went from seconds to 7.7 minutes with the tier on,
+     * and in a combined run the contention pushed twelve unrelated `0-search` specs
+     * past their timeouts — all of which passed in 16.5s in isolation. A suite whose
+     * results depend on a third party's latency is not deterministic, and the failures
+     * name the wrong specs.
+     *
+     * The peer-card assertions in `0-screen1.spec.ts` deliberately assert the SHAPE of
+     * what may render rather than a count, so they hold in both states. Verify a real
+     * mark in a browser, per `docs/traps.md` — the provider blocks non-browser requests
+     * anyway, so the suite could never have exercised it faithfully.
+     */
+    NEXT_PUBLIC_GCC_BRANDFETCH_CLIENT_ID: "",
+  };
 }
 
 const PORT = 3210;

@@ -2,6 +2,12 @@
  * The ANSR wordmark, set inline inside the hero headline where the brand name
  * would otherwise be typed.
  *
+ * **One consumer, and it briefly had two.** The scale curve's ANSR rail caption on the
+ * operations and HR tabs used it for a pass, which moved this file to `public/`; ANSR then
+ * asked for the FULL lockup there — the circular mark as well as the wordmark — so that
+ * caption serves `public/brand/ansr-logo.svg` as an image and this went back to the one
+ * surface that sets the wordmark inline in a line of type.
+ *
  * `assets/brand/logo/ANSR Name.svg`, inlined rather than served, and changed in
  * exactly two ways — both required for it to sit in a line of type:
  *

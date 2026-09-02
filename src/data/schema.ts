@@ -1,6 +1,12 @@
 import { z } from "zod";
 
 import { BUSINESS_TAGS } from "./business-tags";
+/**
+ * `normalize.ts` imports nothing, so this cannot cycle. The pattern lives there
+ * beside `canonicalDomain` because a cleaner and its validator drifting apart is the
+ * failure this pairing exists to prevent.
+ */
+import { DOMAIN_PATTERN } from "./normalize";
 
 /**
  * The published dataset shape. This is the contract for every consumer: the
@@ -39,6 +45,33 @@ export const companySchema = z.object({
     .string()
     .regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/, "id must be a lowercase slug"),
   name: nonEmpty,
+  /**
+   * The company's registrable domain, lowercase and bare. The identifier a logo
+   * provider is asked for; nothing else in the product reads it.
+   *
+   * **`.optional()` rather than `.default("")`, and the difference is 1,834 lines.**
+   * A defaulted string is written back on every publish, so adding it would put
+   * `"domain": ""` on every company in `dataset.json` — a diff nobody can read, on the
+   * file whose reviewable diff is the reason there is no database. Optional means an
+   * unfilled company carries no key at all and only a real domain shows up.
+   *
+   * **So a blank must be stored as `undefined`, never `""`.** `sameValue` in `diff.ts`
+   * compares through `JSON.stringify`, where those two are not equal — an editor
+   * emitting `""` for an untouched blank would report every company as changed.
+   *
+   * Validated against `DOMAIN_PATTERN` and cleaned by `canonicalDomain`, both in
+   * `normalize.ts`, so the admin form and the bulk import cannot disagree about what a
+   * domain is. The empty string is accepted here only so a form round-trip cannot fail
+   * the gate on a field the admin left alone.
+   */
+  domain: z
+    .string()
+    .max(253)
+    .refine((value) => value === "" || DOMAIN_PATTERN.test(value), {
+      message:
+        "domain must be a bare registrable domain, lowercase, with no scheme, www. or path — e.g. nike.com",
+    })
+    .optional(),
   /** Country, not city — the source column is misleadingly named "Company HQ". */
   hqCountry: nonEmpty,
   industry: nonEmpty,

@@ -482,18 +482,39 @@ export const METRIC_CATALOGUE: readonly Metric[] = [
     question: "Will our teams be working at the same responsiveness as the rest of the business?",
     unit: "milliseconds",
     format: "duration",
+    /**
+     * **Seven destinations, up from four, at ANSR's request** — and the three that were
+     * added are the reason to read the note before touching this metric.
+     *
+     * The set is ordered OUTWARD BY DISTANCE, not by value, which is what makes it a
+     * geography rather than a ranking. That order is also what keeps `selfLabelling`
+     * false, so the bars keep the grey track that is their shared axis; a set sorted by
+     * its own quantity would drop it. The two happen to coincide here because latency
+     * rises with distance, and the day one of them does not, the ORDER is the contract.
+     *
+     * **Three of the seven are PROVISIONAL and the note names them.** Same-city, another
+     * India region, Europe and US East are the supplied figures, unchanged. Middle East,
+     * Singapore and US West are typical published round-trip times for the same routes,
+     * added so the card covers the regions a global business actually runs in — and they
+     * are marked rather than blended in, for the reason every provisional figure in this
+     * catalogue is: a number promoted from estimate to measurement should read as a change
+     * to a list somebody has to explain.
+     */
     note:
-      "Upper end of each supplied range, so nothing reads better than it is: 2–8 ms intra-city to the Mumbai, Hyderabad and Chennai regions, 25–40 ms inter-city. Singapore was a seeded part with no figure and was removed.",
+      "Upper end of each supplied range, so nothing reads better than it is: 2–8 ms intra-city to the Mumbai, Hyderabad and Chennai regions, 25–40 ms inter-city. PROVISIONAL: Middle East, Singapore and US West are typical published round-trip times for those routes rather than supplied figures, added at ANSR's request to cover the regions a global business runs in — confirm all three before this ships. Singapore was previously a seeded part with no figure at all and was removed; it is back with a provisional one. Ordered outward by distance, never by value.",
     structure: {
       kind: "breakdown",
       entries: [
         "Same-city cloud region",
         "Another India region",
+        "Middle East",
+        "Singapore",
         "Europe",
         "US East",
+        "US West",
       ],
     },
-    value: { kind: "breakdown", values: [8, 40, 110, 180] },
+    value: { kind: "breakdown", values: [8, 40, 50, 70, 110, 180, 230] },
     gated: false,
   },
   {
@@ -574,43 +595,73 @@ export const METRIC_CATALOGUE: readonly Metric[] = [
     /**
      * **Retitled to name the finding, with the quantity moved into the unit.** It was
      * "Base salary growth year on year", which names the measurement and leaves the
-     * reader to work out what the ranking is for. The five figures answer a question —
+     * reader to work out what the ranking is for. The figures answer a question —
      * which skills are repricing fastest — and the title says it now, with the
      * measurement directly under it as the unit, which is the field that names what
      * every figure counts. Nothing else about the metric moved.
      *
-     * **The entries are in DESCENDING order and the values are untouched.** The order
-     * is authored rather than sorted at render — `RankedBars` never re-sorts, and
+     * **The entries are in DESCENDING order and the supplied values are untouched.** The
+     * order is authored rather than sorted at render — `RankedBars` never re-sorts, and
      * `project.md`'s rule is that a catalogue order is meaningful — so putting the
      * scarce skills first is a decision recorded here. It has one derived consequence
      * worth knowing: `nonIncreasing` now holds, so the set is self-labelling and the
      * bars drop their grey track. Row one is full width and carries its own figure,
      * which is what states the axis.
      *
-     * **"All roles" is "All roles (reference)" so the comparator says so in text.** It
-     * is drawn in the action orange, which on a ranking of teal bars is the one mark
-     * that is not a specialism — and a colour cannot be the only carrier of that. The
-     * word in the label is what survives greyscale, and it is also what stops a reader
-     * taking the fourth row for a fourth specialism that happens to be a different
-     * colour.
+     * **Three specialism rows — "Software Development (SDE)", "Product Management" and
+     * "DevOps / Platform Engineering" — were added at the project owner's instruction with
+     * supplied figures.** They replaced an earlier "Data engineering" placeholder, and they
+     * replaced the comparator SENTENCE that used to sit under the chart: the sentence was
+     * closing the height gap with the scale-milestones card beside it as much as naming the
+     * comparator, and real specialism rows do the first job with data rather than editorial
+     * copy.
+     *
+     * **Product Management (14.5) is IN, on the project owner's call.** It was briefly left
+     * out on a reading that seven rows sat level with the two-rail scale-milestones card
+     * and an eighth overshot; the project owner judged the seven-row card asymmetrical
+     * against that neighbour, so all three supplied rows stay and the ranking is eight
+     * rows. Each supplied range was read at the end that UNDERSTATES India's advantage — a
+     * higher growth rate is the less favourable reading of a cost — so "~14–15%" is 15 and
+     * "~13–14%" is 14.
+     *
+     * **"(reference)" is OFF the comparator's label at ANSR's request, and the comparator
+     * is now named by its own label.** The "All roles" row is drawn in the action orange —
+     * the one warm mark on a ranking of teal bars — and a colour may never be the only
+     * carrier of a distinction on these screens, so something in TEXT has to say that row
+     * is not another specialism. The words "All roles" are self-descriptive as the all-up
+     * baseline, so the label itself is that text carrier; the parenthetical that used to
+     * do it, and the sentence that briefly replaced it, are both gone.
+     *
+     * **"Non-ER&D roles" is "Roles outside engineering R&D".** Same population, and the
+     * acronym was the last piece of internal vocabulary on the card. A CHRO reading a
+     * salary ranking should not have to expand ER&D to find out which of the two floor
+     * rows applies to them.
+     *
+     * The two renamed entries have one consequence worth knowing: `SALARY_TONES` in
+     * `hr-view.tsx` is keyed by these labels, and it moved with them.
      */
     title: "Where salary pressure is strongest",
-    unit: "Base salary growth, year on year",
+    // "Base pay", not "Base salary" — the title one line above already says salary, and
+    // the unit's job is to say WHICH pay figure and over what period.
+    unit: "Base pay growth, year on year",
     question: "How fast is the cost of the same person rising?",
     format: "percent",
     note:
-      "Split by specialism because a single average hides the scarce skills, which is where a plan actually gets repriced. Ordered descending so the ranking states its own axis in row one; 'All roles' carries '(reference)' because it is the comparator the other four are read against, and the label rather than the colour is what says so.",
+      "Split by specialism because a single average hides the scarce skills. Ordered descending so the ranking states its own axis in row one. 'All roles' is the comparator in the action orange; its self-descriptive label carries that distinction — never colour alone. SDE (15), Product Management (14.5) and DevOps / Platform Engineering (14) were supplied by the project owner, giving eight rows. 'Non-ER&D roles' is now 'Roles outside engineering R&D'.",
     structure: {
       kind: "breakdown",
       entries: [
         "AI and machine learning",
         "Cybersecurity",
         "Cloud",
-        "All roles (reference)",
-        "Non-ER&D roles",
+        "Software Development (SDE)",
+        "Product Management",
+        "DevOps / Platform Engineering",
+        "All roles",
+        "Roles outside engineering R&D",
       ],
     },
-    value: { kind: "breakdown", values: [21.1, 20, 16.1, 9.8, 7.5] },
+    value: { kind: "breakdown", values: [21.1, 20, 16.1, 15, 14.5, 14, 9.8, 7.5] },
     gated: false,
   },
   {
@@ -779,13 +830,24 @@ export const METRIC_CATALOGUE: readonly Metric[] = [
     // of a metric is the only one who knows it. `format: "index"` says nothing
     // about whether up is good, and a chart that guessed would eventually put an
     // arrow on the wrong end of a real number.
-    indexBaseline: "Tier 1 cities = 100. Lower is cheaper.",
+    // "Tier 1", matching the column it names. The longer "Tier 1 cities" was kept here for
+    // one pass as the place the full phrase survived; ANSR asked for the short form
+    // everywhere, and a subtitle naming the base differently from the label on the base's
+    // own mark is two names for one thing on one card.
+    indexBaseline: "Tier 1 = 100. Lower is cheaper.",
     note:
       "Indices, not amounts. Conservative end of each supplied range: all-in 25–35% below, compensation 15–22% lower, rent roughly half. Attrition also runs 4–6 points lower in tier 2, which is not a cost and has no slot here.",
     structure: {
       kind: "matrix",
       rows: ["All-in operating cost", "Compensation", "Office space"],
-      columns: ["Tier 1 cities", "Tier 2 cities"],
+      // **"Tier 1" and "Tier 2", not "Tier 1 cities", at ANSR's request.** The names are
+      // drawn above their own marks on the rail now rather than above a display figure,
+      // and two marks on this metric sit as little as 15% of the rail apart — so the
+      // shorter string is what stops the two labels colliding. Shortened HERE and never in
+      // the component: a column name is admin-editable, and `project.md` bans a renderer
+      // that parses one. `indexBaseline` above uses the same short form, so the card names
+      // its base once; the metric's own title is where "tier 2" is spelled out.
+      columns: ["Tier 1", "Tier 2"],
     },
     value: {
       kind: "matrix",

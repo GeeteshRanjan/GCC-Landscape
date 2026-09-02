@@ -621,12 +621,40 @@ test.describe("the answer", () => {
      */
     await expect(peers.getByText(/Full width is/)).toHaveCount(0);
     /**
-     * **No company logo, initial, monogram or reserved empty box anywhere.** This
-     * dataset holds no company marks, so every one of those would be either a
-     * fabricated identity or a visible gap. Every row starts with the name.
+     * **No initial, no monogram, no reserved empty box — narrowed now that a real mark
+     * is permitted.**
+     *
+     * A real company mark may render here, so a bare `img` count is no longer the
+     * assertion. What these three lines guard is what they always really guarded, and
+     * each would have passed the old count:
+     *
+     * - no drawn glyph standing in for a mark (`svg[role='img']`), which is how a
+     *   monogram or letter tile would arrive;
+     * - no image whose accessible name repeats the company, since a real mark carries
+     *   `alt=""` on the rule that the name is the very next element;
+     * - and no reserved empty box, asserted as: every `img` present has a source. A
+     *   placeholder awaiting a logo is the visible-gap case.
+     *
+     * The suite runs with no client ID configured, so the mark tier is OFF here and the
+     * count is zero in practice. These assert the SHAPE rather than the count, so they
+     * keep holding once it is switched on.
+     *
+     * **The named-image rule is now "the only named image is the Fortune badge" rather
+     * than "no named image".** A blanket count of zero was the wrong expression of it
+     * the moment the index membership became Fortune's own badge: that badge REPLACES
+     * the only text stating the fact, so its accessible name has to be the fact, while
+     * a company mark still takes `alt=""` because the name follows it. The intent the
+     * line always had — no image announcing the company twice — is what is asserted.
      */
-    await expect(peers.locator("img")).toHaveCount(0);
     await expect(peers.locator("svg[role='img']")).toHaveCount(0);
+    const namedPeerImages = await peers
+      .locator("img[alt]:not([alt=''])")
+      .evaluateAll((imgs) => imgs.map((i) => i.getAttribute("alt")));
+    for (const name of namedPeerImages) {
+      expect(name).toBe("Fortune Global 500");
+    }
+    await expect(peers.locator("img:not([src])")).toHaveCount(0);
+    await expect(peers.locator('img[src=""]')).toHaveCount(0);
     /**
      * The industry context: three nested populations rather than one divided bar. The
      * figures do not sum to each other — 5 is inside a cohort which is inside the

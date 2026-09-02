@@ -245,11 +245,11 @@ function Drivers({ shown }: { shown: ShownMetric & { shape: "breakdown" } }) {
 
    **The direction is stated once and there is no separate legend.** The composition asks
    for "Lower index = lower cost" beneath each of the three scales and for a shared Tier
-   1 / Tier 2 key above them. The metric's own `indexBaseline` — "Tier 1 cities = 100.
-   Lower is cheaper." — carries the direction already and is drawn as the panel's
-   subtitle; and the key is on each card's own two figure labels rather than in a legend
-   for the set, because a legend made each column name appear four times in one section.
-   See `IndexSpread`.
+   1 / Tier 2 key above them. The metric's own `indexBaseline` — "Tier 1 = 100. Lower is
+   cheaper." — carries the direction already and is drawn as the panel's subtitle;
+   and each mark on the rail carries its own column name directly above it, so there is
+   nothing a key would add. See `IndexSpread`, which no longer draws a display figure at
+   all: the two indices are ON the rail.
    ========================================================================== */
 
 interface SpreadRow {
@@ -287,17 +287,36 @@ function TierSpread({
           sixth bordered box. The outer `Panel` is the object; these are its contents, and
           what groups each one is that its name, its difference and its rail are adjacent.
           The gap widened to carry the separation the borders were doing. */}
-      <div className="grid grid-cols-1 gap-6 md:grid-cols-3 md:gap-8">
+      {/* **Two subgrid rows, so the three line up rather than merely sitting side by
+          side.** The names are three different lengths — "All-in operating cost" against
+          "Office space" — and each carries a chip naming the base, so one card's header was
+          a line taller than another's and pushed its whole rail below its neighbours'. The
+          row heights are declared on the parent and every child spans both. `content-start`
+          keeps a short card from stretching its own contents to fill the taller row.
+
+          **Three across from `lg`, not `md`.** Every card grid on this screen gains its
+          columns at `lg` — a tablet is a one-column reading of Screen 2 — and this set has
+          its own reason on top: at 768 three columns are ~180px each, which puts the two
+          marks 27px apart and collides their labels into "Tier 2Tier 1". */}
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3 lg:grid-rows-[auto_auto] lg:gap-8">
         {rows.map((row) => (
-          <div key={row.label} className="flex flex-col gap-4">
-            <div className="flex flex-wrap items-baseline gap-x-3 gap-y-2">
+          <div
+            key={row.label}
+            className="grid content-start gap-4 lg:row-span-2 lg:grid-rows-subgrid"
+          >
+            {/* The name and the answer STACKED, not on one line. Side by side they
+                wrapped anyway on two of the three cards, and a chip that lands under its
+                own heading on one card and beside it on the next is the same
+                inconsistency the subgrid is here to remove. Stacked, every card reads
+                name-then-answer in the same two places. */}
+            <div className="flex flex-col items-start gap-1.5">
               {/* `h3`, under the panel's own `h2`. A level is an outline rather than a
                   size, and skipping one leaves a screen-reader user with a broken
                   structure. */}
               <h3 className="min-w-0 text-sm font-semibold tracking-body text-text">
                 {row.label}
               </h3>
-              {/* **The answer, beside the name it belongs to.** The view model already
+              {/* **The answer, under the name it belongs to.** The view model already
                   formatted and signed it with a real minus sign, so nothing here
                   subtracts. It is index POINTS rather than a percentage — the base is
                   100, so the two coincide, but writing "%" would be this file adding a

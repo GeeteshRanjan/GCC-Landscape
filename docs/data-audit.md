@@ -478,10 +478,18 @@ dropped view came back. The technology view is still dropped and the same rule s
 
 Four label changes landed in the HR pass and none of them touched a value:
 
-- **`hr-salary-growth` is "Where salary pressure is strongest"**, with "Base salary growth, year on
-  year" moved into its `unit`. Its five entries are reordered descending — 21.1, 20, 16.1, 9.8, 7.5 —
-  which is an authored order rather than a sort at render, and "All roles" is now "All roles
-  (reference)" so the comparator names itself in text as well as in colour.
+- **`hr-salary-growth` is "Where salary pressure is strongest"**, with the measurement moved into its
+  `unit` — "Base pay growth, year on year", "pay" rather than "salary" because the title already says
+  it. Its entries are ordered descending — 21.1, 20, 16.1, 15, 14, 9.8, 7.5 — which is an authored order
+  rather than a sort at render. Two entries were renamed at ANSR's request and neither value moved:
+  "All roles (reference)" is **"All roles"**, the comparator now named by its own self-descriptive label
+  rather than by a bracket or a sentence, and "Non-ER&D roles" is **"Roles outside engineering R&D"**,
+  same population without the acronym. Three specialism rows — **"Software Development (SDE)"** at 15,
+  **"Product Management"** at 14.5 and **"DevOps / Platform Engineering"** at 14 — were supplied by the
+  project owner, replacing an earlier "Data engineering" placeholder and the comparator sentence that
+  used to close the height gap with the scale-milestones card. That gives eight rows; each supplied
+  range was read at the end that understates India's advantage (the higher growth rate), so "~14–15%"
+  is 15 and "~13–14%" is 14.
 - **`hr-cost-per-employee-served` is "HR support ratio"**, shortened because "per employee served"
   duplicated the unit — and on a gated card the title is one of only three fields that cross.
 - **`TIME_TO_FIRST_HIRE`'s end labels are whole clauses** — "Hiring through an employer of record"
@@ -576,7 +584,7 @@ strips the field, and the admin surface labels the groupings as internal.
 `hr-workforce-diversity`, removed at ANSR's request. Everything else the brief asks for is either
 implemented or defined and awaiting a figure.
 
-**Values entered: all 35, of which five are provisional.** The figures supplied 2026-08-27 and revised
+**Values entered: all 35, of which eight are provisional.** The figures supplied 2026-08-27 and revised
 2026-08-28 came from ANSR rather than from a source this repository can cite. Every metric is fully
 populated — a partly-filled one is dropped from the public screen rather than rendered with holes in
 it — but populated is not the same as measured, and the five exceptions are named rather than counted
@@ -591,13 +599,37 @@ and nothing replaces it. `data:verify` still reports how many metrics state no p
 35 — so the number going down remains the visible milestone, but it is now a count in a script rather
 than a warning on the page.
 
-Five figures are provisional, each recorded in its own note. Three were filled from judgement rather
+Eight figures are provisional, each recorded in its own note. Three were filled from judgement rather
 than from the supplied data: Vietnam's column in the capability grid, the role-by-level grid in
 `hr-fully-loaded-cost`, and the depth row for Pune and tier 2 in `fin-cost-vs-ecosystem-depth`. Two
 are placeholders at a round 10% rather than judgement at all: `fin-operating-cost-growth` and
 `fin-workplace-cost-growth`. `tests/unit/metrics.test.ts` asserts the `PLACEHOLDER` marker on the
 latter two, so the figure can be edited from admin — the intended path — while removing the marker
 fails the suite.
+
+**Three more arrived with `ops-network-latency`'s extension, and they carry a `PROVISIONAL` marker
+rather than `PLACEHOLDER` so the two categories stay countable apart.** ANSR asked for more regions on
+that card; the four supplied figures are unchanged and **Middle East (50 ms), Singapore (70 ms) and US
+West (230 ms) are typical published round-trip times for those routes** rather than measurements
+supplied to this project. Singapore had previously been removed for having no figure at all and is back
+with a provisional one. **All three need ANSR's confirmation before this ships** — first item to check
+alongside the two 10% placeholders. The metric's order is outward by distance, never by value, which is
+what keeps its bars on a shared grey track rather than dropping it as a self-labelling ranking would.
+
+**And one figure on the screen belongs to no metric at all.** The scale-milestone card now draws a
+second rail — the same four waypoints reached in 4, 8, 16 and 24 months "Built with ANSR" — supplied in
+`src/components/screen2/milestone-card.tsx` at the project owner's explicit instruction. It is handled
+the way `DISRUPTION_FIGURE` is: supplied in the component, never written into `ops-scale-milestones` or
+`hr-scale-milestones`, so admin still edits the datum and `data:verify` still reads exactly what it read
+before.
+
+**The second rail is COLUMN-ALIGNED with the first rather than plotted on its own duration**, at ANSR's
+request: "50 FTEs" sits under "50 FTEs" and only the month beneath it changes, so the horizontal axis is
+the milestone and the comparison is read straight down a column. The cost is stated in the component and
+is worth knowing here too — a position on the lower rail is not proportional to the figure under it, where
+on the upper rail it is. Every figure is on screen in text directly under its own circle, and the card
+states no ratio, no percentage and no "faster", because with the geometry borrowed any claim about the size
+of the gap would have to come from numbers only one of the two rails has a source for.
 
 **No absolute money survived the import, and that is enforced rather than trusted.** The supplied
 data contained per-head dollar amounts and per-square-foot rupee rents. Where the source also gave a

@@ -60,6 +60,13 @@ session. Read on demand, and add to it whenever something costs more than one at
 
 ## Markup and CSS
 
+- **A spec reading an inline style gets an EMPTY STRING, not a failure, when the positioning moves to a
+  custom property.** `0-screen2.spec.ts` read the finance rail through `style.insetInlineStart` after
+  `IndexSpread` moved to `--gcc-at`, and reported nine empty strings against nine expected percentages —
+  which reads as a broken chart when the chart was drawing correctly. Read
+  `style.getPropertyValue("--gcc-at")` instead. Any spec asserting a position is coupled to HOW the
+  position is set, so moving a measurement into CSS means grepping the specs for the old property.
+
 - **`display: flex` on a `<summary>` silently removes the native disclosure marker**, leaving a
   pressable heading with no affordance. `list-inside` then puts the marker ABOVE the heading rather than
   beside it; `list-item list-outside` plus inline padding is the fix, with the flex moved to a wrapper
@@ -97,6 +104,27 @@ session. Read on demand, and add to it whenever something costs more than one at
   thinner on one axis than the other and vanished into a blur. `vectorEffect="non-scaling-stroke"` is the
   fix, and it is needed on any stretched SVG whose stroke has to stay a constant weight.
 
+## Company marks (Brandfetch Logo API)
+
+- **`curl` against `cdn.brandfetch.io` 302s to their hotlinking guidelines, with OR without a valid
+  client ID.** They detect non-browser requests and bounce them, so a shell test reports 414 KB of
+  `text/html` for every domain — including invented ones — and looks exactly like a broken URL or a dead
+  credential. Both are fine; the request is being refused for its headers. Send a browser
+  `User-Agent`, `Accept: image/*`, a `Referer` and `Sec-Fetch-Dest: image` and the same URL returns
+  `image/webp`. **Verify marks in a real browser, not from a terminal.**
+- **`fallback` is a PATH SEGMENT, not a query parameter, and the wrong form fails silently.**
+  `?fallback=404` is ignored: an unknown brand returns HTTP 200 with a ~346-byte placeholder, so every
+  card renders something and nothing anywhere reports a problem. `/fallback/404` returns a real 404 and
+  the `<img>` fails, which is what the peer card needs. Measured on `notarealbrandxyzq.com` against
+  `nike.com`.
+- **Never ask for `/fallback/lettermark`.** It returns a generated tile bearing the company's initial —
+  precisely the monogram the peer-card rule bans — and it arrives looking like a real logo, so nothing
+  downstream would catch it.
+- **Unset `NEXT_PUBLIC_GCC_BRANDFETCH_CLIENT_ID` is the OFF state and is the safe default.** With no
+  value the resolver returns null for every company, the CSP allows no extra origin, and every card
+  draws the name alone. A deployment that "lost its logos" almost certainly lost that env var, and
+  Vercel applies env vars only to builds created after they were added.
+
 ## Data and the catalogue
 
 - **Do not delete `gccStatus` on the strength of `framing()` having no caller.** Screen 2's
@@ -111,6 +139,13 @@ session. Read on demand, and add to it whenever something costs more than one at
   `json.dumps(indent=2, ensure_ascii=False)` plus a trailing newline reproduces its formatting exactly,
   so a surgical edit stays a small diff. **Running vitest while that file is mid-write** makes unrelated
   suites fail to collect; re-run before believing it.
+- **A metric `note` is capped at 600 characters, and it is the one metric field long enough to reach a
+  cap by accretion.** Recording a decision in it rather than in the code comment above it took
+  `hr-salary-growth` to 751, which surfaced as "dataset.json failed schema validation" on the browser
+  FIXTURE — four minutes into a run, taking every admin spec with it, on a file the failure never names.
+  A note is a working record an admin reads in the editor; reasoning belongs in the comment, which is
+  uncapped and never shipped. `metrics.test.ts`'s "every metric passes the schema the publish gate runs"
+  catches it in two seconds, but only if the unit suite is run AFTER the catalogue edit.
 - **A moved profile figure is a two-file commit.** `npm run data:verify -- --accept` rewrites
   `data/verify-baseline.json`; `docs/data-audit.md` has to follow in the same commit.
 - **`tsc` covers `scripts/` but `tsx` does not typecheck**, `noUncheckedIndexedAccess` is on,

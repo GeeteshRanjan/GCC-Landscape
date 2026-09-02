@@ -84,8 +84,41 @@ function Baseline() {
  */
 export type BarTone = "subject" | "reference" | "muted";
 
-/** The fill each tone takes on a BARE track, where the bar sits on the card's white. */
+/**
+ * The fill each tone takes on a BARE track, where the bar sits on the card's white.
+ *
+ * **`subject` is `teal-500` here, matching the tracked fill, and it was the brand teal
+ * until ANSR asked for one bar colour across the screen.** The argument for the deeper
+ * step was that a bare bar loses the grey track it was measured against, so it should
+ * gain weight to keep reading as a mark rather than as a tint. What that produced in
+ * practice was two teals doing one job on one tab: the HR tab's graduate output keeps its
+ * track and draws `teal-500`, its salary ranking is self-labelling and drew the brand
+ * teal, and the two cards sat one section apart looking like two kinds of chart.
+ *
+ * `teal-500` is 5.14:1 on white against 4.51:1 on the track, so the mark is if anything
+ * stronger without the track than with it — the original worry does not survive the
+ * measurement. What the brand teal is now reserved for is `EMPHASIS_FILL`, which is the
+ * one place a bar is meant to be deeper than its neighbours.
+ */
 const BARE_FILL: Record<BarTone, string> = {
+  subject: "bg-teal-500",
+  reference: "bg-action",
+  muted: "bg-grey-500",
+};
+
+/**
+ * The fill an EMPHASISED row takes — the one row in a set that is the visitor's own
+ * position, or the leader.
+ *
+ * It is a separate map now rather than a reuse of `BARE_FILL`, and it had to become one:
+ * with `BARE_FILL.subject` stepped back to `teal-500` to match the tracked fill, sharing
+ * the map would have drawn an emphasised row in exactly the fill its neighbours already
+ * take, which is an emphasis that emphasises nothing.
+ *
+ * Only `subject` differs. A `reference` or `muted` row is already a different KIND of
+ * thing from the rows around it, so there is nothing for a depth step to add.
+ */
+const EMPHASIS_FILL: Record<BarTone, string> = {
   subject: "bg-accent-teal",
   reference: "bg-action",
   muted: "bg-grey-500",
@@ -127,10 +160,12 @@ export function BarTrack({
    * row IS full width and carries its figure, which is the self-labelling exemption
    * `project.md` grants. On an unsorted set, or a grid of bars, the track stays.
    *
-   * The fill goes a step darker because it loses the track it was measured against:
-   * `teal-500` was chosen at 4.51:1 on `surface-sunken`, and with the track gone the
-   * bar sits on the card's own white, where the brand teal is 6.63:1 and reads as a
-   * mark rather than as a tint.
+   * **The fill does NOT go a step darker any more.** It did, on the argument that a bar
+   * losing its track should gain weight to keep reading as a mark — and the measurement
+   * does not support it: `teal-500` is 4.51:1 on the track and 5.14:1 on the card's own
+   * white, so the bare bar is the stronger of the two before anything is changed. What
+   * the deeper step actually bought was two teals doing one job on one tab. See
+   * `BARE_FILL`.
    */
   bare?: boolean;
 }) {
@@ -157,8 +192,18 @@ export function BarTrack({
           "h-full",
           // The tone decides the hue; `emphasis` and `bare` decide the depth within
           // the default tone. A toned row is already a different kind of thing, so it
-          // takes its own fill on both tracks rather than a darker step of the teal.
-          bare || emphasis ? BARE_FILL[tone] : TRACKED_FILL[tone],
+          // takes its own fill on every track rather than a darker step of the teal.
+          //
+          // **Emphasis is tested FIRST, and the order matters now that a bare subject
+          // bar is `teal-500`.** The two used to share one map, so which branch ran was
+          // immaterial; with `BARE_FILL.subject` matching the tracked fill, an
+          // emphasised row on a bare chart would otherwise draw in the same teal as the
+          // rows it is meant to stand out from.
+          emphasis
+            ? EMPHASIS_FILL[tone]
+            : bare
+              ? BARE_FILL[tone]
+              : TRACKED_FILL[tone],
         )}
         // A floor, so a genuinely tiny share is a visible mark rather than an
         // apparently missing bar.
@@ -799,34 +844,42 @@ export function AdjacentBlocks({
                   ? // White on the brand teal: 5.86:1, and the only ink allowed on it.
                     "bg-accent-teal text-text-inverse"
                   : /**
-                     * **`teal-300` with a brand-teal outline, and the first version of
-                     * this was invisible.** It was `surface-tint`, which IS `teal-100` —
-                     * the mint the zone under it is filled with — so the smaller block
-                     * measured 1.00:1 against its own ground and the chart drew one
-                     * block and a gap. `teal-200` is 1.30:1 there and `teal-300` is
-                     * 1.82:1, a visible step and still under the 3:1 that 1.4.11 asks
-                     * of a graphic carrying information.
+                     * **`teal-500`, filled, with NO OUTLINE — the outline is removed at
+                     * ANSR's request and the fill had to move for it to go.**
                      *
-                     * So the block's EXTENT is carried by the outline rather than by the
-                     * fill: the brand teal is 7.72:1 on the mint, so where the block
-                     * ends is unambiguous, and the fill is left free to be the pale aqua
-                     * the composition asks for. Fill against outline is the device this
-                     * file already uses wherever a distinction must survive greyscale.
+                     * It was `teal-300` behind a brand-teal border, and the border was
+                     * load-bearing rather than decorative: `teal-300` measures 1.82:1 on
+                     * the mint zone under it, so the block's own EXTENT was carried by
+                     * the outline and dropping the border alone would have drawn one
+                     * block and a gap. ANSR read the outline as a hard dark rule around
+                     * a pale box, which beside the solid block next to it made the pair
+                     * look like two different kinds of object rather than two shares of
+                     * one quantity.
                      *
-                     * The figure is the brand teal at 4.23:1 on `teal-300` — under AA
-                     * for body text and comfortably over the 3:1 large-text floor, which
-                     * is the threshold that applies at 24/30px Bold. Its LABEL sits
-                     * outside the block, on the zone, where the same ink is 7.72:1.
+                     * So the pair is now the ordinal step this file already uses
+                     * everywhere else — the brand teal against `teal-500`, exactly the
+                     * pair `BarTrack` uses for emphasis against default. `teal-500` is
+                     * 5.14:1 on white and deeper still on the mint, so the extent is
+                     * unambiguous from the fill and needs nothing drawn round it; white
+                     * on it is 5.14:1, which is legal at any size and comfortably clear
+                     * at the 24/30px Bold this figure sets.
+                     *
+                     * Darker means more is preserved: the larger share takes the deeper
+                     * teal, so the ramp still reads in greyscale.
                      */
-                    "border border-accent-teal bg-teal-300 text-accent-teal",
+                    "bg-teal-500 text-text-inverse",
               )}
             >
               {block.figure}
             </p>
             <p
               className={cn(
+                // The label's rule follows its own block's fill, so the two stay one
+                // column. It moves with the fill above for the same reason it was
+                // `teal-300` before: a rule in a colour the block no longer uses reads as
+                // a third step in a two-step ramp.
                 "border-t-2 pt-2 text-xs text-text",
-                index === 0 ? "border-accent-teal" : "border-teal-300",
+                index === 0 ? "border-accent-teal" : "border-teal-500",
               )}
             >
               {block.label}
@@ -1636,7 +1689,6 @@ export function OrdinalGrid({
   steps,
   rows,
   labelledBy,
-  anchorColumn,
   keyLabel,
 }: {
   columns: readonly string[];
@@ -1659,8 +1711,20 @@ export function OrdinalGrid({
     icon?: React.ReactNode;
   }>;
   labelledBy: string;
-  /** The column the visitor is deciding about. Emphasised, never re-ordered. */
-  anchorColumn?: string;
+  /**
+   * **`anchorColumn` is gone, at ANSR's request, and with it all three of its
+   * emphases.** The subject column was tinted `surface-pale` the whole height of the
+   * grid, its heading took the brand teal, and its filled segments went a step darker
+   * than the comparators'. ANSR read the band as a highlight over India, on a grid whose
+   * whole job is to let a reader compare four locations on equal terms — an emphasis on
+   * one column is a thumb on that scale, and the visitor knows which column is theirs
+   * because it is named.
+   *
+   * The column is still DERIVED — `anchorColumnFor` in `screen2.ts` still finds it and
+   * `grid.anchorColumn` still carries it, unit-tested on both of its rules — so
+   * restoring the emphasis is a prop rather than a derivation. It is drawn by nothing,
+   * which is the same standing `industry.shareOfIndia` has on Screen 1.
+   */
   keyLabel: string;
 }) {
   return (
@@ -1691,14 +1755,9 @@ export function OrdinalGrid({
                     // cell's four segments are 76px of mark in a column two or three
                     // times that wide, so a leading-aligned heading sat over the first
                     // segment rather than over the group and read as a label for it.
-                    "px-4 pb-2 text-center text-xs font-semibold tracking-caps uppercase",
-                    column === anchorColumn
-                      ? // The subject column, tinted the whole height of the grid. The
-                        // pale mint is about 2% off white, so it reads as a band rather
-                        // than as a fill — which is what an emphasis on the column a
-                        // visitor is deciding about should do beside four comparators.
-                        "bg-surface-pale text-accent-teal"
-                      : "text-text-muted",
+                    // One treatment for every column, including the visitor's own. See
+                    // the note on `keyLabel` for why the emphasis came off.
+                    "px-4 pb-2 text-center text-xs font-semibold tracking-caps text-text-muted uppercase",
                   )}
                 >
                   {column}
@@ -1726,14 +1785,12 @@ export function OrdinalGrid({
                   </span>
                 </th>
                 {row.cells.map((cell, index) => {
-                  const anchored = columns[index] === anchorColumn;
                   return (
                     <td
                       key={columns[index]}
-                      className={cn(
-                        "px-4 py-3 align-middle",
-                        anchored ? "bg-surface-pale" : "",
-                      )}
+                      // No fill on any column. The `surface-pale` band that ran the
+                      // height of the subject column came off at ANSR's request.
+                      className="px-4 py-3 align-middle"
                     >
                       {/* The accessible reading, and the only one that is not
                           positional. Hidden from the eye rather than from the
@@ -1754,10 +1811,14 @@ export function OrdinalGrid({
                               // `teal-500` for the same measured reason as
                               // `BarTrack`: `teal-400` is 2.15:1 against this
                               // `surface-sunken` track, under the 3:1 non-text floor.
+                              //
+                              // One fill for every column now. The subject column's
+                              // segments used to take the deeper `accent-teal`, which
+                              // was the third of the three emphases removed with
+                              // `anchorColumn` — a darker mark in one column is read as
+                              // a higher rating, not as "this is you".
                               stepIndex < cell.step
-                                ? anchored
-                                  ? "bg-accent-teal"
-                                  : "bg-teal-500"
+                                ? "bg-teal-500"
                                 : "bg-surface-sunken",
                             )}
                           />
@@ -2202,8 +2263,23 @@ export function RangeBenchmark({
       </p>
 
       {/* Everything below is a second reading of the sentence above, so the whole
-          block is hidden: a screen reader has already been given "7 – 70 days". */}
-      <div aria-hidden="true" className="px-7">
+          block is hidden: a screen reader has already been given "7 – 70 days".
+
+          **The 28px inset is GONE, at ANSR's request, and the endpoint figures moved to
+          pay for it.** The rail used to sit inside `px-7` because both endpoint figures
+          were centred on their own marks and the trailing one therefore overhung the
+          rail's end by about half its width — and the tool is framed, so it cannot own a
+          horizontal scrollbar to absorb that. The cost was that the rail started 28px
+          inside the card's text start line: the value above it, the endpoint labels below
+          it and the card's own heading all began at one edge and the drawing began at
+          another, which is the asymmetry ANSR reported across the two velocity cards.
+
+          So the rail now runs the card's full measure and the trailing figure is
+          right-ALIGNED to the rail's end rather than centred on it — the same call the
+          origin `0` already made at the leading end, and for the same reason. The two
+          figures now bracket the rail exactly as the `0` and the heading do, and nothing
+          can overhang. */}
+      <div aria-hidden="true">
         <div className="relative">
           {/* The rail. Grey for the run-up, teal for the span between the two
               choosable positions. */}
@@ -2258,7 +2334,11 @@ export function RangeBenchmark({
                 <span className="ps-1 font-regular text-text-muted">{unit}</span>
               ) : null}
             </span>
-            <span className="absolute end-0 translate-x-1/2 text-sm font-bold whitespace-nowrap text-text tabular-nums">
+            {/* Flush to the rail's end rather than centred on it, which is what let the
+                enclosing 28px inset go. The high mark is itself flush INSIDE the rail's
+                end, so the figure's trailing edge and the mark's trailing edge line up —
+                the alignment reads the same as centring did, and it costs no overhang. */}
+            <span className="absolute end-0 text-sm font-bold whitespace-nowrap text-text tabular-nums">
               {high}
               {unit ? (
                 <span className="ps-1 font-regular text-text-muted">{unit}</span>
@@ -2310,6 +2390,25 @@ export function RangeBenchmark({
    `.gcc-milestones` positions them absolutely only where there is room. One tree, one
    reading, and the rail is `aria-hidden` decoration that simply does not exist below
    the breakpoint.
+
+   **It draws MORE THAN ONE rail now, and the second one is a comparison against the
+   first.** The component takes a list of tracks rather than a list of points, and every
+   track's shares are computed by the caller against ONE denominator — so a waypoint that
+   happens two thirds of the way through the market's own curve sits at two thirds of
+   every rail. That is the whole reason the second rail is worth drawing: the reader is
+   comparing horizontal positions, and two rails on two axes would compare nothing.
+
+   **EVERY TRACK IS DRAWN IDENTICALLY, at ANSR's request, and the two earlier attempts to
+   differentiate the second one are both reverted.** It had discs where the first has
+   rings, its figures in the heading teal, and its waypoint names clipped to a screen
+   reader on the argument that a second set of the same four strings is chrome. All three
+   made the lower rail read as a different KIND of chart from the one it is being compared
+   with — which is the one thing it must not do, since the comparison is the whole point
+   and it only works if the two drawings are the same drawing.
+
+   So the only difference between two tracks is the CAPTION above each and the figures on
+   it. That is enough: the caption names the rail, and one of them carries the ANSR lockup,
+   which is a stronger and more accessible carrier than a fill ever was.
    ========================================================================== */
 
 export interface MilestonePoint {
@@ -2321,34 +2420,72 @@ export interface MilestonePoint {
   share: number;
 }
 
-export function MilestoneTrack({ points }: { points: readonly MilestonePoint[] }) {
+export interface MilestoneTrackSpec {
+  /**
+   * What this rail IS, in as few words as the reader needs. Rendered above the rail at
+   * the caption step; a node rather than a string so a caller can set a drawn wordmark
+   * in it.
+   */
+  caption: React.ReactNode;
+  points: readonly MilestonePoint[];
+}
+
+export function MilestoneTrack({ tracks }: { tracks: readonly MilestoneTrackSpec[] }) {
   return (
-    <div className="px-7">
-      <dl className="gcc-milestones">
-        {/* The line itself. One element, drawn behind the items, so there is exactly
-            one rail however many milestones a progression has. */}
-        <div aria-hidden="true" className="gcc-milestones__rail" />
-        {points.map((point) => (
-          <div
-            key={point.label}
-            className="gcc-milestones__item"
-            style={{ "--gcc-at": `${point.share * 100}%` } as React.CSSProperties}
-          >
-            {/* **The milestone above the line and its duration below**, which is the
-                composition's own instruction and is also the right way round: the
-                milestone is what the reader is aiming at and the duration is the
-                answer. In the DOM the term precedes its definition regardless, so a
-                screen reader reads "To 50 FTEs, 6". */}
-            <dt className="gcc-milestones__label text-xs font-semibold text-text">
-              {point.label}
-            </dt>
-            <span aria-hidden="true" className="gcc-milestones__dot" />
-            <dd className="gcc-milestones__figure text-lg font-bold tracking-display text-text tabular-nums">
-              {point.figure}
-            </dd>
-          </div>
-        ))}
-      </dl>
+    // The 28px inset stays here, where `RangeBenchmark`'s equivalent has gone: these
+    // items are absolutely positioned and translated by half their own width, so the
+    // last waypoint on a 100% share genuinely overhangs the rail's end by up to half of
+    // `max-inline-size` — and the tool is framed and cannot own a horizontal scrollbar.
+    // `RangeBenchmark` could align its trailing figure to the end instead; a centred
+    // absolute item cannot.
+    // **`gap-8` between tracks, against the `space-2` each chart sits below its own
+    // caption.** A caption belongs to the rail under it, so that pair has to be the
+    // tighter of the two distances — at the earlier `gap-5` over a `space-4` inset the two
+    // gaps were near enough equal that the second caption read as a note on the first
+    // chart. Four times the inset is the separation ANSR asked for, and it is the same
+    // grouping rule every stacked block on these screens follows.
+    <div className="flex flex-col gap-8 px-7">
+      {tracks.map((track, index) => (
+        <div key={index} className="gcc-milestone-track flex flex-col">
+          {/* Above its own rail, at the caption step, in the same ink on every track —
+              the tracks are drawn identically and their captions are the only thing
+              telling them apart, so a coloured one would be re-introducing the
+              differentiation that came off the rails themselves. */}
+          <p className="text-xs font-medium text-text-muted">{track.caption}</p>
+          <dl className="gcc-milestones">
+            {/* The line itself. One element per track, drawn behind that track's items,
+                so there is exactly one rail however many milestones it has. */}
+            <div aria-hidden="true" className="gcc-milestones__rail" />
+            {track.points.map((point) => (
+              <div
+                key={point.label}
+                className="gcc-milestones__item"
+                style={{ "--gcc-at": `${point.share * 100}%` } as React.CSSProperties}
+              >
+                {/* **The milestone above the line and its duration below**, which is the
+                    composition's own instruction and is also the right way round: the
+                    milestone is what the reader is aiming at and the duration is the
+                    answer. In the DOM the term precedes its definition regardless, so a
+                    screen reader reads "50 FTEs, 6".
+
+                    **Every track carries its names visibly**, including a second track
+                    naming the same four waypoints. Clipping the lower set to a screen
+                    reader was tried and reverted at ANSR's request: it saved four
+                    repeated strings and cost the second rail its own reading, so the
+                    lower chart no longer looked like the upper one. Two rails a reader is
+                    asked to compare have to be the same object twice. */}
+                <dt className="gcc-milestones__label text-xs font-semibold text-text">
+                  {point.label}
+                </dt>
+                <span aria-hidden="true" className="gcc-milestones__dot" />
+                <dd className="gcc-milestones__figure text-lg font-bold tracking-display text-text tabular-nums">
+                  {point.figure}
+                </dd>
+              </div>
+            ))}
+          </dl>
+        </div>
+      ))}
     </div>
   );
 }
@@ -2358,8 +2495,24 @@ export function MilestoneTrack({ points }: { points: readonly MilestonePoint[] }
 
    `Dumbbells` above draws the same data as a stack of rows sharing one axis, which is
    the right reading inside a grid of other charts. This is the reading the finance
-   composition asks for: one card per measure, the two indices at the display step, and
-   a rail underneath that is a second reading of them rather than the primary one.
+   composition asks for: one card per measure, and its two indices ON the rail rather than
+   above it.
+
+   **The pair of display figures is GONE at ANSR's request, and the labels moved onto the
+   marks.** The card stated each index twice — a 30px figure under its column name, and
+   the same number again as a small label under its own mark — so a card whose whole
+   subject is one difference carried four numbers. What is left is the rail: each point is
+   its name, its mark and its figure in one positioned column, and the figure moved up to
+   the step the pair used to hold so the card still has a value to read at a glance. The
+   geometry is `.gcc-milestones`', for the reason that file gives.
+
+   **Nothing here is `aria-hidden` except the marks, and that is what the removal
+   changed.** The whole rail used to be hidden wholesale, which was correct while the
+   figures existed above it in text; with the pair gone, hiding the rail would leave the
+   card's own numbers in no accessible reading at all. So the `dl` is real — each column
+   name is a `dt` and its index the `dd` that follows it — and only the marks and the
+   axis furniture are hidden, which is this file's rule everywhere else: a mark is a
+   second reading of a figure already present.
 
    **The rail still starts at zero, and that is a deliberate departure from the supplied
    render.** The reference draws a 50-to-125 axis with ticks at 50, 75, 100 and 125,
@@ -2379,13 +2532,12 @@ export function MilestoneTrack({ points }: { points: readonly MilestonePoint[] }
    survives greyscale. The base takes the fill because it is the reference point the
    card is read against.
 
-   **The key is on each figure's own label rather than in a legend for the set, and that
-   replaces the shared legend the composition asks for.** A legend is what a chart needs
-   when its marks are unlabelled; here every card already names both of its columns above
-   its own two figures, so a legend beneath the set made each column name appear four
-   times in one section — three cards plus the key. Putting the disc and the ring beside
-   the names that are already there says the same thing in the place the reader is
-   looking, and removes two of the four repeats.
+   **There is no legend, and there is no key beside a figure either.** The composition asks
+   for a shared Tier 1 / Tier 2 legend above the three cards, which is what a chart needs
+   when its marks are unlabelled. These marks are labelled — each one carries its own
+   column name directly above it — so a legend would be the same two strings a third and
+   fourth time in one section. The device the labels replaced was a disc and a ring drawn
+   beside the old display figures, which is now the same repetition one step smaller.
    ========================================================================== */
 
 export interface IndexSpreadPoint {
@@ -2407,92 +2559,79 @@ export function IndexSpread({
   const start = Math.min(base.share, comparator.share);
   const end = Math.max(base.share, comparator.share);
   return (
-    <div className="flex flex-col gap-5">
-      {/* The two figures, in text, base first. This is the reading; the rail below is
-          the second one, which is why the rail is hidden wholesale. */}
-      <dl className="grid grid-cols-2 gap-x-4">
-        {[base, comparator].map((point, index) => (
-          <div key={point.column} className="flex min-w-0 flex-col gap-1">
-            <dt className="flex items-center gap-2 text-xs text-text-muted">
-              {/* The marker this column takes on the rail, beside the name it belongs
-                  to. Decorative: the name is right next to it. */}
-              <span
-                aria-hidden="true"
-                className={cn(
-                  "inline-block size-2.5 shrink-0 rounded-full",
-                  index === 0
-                    ? "bg-accent-teal"
-                    : "border-2 border-teal-500 bg-surface",
-                )}
-              />
-              <span className="min-w-0">{point.column}</span>
-            </dt>
-            {/* **The heading teal, never the orange.** A card's own value is evidence
-                inside a section; the tab's one orange role is the figure row at the
-                head of it, and two orange roles in one band is what the brand rule
-                forbids. `--ansr-accent` is 6.63:1 on white and legal at any size. */}
-            <dd className="text-3xl leading-tight font-bold tracking-display text-accent-teal tabular-nums">
-              {point.figure}
-            </dd>
-          </div>
-        ))}
-      </dl>
-
-      {/* Hidden wholesale: both figures are in text directly above, and the axis's own
-          two ends are labelled below for the eye rather than for the reading. */}
-      <div aria-hidden="true" className="flex flex-col gap-1.5">
-        <div className="relative h-4 w-full">
-          <div className="absolute inset-x-0 top-1/2 h-px -translate-y-1/2 bg-border-subtle" />
-          {/* Zero, drawn, so the axis is visibly not truncated. See the block comment. */}
-          <div className="absolute inset-y-0 start-0 w-px bg-border-strong" />
-          <div
-            className="absolute top-1/2 h-1 -translate-y-1/2 bg-teal-200"
-            style={{
-              insetInlineStart: `${start * 100}%`,
-              inlineSize: `${Math.max(end - start, 0) * 100}%`,
-            }}
-          />
-          {/* The comparator first in the DOM so the base's disc paints over it where the
-              two coincide — a ring drawn on top of a filled disc reads as neither. */}
-          <span
-            className="absolute top-1/2 size-3.5 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-teal-500 bg-surface"
-            style={{ insetInlineStart: `${comparator.share * 100}%` }}
-          />
-          <span
-            className="absolute top-1/2 size-3.5 -translate-x-1/2 -translate-y-1/2 rounded-full bg-accent-teal"
-            style={{ insetInlineStart: `${base.share * 100}%` }}
-          />
-        </div>
-        {/* **Both ends of the axis, labelled, and without them the rail is unreadable.**
-            Two marks near the top of a zero-based track render as a short segment
-            floating at the right — the same defect `RangeBar` was rebuilt to fix, where a
-            band with no stated axis read as "a value near the maximum". The ticks are what
-            say the track starts at zero and ends at the base, which is the whole reason
-            the truncated domain the reference asks for could be refused. */}
-        <div className="relative h-4 text-xs text-text-muted tabular-nums">
-          <span className="absolute start-0">0</span>
-          {/* **The comparator's own figure, under its marker, at ANSR's request.** It is
-              the third place the same number appears on one card — the figure above, this
-              label, and the delta beside the heading as a difference from 100 — which is
-              the repetition this screen usually removes. Asked for because the rail is
-              where a reader looks to see WHERE the cheaper option sits, and a positioned
-              mark with no number on it sends them back up to the pair of figures to work
-              out which of the two it is.
-
-              Centred on the mark, and the base's end label is what it has to clear: at 85
-              against 100 the two sit 15% of the rail apart, which is 30px on the narrowest
-              card this draws in and enough for two two-digit labels. `whitespace-nowrap`
-              so a centred label never wraps into two lines and drags the row's height. */}
-          <span
-            className="absolute -translate-x-1/2 font-semibold whitespace-nowrap text-accent-teal"
-            style={{ insetInlineStart: `${comparator.share * 100}%` }}
-          >
-            {comparator.figure}
-          </span>
-          <span className="absolute end-0">{base.figure}</span>
-        </div>
+    // `.gcc-index-rail` holds every measurement, because the rail's offset is derived
+    // from the reserved label row and two copies of that number is how a rail stops
+    // meeting its marks. It also carries the half-marker inset at each end: the axis runs
+    // zero to the base, so the base's share is 1 by construction and its mark would
+    // otherwise hang half outside the column.
+    <dl className="gcc-index-rail">
+      <div aria-hidden="true" className="gcc-index-rail__line" />
+      {/* The gap between the two points, which is what this card is about. */}
+      <div
+        aria-hidden="true"
+        className="gcc-index-rail__span"
+        style={
+          {
+            "--gcc-from": `${start * 100}%`,
+            "--gcc-span": `${Math.max(end - start, 0) * 100}%`,
+          } as React.CSSProperties
+        }
+      />
+      {/* **Zero, drawn and labelled, which is the record of refusing the supplied 50-to-125
+          axis.** The reference's domain puts 75 against 100 a third of the way along a
+          track rather than three quarters, and `project.md` bans exactly that for a cost
+          index. Axis furniture rather than a point being compared, so the whole item is
+          hidden and its figure is muted — the two real readings are the `dt`/`dd` pairs
+          below it. */}
+      <div
+        aria-hidden="true"
+        className="gcc-index-rail__item"
+        style={{ "--gcc-at": "0%" } as React.CSSProperties}
+      >
+        <span className="gcc-index-rail__label" />
+        <span className="gcc-index-rail__tick" />
+        <span className="gcc-index-rail__figure text-lg leading-tight font-medium text-text-muted tabular-nums">
+          0
+        </span>
       </div>
-    </div>
+      {[base, comparator].map((point, index) => (
+        <div
+          key={point.column}
+          className="gcc-index-rail__item"
+          style={{ "--gcc-at": `${point.share * 100}%` } as React.CSSProperties}
+        >
+          {/* **The column's name above its own mark, at ANSR's request.** It sat above a
+              display figure with a disc or a ring beside it; on the mark it names, the
+              marker's shape needs no key at all. In the DOM the term still precedes its
+              definition, so a screen reader reads "Tier 1, 100". */}
+          <dt className="gcc-index-rail__label text-xs font-medium text-text-muted">
+            {point.column}
+          </dt>
+          {/* Form, not hue: a disc for the base, a ring for the comparator. The
+              composition asks for dark teal against turquoise, and `--ansr-teal-bright` is
+              2.44:1 on white, so it is unavailable for a mark on a light ground at any
+              size. Decorative — its figure is directly below it. */}
+          <span
+            aria-hidden="true"
+            className={cn(
+              "gcc-index-rail__dot",
+              index === 0 ? "gcc-index-rail__dot--base" : undefined,
+            )}
+          />
+          {/* **The heading teal, never the orange.** A card's own value is evidence inside
+              a section; the tab's one orange role is the figure row at the head of it, and
+              two orange roles in one band is what the brand rule forbids. `--ansr-accent`
+              is 6.63:1 on white and legal at any size.
+
+              `text-lg` rather than the `text-3xl` the deleted pair held: three figures now
+              share one row, and the two that matter sit 15 to 25% of the rail apart, which
+              at the display step would collide on the narrowest card this draws in. */}
+          <dd className="gcc-index-rail__figure text-lg leading-tight font-bold tracking-display text-accent-teal tabular-nums">
+            {point.figure}
+          </dd>
+        </div>
+      ))}
+    </dl>
   );
 }
 
@@ -2525,9 +2664,21 @@ export function IndexSpread({
    an admin-editable string; with it gone, `IndexTable` reads none, and `DeliveryLocations`
    no longer needs to know which tab it is on.
 
-   The alignment is a consequence rather than a separate decision: with no bar to sit
-   beside, a cell is one element, so the figures line up on each column's own start edge
-   and the table no longer needs a minimum width wider than its card.
+   **The figures are CENTRED in equal columns, at ANSR's request, and the two go
+   together.** Start-aligned digits in auto-width columns put each column's numbers hard
+   against a boundary whose position was decided by the longest header on it — so
+   "PHILIPPINES" pushed its own three digits into the middle of a wide column while
+   "MEXICO" held its against the left of a narrow one, and the twenty figures read as
+   five ragged groups rather than one grid. A fixed layout gives every location column
+   the same width and centring puts the digits on that column's own axis, which is what
+   makes a column readable DOWN — the reading this component exists for. `tabular-nums`
+   already guarantees the digits themselves align.
+
+   The row-header column takes a quarter and the five locations divide the rest, so the
+   equal widths are a property of the table rather than of the strings in it. The minimum
+   width is back for a different reason from the one that removed it: a fixed layout never
+   overflows, so without it a phone would compress each column until its own header
+   wrapped to three lines. It is the container that scrolls, never the document.
    ========================================================================== */
 
 export interface IndexTableRow {
@@ -2569,25 +2720,31 @@ export function IndexTable({
       role="group"
       aria-labelledby={labelledBy}
     >
-      {/* **No `min-w-2xl` any more.** The minimum was what the bars needed: sixteen
-          tracks each wanting enough width to be a comparison forced the table wider than
-          its own card at every breakpoint. Six columns of digits fit a desktop card
-          unaided, so the table sizes to its content and only a phone scrolls it — the
-          container stays because a phone still does. */}
-      <table className="w-full border-collapse text-sm">
+      {/* `table-fixed`, which is what makes the five location columns equal — under auto
+          layout each one sized to its own header and no two were the same width. The
+          minimum is what the fixed layout costs on a phone: with nothing to overflow, six
+          columns would divide a 340px card and every header would wrap. `min-w-xl` and
+          not a step above it, because the tablet card is the width that decides this — at
+          `2xl` the last location fell outside a 768 card and had to be scrolled to, on a
+          layout that fits there unaided. */}
+      <table className="w-full min-w-xl table-fixed border-collapse text-sm">
         <thead>
           <tr>
+            {/* A quarter to the row labels, so the remaining five divide the rest evenly
+                — the widths come from the table, not from the longest string in it. */}
             <th
               scope="col"
-              className="pb-3 pe-4 text-start text-xs font-semibold tracking-caps text-text-muted uppercase"
+              className="w-1/4 pb-3 pe-4 text-start text-xs font-semibold tracking-caps text-text-muted uppercase"
             >
               {rowHeader}
             </th>
             {columns.map((column) => (
+              /* Centred, and the padding is symmetric for the same reason: the header
+                 sits on its column's own axis, directly above the digits. */
               <th
                 key={column}
                 scope="col"
-                className="pb-3 pe-4 ps-4 text-start text-xs font-semibold tracking-caps text-text-muted uppercase"
+                className="px-3 pb-3 text-center text-xs font-semibold tracking-caps text-text-muted uppercase"
               >
                 {column}
               </th>
@@ -2607,7 +2764,7 @@ export function IndexTable({
                 <td
                   key={cell.column}
                   className={cn(
-                    "py-3 pe-4 ps-4 align-middle",
+                    "px-3 py-3 text-center align-middle",
                     /**
                      * **The base column, filled — and now the only fill in the table.**
                      * It used to yield to the emphasised row, because two tints of one

@@ -91,13 +91,25 @@ label on its own fill is limited to `teal-100`/`200`/`300`.
 2.98:1, so a tinted field needs a darker edge.
 
 **A bar may be warm in exactly one situation: a set holding a comparator as well as its subjects.**
-The HR salary ranking is it — four specialisms in the heading teal, the all-roles row in
-`--ansr-action` at 3.35:1 on white, one held-back row in `--ansr-grey-500` at 3.28:1, the only light
-neutral clearing the 3:1 floor 1.4.11 asks of a non-text graphic. `--ansr-teal-300` is the blue-grey a
-muted row wants and measures ~2.3:1, so it is unavailable whatever it looks like. Two conditions: the
-row must name itself in TEXT as well ("All roles (reference)"), because this palette cannot separate
-categories by hue; and the warm fill is offered only on a BARE track, since `--ansr-action` drops to
-2.61:1 on the grey one. See `BarTone`.
+The HR salary ranking is it — seven subject rows in `--ansr-teal-500` and the all-roles row in
+`--ansr-action` at 3.35:1 on white. Two conditions: something in TEXT must say which row is the
+comparator, because this palette cannot separate categories by hue; and the warm fill is offered only
+on a BARE track, since `--ansr-action` drops to 2.61:1 on the grey one. The text carrier used to be
+"(reference)" inside the row's own label, then briefly a sentence under the chart; it is now the
+self-descriptive label "All roles" itself, at ANSR's request — no separate note. See `BarTone`.
+
+**`muted` is the third tone and is carried by nothing today.** It is `--ansr-grey-500` at 3.28:1, the
+only light neutral clearing the 3:1 floor 1.4.11 asks of a non-text graphic; `--ansr-teal-300` is the
+blue-grey a held-back row wants and measures ~2.3:1, so it is unavailable whatever it looks like. The
+salary ranking's "roles outside engineering R&D" row took it until ANSR asked for it back on the
+subject teal — beside the teal bars and one orange, a grey one read as a third category rather than
+as another measurement of the same thing.
+
+**A bar takes ONE teal whether or not it has a track.** `--ansr-teal-500` is 4.51:1 on the
+`surface-sunken` track and 5.14:1 on the card's own white, so a bare bar needs no depth step to keep
+reading as a mark — it used to take the brand teal, which put two teals on one tab doing one job. The
+brand teal is now the `emphasis` fill only, which is the one place a bar is meant to be deeper than
+its neighbours.
 
 **Two gradient caps, both forced by measurement.** `--ansr-gradient-teal` is capped at `teal-700` —
 its old peak put `--ansr-text-inverse-muted` at 3.30:1, a latent AA failure on every band using it.

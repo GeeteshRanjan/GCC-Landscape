@@ -144,23 +144,32 @@ function parseNumber(text: string): number | null | "invalid" {
 /* --------------------------------------------------------------------------
    Three couplings the admin cannot otherwise see
 
-   Three places on the public screens read an admin-editable STRING and degrade
-   quietly when it changes. Each degradation is documented where it lives and each
-   is an accepted trade — the figure, the order and the words are all unaffected, so
-   nothing the screen CLAIMS can move. What was missing is that the person renaming
-   the string had no way to know. These notices are that, and nothing more: they are
-   advisory, they never block a save, and they never mark a field invalid.
+   Three places on the public screens read something this form controls and change
+   quietly when it moves. Each is documented where it lives. What was missing is that
+   the person typing had no way to know. These notices are that, and nothing more: they
+   are advisory, they never block a save, and they never mark a field invalid.
+
+   **TWO OF THE THREE ARE COSMETIC AND THE THIRD IS NOT, and the wording has to keep
+   them apart.** The glyph column and the comparator tone are accepted trades — the
+   figure, the order and the words are all unaffected, so nothing the screen CLAIMS can
+   move, and the notices for both say as much. The scale-milestone rule is different in
+   kind: it warns that the public card would state something FALSE. It gets no softening
+   clause for that reason.
+
+   **One earlier notice was deleted rather than kept, because its coupling went.** A
+   ratings grid used to emphasise the column called "India" — a pale band the height of
+   the grid, a teal heading, deeper segments — so renaming it lost the emphasis and the
+   admin was warned. ANSR asked for that emphasis off the capability grid entirely;
+   `grid.anchorColumn` is still derived and is drawn by nothing, so renaming the column
+   now changes nothing a visitor sees. A notice describing a consequence that no longer
+   happens is worse than no notice: it is a warning the reader cannot verify and will
+   learn to ignore.
 
    **The three key lists below are MIRRORS, copied rather than imported, and they can
-   drift.** Neither source is importable here: `metric-card.tsx` and `hr-view.tsx` are
-   public components — importing either would pull the public screen's React tree into
-   the admin bundle, and this editor must not depend on a public component — and
-   `SUBJECT_COLUMN` lives in `screen2.ts` beside the dataset-shaped code the admin
-   surface deliberately keeps at arm's length. So the copies are the cheap option and
-   the drift is the cost. What catches the drift is `tests/unit/charts-data.test.ts`,
-   which asserts the consequence rather than the constant — that renaming the subject
-   column loses a grid's emphasis without throwing — plus these notices being read by
-   whoever next renames a row. If a source list gains an entry, add it here too.
+   drift.** No source is importable here: `metric-card.tsx`, `hr-view.tsx` and
+   `milestone-card.tsx` are public components, and importing any of them would pull the
+   public screen's React tree into the admin bundle. So the copies are the cheap option
+   and the drift is the cost. If a source list gains an entry, add it here too.
    -------------------------------------------------------------------------- */
 
 /**
@@ -183,14 +192,44 @@ const GLYPH_ROWS: readonly string[] = [
 /**
  * Mirror of `SALARY_TONES` in `src/components/screen2/hr-view.tsx`.
  *
- * Keyed by breakdown ENTRY label. These two rows of the salary ranking draw in their
- * own tone so the comparator reads as the comparator; every other row takes the
- * subject tone.
+ * Keyed by breakdown ENTRY label. This row of the salary ranking draws in its own tone
+ * so the comparator reads as the comparator; every other row takes the subject tone.
+ *
+ * **One entry, not two.** "Non-ER&D roles" took the muted grey and no longer does — it
+ * was reading as a third category rather than as another measurement of the same thing —
+ * and it has been renamed "Roles outside engineering R&D" besides. "All roles" lost its
+ * "(reference)" suffix at ANSR's request; the self-descriptive label "All roles" names
+ * the comparator itself now, so there is no sentence under the chart to keep in step.
  */
-const TONED_ENTRIES: readonly string[] = ["All roles (reference)", "Non-ER&D roles"];
+const TONED_ENTRIES: readonly string[] = ["All roles"];
 
-/** Mirror of `SUBJECT_COLUMN` in `src/data/screen2.ts`. */
-const SUBJECT_COLUMN = "India";
+/**
+ * Mirror of `ANSR_MONTHS` in `src/components/screen2/milestone-card.tsx`, and of the two
+ * metric ids that card is drawn for.
+ *
+ * **This is the one coupling here that can make the public screen state something
+ * false, and it is the only reason this rule exists.** The scale-milestone card draws a
+ * second rail captioned "Built with ANSR" whose figures are supplied in code rather than
+ * held in the dataset — the project owner's decision, recorded in project.md — and it is
+ * drawn at the MARKET rail's own positions, so the numbers are the only thing saying the
+ * ANSR curve is the faster one. An admin editing the market months down to 3, 6, 12, 18
+ * would leave a card claiming ANSR reaches fifty FTEs in four months beside a market
+ * that reaches it in three. Nothing else catches that: the supplied months are not in
+ * the dataset, so the schema cannot see them, the publish diff cannot see them and
+ * `data:verify` cannot see them.
+ *
+ * **Two deviations from its two siblings, both deliberate.** It keys on `metric.id`
+ * rather than on a label, because a figure has no name to key on and the id is the one
+ * handle admin cannot change. And it reads the FORM ALONE rather than comparing the form
+ * with the saved metric: the other two warn about something an edit is taking away,
+ * where this warns about the state the card would be left in — which is worth saying even
+ * on a metric that was already wrong before this dialog opened.
+ */
+const ANSR_RAIL_IDS: readonly string[] = [
+  "ops-scale-milestones",
+  "hr-scale-milestones",
+];
+const ANSR_RAIL_MONTHS: readonly number[] = [4, 8, 16, 24];
 
 interface Coupling {
   id: string;
@@ -231,15 +270,8 @@ function couplings(metric: Metric, form: Form): Coupling[] {
       });
     }
 
-    if (
-      trimmed(structure.columns).includes(SUBJECT_COLUMN) &&
-      !trimmed(form.columns).includes(SUBJECT_COLUMN)
-    ) {
-      notices.push({
-        id: "columns",
-        text: `Without a column called “${SUBJECT_COLUMN}” the grid stops tinting and colouring the column the visitor is deciding about, so their eye no longer lands on it first. Every cell still states its own value.`,
-      });
-    }
+    // The subject-column notice used to be here and is gone with the emphasis it warned
+    // about. See the block comment above.
   }
 
   if (structure.kind === "breakdown") {
@@ -252,6 +284,34 @@ function couplings(metric: Metric, form: Form): Coupling[] {
         id: "entries",
         text: `${lost.join(" and ")} draws in its own tone on the public ranking, so a reader can see at a glance which row is the comparison. Renamed, it draws like every other row — the words in the name are what actually tell them, so nothing is stated any less clearly.`,
       });
+    }
+
+    /**
+     * The scale curve's second rail. See `ANSR_RAIL_MONTHS` for why this one is not a
+     * cosmetic warning, and `milestone-card.tsx` for where the months it compares against
+     * are supplied.
+     *
+     * Only a waypoint the second rail actually draws is checked: it zips by position and
+     * drops anything past the end of the supplied list, so a fifth milestone shortens the
+     * rail rather than inventing a fifth month, and there is nothing to warn about there.
+     */
+    if (ANSR_RAIL_IDS.includes(metric.id)) {
+      const conflicts = ANSR_RAIL_MONTHS.flatMap((ansr, index) => {
+        const typed = parseNumber(form.entryValues[index] ?? "");
+        if (typed === null || typed === "invalid") return [];
+        if (typed > ansr) return [];
+        return [`${(form.entries[index] ?? "").trim() || `part ${index + 1}`} (${typed})`];
+      });
+      if (conflicts.length > 0) {
+        notices.push({
+          id: "ansr-rail",
+          text:
+            "This card draws a second line captioned “Built with ANSR”, at a fixed " +
+            `${ANSR_RAIL_MONTHS.join(", ")} months. These figures are at or below it, so the ` +
+            `public card would show ANSR as no faster than a typical centre: ${conflicts.join(", ")}. ` +
+            "The ANSR line is set in code and cannot be changed here — ask a developer before saving.",
+        });
+      }
     }
   }
 

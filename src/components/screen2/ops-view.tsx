@@ -6,13 +6,13 @@ import type {
 import { usePublicCopy } from "@/components/public/copy-context";
 import { Panel } from "@/components/public/primitives";
 import {
-  MilestoneTrack,
   RangeBenchmark,
   RankedBars,
   type BarRow,
 } from "@/components/public/charts";
 import { figuresHeadings, heldHeading, METRIC_NOTES, opsSections } from "./copy";
 import { GraduateOutput } from "./graduate-card";
+import { ScaleMilestones } from "./milestone-card";
 import { HeldMetricCard } from "./metric-card";
 import { SummaryFigures, type SummaryFigure } from "./summary-figures";
 import { TabZones } from "./zones";
@@ -305,9 +305,9 @@ function Velocity({ ranges }: { ranges: readonly ShownMetric[] }) {
       aria-label={opsSections(copy).velocity}
       className="flex min-w-0 flex-col"
     >
-      {/* `items-stretch` and a centring body, exactly as the HR tab draws this same
-          section — see the comment there. A reader crossing between the two tabs must not
-          be able to tell that two files drew it. */}
+      {/* `items-stretch` and a TOP-ALIGNED body, exactly as the HR tab draws this same
+          section — see the comment there for why the centring came off. A reader crossing
+          between the two tabs must not be able to tell that two files drew it. */}
       <div className="grid grid-cols-1 items-stretch gap-6 lg:grid-cols-2 lg:gap-8">
         {ranges.map((shown) =>
           shown.shape === "range" ? (
@@ -315,7 +315,7 @@ function Velocity({ ranges }: { ranges: readonly ShownMetric[] }) {
               key={shown.metric.id}
               id={`metric-${shown.metric.id}`}
               title={shown.metric.title}
-              bodyClassName="flex flex-col grow justify-center"
+              bodyClassName="flex grow flex-col"
             >
               <div className="flex flex-col gap-4">
                 <RangeBenchmark
@@ -374,28 +374,16 @@ function Supporting({
           is shorter than the latency ranking beside it, and at `items-start` the surplus
           was bare zone under the shorter card. */}
       <div className="grid grid-cols-1 items-stretch gap-6 lg:grid-cols-2 lg:gap-8">
+        {/* **`ScaleMilestones`, the same component the HR tab draws, replacing `Journey`
+            and then the inline `MilestoneTrack` that replaced it.** Both read the same
+            `parts` — a part's `share` is its value over the largest, which for a rising
+            duration set is where it sits on the whole progression — so no figure moved and
+            nothing forked. The card now also carries an ANSR comparison rail, which is
+            exactly why the markup is in one file rather than two: see
+            `milestone-card.tsx`. The cost of leaving `Journey` is the derived intervals,
+            which only it renders; see the file comment. */}
         {milestones?.shape === "breakdown" ? (
-          <Panel
-            id={`metric-${milestones.metric.id}`}
-            title={milestones.metric.title}
-            // "months, median" — the unit once, rather than under each of four circles.
-            lead={milestones.metric.unit}
-            bodyClassName="flex flex-col grow justify-center"
-          >
-            {/* **`MilestoneTrack`, which is what the HR tab draws, replacing `Journey`.**
-                Both read the same `parts` — a part's `share` is its value over the
-                largest, which for a rising duration set is where it sits on the whole
-                progression — so no figure moved and nothing forked. What changed is that
-                the two composed tabs now draw one progression one way. The cost is the
-                derived intervals, which only `Journey` renders; see the file comment. */}
-            <MilestoneTrack
-              points={milestones.parts.map((part) => ({
-                label: part.label,
-                figure: part.figure,
-                share: part.share,
-              }))}
-            />
-          </Panel>
+          <ScaleMilestones shown={milestones} />
         ) : null}
 
         {latency?.shape === "breakdown" ? (

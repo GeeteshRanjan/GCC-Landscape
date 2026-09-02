@@ -882,8 +882,20 @@ export function Chip({
    * `accent` marks something the visitor should notice once per card, never
    * twice. There is no danger tone: this palette carries status by form, not by
    * hue, and a chip has no form to vary.
+   *
+   * **`quiet` is the same pill with a step less of everything, at ANSR's request**, and
+   * it exists for one placement: the largest-centres ranking, where a row carries two
+   * or three city pills and a year pill on the line ABOVE its own bar. A neutral chip
+   * there is `grey-100` under black at Medium — five rows of it read as a second set of
+   * marks competing with the bars, which is the interference ANSR reported. It is still
+   * a filled pill rather than an outlined one: a hairline round four pills a row is more
+   * chrome than the fill it replaces, not less.
+   *
+   * Both steps stay well clear of the floor. `grey-50` under `grey-700` is 7.81:1
+   * against the neutral chip's 6.88:1, so the quieter pill is the more legible of the
+   * two — what it gives up is WEIGHT, which is the thing that was competing.
    */
-  tone?: "neutral" | "accent";
+  tone?: "neutral" | "accent" | "quiet";
   /**
    * `sm` is a step down in type and padding, for a chip that sits beside a heading or
    * inside a dense row rather than in a list of its own.
@@ -906,16 +918,32 @@ export function Chip({
     tint: "bg-surface text-text",
     inverse: "border border-border-inverse text-text-inverse",
   };
+  /**
+   * The quiet pill, per ground. On white the fill steps down a rung of the neutral ramp
+   * and the ink steps back to the muted grey. On the mint there is no rung below the
+   * card's own white, so only the ink moves — `grey-50` on the tint reads as a gap
+   * rather than as a quieter pill.
+   */
+  const quiet: Record<Ground, string> = {
+    surface: "bg-surface-subtle text-text-muted",
+    tint: "bg-surface text-text-muted",
+    inverse: "border border-border-inverse text-text-inverse-muted",
+  };
   return (
     <span
       className={cn(
-        "inline-flex items-center rounded-full font-medium",
+        "inline-flex items-center rounded-full",
+        // Medium is what makes a neutral chip read as a fact rather than as a caption;
+        // the quiet one gives exactly that up, which is the point of it.
+        tone === "quiet" ? "font-regular" : "font-medium",
         size === "sm"
           ? "px-2 py-0.5 text-[0.6875rem] leading-snug"
           : "px-2.5 py-1 text-xs",
         tone === "accent"
           ? "bg-surface-accent text-text-on-accent"
-          : neutral[ground],
+          : tone === "quiet"
+            ? quiet[ground]
+            : neutral[ground],
       )}
     >
       {children}

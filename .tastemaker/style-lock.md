@@ -4386,13 +4386,36 @@ already gone by then: 99.95% against 99.5% is caught by `clusteredHigh` and draw
 bars at all. That is what makes it safe rather than a relaxation, and it is the reason the display is
 resolved before the scale rather than after.
 
-**The comparator is warm, and it is warm because the label says so first.** The composition asks for
-orange on the all-roles row and a muted blue-grey on Non-ER&D. Colour cannot carry that alone — this
-palette has no categorical hue, which is a measured fact rather than a preference — so the entry was
-renamed "All roles (reference)" in the catalogue and the tone is the second reading. The muted row is
-`--ansr-grey-500` rather than the `--ansr-teal-300` the composition describes, because teal-300
-measures about 2.3:1 on white and a mark under the 3:1 floor is not available whatever it looks like.
-The row's figure and label take `--ansr-accent-warm`, since `--ansr-action` is illegal at 14px.
+**The comparator is warm, and it is warm because something written says so first.** The composition
+asks for orange on the all-roles row and a muted blue-grey on Non-ER&D. Colour cannot carry that alone
+— this palette has no categorical hue, which is a measured fact rather than a preference — so the
+entry was renamed "All roles (reference)" in the catalogue and the tone became the second reading. The
+row's figure and label take `--ansr-accent-warm`, since `--ansr-action` is illegal at 14px.
+
+**Both halves of that then moved at ANSR's request, and the reasoning survives the move.** The bracket
+came off the label: it read as an editorial aside welded to a category name, and it made the plainest
+row on the card carry the longest string. It was replaced by a sentence under the chart, then the
+sentence was removed too at the project owner's request — the words "All roles" are self-descriptive as
+the all-up baseline, so the LABEL itself is the written carrier and no note is needed. The sentence had
+also been closing the height gap with the scale-milestones card beside it; that job now falls to three
+supplied specialism rows (SDE, Product Management and DevOps / Platform Engineering), so the height is
+bought with data rather than editorial copy — the ranking is eight rows, the count the project owner
+judged level with the two-rail milestone card. And the muted row went back to the subject teal: beside the teal
+bars and one orange one, a grey bar read as a third CATEGORY rather than as another measurement of the
+same quantity, which is a stronger claim than "held back from the comparison". `muted` stays in `BarTone` for a chart that genuinely holds a row back —
+`--ansr-grey-500` at 3.28:1 is the only light neutral that clears the floor, and the
+`--ansr-teal-300` the composition describes measures about 2.3:1 and is unavailable whatever it looks
+like, so re-deriving it later would be re-doing that measurement.
+
+**And the four subject bars stepped back a shade, which is the one change here that is not local to
+this card.** They were `--ansr-accent` because the ranking is self-labelling and drops its grey track,
+and a bare bar used to go a step deeper to compensate for losing the track it was measured against.
+The measurement does not support the compensation: `--ansr-teal-500` is 4.51:1 on the track and 5.14:1
+on the card's own white, so the bare bar is the stronger of the two before anything changes. What the
+deeper step actually bought was two teals doing one job on one tab — this ranking in the brand teal and
+the graduate ranking one section below it in `teal-500`, which is the mismatch ANSR reported. So
+`BARE_FILL.subject` is `teal-500` now and the brand teal is the `emphasis` fill alone, which is the one
+place a bar is meant to be deeper than its neighbours.
 
 **"20%", not "20.0%".** The reference shows a padded decimal for column alignment. Same value, and
 matching set-wide decimals would mean a formatter that reads its siblings — a change to every tab to
@@ -4677,7 +4700,7 @@ things make that legible rather than merely honest, and the first was found by r
 ### Two drawings replaced, and both had a reason beyond the ask
 
 - **The tier spread was `Dumbbells`** — three rows on one axis — and is **three cards**. One measure per
-  card, its two indices at the display step, its delta beside its name.
+  card, its delta under its name, and its two indices on the rail rather than above it.
 - **The location comparison was `IndexLollipop`** — a plot per row — and is **`IndexTable`**, a real
   table. The argument is what the reader is doing: four functions against five locations is twenty
   figures compared DOWN a column as much as along a row, and a row of dots cannot be read down.
@@ -4694,22 +4717,86 @@ in a single cell and a row whose fill stops in the middle reads as a rendering f
 
 What the removal cost, stated plainly: the bars were this card's only encoding of magnitude, so twenty
 indices are now compared as numbers. Defensible at four rows by five columns and not at a wider grid.
-What it bought: the figures are one element per cell, so they align on each column's own start edge, the
-table needs no minimum width and only a phone scrolls it — and with no emphasised row, `IndexTable` reads
-no admin-editable string at all, which returns `metric-card.tsx`'s capability grid to being the only place
-on this screen that does.
+What it bought: the figures are one element per cell — and with no emphasised row, `IndexTable` reads no
+admin-editable string at all, which returns `metric-card.tsx`'s capability grid to being the only place on
+this screen that does.
+
+### The table is CENTRED in EQUAL columns, and the two are one decision
+
+Asked for at ANSR's request, and the alignment alone would not have fixed what was wrong. Start-aligned
+digits in an auto-width table put each column's figures against a boundary decided by the longest header
+above them, so "PHILIPPINES" held its three digits near the middle of a wide column while "MEXICO" held
+its at the left of a narrow one, and twenty figures read as five ragged groups instead of one grid. So the
+layout is fixed: the row-header column takes a quarter and the five locations divide the rest, which makes
+the equal widths a property of the table rather than of the strings in it. Centring then puts each figure
+and its own header on the column's shared axis, which is what makes the grid readable DOWN — the reading
+the table exists for. `tabular-nums` was already doing the within-column part.
+
+**The minimum width is back, for the opposite reason it was removed.** It came off with the bars, which had
+forced the table wider than its card at every breakpoint. A fixed layout has the inverse failure: it never
+overflows, so on a phone six columns divide a ~330px card and every header wraps to three lines. `min-w-xl`
+and deliberately not the `2xl` the bars used — at `2xl` the last location fell outside a 768px card and had
+to be scrolled to, on a layout that fits a tablet unaided. Only a phone scrolls it now, inside the
+container, never the document.
+
+### The tier spread's rail is inset by half a marker, and its cards align on a subgrid
+
+Two defects, one section, and neither was the axis. The rail runs zero to the base, so the base's share is
+1 by construction on every row of this metric — which centred a 16px disc on the track's last pixel and
+left half of it hanging outside the column into the grid gap while the zero tick sat flush inside at the
+other end. The marker is a spacing step, so the inset is half of it — `margin-inline` on `.gcc-index-rail`,
+which the whole chart shares: both extremes sit wholly inside one measure and the two ends match. The base's own
+figure moved off `end-0` onto its marker's position in the same pass — right-aligned, its centre sat half a
+label short of the disc it named, so one axis had its two ends labelled by two different rules.
+
+And the three cards now share a two-row subgrid. The measure names are three different lengths and each
+carries a chip naming the base, so the header was one line on the middle card and two on the first — which
+pushed one card's figures, rail and axis a whole line below its neighbours' and read as three unrelated
+charts rather than one comparison. The chip also moved UNDER its heading rather than beside it: it wrapped
+anyway on two of three cards, and a chip that lands below its name on one card and beside it on the next is
+the same inconsistency the subgrid removes. `content-start` keeps the shorter card from stretching its own
+contents to fill the taller row.
 
 **The India column keeps its fill and its heading-teal figures**, which is what the instruction asked to
 keep. It is the base every other figure is read against, so it is the one thing in the grid still marked —
 and with the row emphasis gone it runs unbroken, so the crossing rule above has nothing left to arbitrate.
 
-### The shared legend became a per-figure key
+### The shared legend became a per-figure key, and then no key at all
 
 The reference puts one Tier 1 / Tier 2 legend above the three cards. Built that way first, and the render
-showed why not: every card already names both columns above its own two figures, so the legend made each
-column name appear FOUR times inside one section. The disc and the ring moved onto the labels that were
-already there — same information, in the place the reader is looking, two fewer repeats. `IndexSpreadKey`
-was written and then deleted rather than left unused.
+showed why not: every card already named both columns above its own figures, so the legend made each column
+name appear FOUR times inside one section. The disc and the ring moved onto the labels that were already
+there, and `IndexSpreadKey` was written and then deleted rather than left unused. Both are moot now — the
+names sit directly above the marks they belong to, so the marker's shape needs no key at all.
+
+### The display pair came off and the names moved onto the marks
+
+Asked for at ANSR's request, and the card was carrying the redundancy plainly once it was pointed at: each
+index was a 30px figure under its column name AND the same number again as a small label under its own mark,
+so a card whose entire subject is one difference held four numbers. What is left is the rail. Each point is
+one positioned column — name above, mark, figure below — which is `.gcc-milestones`' geometry, chosen for
+its reason rather than by resemblance: a name, a mark and a number that belong together should be one thing
+in the DOM as well as on screen.
+
+Three consequences, each a decision rather than a fallout:
+
+- **The rail stopped being `aria-hidden`.** Hiding it wholesale was right while the figures existed in text
+  above it; with the pair deleted, hiding it would have left the card's own numbers in no accessible reading
+  at all. Only the marks and the origin are hidden now.
+- **The figures took `text-lg`, not the pair's `text-3xl`.** Three figures share one row and the two that
+  matter sit 15 to 25% of the rail apart, which at the display step collide on the narrowest card the chart
+  is drawn in.
+- **The set goes three across at `lg` rather than `md`.** At 768 three columns are ~180px each, which puts
+  the marks 27px apart and rendered as "Tier 2Tier 1" and "85100". Screen 2's card grids already gain their
+  columns at `lg` for their own reason, so this is the screen's rule rather than an exception to it.
+
+**The column names were shortened in the DATA, and that is the whole reason the labels fit.** "Tier 1
+cities" above a mark is ~70px against a 43px gap. `Tier 1` / `Tier 2` in the catalogue and in
+`dataset.json`, with `indexBaseline` moved to the same short form so the subtitle and the mark do not name
+one base two ways. Trimming the string in `IndexSpread` would have been the quick version and is banned:
+a column name is admin-editable, so the renderer would have been parsing a label. The consequence to keep
+in view is that a long name typed in admin makes those labels long again — it wraps upward rather than
+displacing the mark, which is the degradation the reserved label row buys.
 
 ### Three smaller deviations, each recorded so it is not re-litigated
 

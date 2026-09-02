@@ -596,11 +596,18 @@ describe("a grid's anchor is derived, and degrades rather than throwing", () => 
     }
 
     /**
-     * **The emphasis leaves the visitor's own subject, and this is the documented
+     * **The derived anchor leaves the visitor's own subject, and this is the documented
      * cost of `SUBJECT_COLUMN` being a magic string.** Nothing throws and no rating
      * moves — but the identical-column rule then fires on the comparator that happens
-     * to hold one value in every row, so the reader's eye is anchored to a rival on a
-     * screen about India. `metric-editor.tsx` warns the admin before they save it.
+     * to hold one value in every row, so the derived anchor names a rival on a screen
+     * about India.
+     *
+     * **That is now a defect with no visible consequence, and the assertion is kept
+     * anyway.** `OrdinalGrid` stopped drawing the anchor at ANSR's request, so today
+     * nothing a visitor sees moves when this column is renamed — the admin notice that
+     * used to warn about it is gone for that reason. What the derivation is still doing
+     * is holding the emphasis one prop away from being restored, and this is the test
+     * that keeps it correct while it waits.
      */
     expect(renamed.grid.anchorColumn).not.toBe(SUBJECT_COLUMN);
     expect(renamed.grid.anchorColumn).not.toBe("Bharat");

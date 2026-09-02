@@ -274,6 +274,11 @@ describe("buildPeerView", () => {
       // oversight. Also still absent: `revenueBand`, `industry`, `businessTypes` and
       // `forbesGlobal2000`.
       "id",
+      // **`markUrl` is a resolved URL or null, and `domain` is deliberately NOT here.**
+      // The card is handed a finished source so the component knows no provider, holds
+      // no client ID and picks no source; a raw domain on the card would invite a second
+      // component to build its own URL from it. Resolved by `company-mark.ts`.
+      "markUrl",
       "name",
       // A ratio, never a published figure: the visible headcount stays the band,
       // because a share derived from band midpoints is honest as a bar's length
