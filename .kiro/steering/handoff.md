@@ -8,11 +8,10 @@ visual. Bounded by SHAPE, not length — see the `handoff.md` subsection of "Doc
 
 ## Where we are
 
-- **Pushed to `main` at `284b5fc`. Working tree clean, local equals `origin/main`.** Two commits: the
-  peer-card marks, domains, Fortune badge and Screen 2 refinements; then the metric-rename cascade.
-  Vercel rebuilds production from `main`, so this is live within about a minute.
-- **Full gate GREEN on the integrated tree** — `tsc`, `brand:lint`, 668 unit, **199 browser**,
-  `data:verify` clean.
+- **Everything is committed and pushed to `main`. Working tree clean, local equals `origin/main`.** No
+  SHA here on purpose — it goes stale on this file's own commit.
+- **Full gate GREEN on the pushed tree** — `tsc`, `brand:lint`, 668 unit, **199 browser**, `data:verify`
+  clean. Vercel rebuilds production from `main`, so this is live.
 - **Another session's two admin publishes were INTEGRATED, not reverted.** The rebase auto-merged; both
   sides were verified present. Their two title renames are cascaded into `metric-catalogue.ts` and four
   spec locations; `close.ctaLabel` is now "Get all Parameters".
