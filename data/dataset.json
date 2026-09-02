@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generatedAt": "2026-09-01T14:29:43.246Z",
+  "generatedAt": "2026-09-02T15:00:25.831Z",
   "source": "Consolidated_GCC_India_Database_2026_New.xlsx",
   "taxonomy": {
     "industries": [
@@ -40082,7 +40082,7 @@
       "id": "tech-graduate-pipeline",
       "functionArea": "tech",
       "lens": "supply",
-      "title": "Graduate pipeline into technology",
+      "title": "Technology Graduate Pipeline",
       "question": "Will the talent pool still be deep enough tomorrow, as we grow?",
       "unit": "graduates a year",
       "format": "number",
@@ -40107,7 +40107,7 @@
       "id": "tech-ecosystem-size",
       "functionArea": "tech",
       "lens": "supply",
-      "title": "Talent depth by specialism",
+      "title": "Talent Depth by Specialisation",
       "question": "Is the depth spread across the specialisms we need, or concentrated in one?",
       "unit": "professionals",
       "format": "number",
