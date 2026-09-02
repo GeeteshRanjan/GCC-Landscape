@@ -148,6 +148,56 @@ function CityCells({
 }
 
 /**
+ * A company's mark, wherever one is drawn on this surface.
+ *
+ * **Two consumers, so ONE piece of markup**, on the same reasoning as `CityCells` above:
+ * the comparison card and the largest-centres ranking both draw a company's logo, and two
+ * copies of an `<img>` with two sets of caps is how the same mark ends up two sizes.
+ *
+ * **Every rule the mark has to obey lives here.** `alt=""` because the company name is
+ * always the adjacent element as a real heading, so naming the mark would make a screen
+ * reader say the company twice — the same argument that makes a chart mark `aria-hidden`.
+ * Both a height AND a width cap plus `object-contain`, because a single height renders a
+ * 4.9:1 wordmark at six times the optical weight of a 0.8:1 stacked mark; that is
+ * measured on the customer strip and it is why the resolver requests a fixed box. And
+ * nothing is reserved when there is no mark: the absent case is ROUTINE, not exceptional,
+ * so a card or row without one is complete rather than short.
+ *
+ * `md` is the comparison card, where the mark sits above the name and is the card's
+ * introduction. `sm` is a ranking row, where it sits BEFORE the name on one line and is a
+ * recognition aid rather than a subject — so it is deliberately smaller than the name it
+ * precedes.
+ */
+function CompanyMark({
+  src,
+  size = "md",
+}: {
+  src: string | null;
+  size?: "md" | "sm";
+}) {
+  if (!src) return null;
+  return (
+    /* eslint-disable-next-line @next/next/no-img-element -- a third-party origin the
+       optimiser cannot process, and the box is already fixed by the resolver. */
+    <img
+      src={src}
+      alt=""
+      width={128}
+      height={40}
+      className={cn(
+        "w-auto object-contain object-left",
+        size === "md" ? "h-7 max-w-28 md:h-8" : "h-5 max-w-20 md:h-6",
+      )}
+      /* A brand the provider does not hold returns a real 404 by request, so nothing
+         renders rather than a generic letter tile — which would be the monogram this
+         surface refuses to draw. See `company-mark.ts`. */
+      loading="lazy"
+      decoding="async"
+    />
+  );
+}
+
+/**
  * A comparison card's interior. One column, one width, every card the same.
  *
  * **The two-column variant is gone with the multi-row grid it served.** It existed
@@ -389,49 +439,37 @@ export function PeerBlockView({ view }: { view: PeerView }) {
                     `markUrl` is resolved in `screen1.ts` via `company-mark.ts`. This
                     component knows no provider, holds no client ID and picks no
                     source. */}
-                {peer.markUrl ? (
-                  /* eslint-disable-next-line @next/next/no-img-element -- a
-                     third-party origin the optimiser cannot process, and the box is
-                     already fixed by the resolver. */
-                  <img
-                    src={peer.markUrl}
-                    /* **Empty alt, and this is the one case where that is correct.**
-                       The company name is the very next element, as a real heading, so
-                       the mark is a second reading of text already present — naming it
-                       again would make a screen reader say the company twice. Same
-                       reasoning as an `aria-hidden` chart mark. */
-                    alt=""
-                    width={128}
-                    height={40}
-                    /* Both caps plus `object-contain`, the customer strip's treatment.
-                       A fixed height alone renders a 4.9:1 wordmark six times the
-                       optical weight of a 0.8:1 stacked mark, so the row would read as
-                       one company shouting. */
-                    className="h-7 w-auto max-w-28 object-contain object-left md:h-8"
-                    /* A brand the provider does not hold returns 404 by request, so
-                       nothing renders rather than a generic letter tile — which would
-                       be the monogram this card refuses to draw. */
-                    loading="lazy"
-                    decoding="async"
-                  />
-                ) : null}
-                <h3 className="min-w-0 text-base leading-snug font-semibold text-pretty text-text md:text-lg">
-                  {peer.name}
-                </h3>
-                {/* The index membership, beside the name it is a fact about. Where every
-                    peer carries it, it becomes one line under the grid instead — a badge
-                    every card has is not a badge.
+                <CompanyMark src={peer.markUrl} />
+                {/* **The name and the index badge share a LINE, at the project owner's
+                    instruction.** The badge was a row of its own under the name, which
+                    made a card with one three cells deep before its figure and left the
+                    cards uneven wherever only some peers carry it. Beside the name it
+                    qualifies, it costs no height at all on the common case.
 
-                    **Fortune's own badge rather than an accent chip**, at the project
-                    owner's instruction, including the colour rule it sits outside. It is
-                    sized to the row it sits in rather than to the artwork — see
-                    `FortuneBadge`. The `<span>` is load-bearing: an `<img>` in this flex
-                    column stretches to the card's width without it. */}
-                {showFortune && peer.fortuneGlobal500 ? (
-                  <span>
-                    <FortuneBadge />
-                  </span>
-                ) : null}
+                    `items-center` rather than `items-baseline`: an image's baseline is
+                    its bottom edge, so on a baseline row the badge sits ON the name's
+                    baseline and reads as a mark that has slipped a line. The
+                    largest-centres row solves the same problem with `self-center` and
+                    records it there. `flex-wrap` because a long name on a narrow card
+                    must push the badge down rather than squeeze it. */}
+                <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
+                  <h3 className="min-w-0 text-base leading-snug font-semibold text-pretty text-text md:text-lg">
+                    {peer.name}
+                  </h3>
+                  {/* Where every peer carries it, it becomes one line under the grid
+                      instead — a badge every card has is not a badge.
+
+                      **Fortune's own badge rather than an accent chip**, at the project
+                      owner's instruction, including the colour rule it sits outside. It
+                      is sized to the row it sits in rather than to the artwork — see
+                      `FortuneBadge`. The `<span>` is load-bearing: an `<img>` in a flex
+                      container stretches without it. */}
+                  {showFortune && peer.fortuneGlobal500 ? (
+                    <span className="shrink-0">
+                      <FortuneBadge />
+                    </span>
+                  ) : null}
+                </div>
               </div>
               <PeerCardBody peer={peer} />
             </article>
@@ -685,6 +723,22 @@ export function LargestBlockView({ view }: { view: PeerView }) {
                   under it as space nothing declared. Safe here where it would not be on a
                   comparison card: a ranking row's name is one line, so there is no second
                   line for the tighter leading to crowd. */}
+              {/* **The mark leads the row, at the project owner's instruction, and it is
+                  the `sm` size.** A ranking's rows are scanned for recognition before they
+                  are read, so a logo at the leading edge is doing the work the position
+                  numeral used to — which is also why it must stay SMALLER than the name it
+                  precedes: the row's subject is still the company, and a mark at the
+                  card's size would outweigh it.
+
+                  `self-center` for the reason the Fortune badge below carries it: the row
+                  is `items-baseline`, and an image's baseline is its bottom edge, so the
+                  mark would sit ON the name's baseline rather than level with it.
+                  `shrink-0` so a long name cannot compress it to a sliver. */}
+              {entry.company.markUrl ? (
+                <span className="shrink-0 self-center">
+                  <CompanyMark src={entry.company.markUrl} size="sm" />
+                </span>
+              ) : null}
               <h3 className="min-w-0 text-base leading-tight font-semibold text-text md:text-lg">
                 {entry.company.name}
               </h3>
