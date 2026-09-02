@@ -303,7 +303,9 @@ export const METRIC_CATALOGUE: readonly Metric[] = [
     id: "tech-graduate-pipeline",
     functionArea: "tech",
     lens: "supply",
-    title: "Graduate pipeline into technology",
+    /* Renamed in admin and published, so the catalogue follows the datum rather than
+       the other way round — left behind, a `--reseed-metrics` would silently undo it. */
+    title: "Technology Graduate Pipeline",
     question: "Will the talent pool still be deep enough tomorrow, as we grow?",
     unit: "graduates a year",
     format: "number",
@@ -320,7 +322,9 @@ export const METRIC_CATALOGUE: readonly Metric[] = [
     id: "tech-ecosystem-size",
     functionArea: "tech",
     lens: "supply",
-    title: "Talent depth by specialism",
+    /* Renamed in admin and published; the catalogue follows the datum. See the
+       `tech-graduate-pipeline` note above for why leaving it behind is not neutral. */
+    title: "Talent Depth by Specialisation",
     question: "Is the depth spread across the specialisms we need, or concentrated in one?",
     unit: "professionals",
     format: "number",

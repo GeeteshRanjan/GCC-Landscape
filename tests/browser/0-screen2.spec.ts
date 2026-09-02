@@ -294,7 +294,7 @@ test.describe("the four functions", () => {
     await expect(
       page.getByRole("tabpanel").getByRole("heading", {
         level: 2,
-        name: "Talent depth by specialism",
+        name: "Talent Depth by Specialisation",
       }),
     ).toBeVisible();
 
@@ -326,7 +326,7 @@ test.describe("the four functions", () => {
     // alone — "Technology professionals" is on three tabs by design, so it would still
     // be present after the switch and would prove nothing.
     await expect(
-      page.getByRole("heading", { level: 2, name: "Talent depth by specialism" }),
+      page.getByRole("heading", { level: 2, name: "Talent Depth by Specialisation" }),
     ).toHaveCount(0);
   });
 

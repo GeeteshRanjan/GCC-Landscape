@@ -125,7 +125,7 @@ test("editing a figure back to its original clears the unpublished warning", asy
 });
 
 test.describe("a breakdown", () => {
-  const title = "Talent depth by specialism";
+  const title = "Talent Depth by Specialisation";
 
   test("keeps figures already typed when a part is added", async ({ page }) => {
     await page.goto("/admin/metrics");
@@ -171,7 +171,7 @@ test.describe("a breakdown", () => {
      * this pair is the technology tab's graduate blocks, and it is at the floor for the
      * same reason: two entries is the schema's minimum for a breakdown.
      */
-    await openMetric(page, "Graduate pipeline into technology");
+    await openMetric(page, "Technology Graduate Pipeline");
 
     // Disabled rather than allowed and then rejected at the publish gate.
     await expect(page.getByRole("button", { name: "Remove part 1" })).toBeDisabled();

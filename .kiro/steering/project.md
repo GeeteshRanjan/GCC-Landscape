@@ -1034,6 +1034,13 @@ while it re-pins the rest. `progression` and `subset` stay out because both chan
 genuinely new metric is a code change to the catalogue, deliberately. Because six titles appear on more
 than one tab, admin's Edit button names the function area alongside the title.
 
+**A TITLE RENAMED IN ADMIN LANDS IN `dataset.json` ONLY, AND THAT LEAVES TWO PLACES DISAGREEING WITH IT.**
+`metric-catalogue.ts` still holds the old wording, so `--reseed-metrics` would silently undo the rename;
+and the browser specs name titles literally, so they now assert a string the published data no longer has.
+Neither is caught by the schema, the diff or `data:verify`. So a rename is finished by cascading it into
+the catalogue and every spec that names it — which is the third leg of the load-bearing-title rule in
+`docs/traps.md`, stated here because a publish is where it actually happens.
+
 ### `data:verify`
 
 **Two different things, and the distinction is load-bearing.** *Invariants* are properties of the code
