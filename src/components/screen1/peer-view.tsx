@@ -490,21 +490,14 @@ export function PeerViewAnswer({
             onSwitch={(next) => {
               if (next === "functions") onOpenFunctions();
             }}
-            // This screen's content opens on the near-white mint, so that is what the
-            // selected cell is filled with — the joint between the two is then the
-            // absence of an edge rather than two fills that nearly match.
-            //
-            // **`pale`, because the snapshot's zone is the near-white mint now.** It was
-            // plain `surface` — and a white zone at the top of a white card has no
-            // boundary at all, so the four figures read as a row floating in unbounded
-            // space rather than as the block the card opens with. The mint `tint` is not
-            // available to it: `--ansr-action` is 2.63:1 there against 3.29:1 on the pale,
-            // so the orange figures would fail the 3:1 large-text floor at any size.
-            //
-            // The bar has to follow the zone or the joint this component exists to hide
-            // reappears as an edge. See `Zone` for why the pale may only ever neighbour
-            // the mint.
-            ground="pale"
+            // **`surface`, at the project owner's request: this screen now opens on
+            // white, the same as Function Metrics.** The selected cell is filled with the
+            // ground of the content below it, so the bar follows the zone — the joint
+            // between the two is the absence of an edge rather than two fills that nearly
+            // match. The snapshot's orange figures clear the 3:1 large-text floor on
+            // white (`--ansr-action` is 3.4:1 there), so the pale ground it used to need
+            // for contrast is no longer required.
+            ground="surface"
           />
         }
         card={
@@ -525,11 +518,16 @@ export function PeerViewAnswer({
                 : `Showing ${peerCount} comparable ${peerCount === 1 ? "company" : "companies"} in ${view.industry.industry}.`}
             </p>
 
-            {/* ---- Zone 1: the industry at a glance, on the pale teal -------------
+            {/* ---- Zone 1: the industry at a glance, on white ---------------------
                 First inside the card, so the strip reads as what the card opens with
                 rather than as the first thing the content does. That is also what makes
-                it survive being four figures with no section around them. */}
-            <Zone ground="pale">
+                it survive being four figures with no section around them.
+
+                **White at the project owner's request, matching Function Metrics.** It
+                was `pale` to give the snapshot's figures a boundary and a contrast-safe
+                ground; on white the orange figures still clear the 3:1 floor (3.4:1), so
+                the screen opens on the same white the function view does. */}
+            <Zone ground="surface">
               <Enter index={1}>
                 {/* **The three static labels are passed IN, not read inside
                     `signals`.** That is a plain function the unit suite calls over all

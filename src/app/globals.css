@@ -2603,8 +2603,13 @@ select.gcc-field {
      beside its own mark rather than overhanging it. At 200 the extra 56px was fill: on
      the default path two thirds of the chart is the outermost layer's own pale ground,
      and making that region taller made the card read as mostly empty tint without
-     making a single figure easier to read. */
-  block-size: calc(var(--ansr-space-32) + var(--ansr-space-4));
+     making a single figure easier to read.
+
+     **160px, up from 144, at the project owner's request.** The card sits beside the
+     taller ranking block and read a touch short against it; a band of ~53px still holds
+     one line of a figure and its label, so the extra height balances the row rather than
+     reopening the "mostly empty tint". */
+  block-size: var(--ansr-space-40);
   /* **A CEILING on the stretch, and it exists because this chart shares a row.** The
      card it sits in opts into the row's height (`lg:h-full` in `peer-view.tsx`) and its
      body lets this chart grow into it, so the stack's real height is set by whatever the
@@ -2617,8 +2622,12 @@ select.gcc-field {
      air rather than as fill. Past the cap the leftover space stays in the CARD, where
      `justify-center` splits it above and below the chart — a symmetrical inset reads as
      padding, where the same space collected under the chart read as a card that failed to
-     fill. */
-  max-block-size: calc(var(--ansr-space-56) + var(--ansr-space-32));
+     fill.
+
+     **Raised one step at the project owner's request** so the chart fills more of the
+     stretched card beside the ranking and the centred inset that read as uneven padding
+     shrinks. */
+  max-block-size: calc(var(--ansr-space-56) + var(--ansr-space-40));
 }
 
 .gcc-containment__bar,
@@ -2633,11 +2642,12 @@ select.gcc-field {
 .gcc-containment__bar {
   inset-inline-start: 0;
   inline-size: var(--gcc-extent);
-  /* Hard-edged on the leading side, rounded on the trailing one: the shared zero is
-     a real edge and the far end is the quantity, so only the end that carries a
-     value gets a radius. */
-  border-start-end-radius: var(--ansr-radius-md);
-  border-end-end-radius: var(--ansr-radius-md);
+  /* Rounded on ALL FOUR corners, at the project owner's request: the leading edge is
+     curved to match the trailing one so each layer reads as a symmetric mark rather
+     than one cut square on the shared zero. Every bar steps down from the shared top
+     edge, so each layer's top-leading corner is exposed in its own band; the bottom-
+     leading corner is carried by the innermost layer that draws on top. */
+  border-radius: var(--ansr-radius-md);
   /* **Depth, not just a colour change.** Two adjacent ramp steps at the widths real
      figures produce are a 1.2:1 difference, so the layering was carried entirely by
      hue and read as one flat block with a lighter patch. A shallow shadow makes each
@@ -2663,11 +2673,11 @@ select.gcc-field {
    population it is inside rather than one sticking out of it. `min()` resolves the
    percentage against the chart, which is the box `--gcc-extent` is expressed in.
 
-   **Rounded on the trailing end like every bar, at ANSR's request.** The marker read as
-   the one hard-cut mark in a chart whose other layers all curve their trailing edge, so
-   it looked like a different kind of object rather than the innermost layer. It inherits
-   the bar's own `--ansr-radius-md` on the trailing corners now; the leading edge stays
-   square on the shared zero, the same as the bars. */
+   **Rounded like every bar, at ANSR's request.** The marker read as the one hard-cut
+   mark in a chart whose other layers curve their edges, so it looked like a different
+   kind of object rather than the innermost layer. It inherits the bar's own
+   `--ansr-radius-md` on all four corners now — the same as the bars, which now round
+   their leading edge too — so at its ~8px width it reads as a small rounded tick. */
 .gcc-containment__bar--marker {
   inline-size: min(var(--ansr-space-2), var(--gcc-extent));
 }
@@ -3070,11 +3080,22 @@ select.gcc-field {
   background-color: var(--ansr-surface-pale);
 }
 
+/* **The unselected cell is held back at reduced opacity, at the project owner's
+   request, so it reads as more transparent than the selected one.** The cell itself
+   stays empty — what fades is its content, which lets the bar's own mint show through
+   more strongly and pushes the inactive half further behind the lit, fully opaque
+   selected cell. Hover restores full strength (below), so the cell comes forward as the
+   pointer lands on it. */
+.gcc-result-tab--off {
+  opacity: 0.7;
+}
+
 /* Hover on an unselected cell: a barely-there darken and the ink coming forward.
    DARKER rather than lighter, so hovering can never be mistaken for selection —
    selection is the lightest state in this row, which is the failure mode of a
    two-cell switch that lightens on hover. */
 .gcc-result-tab--off:hover {
+  opacity: 1;
   /* A barely-there darken, and DARKER rather than lighter. Selection is the lightest state
      in this row, so hover has to move away from it — a lighten here is the failure mode of
      a two-cell switch, where pointing at the cell you are not on looks like arriving on
