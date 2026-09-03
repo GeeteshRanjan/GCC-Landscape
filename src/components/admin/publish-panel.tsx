@@ -6,6 +6,7 @@ import { useDraft } from "@/components/admin/draft-provider";
 import { AdminPageHeader, AdminSection } from "@/components/admin/page-header";
 import { Button } from "@/components/ui/button";
 import {
+  CLOSE_FIELD_LABELS,
   METRIC_FIELD_LABELS,
   PUBLIC_COPY_LABELS,
   TAXONOMY_LABELS,
@@ -343,10 +344,20 @@ function DiffView({ diff }: { diff: DatasetDiff }) {
             {diff.siteContent.close.map((change) => (
               <li key={change.field} className="px-5 py-3 text-sm">
                 <p className="text-xs uppercase tracking-caps text-text-muted">
-                  Result close {change.field === "ctaLabel" ? "button" : change.field}
+                  {/* `CLOSE_FIELD_LABELS` rather than the key, because two of the four
+                      are `ctaHrefPeers` and `ctaHrefFunctions` and neither names a
+                      screen an admin would recognise. Shared with the text renderer so
+                      the same change reads the same way in both. */}
+                  Result close {CLOSE_FIELD_LABELS[change.field]}
                 </p>
-                <p className="mt-1 text-text-muted line-through">{change.before}</p>
-                <p className="mt-0.5 text-text">{change.after}</p>
+                {/* A link field may legitimately be blank, meaning "use the configured
+                    default" — and a struck-through empty string renders as nothing at
+                    all, which would show a change with only one side of it. So a blank
+                    is named rather than drawn. */}
+                <p className="mt-1 text-text-muted line-through">
+                  {change.before || "(not set)"}
+                </p>
+                <p className="mt-0.5 text-text">{change.after || "(not set)"}</p>
               </li>
             ))}
             {/* The static strings, spelled out for the same reason the hero is: these

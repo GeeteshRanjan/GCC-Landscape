@@ -58,7 +58,7 @@ import { slugify, uniqueSlug } from "@/data/normalize";
  *
  * `tests/browser/helpers.ts` owns `DRAFT_STORAGE_KEY` and must move with it.
  *
- * **The five keys added since v5 are guarded by SHAPE rather than by a sixth
+ * **The keys added since v5 are guarded by SHAPE rather than by a sixth
  * version, and the restore below is where that happens.** A version bump is the
  * blunt instrument and it is the right one when a whole collection appears; these
  * five are all `.default()`-ed in the schema, which makes the failure quieter and
@@ -67,8 +67,24 @@ import { slugify, uniqueSlug } from "@/data/normalize";
  * coordinates, the function list, the logo strip and all thirty copy strings to the
  * shipped values, and report it as an ordinary edit. So the restore checks the keys
  * it is about to trust and drops a draft that predates them.
+ *
+ * **The close's two per-screen CTA links are guarded the same way, and they are the case
+ * that shows why the check is by TYPE and not by truthiness.** Blank is a legal value for
+ * a link — it means "use the configured default" — so `!link` would discard a draft in
+ * which an admin had deliberately cleared one. Publishing a draft that predates the keys
+ * would reset both links to blank and silently untag the only outbound link in the
+ * product, which is the same class of quiet reset as the five above.
+ *
+ * **v6 is a key REMOVED rather than added, and that is the case a shape check cannot
+ * catch.** `copy.peersTitle` left the schema when the comparable-companies heading
+ * started naming the visitor's own company. A v5 draft still holds the key; zod strips
+ * an unrecognised key rather than refusing it, so such a draft would publish cleanly and
+ * the extra string would vanish without appearing in the diff — quiet, and it would take
+ * the admin's real edits in that draft with it if the shape had drifted further. There is
+ * no key whose ABSENCE marks a v5 draft, so a version bump is the only instrument
+ * available here.
  */
-const STORAGE_KEY = "gcc-admin-draft-v5";
+const STORAGE_KEY = "gcc-admin-draft-v6";
 const AUTOSAVE_DEBOUNCE_MS = 800;
 
 /** Everything the admin can edit. Metadata is server-owned. */
@@ -311,7 +327,14 @@ export function DraftProvider({
       !stored.editable.taxonomy.cityCoordinates ||
       !stored.editable.siteContent.commonFunctions ||
       !stored.editable.siteContent.logos ||
-      !stored.editable.siteContent.copy
+      !stored.editable.siteContent.copy ||
+      // The close's two per-screen CTA links, checked on the same argument as the five
+      // above and with one difference that matters: BLANK IS A LEGAL VALUE for these, so
+      // truthiness is the wrong test — `!""` would throw away every draft in which an
+      // admin has deliberately left a link unset. The presence of the key is what marks a
+      // draft written after the field existed, so the type is what is checked.
+      typeof stored.editable.siteContent.close?.ctaHrefPeers !== "string" ||
+      typeof stored.editable.siteContent.close?.ctaHrefFunctions !== "string"
     ) {
       window.localStorage.removeItem(STORAGE_KEY);
       return;

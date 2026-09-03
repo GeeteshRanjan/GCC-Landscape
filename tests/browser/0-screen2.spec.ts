@@ -39,7 +39,7 @@ async function openFunctionView(page: Page): Promise<void> {
   await choose(page, "Industry", "BFSI");
   await choose(page, "Annual revenue", "Above $20 Bn");
   await choose(page, "Headquarters", "USA");
-  await page.getByRole("button", { name: "See my results" }).click();
+  await page.getByRole("button", { name: "Build my GCC Landscape" }).click();
   await expect(band(page, "peers")).toBeVisible();
   /**
    * **The way across is the view tab, not a band at the foot of the page.** The
@@ -69,7 +69,7 @@ test.describe("getting there and back", () => {
      * `region`, and the cards inside are `h2` so the outline skips no level.
      */
     await expect(
-      page.getByRole("heading", { level: 1, name: "ANSR GCC Intelligence" }),
+      page.getByRole("heading", { level: 1, name: "ANSR ATLAS" }),
     ).toBeVisible();
     await expectBand(page, "function-metrics");
     await expect(page.getByText(/What an India GCC would give/)).toHaveCount(0);
@@ -168,7 +168,7 @@ test.describe("getting there and back", () => {
     await choose(page, "Industry", "BFSI");
     await choose(page, "Annual revenue", "Above $20 Bn");
     await choose(page, "Headquarters", "Germany");
-    await page.getByRole("button", { name: "See my results" }).click();
+    await page.getByRole("button", { name: "Build my GCC Landscape" }).click();
     await page.getByRole("tab", { name: /Function Metrics/ }).click();
 
     /**
@@ -193,10 +193,10 @@ test.describe("getting there and back", () => {
      * own answer on the very next screen. Four facts, all of them theirs.
      */
     /**
-     * The same four editable panels Screen 1 shows, from the same answers, in the same
-     * order — one component in one place on both screens, so they cannot come to mean
-     * two different things. New here: they are controls, and pressing one reaches the
-     * form. This screen previously had no route to it at all.
+     * The same four panels Screen 1 shows, from the same answers, in the same order — one
+     * component in one place on both screens, so they cannot come to mean two different
+     * things. What is new here is the route to changing them: this screen once had none at
+     * all, then one that reached the form, and now one that opens the editor in place.
      */
     const profile = page.getByRole("group", { name: /Your profile/ });
     /**
@@ -209,12 +209,26 @@ test.describe("getting there and back", () => {
     await expect(profile.getByText("Company")).toBeVisible();
     await expect(profile.getByText("Northwind Financial")).toBeVisible();
     await expect(page.getByText("India today")).toHaveCount(0);
-    await profile
-      .getByRole("button", { name: "Edit answers" })
-      .click();
-    await expect(page.locator("h1#ask-title")).toBeVisible();
-    await page.getByRole("button", { name: "See my results" }).click();
-    await page.getByRole("tab", { name: /Function Metrics/ }).click();
+    /**
+     * **The editor opens HERE, and applying an answer leaves the visitor on this tab.**
+     * That second half is the part this screen gets wrong most easily: a correction goes
+     * through the same server action Screen 1's submit does, and routing it through
+     * `submit` rather than `refine` would land a visitor reading function metrics on the
+     * peer landscape instead. So the assertion is that the function band survives the
+     * round trip.
+     */
+    await profile.getByRole("button", { name: "Edit answers" }).click();
+    await expect(page.locator("h1#ask-title")).toHaveCount(0);
+    await expectBand(page, "function-metrics");
+    await page.getByRole("button", { name: "Update my results" }).click();
+    await expectBand(page, "function-metrics");
+    await expect(
+      page.getByRole("tab", { name: /Function Metrics/ }),
+    ).toHaveAttribute("aria-selected", "true");
+    // The panel closes on a landed correction, and only on one.
+    await expect(
+      page.getByRole("button", { name: "Update my results" }),
+    ).toHaveCount(0);
     /**
      * **The close is BACK, on both screens, at the project owner's decision.** It was
      * removed from Screen 1 on the page-end instruction and from this screen in the
@@ -643,6 +657,92 @@ test.describe("the four functions", () => {
     );
     expect(boxes).toHaveLength(20);
     for (const size of boxes) expect(size).toBeLessThanOrEqual(1);
+
+    /**
+     * **The top rating is drawn a step DEEPER than every rating below it, at ANSR's
+     * request** — the brand teal, which is the fill the graduate pipeline's larger block
+     * takes one tab over.
+     *
+     * **What makes this legal is that the depth is per RATING, not per COLUMN.** The
+     * `anchorColumn` emphasis was removed precisely because India's segments were drawn
+     * darker than the comparators': a darker mark in one column reads as a higher rating
+     * rather than as "this is you". Here a top-rated cell is deeper wherever it appears,
+     * so the grid still emphasises no column — and that is the property asserted, by
+     * checking that the deep fill appears in more than one column.
+     *
+     * Read as computed colour and compared by LUMINANCE rather than against a value: the
+     * fills are brand tokens, and a spec quoting their hex would be a second place those
+     * two colours are written down.
+     */
+    const cellFills = await table.locator("tbody tr td").evaluateAll((tds) =>
+      tds.map((td) => ({
+        rating: td.querySelector("span.sr-only")?.textContent?.trim() ?? "",
+        column: [...(td.parentElement?.children ?? [])].indexOf(td),
+        filled: [...td.querySelectorAll("span[aria-hidden] > span")]
+          .map((mark) => getComputedStyle(mark).backgroundColor)
+          .filter((colour, index, all) => all.indexOf(colour) === index),
+      })),
+    );
+    expect(cellFills).toHaveLength(20);
+
+    const luminance = (colour: string): number => {
+      const [r, g, b] = colour.match(/\d+(\.\d+)?/g)!.slice(0, 3).map(Number);
+      return 0.2126 * r! + 0.7152 * g! + 0.0722 * b!;
+    };
+    // Every cell draws exactly two fills: the filled marks and the empty track. A cell
+    // whose marks disagreed with each other would mean the fill is being decided per
+    // MARK, which is a ramp inside one cell and not what was asked for.
+    for (const cell of cellFills) {
+      expect(cell.filled.length, cell.rating).toBeLessThanOrEqual(2);
+    }
+    const fillOf = (cell: (typeof cellFills)[number]) =>
+      // The track is the lightest thing in the cell; the rating's fill is the rest.
+      cell.filled.sort((a, b) => luminance(a) - luminance(b))[0]!;
+
+    const top = cellFills.filter((cell) => cell.rating === "Very strong");
+    const lower = cellFills.filter(
+      (cell) => cell.rating !== "Very strong" && cell.rating !== "",
+    );
+    expect(top.length).toBeGreaterThan(1);
+    expect(lower.length).toBeGreaterThan(1);
+
+    const topFills = new Set(top.map(fillOf));
+    const lowerFills = new Set(lower.map(fillOf));
+    // One fill for the top step and one for everything under it — two fills across the
+    // grid, not four. A full ramp is unavailable: these segments are the only visible
+    // encoding, so every fill has to clear 3:1 on its own track, which the two deepest
+    // teals do and nothing lighter does.
+    expect(topFills.size).toBe(1);
+    expect(lowerFills.size).toBe(1);
+    expect(luminance([...topFills][0]!)).toBeLessThan(luminance([...lowerFills][0]!));
+
+    /**
+     * **The fill is a function of the RATING and not of the column, asserted on a rating
+     * that actually spans columns.**
+     *
+     * This is the assertion that separates the new depth from the `anchorColumn` emphasis
+     * ANSR had removed, and it cannot be made on "Very strong": in today's ratings every
+     * top-rated cell happens to be in India's column, so the deep fill and an India
+     * highlight are indistinguishable from the rendered grid alone. **That is a real
+     * property of the data rather than of the code, and it is on the blocked list** — a
+     * reader cannot tell the two apart, and only ANSR can decide whether that is
+     * acceptable.
+     *
+     * "Strong" does span columns — India's cybersecurity row and every one of Poland's —
+     * so it is what proves the mechanism: one fill for one rating, wherever it sits.
+     */
+    const strong = cellFills.filter((cell) => cell.rating === "Strong");
+    expect(new Set(strong.map((cell) => cell.column)).size).toBeGreaterThan(1);
+    expect(new Set(strong.map(fillOf)).size).toBe(1);
+    // Every rating draws one fill and no rating shares one with a different rating,
+    // except by the two-step design above: four ratings, two fills.
+    const byRating = new Map<string, Set<string>>();
+    for (const cell of cellFills) {
+      if (cell.rating === "") continue;
+      byRating.set(cell.rating, (byRating.get(cell.rating) ?? new Set()).add(fillOf(cell)));
+    }
+    expect(byRating.size).toBe(4);
+    for (const [rating, fills] of byRating) expect(fills.size, rating).toBe(1);
 
     /**
      * And the key is BELOW the grid, at the trailing end, at ANSR's request. It was
@@ -1151,13 +1251,18 @@ test.describe("the technology composition", () => {
      * **The unit is a step down from the numeral, which is Screen 1's own device.** An
      * `M+` at the figure's 48px is a third of the cell's optical weight carrying none of
      * its information. Asserted as a real size difference rather than as a class name.
+     *
+     * Located by `data-figure-unit` rather than by position: this read `span > span`, which
+     * silently started matching the NUMERAL when that gained a box of its own, and a
+     * numeral compared against itself passes the "greater than zero" half and fails the
+     * other for a reason that has nothing to do with the unit.
      */
     const sizes = await cells
       .first()
       .locator("p")
       .first()
       .evaluate((figure) => {
-        const unit = figure.querySelector("span > span");
+        const unit = figure.querySelector("[data-figure-unit]");
         return {
           figure: Number.parseFloat(getComputedStyle(figure).fontSize),
           unit: unit
@@ -1221,14 +1326,26 @@ test.describe("the technology composition", () => {
     expect(headingInks).toHaveLength(4);
     expect(new Set(headingInks).size).toBe(1);
 
+    /**
+     * **THREE fills across all eighty marks, and the third one is a RATING rather than a
+     * column.** It was two — filled and unfilled — with the comment here noting that a
+     * third would be the subject column's deeper step. ANSR has since asked for the top
+     * rating to be drawn in the deeper brand teal, so the third fill is back and it is
+     * not that emphasis: `ratingFill` keys on the cell's own rating, so a top-rated
+     * Poland cell would draw exactly as a top-rated India cell does.
+     *
+     * The count alone cannot tell those two apart, so it is not the assertion that does
+     * it. The property that separates them — a fill is a function of the RATING, tested
+     * across columns — is asserted in "carries a rating in the accessibility tree and not
+     * in visible text". What this count still holds is that the fill is not being decided
+     * per mark or per row, which would put a ramp inside a single cell.
+     */
     const marks = await table
       .locator("td span[aria-hidden='true'] > span")
       .evaluateAll((spans) =>
         spans.map((span) => getComputedStyle(span).backgroundColor),
       );
-    // Two fills only across all eighty marks: filled and unfilled. A third would be the
-    // subject column's deeper step.
-    expect(new Set(marks).size).toBe(2);
+    expect(new Set(marks).size).toBe(3);
 
     // Country headings are centred over their own marker group rather than aligned to
     // its first segment.
@@ -1515,9 +1632,37 @@ test.describe("the operations composition", () => {
      * breakdown whose own section was removed, which is what makes the notes below
      * load-bearing rather than decorative.
      */
-    for (const [index, figure] of ["8.7M+", "99.95%", "854"].entries()) {
+    for (const [index, figure] of ["8.7M+", "99.95%"].entries()) {
       await expect(cells.nth(index).getByText(figure, { exact: true })).toBeVisible();
     }
+    /**
+     * **The office cell is the one figure on either screen whose unit is a WORD beside
+     * the numeral**, at ANSR's request: "854 mn sq ft" rather than a bare 854 under a
+     * title carrying the unit. So it is asserted as two parts rather than as one string,
+     * unlike the two above, whose units are suffixes `figureParts` splits off a figure it
+     * produced itself.
+     */
+    const office = cells.nth(2);
+    await expect(office.getByText("854", { exact: true })).toBeVisible();
+    await expect(office.getByText("mn sq ft", { exact: true })).toBeVisible();
+    /**
+     * **And the unit is on the FIGURE's line, not on the title's** — which is the whole
+     * of what moved. Asserted as geometry rather than as markup: the two sit in one
+     * element today and a future refactor may split them, but a unit that had fallen back
+     * into the label would sit below the numeral's box rather than beside it.
+     */
+    const [numeralBox, unitBox] = await Promise.all([
+      office.getByText("854", { exact: true }).boundingBox(),
+      office.getByText("mn sq ft", { exact: true }).boundingBox(),
+    ]);
+    expect(unitBox!.x).toBeGreaterThan(numeralBox!.x);
+    expect(Math.abs(unitBox!.y + unitBox!.height - (numeralBox!.y + numeralBox!.height)))
+      .toBeLessThan(4);
+    // Two scale steps down, never the figure's own size: a word unit at 48px is a third
+    // of the cell's optical weight carrying none of its information.
+    expect(unitBox!.height).toBeLessThan(numeralBox!.height);
+    // And it has left the title, which is where it used to live.
+    await expect(office.getByRole("heading", { name: /sq ft|million/ })).toHaveCount(0);
 
     /**
      * **A cell is ONE line under its figure now, and the SCOPE a lifted figure must not
@@ -1534,7 +1679,7 @@ test.describe("the operations composition", () => {
     await expect(
       cells
         .nth(2)
-        .getByRole("heading", { name: "Grade A stock, top 7 cities, mn sq ft" }),
+        .getByRole("heading", { name: "Grade A stock in top 7 cities" }),
     ).toBeVisible();
     // Exactly one line under each figure: no unit line and no note line beside it.
     for (const index of [0, 1, 2, 3]) {
@@ -1844,10 +1989,10 @@ test.describe("the HR composition", () => {
      * card.
      */
     await expect(
-      first.getByText("Hiring through an employer of record"),
+      first.getByText("Through EOR model"),
     ).toBeVisible();
     await expect(
-      first.getByText("Hiring directly into your own entity"),
+      first.getByText("Through own entity"),
     ).toBeVisible();
     // The caveat the card owes a reader, on the card rather than at the foot of the tab.
     await expect(
@@ -1857,7 +2002,7 @@ test.describe("the HR composition", () => {
     // Backfill deliberately has no end labels: naming them would re-introduce the
     // per-function split the shared metric exists to collapse.
     const second = velocity.locator("#metric-hr-backfill-time");
-    await expect(second.getByText(/employer of record/)).toHaveCount(0);
+    await expect(second.getByText(/Through EOR model/)).toHaveCount(0);
     /**
      * **It carries a note of its own now, and the two cards' value lines are level.**
      * ANSR reported the pair as asymmetrical: a caveat under one card and nothing under
@@ -2326,7 +2471,7 @@ test.describe("the finance composition", () => {
     // Titles verbatim, because shortening one would mean parsing an admin-editable
     // string to find the part to drop.
     await expect(
-      cells.nth(0).getByRole("heading", { name: "India wage growth, year on year" }),
+      cells.nth(0).getByRole("heading", { name: "Salary growth in India, YoY" }),
     ).toBeVisible();
     const row = await page.locator("#function-metrics ul").first().innerText();
     expect(row).not.toMatch(/vs last year/i);
@@ -2514,8 +2659,8 @@ test.describe("the finance composition", () => {
      * **NO ROW IS EMPHASISED, and this assertion is the reversal of the one it replaces.**
      * The reader's own function — Finance, on this tab — was filled a step, which was the
      * one place this screen read an admin-editable string. Removed at ANSR's request, so
-     * every row is on the card's own ground and the only fill left in the table is the
-     * India column's.
+     * every row is on the card's own ground — and with the India column's own band gone
+     * too, there is no fill left anywhere in this table.
      */
     const grounds = await table.locator("tbody tr").evaluateAll((rows) =>
       rows.map((row) => ({
@@ -2537,17 +2682,31 @@ test.describe("the finance composition", () => {
     await expect(table.locator("td span[aria-hidden]")).toHaveCount(0);
 
     /**
-     * The India column keeps its fill and its ink, which is what the instruction asked to
-     * KEEP: it is the base every other figure is read against, so it is the one thing in
-     * the grid still marked.
+     * **AND THE INDIA COLUMN NO LONGER HAS A FILL EITHER, which is the third emphasis this
+     * card has lost and the reason the assertion here is inverted rather than deleted.**
+     * The base carried `surface-pale` — the same ~2% tint that marks India's column in the
+     * technology capability grid — and it read as a light blue band down the middle of a
+     * cost table. ANSR asked for it off, so there is now no `background-color` anywhere in
+     * the table body: not on a row, not on a cell.
+     *
+     * What still marks the base is its INK, asserted below rather than left implicit,
+     * because ink alone is now the whole signal and a pass that took the teal off as well
+     * would leave the reference indistinguishable from the four figures read against it.
      */
     const anchor = await table
       .locator("tbody tr td:first-of-type")
       .evaluateAll((cells) =>
-        cells.map((cell) => getComputedStyle(cell).backgroundColor),
+        cells.map((cell) => ({
+          ground: getComputedStyle(cell).backgroundColor,
+          weight: getComputedStyle(cell.querySelector("span")!).fontWeight,
+        })),
       );
     expect(anchor).toHaveLength(4);
-    for (const ground of anchor) expect(ground).not.toBe("rgba(0, 0, 0, 0)");
+    for (const cell of anchor) {
+      expect(cell.ground).toBe("rgba(0, 0, 0, 0)");
+      // Bold, against the `font-normal` every comparator cell takes.
+      expect(cell.weight).toBe("700");
+    }
 
     // The index base and its direction, as the card's subtitle rather than a foot note.
     await expect(

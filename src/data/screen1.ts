@@ -1,6 +1,12 @@
 import { resolveCompanyMark } from "./company-mark";
+import { uploadedCompanyMark } from "./company-marks";
 import { HQ_COUNTRIES } from "./countries";
-import { fteDisplay, fteMidpoint, TIER1_CITIES } from "./derive";
+import {
+  fteDisplay,
+  fteMidpoint,
+  orderCitiesByProminence,
+  TIER1_CITIES,
+} from "./derive";
 import { MAP_HEIGHT, MAP_WIDTH, projectCity, type Point } from "./geo";
 import {
   cityDensity,
@@ -443,10 +449,11 @@ export interface PeerCard {
    * that keeps `metric-card.tsx` from choosing its own chart. Swapping providers or
    * adding the uploaded tier is a change in `company-mark.ts` and nowhere else.
    *
-   * **Null is ROUTINE, not exceptional.** The fallback resolves 86–95% of brands, six
-   * companies carry no domain, and the tier is off entirely when the client ID is
-   * unset. So the name-alone card has to be a complete card at every size, which is
-   * why the mark is an addition to a layout that already worked without it.
+   * **Null is ROUTINE, not exceptional.** The uploaded tier covers eleven companies,
+   * the provider resolves 86–95% of brands, six companies carry no domain, and the
+   * provider tier is off entirely when the client ID is unset. So the name-alone card
+   * has to be a complete card at every size, which is why the mark is an addition to a
+   * layout that already worked without it.
    */
   markUrl: string | null;
 }
@@ -455,7 +462,9 @@ function toCard(company: Company, peak: number): PeerCard {
   return {
     id: company.id,
     name: company.name,
-    cities: [...company.cities],
+    // Prominence order, so a card that shows only its first two cities spends them on
+    // the largest hubs and the rest fall into the "+N" overflow. See `CityCells`.
+    cities: orderCitiesByProminence(company.cities),
     headcount: fteDisplay(company.fte),
     establishedYear: company.establishedYear,
     fortuneGlobal500: company.fortuneGlobal500,
@@ -465,8 +474,14 @@ function toCard(company: Company, peak: number): PeerCard {
      * `hqCountry` documents above: the field travels only as far as the thing that
      * uses it. A card carrying a raw domain would invite a second component to build
      * its own URL from it.
+     *
+     * **Both tiers are passed in one call, so the ORDER is the resolver's and not this
+     * function's.** `uploadedCompanyMark` reads a committed table and never touches the
+     * network; the resolver is what decides it beats the provider. This is also the one
+     * call site, so `LargestEntry.company` being a `PeerCard` means the ranking rows
+     * pick the marks up without a second lookup that could disagree.
      */
-    markUrl: resolveCompanyMark(company.domain),
+    markUrl: resolveCompanyMark(company.domain, uploadedCompanyMark(company.id)),
   };
 }
 

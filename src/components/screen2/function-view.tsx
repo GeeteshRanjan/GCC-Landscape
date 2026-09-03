@@ -6,6 +6,11 @@ import { Tabs as TabsPrimitive } from "radix-ui";
 import type { CloseCopy } from "@/data/schema";
 import { companyName, type PeerViewInput } from "@/data/screen1";
 import type { FunctionAreaView, FunctionView, LaidOutCard } from "@/data/screen2";
+import {
+  AnswerEditor,
+  ANSWER_EDITOR_ID,
+  type AnswerEditing,
+} from "@/components/public/answer-editor";
 import { CloseBackdrop, ClosingCta } from "@/components/public/closing-cta";
 import { usePublicCopy } from "@/components/public/copy-context";
 import { formatRevenueBand, Zone } from "@/components/public/primitives";
@@ -103,14 +108,15 @@ export interface FunctionViewScreenProps {
   input: PeerViewInput;
   onBack: () => void;
   /**
-   * Back to the form, with the answers intact.
+   * Back to the entry point, from the band's own lockup.
    *
-   * New on this screen. The context panels are controls now, and a control that
-   * looks like it changes an answer has to actually change it — previously this
-   * screen had no route to the form at all, so a visitor who noticed a wrong revenue
-   * band here had to go back to the peer view first to find one.
+   * **This replaced `onEditProfile`.** That prop existed because the context pills' one
+   * control went to the form; it now opens the answer editor in place, so the trip to the
+   * entry point moved onto the mark. See `AnswerEditor` and `ProductIdentity`.
    */
-  onEditProfile: () => void;
+  onHome: () => void;
+  /** What the answer editor needs from the tool. The open state is held here. */
+  editing: AnswerEditing;
   /** The tab panel, which is where focus goes on a phase change. See `tool.tsx`. */
   panelRef: React.RefObject<HTMLDivElement | null>;
   /** Where the close links out to. See `tool.tsx`. */
@@ -123,7 +129,8 @@ export function FunctionViewScreen({
   view,
   input,
   onBack,
-  onEditProfile,
+  onHome,
+  editing,
   panelRef,
   ctaHref,
   closeCopy,
@@ -132,6 +139,17 @@ export function FunctionViewScreen({
   const name = companyName(input);
   const first = view.areas[0]?.functionArea ?? "tech";
   const [active, setActive] = useState<string>(first);
+
+  /**
+   * Whether the answer editor is open.
+   *
+   * **Closed by its own handler here, unlike Screen 1's, and the difference is
+   * deliberate.** The tool remounts the peer view on a new input, which closes that
+   * screen's panel for free; this screen is NOT keyed on the input, because remounting it
+   * would throw the visitor off whichever function tab they were reading and back onto
+   * technology. So the close is explicit, and it happens only when the correction lands.
+   */
+  const [editorOpen, setEditorOpen] = useState(false);
 
   /**
    * The same four panels Screen 1 shows, from the same answers, in the same order.
@@ -299,6 +317,22 @@ export function FunctionViewScreen({
           </Zone>
         </ViewPanel>
       }
+      /* The answers, corrected in the overlap the card normally occupies. Rendered
+         outside the band because the band clips — see `ResultSurface.editor`. */
+      editor={
+        editorOpen ? (
+          <AnswerEditor
+            options={editing.options}
+            initial={input}
+            pending={editing.pending}
+            error={editing.error}
+            onApply={async (next) => {
+              if (await editing.onApply(next)) setEditorOpen(false);
+            }}
+            onCancel={() => setEditorOpen(false)}
+          />
+        ) : undefined
+      }
       /* Published copy. It is an attribution rather than a claim about method — which
          is exactly the test that let it become data; `SCREEN_SOURCE`, which does make a
          claim about method, stays in code and unrendered. */
@@ -318,13 +352,20 @@ export function FunctionViewScreen({
             matching GCCs; this one states which market the figures below are about,
             because they are national and do not move with the visitor's answers. */}
         <div className="flex flex-col gap-3 md:gap-4">
-          <ProductIdentity id="product-identity" />
+          {/* The lockup is the way back to the entry point on both screens, for the
+              reason the pills' control no longer is. See `ProductIdentity`. */}
+          <ProductIdentity id="product-identity" onHome={onHome} />
           <HeaderFinding>{headerLines(copy).functions}</HeaderFinding>
         </div>
-        {/* Straight to the form, not via the peer view. Same behaviour as Screen 1's
+        {/* Opens the editor below the band, not the form. Same behaviour as Screen 1's
             row, which is the point: it is the same component in the same place on both
             screens, so the two cannot mean different things. */}
-        <ContextPanels facts={facts} onEdit={onEditProfile} />
+        <ContextPanels
+          facts={facts}
+          onEdit={() => setEditorOpen((open) => !open)}
+          editing={editorOpen}
+          controls={ANSWER_EDITOR_ID}
+        />
     </ResultSurface>
   );
 }

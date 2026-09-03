@@ -157,7 +157,14 @@ export interface SiteContentDiff {
    * it is not literally the first thing every visitor reads — but it is the tool's only
    * call to action, and a publish that silently changed the words on it would be the same
    * defect as a silently changed headline. A field list rather than a keyed collection,
-   * because there are two fields and both are prose worth reading before approving.
+   * because the keys are fixed and every one of them is worth reading before approving.
+   *
+   * **Four fields now: two strings and the two per-screen links.** The links are in here
+   * on a sharper version of the same argument — a retagged link changes nothing a reviewer
+   * can see on the page, so if the diff did not carry it, a wrong UTM string or a typo in a
+   * domain would reach production with the review saying "no site content changes". Both
+   * sides are reported for the links exactly as for the prose, since a link is only
+   * checkable by reading it.
    */
   close: Array<{ field: keyof CloseCopy; before: string; after: string }>;
   /**
@@ -391,7 +398,32 @@ function metricsCount(diff: MetricsDiff): number {
 }
 
 const HERO_FIELDS: ReadonlyArray<keyof HeroCopy> = ["title", "lead"];
-const CLOSE_FIELDS: ReadonlyArray<keyof CloseCopy> = ["body", "ctaLabel"];
+const CLOSE_FIELDS: ReadonlyArray<keyof CloseCopy> = [
+  "body",
+  "ctaLabel",
+  /* The two links, diffed exactly like the two strings. A retagged link is the change
+     most likely to be made quickly and least likely to be noticed on the page, since
+     nothing visible moves — so it is the one in this object that most needs both sides
+     spelled out in the review. */
+  "ctaHrefPeers",
+  "ctaHrefFunctions",
+];
+
+/**
+ * What each close field is called in the review, because three of the four keys name a
+ * slot rather than a thing an admin would recognise.
+ *
+ * Same reasoning as `PUBLIC_COPY_LABELS`: `ctaHrefFunctions` tells a reviewer nothing
+ * about which screen's link moved. Held here rather than in the panel so the text renderer
+ * and the UI renderer name the field identically — a publish reviewed in one and approved
+ * in the other must not read as two different changes.
+ */
+export const CLOSE_FIELD_LABELS: Record<keyof CloseCopy, string> = {
+  body: "body",
+  ctaLabel: "button",
+  ctaHrefPeers: "peer landscape link",
+  ctaHrefFunctions: "function metrics link",
+};
 const IMPACT_FIELDS: ReadonlyArray<keyof ImpactStat> = ["value", "label"];
 const LOGO_FIELDS: ReadonlyArray<keyof CustomerLogo> = ["name", "width", "height"];
 
@@ -845,7 +877,6 @@ export const PUBLIC_COPY_LABELS: Record<keyof PublicCopy, string> = {
   headerFunctions: "Function view finding",
   viewPeers: "Peer view switch",
   viewFunctions: "Function view switch",
-  peersTitle: "Comparable companies heading",
   industryTitle: "Industry count heading",
   peerHeadcountLabel: "Peer card, headcount",
   peerCitiesLabel: "Peer card, cities",
@@ -1039,7 +1070,7 @@ export function renderDiffText(diff: DatasetDiff): string {
   // The close, spelled out for the same reason the hero is: it is prose, and a reviewer
   // needs to read what it became rather than be told a field changed.
   for (const change of diff.siteContent.close) {
-    lines.push(`  close ${change.field}:`);
+    lines.push(`  close ${CLOSE_FIELD_LABELS[change.field]}:`);
     lines.push(`    - ${change.before}`);
     lines.push(`    + ${change.after}`);
   }

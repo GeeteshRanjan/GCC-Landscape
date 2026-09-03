@@ -228,7 +228,17 @@ export interface TieredOptions {
   others: readonly string[];
 }
 
-export interface InputPanelProps {
+/**
+ * Everything the four controls need in order to offer their options, as ONE type.
+ *
+ * **Extracted because the form is rendered in two places now.** The entry point mounts
+ * it as the ask, and both result screens mount it inside `AnswerEditor` so a visitor can
+ * correct an answer without leaving the result. Four separately-threaded props across two
+ * screens and three components is four chances for the result's dropdowns to offer a
+ * different set from the entry point's — which would be a peer set matched against
+ * options one of the two forms could not produce.
+ */
+export interface AskOptions {
   industries: TieredOptions;
   revenueBands: readonly string[];
   hqCountries: TieredOptions;
@@ -240,12 +250,26 @@ export interface InputPanelProps {
    * spinner inside a dropdown for no gain.
    */
   businessTypesByIndustry: Readonly<Record<string, readonly BusinessTypeOption[]>>;
+}
+
+export interface InputPanelProps extends AskOptions {
   /** Set when returning to the form, so a correction starts from the last answer. */
   initial?: Partial<PeerViewInput>;
   pending: boolean;
   /** Server-side failure, surfaced above the button rather than per field. */
   submitError?: string | null;
   onSubmit: (input: PeerViewInput) => void;
+  /**
+   * What the submit says, where it is not the entry point's own published label.
+   *
+   * **Only the answer editor passes it, and it has to.** `copy.askSubmit` is "Build my
+   * GCC Landscape", which is true on the entry point and false in a panel sitting on top
+   * of a landscape that already exists — a visitor correcting one dropdown is updating a
+   * result, not building one. It is a prop rather than a second published key because
+   * the two labels are the same decision said twice: reword the ask and this has to
+   * follow, so it is composed from the one field instead. See `AnswerEditor`.
+   */
+  submitLabel?: string;
 }
 
 type Errors = Partial<Record<"industry" | "revenueBand" | "hqCountry", string>>;
@@ -286,6 +310,7 @@ export function InputPanel({
   pending,
   submitError,
   onSubmit,
+  submitLabel,
 }: InputPanelProps) {
   const copy = usePublicCopy();
   const [companyName, setCompanyName] = useState(initial?.companyName ?? "");
@@ -642,7 +667,7 @@ export function InputPanel({
                 what a visitor reads while deciding to press, which is positioning; the
                 other is a transient machine state an admin could not see the effect of
                 editing. See `ASK.submitPending`. */}
-            {pending ? ASK.submitPending : copy.askSubmit}
+            {pending ? ASK.submitPending : (submitLabel ?? copy.askSubmit)}
           </button>
         </div>
       </div>

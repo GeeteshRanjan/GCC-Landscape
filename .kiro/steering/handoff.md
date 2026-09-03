@@ -8,83 +8,90 @@ visual. Bounded by SHAPE, not length — see the `handoff.md` subsection of "Doc
 
 ## Where we are
 
-- **Everything is committed and pushed to `main`. Working tree clean, local equals `origin/main`.** No
-  SHA here on purpose — it goes stale on this file's own commit.
-- **Full gate GREEN on the pushed tree** — `tsc`, `brand:lint`, 668 unit, **199 browser**, `data:verify`
-  clean. Vercel rebuilds production from `main`, so this is live.
-- **Another session's two admin publishes were INTEGRATED, not reverted.** The rebase auto-merged; both
-  sides were verified present. Their two title renames are cascaded into `metric-catalogue.ts` and four
-  spec locations; `close.ctaLabel` is now "Get all Parameters".
-- **The Fortune Global 500 badge is live at 16px, replacing the accent chip at both sites.** Domains
-  cover 1,828 of 1,834 companies. The Brandfetch mark tier is built and OFF — the client ID is set in
-  `.env.local` only, never in production. Rules for all three in `project.md`.
-- **The dev server was killed and `.next/` cleared to run the suite** — restart with `npm run dev`.
+- **UNCOMMITTED on `main`,** many stacked passes in the working tree. Newest is a peer-view UX + search
+  pass: cities prominence-ordered (`orderCitiesByProminence` in `derive.ts`) and capped with a rounded
+  "+N" disclosure pill (comparison cards max 2, ranking rows max 3, hover `title` + click to expand) in
+  `evidence.tsx`; the containment "shown above" marker now takes the bars' trailing radius; the count-line
+  arrow is a head-only right-facing `ChevronRight`; search folds apostrophes (`L'Oréal`→`loreal`) and
+  prefixes short tokens in every position. Verified `tsc` + unit + `brand_lint` clean; `next build` and the
+  browser suite NOT run this session.
+- **THE CUSTOMER STRIP CARRIES TWENTY-TWO MARKS and that is the only place the new logos are used.**
+  `public/logos/`, each cropped to ink bounds by `npm run logo:crop`. Schema cap 24; admin picker lists all.
+- **THE PEER AND LARGEST-GCC SECTIONS ARE REVERTED to their pre-logo look, and `COMPANY_MARKS` is EMPTY by
+  decision.** The mark tier is still wired end to end so one table entry restores it; the condition a
+  committed mark must meet first is in `project.md`.
+- **NINE candidate treatments of the peers section exist; B `authority` and G `reverse` are the shortlist
+  and NOTHING is merged.** Record in `.tastemaker/peers-candidates.md`; live code in `peers-variants.tsx`,
+  harness on port 3400. **Both dev servers are running, on `.next` and `.next-variants`, and
+  `.next-variants/` is untracked** — gitignore or delete it before staging.
 
 ## Next action
 
-1. **Read the peer row and the ranking rows in a real browser at 1440, 768 and 390.** The badge has only
-   ever been seen in Playwright screenshots. Company marks render as broken-image icons locally because
-   the CDN is unreachable from that context — worth resolving in the same pass.
-2. **Read all four Screen 2 tabs in a browser.** Nothing across the last several sessions was looked at
-   by a human.
-3. **Serialise with the other session.** One at a time for `test:browser`, `build` and admin publish;
-   everything else is safe in parallel. Rule in `project.md`.
-4. **Confirm the two renamed titles belong to the twelve already awaiting ANSR sign-off**, blocked item
-   6, rather than being a new decision.
-5. **A live PREVIEW of the public screens from the draft is the one part of the earlier ask not built.**
-   Peer view can render from the draft directly; Screen 2 needs a server action (the `server-only` gate
-   must stay).
+1. **Stop BOTH dev servers, run `next build`, then `npm run test:browser`.** Unverified by the suite:
+   the new city "+N" pills, the head-only arrow, plus the earlier hero/ATLAS-wordmark/CTA-links passes.
+   `0-search.spec.ts` drives the dropdown filter — confirm the short-token-prefix change did not shift its
+   expectations.
+2. **Owner is deciding between B and G. Do not merge either until told.** On the word: fold the winner into
+   `peer-view.tsx` / `evidence.tsx`, delete `peers-variants.tsx`, `/variants`, `variant-harness.tsx` and
+   every supporting edit the winner does not use.
+3. **G needs two answers before it can ship** — a Fortune recolour grant or the badge moved off the dark
+   region, and a decision on dark-ink company logos, which vanish on teal-deep. `plate` (I) is the built
+   answer to both if they block G.
+4. **Decide whether the `impeccable` devDependency belongs in the repo at all** — a caret range against the
+   exact-pin rule. Pin it exactly or remove it before any of this is committed.
 
 ## Blocked / needs the user
 
-1. **MUST NOT SHIP UNEXAMINED — the ANSR rail's four months (4, 8, 16, 24).** `ANSR_MONTHS` in
+1. **B or G, and G's two grants.** Reasoning and both cards' source: `.tastemaker/peers-candidates.md`.
+2. **THE PEER SECTIONS DRAW NO COMPANY MARKS AT ALL, because the Brandfetch client ID is rejected** —
+   every `cdn.brandfetch.io` request 302s to their hotlinking guidelines, across three referrers and with
+   no id. Either settle it with the provider, or letterbox committed marks onto the resolver's own box and
+   repopulate `COMPANY_MARKS`; `project.md` has the condition.
+3. **The per-SET mark reservation.** Every candidate treatment reserves the mark's band only when some peer
+   in the set has one, where the shipped card reserves per card. It changes a rule the owner set.
+4. **Capability grid: every "Very strong" is India's column,** so the depth-by-rating teal is
+   indistinguishable from the emphasis ANSR removed. Accept, revert, or supply ratings where another hub
+   reaches the top step. Style lock has the argument.
+5. **Two trademark questions the customer clearance does NOT cover** — the Fortune badge (Fortune routes
+   through PARS International) and the provider tier (would resolve a logo for any of the 1,834).
+6. **Three requested labels ship naming the INDUSTRY where ANSR asked for the sub-industry** — snapshot
+   city count, leading city, locations heading. All industry-scoped; narrowing is a data change. Style lock
+   records it.
+7. **MUST NOT SHIP UNEXAMINED — the ANSR rail's four months (4, 8, 16, 24).** `ANSR_MONTHS` in
    `screen2/milestone-card.tsx`. A marketing claim the dataset does not hold.
-2. **MUST NOT SHIP UNEXAMINED — three PROVISIONAL latency figures**, Middle East 50, Singapore 70, US
-   West 230 on `ops-network-latency`; named in the metric's note and `docs/data-audit.md`.
-3. **MUST NOT SHIP AS IS — two placeholder figures at 10%.** India operating cost growth and workplace
-   cost growth. Replace under Metrics → Finance, and replace the `PLACEHOLDER` marker with the number.
-4. **TWO TRADEMARK DECISIONS, both ANSR's and neither this repo's, and both are now on `main`.** 1,834
-   hotlinked Brandfetch marks and Fortune's badge, each beside an ANSR CTA. Fortune's guidance requires
-   written approval via PARS International. The mark tier is off by an unset env var; **the badge has no
-   equivalent switch and would need removing.**
-5. **Rotate the admin password** (shared in a transcript). `npm run admin:hash`, set
-   `ADMIN_PASSWORD_HASH`, redeploy. Calendar the `GCC_GITHUB_TOKEN` expiry.
-6. **Recent Screen 2 changes want ANSR sign-off as a set** — the two published title renames, the two new
-   salary rows and dropped comparator sentence, two renamed salary entries, "Base pay" unit, backfill
-   note, extended latency card, capability grid losing India emphasis, twelve retitled metrics, removed
-   summary/section headings, deleted floor sentence, "Other sciences" dropped from the discipline split.
-7. **Deleting the sealed group means a visitor is never told a figure is being withheld.** Four gated
-   metrics render nothing; restoring the signal is one section per tab.
-8. **The business-type taxonomy wants ANSR sign-off as one pass** — 26 industry re-homes plus tags
-   (table in `scripts/business-type-map.ts`, summary in `docs/data-audit.md`), every peer-split's finer
-   categories, and the honest thin spots: 38 untagged companies, 6 single-member types, `avi-services`
-   empty pending a real second company.
-9. **Moderat is still not on the page.** `Moderat-*.woff` on disk under `public/fonts/` but gitignored
-   and unwired; licence unsettled and Light+Regular alone would synthesise Bold. Needs a licensed woff2
-   set with Medium and Bold, then Moderat at the front of `--ansr-font-display`.
-10. **Kept, tested, rendered nowhere** — Screen 2's six sentences, `FIN_DRIVERS_INSIGHT`,
-    `FIN_FIGURES_QUALIFIER`, `FLOOR_NOTE`; Screen 1's `LARGEST_LEAD`, `peerLead`; `grid.anchorColumn`;
-    `BarTone`'s `muted`. Plus: India outline sign-off (three places), palette anchors, the five
-    composed-tab asks asserted absent (style lock).
+8. **MUST NOT SHIP UNEXAMINED — three PROVISIONAL latency figures** (Middle East 50, Singapore 70, US West
+   230) on `ops-network-latency`; named in the note and `docs/data-audit.md`.
+9. **MUST NOT SHIP AS IS — two 10% placeholder figures**, "Increase in operating costs, YoY" and "Increase
+   in workplace costs, YoY". Replace under Metrics → Finance and swap the `PLACEHOLDER` marker.
+10. **Rotate the admin password** (shared in a transcript): `npm run admin:hash`, set `ADMIN_PASSWORD_HASH`,
+    redeploy. Calendar the `GCC_GITHUB_TOKEN` expiry.
+11. **ANSR sign-off backlog, as a set:** the hero rewrite and drawn product name; the mobile map as texture
+    below `lg`; the strip going to twenty-two marks; Screen 2's metric rewordings, salary rows/renames/notes,
+    capability grid losing India emphasis, retitled metrics; and the taxonomy 26 industry re-homes, tags and
+    peer splits (tables in `scripts/business-type-map.ts`, summary in `docs/data-audit.md`).
+12. **Deleting the sealed group means a visitor is never told a figure is withheld.** Four gated metrics
+    render nothing; restoring the signal is one section per tab. Plus the honest thin spots — 38 untagged
+    companies, 6 single-member business types, `avi-services` empty — which need a future data batch.
 
 ## Traps worth remembering
 
 **`docs/traps.md`** — read it before touching the test suite, the dev server, the metric catalogue, or
 anything that renders. Five that would cost the most time:
 
-- **`test:browser`, `build` and admin publish are single-tenant.** One port 3210, one fixture, one
-  `test-results/`, one `.next/`, one `main`. A second session running any of them corrupts the first into
-  `page.goto` timeouts and trace `ENOENT`, which reads as a product bug. Rule in `project.md`.
-- **A `dataset.json` rebase AUTO-MERGES rather than conflicting**, because the file is pretty-printed and
-  two sessions rarely touch the same lines. "No conflict" is not evidence nothing was lost — verify both
-  sides are present in the merged file before committing.
-- **A metric TITLE is load-bearing in four places** — the public card, the shared-title invariant in
-  `metrics.test.ts`, admin's `Edit {title}, {area}` button, and `metric-catalogue.ts`. **A rename
-  published from admin lands in `dataset.json` alone**, so the catalogue and the specs are left behind and
-  `--reseed-metrics` would undo it. Nothing in the schema, the diff or `data:verify` catches this.
-- **`curl` against `cdn.brandfetch.io` 302s with OR without a valid client ID**, so a shell test reports
-  `text/html` for every domain and looks like a dead credential. And **`fallback` is a PATH segment**.
-  Verify marks in a browser, never a terminal.
-- **Never touch `.next/` while a dev server holds it.** Every request then 500s with
-  `TurbopackInternalError`. Playwright also leaves 3210 held after a killed run — but check for a live run
-  before killing it.
+- **Never touch `.next/` while a dev server holds it**, and never run two dev servers on one `distDir` —
+  every request then 500s. Two are running now, on `.next` and `.next-variants`. Playwright leaves port
+  3210 held after a killed run: `lsof -ti:3210 | xargs kill -9`, and `npx playwright test` does NOT rebuild
+  the fixture. Overriding `distDir` makes `next dev` AND `next build` rewrite `tsconfig.json`'s `include` —
+  revert it.
+- **THE MARK TIER LIES TWICE OVER, so believe neither the local render nor an absent logo.** `.env.local`
+  sets the client ID, so a local dev server has the tier ON while production ships it OFF, and the ID is
+  currently REJECTED so a mark that will not draw is the CDN 302, not the card. Blank the var on its own
+  `GCC_DIST_DIR` to see the shipped state; `curl` the CDN before debugging a component.
+- **WHILE A RADIX DIALOG IS OPEN OR CLOSING, EVERY ROLE QUERY AGAINST THE PAGE BEHIND IT RETURNS NOTHING** —
+  the rest of the document is `aria-hidden` and `getByRole` honours it. Wait for `[role="dialog"]` to
+  detach, or locate by tag. More probe traps beside it in `docs/traps.md`.
+- **30px IS NOT AVAILABLE for a peer card's headcount figure at five columns** — "22,100–22,200" wraps to
+  two lines in a 205px card. A louder figure needs a different ground, ratio, or a full-width row.
+- **A SPEC IS COUPLED TO CONTENT IN MORE PLACES THAN THE RENDER PATH.** A hero title lives in
+  `dataset.json`, `DEFAULT_SITE_CONTENT` and every spec naming it; `getByLabel` matches on SUBSTRING, so a
+  new admin field can break a spec naming an old one. Grep on every content pass.

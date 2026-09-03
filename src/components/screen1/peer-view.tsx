@@ -4,6 +4,13 @@
 
 import { Globe, Landmark, Users } from "lucide-react";
 
+import { useState } from "react";
+
+import {
+  AnswerEditor,
+  ANSWER_EDITOR_ID,
+  type AnswerEditing,
+} from "@/components/public/answer-editor";
 import { CloseBackdrop, ClosingCta } from "@/components/public/closing-cta";
 import { usePublicCopy } from "@/components/public/copy-context";
 import { Block, formatRevenueBand, Panel, Zone } from "@/components/public/primitives";
@@ -28,8 +35,8 @@ import {
   IndustryCountView,
   LargestBlockView,
   NationalScaleView,
-  PeerBlockView,
 } from "./evidence";
+import { PeersZone, type PeersVariant } from "./peers-variants";
 import {
   FUNCTIONS_TITLE,
   largestTitle,
@@ -375,11 +382,19 @@ export function PeerViewAsk({
 export function PeerViewAnswer({
   panelRef,
   view,
-  onChangeDetails,
+  onHome,
+  editing,
   onOpenFunctions,
   ctaHref,
   closeCopy,
+  peersVariant = "current",
 }: {
+  /**
+   * **TEMPORARY.** Which candidate treatment of the comparison set to draw. Defaults to
+   * the shipped one, so the only caller that passes it is the variants harness. Goes with
+   * `peers-variants.tsx` once a treatment is chosen.
+   */
+  peersVariant?: PeersVariant;
   /**
    * The tab panel, which is where focus goes on a phase change.
    *
@@ -390,7 +405,17 @@ export function PeerViewAnswer({
    */
   panelRef: React.RefObject<HTMLDivElement | null>;
   view: PeerView;
-  onChangeDetails: () => void;
+  /**
+   * Back to the entry point, from the band's own lockup.
+   *
+   * **This replaced `onChangeDetails`, and the rename is the change rather than a
+   * tidy-up.** That prop was "Edit answers", which left the result for the form; the
+   * answers are corrected in place now, so the only thing left that goes to the entry
+   * point is the mark. See `AnswerEditor` and `ProductIdentity`.
+   */
+  onHome: () => void;
+  /** What the answer editor needs from the tool. The open state is held here. */
+  editing: AnswerEditing;
   onOpenFunctions: () => void;
   /** Where the close links out to. See `tool.tsx`. */
   ctaHref: string;
@@ -400,6 +425,16 @@ export function PeerViewAnswer({
   const copy = usePublicCopy();
   const peerCount = view.peers.peers.length;
   const name = companyName(view.input);
+
+  /**
+   * Whether the answer editor is open.
+   *
+   * Held here rather than in the tool, because it is state about one band on one screen
+   * and nothing above this component reads it. It resets by REMOUNT rather than by a
+   * handler: `tool.tsx` keys this screen on the visitor's answers, so a successful
+   * correction replaces the whole tree and the panel closes with it.
+   */
+  const [editorOpen, setEditorOpen] = useState(false);
 
   /**
    * The four answers, in the order the form asks them.
@@ -517,34 +552,16 @@ export function PeerViewAnswer({
                 itself. The accent header strip is spent here rather than shared out —
                 one card on the surface announces itself in colour, and it is this
                 one. */}
-            <Zone ground="tint">
-              <Enter index={2}>
-                {/* **A `Block`, not a `Panel`, and the accent gradient strip went with
-                    the border.** Five floating company cards inside a sixth bordered
-                    box is a card inside a card — the one nesting the craft floor treats
-                    as always wrong — and the outer edge was adding nothing the cards
-                    did not already have. What the strip was buying was "one card on
-                    this surface announces itself in colour"; what it cost was that the
-                    primary evidence read as another panel in a stack of six.
-
-                    `weight="lead"` is what replaces it. The heading is a step above
-                    every other section's, so the hierarchy is carried by size rather
-                    than by a fill — which is also the honest version, since this block
-                    genuinely does outrank the five under it. */}
-                {/* **No lead, at ANSR's request.** It was `peerLead`, the block's only
-                    statement of method — which industry the set was matched on and what
-                    it was ordered by. The heading now names the subject ("The India GCCs
-                    closest to yours") and the count line under the grid names the
-                    denominator, so what is lost is specifically the ORDERING claim: a
-                    visitor can no longer see why this exact five, in this exact order.
-                    `peerLead` is kept in `copy.ts` and still unit-tested on both
-                    branches, because it is the sentence to restore rather than a sentence
-                    that was wrong. On the blocked list. */}
-                <Block id="peers" title={copy.peersTitle} weight="lead">
-                  <PeerBlockView view={view} />
-                </Block>
-              </Enter>
-            </Zone>
+            {/* **TEMPORARY SEAM — the four candidate treatments of this section.** The
+                composition below is unchanged and is what `variant="current"` renders;
+                `PeersZone` owns the whole zone rather than its contents because one
+                candidate changes the zone's own ground. Delete `peers-variants.tsx` and
+                restore the block below inline once a treatment is chosen. */}
+            {/* The shipped composition — a `Block` rather than a `Panel`, `weight="lead"`
+                rather than an accent fill, and no lead sentence — is reproduced verbatim
+                as `PeersZone`'s `current` branch, together with the whole of its
+                reasoning. Nothing about it has changed. */}
+            <PeersZone view={view} variant={peersVariant} />
 
             {/* ---- Zone 3: the upper end, beside the industry it sits in --------
                 **The two blocks that answer "and how does that compare" are now one
@@ -728,9 +745,32 @@ export function PeerViewAnswer({
             </Zone>
           </ViewPanel>
         }
+        /* The answers, corrected in the overlap the card normally occupies. Rendered
+           outside the band because the band clips — see `ResultSurface.editor`.
+
+           `onApply` closes the panel only on success, which on this screen is belt and
+           braces: the tool keys the whole screen on the input, so a landed correction
+           remounts and the panel goes with it. It is the failure case that needs the
+           check — the panel has to stay open holding the error. */
+        editor={
+          editorOpen ? (
+            <AnswerEditor
+              options={editing.options}
+              initial={view.input}
+              pending={editing.pending}
+              error={editing.error}
+              onApply={async (next) => {
+                if (await editing.onApply(next)) setEditorOpen(false);
+              }}
+              onCancel={() => setEditorOpen(false)}
+            />
+          ) : undefined
+        }
       >
         <div className="flex flex-col gap-3 md:gap-4">
-          <ProductIdentity id="product-identity" />
+          {/* The lockup is the way back to the entry point, which it became when
+              "Edit answers" stopped being one. See `ProductIdentity`. */}
+          <ProductIdentity id="product-identity" onHome={onHome} />
           {/* **The band's line comes from `HEADER_LINES` now, not from `framing()`.**
               `copy.title` stated a COUNT — "5 India GCCs match your BFSI profile" — and
               five is what the grid SHOWS, capped by the peer limit, not how many matched:
@@ -752,7 +792,13 @@ export function PeerViewAnswer({
               heading. */}
           <HeaderFinding>{headerLines(copy).peers}</HeaderFinding>
         </div>
-        <ContextPanels facts={facts} onEdit={onChangeDetails} />
+        {/* A disclosure now, not a way out: it opens `AnswerEditor` below the band. */}
+        <ContextPanels
+          facts={facts}
+          onEdit={() => setEditorOpen((open) => !open)}
+          editing={editorOpen}
+          controls={ANSWER_EDITOR_ID}
+        />
       </ResultSurface>
     </div>
   );

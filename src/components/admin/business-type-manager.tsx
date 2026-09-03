@@ -3,6 +3,13 @@
 import { useMemo, useState } from "react";
 
 import { AdminPageHeader } from "@/components/admin/page-header";
+import {
+  AdminSearch,
+  NoSearchMatches,
+  useAdminSearch,
+  useDeepLinkOpen,
+  useDeepLinkQuery,
+} from "@/components/admin/search-box";
 import { Button } from "@/components/ui/button";
 import { BUSINESS_TAG_AXES, type BusinessTag } from "@/data/business-tags";
 import type { BusinessType } from "@/data/schema";
@@ -36,9 +43,17 @@ const CONTROL =
 
 export function BusinessTypeManager() {
   const { draft, addBusinessType, updateBusinessType, removeBusinessType } = useDraft();
+  const search = useAdminSearch();
   const [industryFilter, setIndustryFilter] = useState("");
   const [editing, setEditing] = useState<string | null>(null);
   const [adding, setAdding] = useState(false);
+
+  // Arriving from the universal search. `open` is a business-type id, which is what
+  // the editing state holds. The industry filter is deliberately NOT set from the
+  // link: the query alone reaches the row, and a filter the admin did not choose is
+  // the thing that later looks like a broken search.
+  useDeepLinkQuery(search.setQuery);
+  useDeepLinkOpen(setEditing);
 
   /** How many companies carry each type, and how many types carry each tag. */
   const usage = useMemo(() => {
@@ -55,14 +70,28 @@ export function BusinessTypeManager() {
     return { byType, byTag };
   }, [draft.companies, draft.businessTypes]);
 
+  /**
+   * Filtered by industry, then by the query, then sorted.
+   *
+   * **The query reaches the TAGS as well as the name**, which is the thing the
+   * industry select cannot do and the reason a text search earns its place on a page
+   * that already had a filter. Tags are the similarity substrate, so the question an
+   * admin actually arrives with is "which types carry `luxury`?" — an audit that
+   * spans industries and was previously 164 rows read by eye. The id is in scope too,
+   * because a tag check script and `business-type-map.ts` both name types by id, so
+   * an id is what an admin is holding when they come here from a terminal.
+   */
   const visible = useMemo(() => {
-    const types = industryFilter
-      ? draft.businessTypes.filter((type) => type.industry === industryFilter)
-      : draft.businessTypes;
+    const types = draft.businessTypes.filter((type) => {
+      if (industryFilter && type.industry !== industryFilter) return false;
+      return search.matches(type.name, type.id, type.tags);
+    });
     return [...types].sort(
       (a, b) => a.industry.localeCompare(b.industry) || a.name.localeCompare(b.name),
     );
-  }, [draft.businessTypes, industryFilter]);
+    // `search.matches` is stable per query; the query is what changes.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [draft.businessTypes, industryFilter, search.matches]);
 
   return (
     <div className="flex flex-col gap-6">
@@ -76,7 +105,16 @@ export function BusinessTypeManager() {
         <Button onClick={() => setAdding(true)}>Add a business type</Button>
       </AdminPageHeader>
 
-      <div className="flex flex-wrap items-end justify-between gap-x-6 gap-y-3">
+      {/* The industry select sits INSIDE the search row rather than beside it: the
+          two narrow the same list, and a filter an admin has forgotten they set is
+          the commonest cause of "the search is broken". One Clear resets both. */}
+      <AdminSearch
+        placeholder="Payments, luxury, sw-ai-platform"
+        hint="Searches the name, the id and the tags. A tag search spans every industry."
+        value={search.query}
+        onChange={search.setQuery}
+        onClear={() => setIndustryFilter("")}
+      >
         <label className="flex w-64 flex-col gap-1.5">
           {/* "Filter by industry", not "Industry": the edit form below has its own
               Industry select, and two controls with the same accessible name make
@@ -95,11 +133,20 @@ export function BusinessTypeManager() {
             ))}
           </select>
         </label>
-        <p className="text-sm text-text-muted">
-          {visible.length} business {visible.length === 1 ? "type" : "types"}. Editing tags
-          re-scores every peer set in that industry.
-        </p>
-      </div>
+      </AdminSearch>
+
+      <p className="text-sm text-text-muted">
+        {visible.length} business {visible.length === 1 ? "type" : "types"}. Editing tags
+        re-scores every peer set in that industry.
+      </p>
+
+      {visible.length === 0 && search.searching ? (
+        <NoSearchMatches
+          query={search.query}
+          what="business types"
+          hint="Try a shorter word, or clear the industry filter."
+        />
+      ) : null}
 
       {adding ? (
         <BusinessTypeForm

@@ -315,8 +315,54 @@ function couplings(metric: Metric, form: Form): Coupling[] {
     }
   }
 
+  /**
+   * The one metric whose `unit` is DRAWN beside its figure rather than read as prose.
+   *
+   * See `DRAWN_UNIT_IDS` for why the schema cannot express this and why the threshold is
+   * a length rather than a mirrored constant. Outside the structure branch above, because
+   * a unit is a field of the metric rather than of its shape.
+   */
+  if (DRAWN_UNIT_IDS.includes(metric.id)) {
+    const unit = form.unit.trim();
+    if (unit.length > DRAWN_UNIT_MAX) {
+      notices.push({
+        id: "drawn-unit",
+        text:
+          "This figure opens the operations tab with its unit set beside the number, not " +
+          `underneath it — so the unit is drawn at display size in a narrow cell. “${unit}” is ` +
+          `${unit.length} characters and the cell fits about ${DRAWN_UNIT_MAX}; longer than that ` +
+          "and the public screen clips it on a laptop. Abbreviate it (“mn sq ft”, not “million " +
+          "square feet”).",
+      });
+    }
+  }
+
   return notices;
 }
+
+/**
+ * The metric whose `unit` the public screen DRAWS, and the length the cell holds.
+ *
+ * **Why the schema cannot carry this.** `unitSchema` caps a unit at 60 characters, which
+ * is right for every other metric: a unit is normally prose in an axis note under a card
+ * heading, and two of them are already 39 and 42 characters ("professionals in manager
+ * and above roles"). This one is different because the metric is PROMOTED into the
+ * operations figure row, where its unit is passed through as `SummaryFigure.unit` and set
+ * two scale steps under a 48px numeral — so its render limit is a property of one cell on
+ * one tab, and a cap tight enough for it would refuse the other metrics' units outright.
+ *
+ * **A LENGTH rather than a mirrored constant, which is the deviation from its three
+ * siblings.** The other notices mirror a public list — row names, entry names, supplied
+ * months — and compare against it. There is no list to mirror here: what constrains this
+ * field is 22px of measured headroom in a 192px box at `lg`, and the honest admin-side
+ * expression of that is roughly how many characters fit. 12 is "mn sq ft" plus room,
+ * derived from the measurement recorded in project.md rather than from the token system.
+ * Re-derive it if the figure row's column count or the unit's size step changes.
+ *
+ * Advisory like the rest: it blocks no save and marks no field invalid.
+ */
+const DRAWN_UNIT_IDS: readonly string[] = ["ops-grade-a-office-stock"];
+const DRAWN_UNIT_MAX = 12;
 
 export function MetricEditor({
   metric,

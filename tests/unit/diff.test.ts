@@ -90,7 +90,15 @@ describe("diffDatasets — site content", () => {
     // The close's copy. Defaulted in the schema so an older dataset still reads, but
     // REQUIRED on the parsed type — so a fixture that omits it is a compile error rather
     // than a silent `undefined` reaching the diff.
-    close: { body: "Access the complete dataset.", ctaLabel: "Unlock full intelligence" },
+    // The two links are blank here for the same reason they ship blank: blank is the
+    // legal "use the configured default" value, so it is the state a fixture that is not
+    // exercising them should be in.
+    close: {
+      body: "Access the complete dataset.",
+      ctaLabel: "Unlock full intelligence",
+      ctaHrefPeers: "",
+      ctaHrefFunctions: "",
+    },
     // The three collections that moved out of code, on the same terms as `close`:
     // defaulted in the schema, required on the parsed type. The shipped values are
     // reused rather than restated so a copy change does not have to be typed twice.
@@ -190,17 +198,19 @@ describe("diffDatasets — site content", () => {
   });
 
   /**
-   * The thirty static strings.
-   *
-   * Every one of them, in a loop, because the list of fields the diff walks is the
+   * Every static string, in a loop, because the list of fields the diff walks is the
    * thing being tested here rather than the walking of it. A hand-maintained list of
-   * twenty-nine keys loses one eventually, and the key it loses is a heading that then
+   * twenty-eight keys loses one eventually, and the key it loses is a heading that then
    * publishes silently — the `businessTypes`-missing-from-`COMPANY_FIELDS` defect,
-   * with twenty-nine chances to happen instead of one.
+   * with twenty-eight chances to happen instead of one.
+   *
+   * 28 since `peersTitle` left the schema; the count is asserted here as well as in
+   * `public-copy.test.ts` because this is the walk that would silently stop covering a
+   * key.
    */
-  it("catches a change in every one of the twenty-nine copy strings", () => {
+  it("catches a change in every one of the twenty-eight copy strings", () => {
     const keys = Object.keys(DEFAULT_PUBLIC_COPY) as Array<keyof PublicCopy>;
-    expect(keys).toHaveLength(29);
+    expect(keys).toHaveLength(28);
 
     for (const field of keys) {
       const copy: PublicCopy = { ...DEFAULT_PUBLIC_COPY, [field]: "Edited" };

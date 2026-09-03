@@ -9,15 +9,26 @@
  *
  * The order, and why it is this way round:
  *
- * 1. **An uploaded mark**, once that exists. Not built yet, and this module is where
- *    it plugs in — see `resolveCompanyMark`'s `uploaded` parameter, which is already
- *    threaded so adding the manifest is a change here and nowhere else.
+ * 1. **A mark committed to this repo**, from `COMPANY_MARKS` in `company-marks.ts`.
+ *    It wins over the provider for two reasons: it is the artwork somebody chose and
+ *    checked, and it is the ONLY tier that can reach a company with no `domain` at all.
+ *    **The table is EMPTY today**, so nothing takes this tier and every company falls to
+ *    the provider — see `company-marks.ts` for why, which is a layout consequence of
+ *    committed files carrying the artwork's own ratio rather than the provider's box. It is
+ *    code rather than admin data, because the entry is worthless without the file and the
+ *    file is a commit.
  * 2. **Brandfetch's Logo API**, hotlinked. Their terms require the link be embedded
  *    rather than the image retrieved, so this returns a URL and nothing in this repo
  *    ever fetches it server-side.
  * 3. **Nothing.** The card draws the name alone, which is a complete card. Brandfetch
  *    resolves roughly 86–95% of brands, and six companies carry no domain at all, so
  *    this branch is ROUTINE rather than defensive.
+ *
+ * **`MARK_BOX` below is the PROVIDER's box and not the card's, which is why tier 1
+ * needs no second copy of any artwork.** An uploaded mark is a file cropped to its own
+ * ink at whatever ratio the trademark is, and the card fits it with `object-contain`
+ * inside a definite height — so it hugs its own artwork rather than sitting letterboxed
+ * in a 3.2:1 slot. Measured, and recorded on `COMPANY_MARKS`.
  *
  * **This module holds no dataset and must never take `server-only`.** The resolved URL
  * is computed server-side and travels on the card, but the client ID is a

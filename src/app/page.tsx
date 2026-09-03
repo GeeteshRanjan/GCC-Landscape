@@ -28,13 +28,19 @@ import { GccLandscapeTool } from "@/components/public/tool";
  */
 
 /**
- * Where the closing CTA goes. Configured rather than hardcoded because the
- * hosting page and its conversion path are the client's to decide, and the tool
- * ships before that decision.
+ * The FALLBACK for the closing CTA, and the last of its three sources.
  *
- * The fallback is ansr.com itself: certainly correct, if less specific than the
- * real landing page will be. It is deliberately not a guessed deep path — a
- * plausible-looking URL that 404s is worse than a general one that works.
+ * **`siteContent.close` now carries a link per result screen and those win.** The band is
+ * the tool's only outbound link and it renders on both screens, so a single URL made the
+ * two presses one analytics event — the per-screen fields exist so each can carry its own
+ * UTM tagging. `resolveCtaHref` in `derive.ts` is where the three sources are ordered.
+ *
+ * This path stays live rather than being deleted with the change: a deployment with one
+ * landing page and no tagging should not have to publish a dataset to set its link, and a
+ * screen whose field is blank lands here. The fallback behind it is ansr.com itself,
+ * certainly correct if less specific than the real landing page will be, and deliberately
+ * not a guessed deep path — a plausible-looking URL that 404s is worse than a general one
+ * that works.
  */
 const CTA_HREF = process.env.NEXT_PUBLIC_GCC_CTA_URL ?? "https://www.ansr.com/";
 

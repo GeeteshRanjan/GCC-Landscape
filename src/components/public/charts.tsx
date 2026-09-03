@@ -1724,6 +1724,12 @@ export function OrdinalGrid({
    * `grid.anchorColumn` still carries it, unit-tested on both of its rules — so
    * restoring the emphasis is a prop rather than a derivation. It is drawn by nothing,
    * which is the same standing `industry.shareOfIndia` has on Screen 1.
+   *
+   * **`ratingFill` is not that emphasis coming back and the difference is which axis the
+   * depth is read off.** It draws a top-rated cell in the deeper teal wherever the cell
+   * appears — every column, not one — so the depth encodes the RATING rather than whose
+   * column it is. That is the thing the removed emphasis was mistaken for; see the note
+   * on `ratingFill`.
    */
   keyLabel: string;
 }) {
@@ -1808,17 +1814,8 @@ export function OrdinalGrid({
                             key={step}
                             className={cn(
                               RATING_MARK,
-                              // `teal-500` for the same measured reason as
-                              // `BarTrack`: `teal-400` is 2.15:1 against this
-                              // `surface-sunken` track, under the 3:1 non-text floor.
-                              //
-                              // One fill for every column now. The subject column's
-                              // segments used to take the deeper `accent-teal`, which
-                              // was the third of the three emphases removed with
-                              // `anchorColumn` — a darker mark in one column is read as
-                              // a higher rating, not as "this is you".
                               stepIndex < cell.step
-                                ? "bg-teal-500"
+                                ? ratingFill(cell.step, steps.length)
                                 : "bg-surface-sunken",
                             )}
                           />
@@ -1835,6 +1832,34 @@ export function OrdinalGrid({
       <RatingKey steps={steps} keyLabel={keyLabel} />
     </div>
   );
+}
+
+/**
+ * A rated cell's fill, by the RATING it holds rather than by the column it sits in.
+ *
+ * **The top step takes the deeper `accent-teal` and every step below it `teal-500`, at
+ * ANSR's request** — the brand teal being the fill the graduate pipeline's larger block
+ * uses one tab over, which is where the colour was asked for from.
+ *
+ * **It is per-RATING, which is what keeps it clear of the rule it looks like it breaks.**
+ * `anchorColumn` was removed because the subject column's segments were drawn a step
+ * darker, and a darker mark in one COLUMN reads as a higher rating rather than as "this
+ * is you" — the emphasis was lying about the quantity. Here the depth IS the quantity:
+ * every cell rated at the top step is deeper wherever it appears, in India's column and
+ * in Poland's alike, so nothing is emphasised and the grid still emphasises no column.
+ * It is the file's own ordinal rule applied to a chart that had only been counting —
+ * darker means more, which is what `RAMP` and `depthFor` do everywhere else.
+ *
+ * **Two steps, not four, and the count is deliberate.** A full ramp across four ratings
+ * would put the weakest cells on a pale teal, and these segments are the ONLY visible
+ * encoding on this chart — the rating word beside them is `sr-only` — so every fill has
+ * to clear 3:1 against its own `surface-sunken` track. `teal-400` measures 2.15:1 there
+ * and everything lighter is worse, which is the same measurement `BarTrack` records. So
+ * the legal range is exactly the two deepest steps, and the top rating gets the deeper
+ * of them.
+ */
+function ratingFill(step: number, total: number): string {
+  return step >= total ? "bg-accent-teal" : "bg-teal-500";
 }
 
 /**
@@ -1904,7 +1929,13 @@ function RatingKey({
                 key={track}
                 className={cn(
                   RATING_KEY_MARK,
-                  trackIndex <= stepIndex ? "bg-teal-500" : "bg-surface-sunken",
+                  // The same fill the cells use for this step, which is the point of a
+                  // key: the top row is drawn in the deeper teal because a top-rated
+                  // cell is, so a reader meeting `accent-teal` in the grid can decode it
+                  // here. See `ratingFill`.
+                  trackIndex <= stepIndex
+                    ? ratingFill(stepIndex + 1, steps.length)
+                    : "bg-surface-sunken",
                 )}
               />
             ))}
@@ -2648,9 +2679,11 @@ export function IndexSpread({
 
      - **Every cell states its exact index**, so nothing is encoded only by length.
        Which is now the ONLY encoding — see below.
-     - **The base column is the one thing marked**, by a fill and by its figures in the
-       heading teal. It is the same figure in every row by definition, so it is the
-       reference the other four are read against rather than a value competing with them.
+     - **The base column is the one thing marked, and it is marked by INK ALONE** — bold
+       in the heading teal, on a column holding the identical figure in every row by
+       definition, so it is the reference the other four are read against rather than a
+       value competing with them. It had a `surface-pale` band as well and ANSR asked for
+       it off; see the cell below.
      - **Row separators and nothing else.** No boxed cells: a border around every cell
        would draw twenty rectangles over twenty numbers.
 
@@ -2763,22 +2796,24 @@ export function IndexTable({
               {row.cells.map((cell) => (
                 <td
                   key={cell.column}
-                  className={cn(
-                    "px-3 py-3 text-center align-middle",
-                    /**
-                     * **The base column, filled — and now the only fill in the table.**
-                     * It used to yield to the emphasised row, because two tints of one
-                     * value drew an L that broke in a single cell; with the row emphasis
-                     * gone the column runs unbroken and the branch that handled the
-                     * crossing goes with it.
-                     *
-                     * `surface-pale`, matching the technology capability grid's anchor
-                     * column — the mint `surface-tint` read too dark and too blue on this
-                     * tab at ANSR's request. Pale is ~2% off white, so it reads as a band
-                     * rather than a fill, and the figures' own ink carries the rest.
-                     */
-                    cell.anchor ? "bg-surface-pale" : undefined,
-                  )}
+                  /**
+                   * **NO FILL ON THE BASE COLUMN, at ANSR's request, and the table has
+                   * no fill anywhere now.** The base carried `surface-pale` — the same
+                   * ~2% tint that marks India's column in the technology capability grid
+                   * — on the argument that the reference the other four are read against
+                   * has to be findable. It read as a light blue band down the middle of a
+                   * cost table, which is one highlight too many on a card whose bars and
+                   * whose emphasised row were already removed for being emphasis nobody
+                   * asked for.
+                   *
+                   * What marks the base is its INK, which is the same signal at a
+                   * fraction of the weight: bold in the heading teal against normal in
+                   * the body ink, on a column that holds the identical figure in every
+                   * row by definition. Restoring the fill is one class here — and it is
+                   * the third emphasis this card has lost, so restore it only on a
+                   * request that names it.
+                   */
+                  className="px-3 py-3 text-center align-middle"
                 >
                   {/* One element per cell, which is what aligns the columns. The flex row
                       that held a figure beside a bar is gone with the bar. */}

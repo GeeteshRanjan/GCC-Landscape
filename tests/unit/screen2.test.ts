@@ -602,8 +602,15 @@ describe("resolving a value", () => {
     // endpoint figure by `RangeBar`; the HR tab draws this metric as a benchmark whose
     // figures sit on the rail itself, so the fragment had nothing to attach to and the
     // prefix was the third appearance of the same number on one card.
-    expect(shown.lowLabel).toBe("Hiring through an employer of record");
-    expect(shown.highLabel).toBe("Hiring directly into your own entity");
+    //
+    // **Shortened at ANSR's request, and what they had to keep is that they name an
+    // OPERATING MODEL** — asserted, because the shortening is exactly where that could
+    // have been lost: an end labelled "EOR" alone names a vendor category rather than
+    // the route the visitor would take.
+    expect(shown.lowLabel).toBe("Through EOR model");
+    expect(shown.highLabel).toBe("Through own entity");
+    expect(shown.lowLabel).toMatch(/^Through /);
+    expect(shown.highLabel).toMatch(/^Through /);
     expect(shown.offset).toBeCloseTo(7 / 70);
   });
 

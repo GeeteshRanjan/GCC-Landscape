@@ -1,4 +1,4 @@
-import type { Company, FteRange } from "./schema";
+import type { CloseCopy, Company, FteRange } from "./schema";
 
 /**
  * Everything derived from a stored field. Nothing here is persisted: the source
@@ -24,7 +24,16 @@ import type { Company, FteRange } from "./schema";
  * NCR is a region standing in for Gurgaon / Noida / Delhi. Fine as a tier-1
  * label; it needs a deliberate decision before any city-level map ranks it.
  */
-export const TIER1_CITIES: ReadonlySet<string> = new Set([
+/**
+ * The tier-1 cities in descending GCC prominence, most-established hub first.
+ *
+ * The ORDER is the source of the prominence ranking `orderCitiesByProminence` reads —
+ * Bengaluru is the largest GCC hub, Kolkata the smallest of the seven — so a single
+ * list decides both membership (the `Set` below) and the display precedence a peer
+ * card's city list is sorted by. Keeping the two derived from one array is what stops a
+ * city being tier-1 for the map but ranked as an afterthought on a card.
+ */
+export const TIER1_CITY_ORDER: readonly string[] = [
   "Bengaluru",
   "Hyderabad",
   "Pune",
@@ -32,7 +41,30 @@ export const TIER1_CITIES: ReadonlySet<string> = new Set([
   "Chennai",
   "Mumbai",
   "Kolkata",
-]);
+];
+
+export const TIER1_CITIES: ReadonlySet<string> = new Set(TIER1_CITY_ORDER);
+
+/** A city's display rank: its index in the tier-1 order, or the end for tier-2. */
+const CITY_RANK = new Map(TIER1_CITY_ORDER.map((city, index) => [city, index]));
+
+/**
+ * Cities sorted so the most prominent hub leads, tier-2 cities trailing in their
+ * original order.
+ *
+ * Used to decide which cities a peer card shows first and which fall into the "+N"
+ * overflow: a reader scanning five cards wants Bengaluru before Coimbatore, and a
+ * card that can only show two names should spend them on the hubs. The sort is stable,
+ * so tier-2 cities keep the order the source listed them in — there is no measured
+ * ranking below tier-1 to impose one.
+ */
+export function orderCitiesByProminence(cities: readonly string[]): string[] {
+  return [...cities].sort(
+    (a, b) =>
+      (CITY_RANK.get(a) ?? Number.MAX_SAFE_INTEGER) -
+      (CITY_RANK.get(b) ?? Number.MAX_SAFE_INTEGER),
+  );
+}
 
 export function locationCount(company: Pick<Company, "cities">): number {
   return company.cities.length;
@@ -68,4 +100,38 @@ export function fteDisplay(fte: FteRange): string {
 /** Sum of band midpoints across a set. Round before display. */
 export function sumProfessionals(companies: readonly Company[]): number {
   return companies.reduce((total, company) => total + fteMidpoint(company.fte), 0);
+}
+/**
+ * Which result screen a CTA press came from, as the two link fields' own key suffix.
+ *
+ * Named after the phases in `tool.tsx` rather than after the tab labels, because the
+ * phase is what actually selects the link and a tab label is editable prose.
+ */
+export type CtaScreen = "peers" | "functions";
+
+/**
+ * The link the close's button points at, for one screen.
+ *
+ * **Data over configuration over the hardcoded fallback, resolved in ONE place.** The
+ * three sources exist for three different reasons and the order is what keeps all three
+ * honest: `siteContent.close` is what an admin sets per screen so the two presses are
+ * distinguishable in ANSR's analytics, `NEXT_PUBLIC_GCC_CTA_URL` is what a deployment sets
+ * when there is one landing page and no tagging, and ansr.com is what is certainly correct
+ * when neither has been decided. A blank field is therefore not a missing value — it is
+ * the admin declining to override, which is why this reads `|| fallback` rather than
+ * treating `""` as a link.
+ *
+ * Here rather than in `closing-cta.tsx` on the rule that a component decides nothing: the
+ * band draws the `href` it is handed, and which of three sources produced it is a
+ * derivation over the dataset. `tool.tsx` is the one caller, because it is the one place
+ * that holds the close copy and knows which screen is about to render.
+ */
+export function resolveCtaHref(
+  close: Pick<CloseCopy, "ctaHrefPeers" | "ctaHrefFunctions">,
+  screen: CtaScreen,
+  fallback: string,
+): string {
+  const configured =
+    screen === "peers" ? close.ctaHrefPeers : close.ctaHrefFunctions;
+  return configured.trim() || fallback;
 }

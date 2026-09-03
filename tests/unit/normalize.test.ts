@@ -3,10 +3,12 @@ import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
 import path from "node:path";
 import {
+  CTA_URL_MAX_LENGTH,
   SEED_REVENUE_BAND_ORDER,
   canonicalCompanyName,
   canonicalIndustry,
   cleanText,
+  isCtaUrl,
   parseCities,
   parseFteRange,
   parseYear,
@@ -14,8 +16,13 @@ import {
   slugify,
   uniqueSlug,
 } from "@/data/normalize";
-import { TIER1_CITIES, fteDisplay, fteMidpoint, hasTier2Presence, sumProfessionals } from "@/data/derive";
-import { parseDataset, type Company } from "@/data/schema";
+import { TIER1_CITIES, fteDisplay, fteMidpoint, hasTier2Presence, resolveCtaHref, sumProfessionals } from "@/data/derive";
+import {
+  DEFAULT_CLOSE_COPY,
+  closeCopySchema,
+  parseDataset,
+  type Company,
+} from "@/data/schema";
 
 /**
  * Every function here exists because of a measured defect in the source
@@ -379,6 +386,146 @@ describe("the corrections in the published dataset", () => {
   it("has no name carrying stray whitespace", () => {
     for (const company of dataset.companies) {
       expect(company.name, company.id).toBe(company.name.replace(/\s+/g, " ").trim());
+    }
+  });
+});
+
+/* ==========================================================================
+   The close's outbound link.
+
+   Three things are pinned here and each has a different failure mode. `isCtaUrl` guards
+   an `href` on a page served from ansr.com, so its scheme rule is a security boundary
+   rather than validation. The schema decides whether blank is legal, and blank is the
+   value every deployment starts on — so if it stopped being legal, the shipped default
+   would be an unpublishable dataset. And `resolveCtaHref` is the precedence between the
+   three sources; getting it backwards would make an admin's tagging silently unreachable
+   on any deployment that has the environment variable set.
+   ========================================================================== */
+
+describe("a CTA link as a validator", () => {
+  it("accepts a tagged link exactly as pasted, query string and all", () => {
+    // The whole reason the field exists. If anything reduced this, the attribution the
+    // two fields were added to carry would be destroyed on the way in.
+    const tagged =
+      "https://www.ansr.com/gcc-report?utm_source=atlas&utm_medium=embed&utm_campaign=peer-landscape";
+    expect(isCtaUrl(tagged)).toBe(true);
+    expect(closeCopySchema.parse({
+      ...DEFAULT_CLOSE_COPY,
+      ctaHrefPeers: tagged,
+    }).ctaHrefPeers).toBe(tagged);
+  });
+
+  it("refuses every scheme but http and https", () => {
+    /* The boundary, not a preference. This value lands in an `href` on ANSR's own
+       domain, so an arbitrary scheme here would make the field a way to put script in
+       the one outbound link on both result screens. */
+    for (const bad of [
+      "javascript:alert(1)",
+      "JavaScript:alert(1)",
+      "data:text/html,<script>alert(1)</script>",
+      "vbscript:msgbox(1)",
+      "file:///etc/passwd",
+    ]) {
+      expect(isCtaUrl(bad), bad).toBe(false);
+      expect(closeCopySchema.safeParse({
+        ...DEFAULT_CLOSE_COPY,
+        ctaHrefPeers: bad,
+      }).success, bad).toBe(false);
+    }
+    expect(isCtaUrl("http://ansr.com/x")).toBe(true);
+  });
+
+  it("refuses a value that is not an absolute link at all", () => {
+    // A scheme-less paste is refused rather than repaired: prepending `https://` would be
+    // a transform, and the field's whole contract is that what is typed is what is stored.
+    for (const bad of ["ansr.com", "/gcc-report", "see the website", "www.ansr.com"]) {
+      expect(isCtaUrl(bad), bad).toBe(false);
+    }
+  });
+
+  it("caps the length, and the cap leaves room for full UTM tagging", () => {
+    expect(isCtaUrl(`https://a.com/${"x".repeat(CTA_URL_MAX_LENGTH)}`)).toBe(false);
+    // A realistic worst case: five spelled-out UTM parameters plus a click id.
+    const heavy =
+      "https://www.ansr.com/global-capability-centre-benchmark-report" +
+      "?utm_source=ansr-atlas&utm_medium=embedded-tool&utm_campaign=india-gcc-landscape-2026" +
+      "&utm_content=function-metrics-closing-band&utm_term=cio-coo-benchmark&gclid=abc123def456";
+    expect(heavy.length).toBeLessThan(CTA_URL_MAX_LENGTH);
+    expect(isCtaUrl(heavy)).toBe(true);
+  });
+
+  it("treats blank as legal in the schema and as not a link in the predicate", () => {
+    /* The split that lets the field mean "use whatever is configured". `isCtaUrl` answers
+       only whether a non-empty value is a link; legality of an empty one is the schema's
+       call, and it has to stay legal because the shipped default is empty. */
+    expect(isCtaUrl("")).toBe(false);
+    expect(isCtaUrl("   ")).toBe(false);
+    expect(DEFAULT_CLOSE_COPY.ctaHrefPeers).toBe("");
+    expect(DEFAULT_CLOSE_COPY.ctaHrefFunctions).toBe("");
+    expect(closeCopySchema.safeParse(DEFAULT_CLOSE_COPY).success).toBe(true);
+  });
+
+  it("fills both links when a dataset written before them is read", () => {
+    // The `metrics` precedent: a required key would have made every older dataset a
+    // broken read. Parsing without them must produce the blank default, not an error.
+    const parsed = closeCopySchema.parse({
+      body: DEFAULT_CLOSE_COPY.body,
+      ctaLabel: DEFAULT_CLOSE_COPY.ctaLabel,
+    });
+    expect(parsed.ctaHrefPeers).toBe("");
+    expect(parsed.ctaHrefFunctions).toBe("");
+  });
+});
+
+describe("resolving which link the close points at", () => {
+  const close = (peers: string, functions: string) => ({
+    ctaHrefPeers: peers,
+    ctaHrefFunctions: functions,
+  });
+
+  it("gives each screen its own link, so the two presses are distinguishable", () => {
+    // The reason there are two fields rather than one. A shared link makes a conversion
+    // off the peer landscape and one off the function metrics the same analytics event.
+    const set = close("https://a.com/?utm_content=peers", "https://a.com/?utm_content=fn");
+    expect(resolveCtaHref(set, "peers", "https://fallback.test/")).toBe(
+      "https://a.com/?utm_content=peers",
+    );
+    expect(resolveCtaHref(set, "functions", "https://fallback.test/")).toBe(
+      "https://a.com/?utm_content=fn",
+    );
+  });
+
+  it("falls back per screen, so tagging one screen does not untag the other", () => {
+    /* The case an all-or-nothing rule would get wrong: an admin tags the peer landscape
+       first and leaves the other for later. The untagged screen keeps the configured
+       link rather than losing its link entirely. */
+    const half = close("https://a.com/?utm_content=peers", "");
+    expect(resolveCtaHref(half, "functions", "https://fallback.test/")).toBe(
+      "https://fallback.test/",
+    );
+    expect(resolveCtaHref(half, "peers", "https://fallback.test/")).toBe(
+      "https://a.com/?utm_content=peers",
+    );
+  });
+
+  it("reads the shipped default as no override at all", () => {
+    // Today's behaviour has to survive the addition unchanged: with the default dataset,
+    // both screens resolve to whatever the deployment configured.
+    for (const screen of ["peers", "functions"] as const) {
+      expect(resolveCtaHref(DEFAULT_CLOSE_COPY, screen, "https://www.ansr.com/")).toBe(
+        "https://www.ansr.com/",
+      );
+    }
+  });
+
+  it("never hands the band an empty href", () => {
+    /* A blank `href` resolves to the current page, which inside the iframe means the
+       button reloads the tool — a dead primary action that looks like it worked. */
+    for (const screen of ["peers", "functions"] as const) {
+      expect(resolveCtaHref(close("", ""), screen, "https://www.ansr.com/")).not.toBe("");
+      expect(resolveCtaHref(close("   ", "   "), screen, "https://www.ansr.com/")).toBe(
+        "https://www.ansr.com/",
+      );
     }
   });
 });

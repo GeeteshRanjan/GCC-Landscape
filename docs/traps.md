@@ -53,6 +53,21 @@ session. Read on demand, and add to it whenever something costs more than one at
   tripped on both result screens for a reason that had nothing to do with the dataset. Four properties
   now, the last one being the one that bit: distinctive, in the dataset, off the specs' industries, and
   not a logo.
+- **WHILE A RADIX DIALOG IS OPEN OR CLOSING, EVERY ROLE QUERY AGAINST THE PAGE BEHIND IT RETURNS
+  NOTHING.** Radix marks the rest of the document `aria-hidden`, and `getByRole` honours that, so
+  `getByRole("region")` reads 0 and `getByRole("heading", { name: "…", level: 1 })` never becomes visible
+  — on a page whose `h1` and nine landmarks are demonstrably in the DOM. Two separate ways this reads as a
+  product bug and is not one: asserting a heading while an editor dialog is open, and asserting anything
+  by role in the moment after a dialog closes, because the close is animated and the attribute outlives
+  the click. Wait for `[role="dialog"]` to be `detached` before counting roles, or locate by tag
+  (`page.locator("h1", { hasText: … })`) when the dialog is meant to be open. Cost an hour chasing a
+  stale-`aria-hidden` accessibility defect that did not exist.
+- **The admin login limiter is per-process AND per-IP, so a hand-written probe gets four or five logins
+  before every attempt 401s** with a correct password. It is the same budget `6-lockout.spec.ts`
+  deliberately exhausts. Restarting the dev server is the reset; one login per probe run is the habit.
+- **`next dev` refuses cross-origin dev resources, so driving a probe at `127.0.0.1` serves the HTML and
+  none of the JavaScript.** The page renders unhydrated, forms submit natively, and a password lands in a
+  GET query string in the terminal log. Use `localhost`, which is the origin the server names itself by.
 - **`getComputedStyle().transitionProperty` is `all` by default**, so a "no `transition-all`" check must
   also require `transitionDuration > 0` or it flags several hundred innocent elements.
 - **`detect.mjs src` times out at 120s.** Pass the two or three component directories instead. And
@@ -112,6 +127,11 @@ session. Read on demand, and add to it whenever something costs more than one at
   credential. Both are fine; the request is being refused for its headers. Send a browser
   `User-Agent`, `Accept: image/*`, a `Referer` and `Sec-Fetch-Dest: image` and the same URL returns
   `image/webp`. **Verify marks in a real browser, not from a terminal.**
+- **HEADLESS Chromium is bounced the same way, so Playwright cannot see a mark either.** Every request
+  from a headless page 302s to that guidelines URL and the redirect is then refused by our own CSP,
+  which surfaces as `requestfailed / csp` and `naturalWidth === 0` on every peer card. A headless run
+  can measure a mark's BOX and nothing about its artwork; it is also a second reason the suite pins the
+  tier off. Judge a mark in a real browser only.
 - **`fallback` is a PATH SEGMENT, not a query parameter, and the wrong form fails silently.**
   `?fallback=404` is ignored: an unknown brand returns HTTP 200 with a ~346-byte placeholder, so every
   card renders something and nothing anywhere reports a problem. `/fallback/404` returns a real 404 and

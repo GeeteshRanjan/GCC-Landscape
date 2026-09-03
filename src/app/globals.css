@@ -550,26 +550,13 @@
        carried by the mask rather than by dimming the whole graphic until it
        disappears.
 
-       **The stops track where the COPY ends, which is now derived rather than
-       tuned.** The copy block was centred (reaching ~74% of the band, ramp complete
-       at 62% of the box), then left-aligned at a 5% inset (~60% of the band, ramp at
-       50%). It then started on the FORM CARD's leading edge so the two bands shared
-       one edge, with the ramp completing at 58%.
-
-       **It is now the container's own gutter from `xl` — 144px outside the card — and
-       the box these percentages are measured against grew from 82% to 94% of the
-       band.** Both changes push the same way: the copy starts further left, and a
-       fixed distance is a smaller fraction of a wider box.
-
-       **The stop stayed at 54% through the last two passes, and that is a result
-       rather than an oversight.** The copy's trailing edge did not move: the hero
-       shifted 6rem left and its lead gained the same 6rem on the right, deliberately,
-       so `max-w-lead` could buy a two-line sentence without pushing text onto the
-       field. And the box growing to 94% moves the ramp's absolute position by ~1% of
-       the band, because a wider box starts further out by almost as much as 54% of it
-       reaches back. Measured: 61.1% of the band before, 61.8% after, against copy that
-       ends at 64%. Read this together with `max-w-card`, `max-w-lead` and the `-ms-*`
-       outdent in `ask-hero.tsx` — three files, one composition. */
+       **The stops track where the COPY ends, and the copy is outdented onto the
+       container gutter from `xl`.** With that outdent the copy ends ~64% of the band
+       and India sits at ~75%; the ramp completes at ~62% of the band, between the two.
+       The copy's child caps (`max-w-hero`, `max-w-lead`) hold that trailing edge
+       steady even when the headline's font size changes, so the fade is tied to the
+       caps rather than to the type. Read this together with `max-w-card`, `max-w-lead`
+       and the `-ms-*` outdent in `ask-hero.tsx` — three files, one composition. */
     linear-gradient(
       to right,
       transparent 0%,
@@ -592,6 +579,54 @@
     );
   mask-composite: intersect;
   -webkit-mask-composite: source-in;
+}
+
+/* **Below `lg` the map is ambient TEXTURE, not a subject, and this block is the
+   whole difference.** At these widths the headline runs nearly the full band and the
+   dot pitch is tight enough that India merges into a blob, so the two cannot sit
+   beside each other the way they do on desktop. Instead the field is dimmed hard and
+   held to the LOWER band, below the copy, so it reads as a faint texture the eye
+   registers without the copy ever competing with it.
+
+   Three things do that, and each has a reason:
+
+     - **Opacity 0.42**, half the desktop 0.86. This is the contrast lever:
+       against `--ansr-teal-900` an orange India dot composites to a dark value even
+       at full India strength, so white copy clears the 4.5:1 body floor over the
+       field even where the two meet. The desktop mask cannot be trusted to keep them
+       apart here, so the opacity carries it instead.
+     - **A VERTICAL fade replaces the desktop leading fade.** The desktop mask hides
+       the map on the LEFT, which is where a left-aligned column of copy sits; here
+       the copy spans the band, so the map is hidden across the TOP instead and
+       arrives in the lower third. India's horizontal placement stops being
+       load-bearing — the graphic is a field, not a map to be read — so the vignette
+       is dropped and the two edge fades are kept.
+     - **A tighter crop** (`116%` / `-8%`) so the blob is a little larger and sits
+       toward the trailing-lower corner rather than dead centre.
+
+   The dot geometry, inks and entrance are unchanged; only the framing, opacity and
+   mask differ. Reduced-contrast users still lose the whole thing to the
+   `prefers-contrast` rule below. */
+@media (max-width: 63.999rem) {
+  .gcc-hero-map {
+    inline-size: 116%;
+    inset-inline-end: -8%;
+    opacity: 0.42;
+    mask-image:
+      /* Hidden across the copy at the top, arriving in the lower band. */
+      linear-gradient(
+        to bottom,
+        transparent 0%,
+        transparent 42%,
+        var(--ansr-black) 70%,
+        var(--ansr-black) 86%,
+        transparent 100%
+      ),
+      /* The short trailing-edge fade, so the slice does not end in a vertical rule. */
+      linear-gradient(to left, transparent 0%, var(--ansr-black) 14%);
+    mask-composite: intersect;
+    -webkit-mask-composite: source-in;
+  }
 }
 
 /* A graphic under text cuts effective contrast, so it goes when the visitor has
@@ -2432,6 +2467,85 @@ select.gcc-field {
 }
 
 /* --------------------------------------------------------------------------
+   `.gcc-badge-pop` — the Fortune Global 500 badge grows on hover.
+
+   **The one pointer response on the peer surface, at the project owner's
+   instruction, and a deliberate exception to the rule above it.** Nothing here is
+   pressable, so nothing rises on hover — including this badge, which opens nothing.
+   What the pop is for is legibility rather than affordance: at 16px, set by the cap
+   height of the name beside it, `FORTUNE` and `GLOBAL` stop resolving and the mark
+   reads as a red `500`. Hovering restores it.
+
+   **1.6, so 16px reaches 25.6px.** 1.25 was tried and read as not clearly visible,
+   which is right at this size: a quarter of 16px is 4px of growth on a mark whose
+   detail is already below the resolving threshold. Transform only, so no row can
+   grow and no figure beside it moves; `overflow-hidden` on the enclosing `Panel`
+   never reaches it, the badge sitting mid-row inside the card's own padding.
+
+   `--ansr-ease-spring` rather than `standard` — it is the one curve in the system
+   with an overshoot, and the overshoot is what makes this read as a pop rather than
+   a swell. The token's own note allows one accent use; this is it.
+
+   **This was a `motion` (framer-motion) `whileHover` for one pass and CSS is
+   strictly better here.** Measured at 40KB gzipped for `motion.img` plus
+   `useReducedMotion` — on the entry point of a tool embedded in someone else's page
+   — against nothing for these six declarations. It also drops a `useReducedMotion`
+   hook, since the global `reduce` clamp in `tokens.css` reaches a CSS transition and
+   cannot reach a scripted transform, and it lets `FortuneBadge` go back to being a
+   server component.
+
+   Gated on `hover: hover` for the reason `.gcc-lift` is: a touch device holds the
+   hover state after a tap, which would leave one badge permanently enlarged. Under
+   `reduce` the pop simply does not happen — unlike `.gcc-lift`, there is no
+   affordance being withheld, because the badge is not interactive.
+   -------------------------------------------------------------------------- */
+.gcc-badge-pop {
+  transition: transform var(--ansr-duration-base) var(--ansr-ease-spring);
+}
+
+@media (prefers-reduced-motion: no-preference) and (hover: hover) {
+  .gcc-badge-pop:hover {
+    transform: scale(1.6);
+  }
+}
+
+/* --------------------------------------------------------------------------
+   `.gcc-mark-pop` — a company logo grows on hover, at the project owner's
+   instruction, on the same argument as the badge above.
+
+   **1.12, not the badge's 1.6, and the difference is arithmetic rather than
+   taste.** A scale is a RATIO, so the same ratio on a bigger object is a much
+   bigger movement: the badge is 16px square-ish, where 1.6 adds about 5px a side,
+   while a mark is up to 112px wide, where 1.6 would add 34px a side and throw the
+   logo clean out of its own card. The absolute movement is what a reader sees, and
+   at this size 12% of it is plainly visible.
+
+   **1.2 was measured first and rejected on a collision.** On a widest-case mark it
+   left 2.3px between a ranking row's logo and the company name beside it — the 10px
+   gap almost entirely eaten, which reads as touching. 1.12 leaves 5.4px there and
+   11.7px inside the comparison card's own 16px padding. Both numbers come from a
+   fully-inked mark at the max-width cap, so they are the worst case rather than the
+   typical one.
+
+   Centre origin rather than `left`, deliberately. Growing only rightward keeps a
+   card's leading edge clean but drives the whole increase into the ranking row's
+   gap and overlaps the company name; splitting it costs a few pixels of the card's
+   padding, which has room, and costs the row nothing.
+
+   Duration, curve and both gates are the badge's — see `.gcc-badge-pop` above for
+   every one of them, including why this is CSS rather than a motion library.
+   -------------------------------------------------------------------------- */
+.gcc-mark-pop {
+  transition: transform var(--ansr-duration-base) var(--ansr-ease-spring);
+}
+
+@media (prefers-reduced-motion: no-preference) and (hover: hover) {
+  .gcc-mark-pop:hover {
+    transform: scale(1.12);
+  }
+}
+
+/* --------------------------------------------------------------------------
    `.gcc-rank` was here: the filled mint counter on a comparison card.
 
    Deleted rather than left unused. Every ordinal on this surface is typographic
@@ -2549,12 +2663,13 @@ select.gcc-field {
    population it is inside rather than one sticking out of it. `min()` resolves the
    percentage against the chart, which is the box `--gcc-extent` is expressed in.
 
-   Square on both ends: the trailing radius on a bar means "this end is the value", and
-   a marker has no value at its end. */
+   **Rounded on the trailing end like every bar, at ANSR's request.** The marker read as
+   the one hard-cut mark in a chart whose other layers all curve their trailing edge, so
+   it looked like a different kind of object rather than the innermost layer. It inherits
+   the bar's own `--ansr-radius-md` on the trailing corners now; the leading edge stays
+   square on the shared zero, the same as the bars. */
 .gcc-containment__bar--marker {
   inline-size: min(var(--ansr-space-2), var(--gcc-extent));
-  border-start-end-radius: 0;
-  border-end-end-radius: 0;
 }
 
 /* The figures sit in their own layer above every bar, so the growth animation on a

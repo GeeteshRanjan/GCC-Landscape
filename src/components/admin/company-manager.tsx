@@ -25,7 +25,12 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import {
+  useDeepLinkOpen,
+  useDeepLinkQuery,
+} from "@/components/admin/search-box";
 import { fteDisplay } from "@/data/derive";
+import { matchesTokens, searchTokens, searchableText } from "@/data/search";
 import type { Company } from "@/data/schema";
 
 /**
@@ -47,9 +52,19 @@ export function CompanyManager() {
 
   const [query, setQuery] = useState("");
   const [industry, setIndustry] = useState("");
+  // Normalised once per keystroke, then tested against 1,834 prebuilt haystacks.
+  const tokens = useMemo(() => searchTokens(query), [query]);
   const [page, setPage] = useState(0);
   const [editing, setEditing] = useState<{ company: Company | null } | null>(null);
   const [confirmDelete, setConfirmDelete] = useState<Company | null>(null);
+
+  // Arriving from the universal search: narrow the table to the row, and open its
+  // editor. Declared after the state it sets, so the closure cannot run into a TDZ.
+  useDeepLinkQuery(setQuery);
+  useDeepLinkOpen((id) => {
+    const company = draft.companies.find((row) => row.id === id);
+    if (company) setEditing({ company });
+  });
 
   /** Id -> name, so the table and the search show labels rather than slugs. */
   const typeNames = useMemo(
@@ -57,25 +72,51 @@ export function CompanyManager() {
     [draft.businessTypes],
   );
 
+  /**
+   * One searchable string per company, built ONCE per draft change.
+   *
+   * 1,834 rows rebuilt on every keystroke is work with a visible cost on a slow
+   * machine, and none of it changes between keystrokes — the same reason the public
+   * dropdown memoises its own haystacks rather than normalising per row per
+   * character.
+   *
+   * What is IN it is the decision worth reading. The company name, its cities and its
+   * HQ country are the three things an admin types. Business type goes in by NAME
+   * rather than id, so `apparel` pulls up every apparel company and a tagging pass can
+   * be spot-checked in bulk rather than a row at a time. The literal words `not set`
+   * go in for an untagged company, because untagged is a real state — the company
+   * matches on industry and revenue band alone — and has to be findable as one. The
+   * two index flags go in as their own names only when set, so `fortune` is a query.
+   * Industry is deliberately absent: it has its own select beside the field, and
+   * putting it here would make that control look broken by matching rows it excluded.
+   */
+  const haystacks = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const company of draft.companies) {
+      map.set(
+        company.id,
+        searchableText(
+          company.name,
+          company.cities,
+          company.hqCountry,
+          company.revenueBand,
+          company.businessTypes.length === 0
+            ? "not set"
+            : company.businessTypes.map((id) => typeNames.get(id) ?? id),
+          company.fortuneGlobal500 && "fortune global 500",
+          company.forbesGlobal2000 && "forbes global 2000",
+        ),
+      );
+    }
+    return map;
+  }, [draft.companies, typeNames]);
+
   const filtered = useMemo(() => {
-    const needle = query.trim().toLowerCase();
     return draft.companies.filter((company) => {
       if (industry && company.industry !== industry) return false;
-      if (!needle) return true;
-      return (
-        company.name.toLowerCase().includes(needle) ||
-        company.cities.some((city) => city.toLowerCase().includes(needle)) ||
-        company.hqCountry.toLowerCase().includes(needle) ||
-        // Business type by NAME, not id, so "apparel" pulls up every apparel
-        // company — which is how a tagging decision gets spot-checked in bulk
-        // rather than one row at a time. "not set" finds the untagged ones.
-        (company.businessTypes.length === 0 && "not set".includes(needle)) ||
-        company.businessTypes.some((id) =>
-          (typeNames.get(id) ?? id).toLowerCase().includes(needle),
-        )
-      );
+      return matchesTokens(tokens, haystacks.get(company.id) ?? "");
     });
-  }, [draft.companies, query, industry, typeNames]);
+  }, [draft.companies, tokens, industry, haystacks]);
 
   const pageCount = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   // A filter change can strand the viewer past the end of the new result set.
@@ -85,7 +126,7 @@ export function CompanyManager() {
 
   const start = page * PAGE_SIZE;
   const rows = filtered.slice(start, start + PAGE_SIZE);
-  const filtering = Boolean(query.trim() || industry);
+  const filtering = tokens.length > 0 || Boolean(industry);
 
   return (
     <div className="flex flex-col gap-6">
@@ -103,7 +144,7 @@ export function CompanyManager() {
             id={searchId}
             type="search"
             value={query}
-            placeholder="Company, city or HQ country"
+            placeholder="Company, city, HQ country, sub-industry"
             aria-describedby={resultsId}
             onChange={(event) => {
               setQuery(event.target.value);

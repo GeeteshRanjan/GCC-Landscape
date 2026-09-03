@@ -53,7 +53,7 @@ async function submit(
   }
   await choose(page, "Annual revenue", "Above $20 Bn");
   await choose(page, "Headquarters", "USA");
-  await page.getByRole("button", { name: "See my results" }).click();
+  await page.getByRole("button", { name: "Build my GCC Landscape" }).click();
 }
 
 test("cascades each industry's own sub-industries, and nobody else's", async ({

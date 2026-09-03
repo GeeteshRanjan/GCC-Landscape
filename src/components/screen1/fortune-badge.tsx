@@ -23,43 +23,68 @@
  * must never be emptied to match the company mark's `alt=""`.
  *
  * **The red is Fortune's and is deliberately outside the token system**, at the project
- * owner's explicit instruction. It lives inside the PNG, never in CSS, so the
- * no-raw-hex rule is not bent to admit it — `brand_lint.py` scans code, and there is no
- * colour here for it to find. Do not derive a token from it and do not recolour the
- * artwork; a recoloured accreditation mark is a fabricated one.
+ * owner's explicit instruction. It lives inside the asset file, never in CSS, so the
+ * no-raw-hex rule is not bent to admit it — `brand_lint.py` reads code and stylesheets,
+ * and `.svg` is not in its `SCAN_EXT`, so there is no colour here for it to find. Do
+ * not derive a token from it and do not tint the artwork from the outside: the fills are
+ * literal, not `currentColor`, precisely so no surface this sits on can recolour an
+ * accreditation mark.
  *
  * **`alt` carries the index name, unlike the peer card's company mark right above it.**
  * The mark takes `alt=""` because the company name is the very next element, so naming
  * it would say the company twice. This badge is the opposite case: it REPLACES text
  * that was the only statement of the fact, so its accessible name is the fact.
  *
- * Asset: `public/badges/fortune-global-500.png`, 111×120, derived from the supplied
- * raster by cropping 75px of dead field off each side — the same padding the artwork
- * already carried top and bottom — which takes it from 1.5:1 to 0.93:1 and is what lets
- * it sit in a text row at all. Held well above the display height so the hairline
- * chevrons inside the `500` survive downscaling on a 3x screen. Not vectorised: the
- * field is a gradient and the numerals are Fortune's own artwork, so tracing it would be
- * authoring a trademark by hand.
+ * Asset: `public/badges/fortune-global-500.svg`, 835×866 user units, derived from a
+ * VECTOR of the lockup supplied by the project owner. **It replaces the 111×120 raster
+ * and the raster is deleted rather than kept** — two copies of one trademark is how the
+ * two placements start drawing different marks. Nothing in the outlines is redrawn: the
+ * path data and the supplied file's own `translate/scale` are carried over verbatim, and
+ * the only change to the geometry is an added offset that crops the empty 2000×2000
+ * artboard down to the lockup's own bounds, 0.96:1, which is what lets it sit in a text
+ * row at all. **Tracing is still banned** — this is not a trace, it arrived as a vector.
+ *
+ * **`GLOBAL` and the `500` are Fortune's red and `FORTUNE` is black, per the project
+ * owner.** The supplied vector filled every glyph black; the two red groups are a fill
+ * on the groups the supplied outlines already separate, so no outline moved to achieve
+ * it. Being a vector rather than a raster is what makes the `500`'s hairline chevrons
+ * survive at 16px on any density, which the raster only managed by being held at 7x its
+ * display height.
  *
  * **Third-party trademark use on an ANSR page is still ANSR's decision, not this
  * repo's** — see the handoff. This component ships the placement; it does not settle
  * the permission.
+ *
+ * **The hover pop is `.gcc-badge-pop` in `globals.css` and this component holds no part of
+ * it.** It was a `motion` (framer-motion) `whileHover` for one pass and CSS is strictly
+ * better for a scale on hover: the duration and curve come straight from
+ * `--ansr-duration-base` and `--ansr-ease-spring` instead of being mirrored as JS numbers
+ * the brand lint cannot see, the global `reduce` clamp in `tokens.css` reaches a CSS
+ * transition where it cannot reach a scripted transform, the `hover: hover` gate stops a
+ * touch device leaving one badge permanently enlarged, and this file goes back to being a
+ * server component. It also removed a 40KB gzipped dependency from the entry point of a
+ * tool embedded in someone else's page. Every measurement and the rejected scale is in
+ * the CSS rule's own comment.
  */
 export function FortuneBadge() {
   return (
     /* eslint-disable-next-line @next/next/no-img-element -- a static file already
        sized for its slot, on the same argument as the customer strip and the ANSR
-       lockups: there is nothing for an optimiser to do to a 14 KB pre-scaled raster. */
+       lockups: there is nothing for an optimiser to do to a 7 KB vector. */
     <img
-      src="/badges/fortune-global-500.png"
+      src="/badges/fortune-global-500.svg"
       alt="Fortune Global 500"
-      /* Intrinsic dimensions so the row does not reflow when the file lands. */
-      width={111}
-      height={120}
-      /* Fixed height, auto width, square corners. The badge's red field IS its
-         boundary, so it takes no border, no ring and no radius — the same reasoning
-         that keeps every card on this surface at radius `none`. */
-      className="block h-4 w-auto rounded-none"
+      /* Intrinsic dimensions so the row does not reflow when the file lands. These
+         are the asset's own viewBox, so the ratio here and the ratio in the file
+         cannot disagree and letterbox the mark. */
+      width={835}
+      height={866}
+      /* Fixed height, auto width, square corners. The mark is drawn on transparent
+         now rather than on a red field, so there is nothing to bound: it takes no
+         border, no ring and no radius, the same reasoning that keeps every card on
+         this surface at radius `none`. `.gcc-badge-pop` carries the hover growth and
+         nothing else — no fill, no ring, no shadow, so the resting mark is untouched. */
+      className="gcc-badge-pop block h-4 w-auto rounded-none"
       loading="lazy"
       decoding="async"
     />

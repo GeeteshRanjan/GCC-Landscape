@@ -6,7 +6,7 @@ import { BUSINESS_TAGS } from "./business-tags";
  * beside `canonicalDomain` because a cleaner and its validator drifting apart is the
  * failure this pairing exists to prevent.
  */
-import { DOMAIN_PATTERN } from "./normalize";
+import { CTA_URL_MAX_LENGTH, DOMAIN_PATTERN, isCtaUrl } from "./normalize";
 
 /**
  * The published dataset shape. This is the contract for every consumer: the
@@ -638,15 +638,17 @@ export const metricSchema = metricObjectSchema.superRefine((metric, ctx) => {
  * is an invitation to fill it, so the slot is gone rather than left empty.
  *
  * Bounded lengths rather than free text, because both have a typographic job the
- * layout depends on. `title` renders at 60-80px in a centred column: past ~60
- * characters it takes a third line on desktop and pushes the overlapping card
- * below it off the first screen. `lead` is capped near the reading measure. An
- * admin needing more words than this needs a different band, and the form says
- * so rather than letting them find out on the live site.
+ * layout depends on. `title` renders at 40-80px in a leading-aligned column: past
+ * ~60 characters it takes a third line on desktop and pushes the overlapping card
+ * below it off the first screen. `lead` sits under the headline as a two-line
+ * supporting sentence; the cap is set to that target rather than to the reading
+ * measure, so an admin cannot quietly grow it into a paragraph that crowds the
+ * card. An admin needing more words than this needs a different band, and the form
+ * says so rather than letting them find out on the live site.
  */
 export const heroCopySchema = z.object({
   title: nonEmpty.max(60),
-  lead: nonEmpty.max(240),
+  lead: nonEmpty.max(180),
 });
 
 /**
@@ -671,6 +673,27 @@ export const impactStatSchema = z.object({
 });
 
 /**
+ * A CTA link as stored: blank, or an absolute `http`/`https` URL with its query string
+ * intact.
+ *
+ * **`.refine` rather than a regex, so this is a `ZodEffects` and has no readable
+ * `maxLength`.** That is why the admin form reads `CTA_URL_MAX_LENGTH` from
+ * `normalize.ts` instead of introspecting the schema the way it does for every other cap.
+ * The bound and the predicate are both imported from the one module that owns them, so
+ * the two cannot state different rules — which is the same guarantee reading `.maxLength`
+ * off the schema buys elsewhere.
+ */
+const ctaUrl = z
+  .string()
+  .trim()
+  .max(CTA_URL_MAX_LENGTH)
+  .refine((value) => value === "" || isCtaUrl(value), {
+    message:
+      "Must be a full link starting with https:// (or http://), or left blank to use the configured default.",
+  })
+  .default("");
+
+/**
  * The close's copy — the one band on the RESULT screens that is editable data.
  *
  * **It is here for the same reason the hero is, and that reason is the test any future
@@ -680,20 +703,51 @@ export const impactStatSchema = z.object({
  * is positioning and an offer, on ANSR's own schedule rather than the data's. Same
  * category as the hero, so it gets the same treatment.
  *
- * **Two fields, because the band renders two strings.** There is no heading — the band's
- * accessible name is an `aria-label` in the component, and a heading field nothing draws
- * would be a field asked for and never consumed. If a heading comes back it is a schema
- * addition and a component change together, which is the right amount of friction.
+ * **Two strings and two links, and there is still no heading** — the band's accessible
+ * name is an `aria-label` in the component, and a heading field nothing draws would be a
+ * field asked for and never consumed. If a heading comes back it is a schema addition and
+ * a component change together, which is the right amount of friction.
  *
- * The caps are the render limits rather than editorial taste. `body` is the band's display
+ * The two caps are render limits rather than editorial taste. `body` is the band's display
  * line, set large and centred at the lead measure: past roughly 140 characters it runs to
  * four lines and the button falls out of the first screenful on a phone. `ctaLabel` sits
  * in a pill that must not wrap — 28 characters is what fits at 390 with the pill's own
- * padding, measured rather than guessed.
+ * padding, measured rather than guessed. The links have no render limit at all, so their
+ * cap is a different kind of bound; see `CTA_URL_MAX_LENGTH`.
  */
 export const closeCopySchema = z.object({
   body: nonEmpty.max(140),
   ctaLabel: nonEmpty.max(28),
+  /**
+   * Where the button goes, ONE FIELD PER RESULT SCREEN.
+   *
+   * **Two fields rather than one, because the point of them is the query string.** The
+   * band is the tool's only outbound link and it renders on both result screens, so a
+   * single URL makes the two presses indistinguishable in ANSR's analytics — a visitor
+   * who converts off the peer landscape and one who converts off the function metrics
+   * arrive as the same event. Separate fields let each carry its own UTM tagging, which
+   * is the whole reason this is data and not one environment variable.
+   *
+   * **Blank is legal and means "use the configured default", which is why these are the
+   * only strings in `siteContent` that may be empty.** The link out existed before this
+   * field did, as `NEXT_PUBLIC_GCC_CTA_URL` with ansr.com behind it, and that path is
+   * still live — see `resolveCtaHref` in `derive.ts`. So an untagged deployment keeps
+   * working, an admin who wants tagging fills these, and nobody has to fill a field to
+   * preserve today's behaviour. It also means `lengthError`'s "required" reading does not
+   * apply here and the admin form uses its own validator.
+   *
+   * **`.default("")` rather than `.optional()`, which is the opposite of the call on
+   * `company.domain` and for a reason that does not carry across.** A defaulted string is
+   * written back on every publish; on 1,834 companies that was 1,834 unreadable lines of
+   * diff, and here it is two keys on one object. What the default buys is a fixed slot,
+   * so the diff reports these as field edits with both sides — the shape a reviewer needs
+   * for a link — rather than as a key appearing and disappearing.
+   *
+   * Validated but never transformed, so the pasted string, the diffed string and the
+   * `href` are one value. See `isCtaUrl`.
+   */
+  ctaHrefPeers: ctaUrl,
+  ctaHrefFunctions: ctaUrl,
 });
 
 /**
@@ -755,6 +809,21 @@ export const publicCopySchema = z.object({
   askSubmit: nonEmpty.max(32),
   /* The logo strip's accessible name, and the impact band's heading. */
   customersLabel: nonEmpty.max(80),
+  /**
+   * The impact band's heading, MINUS the brand name — the lockup is drawn, and it
+   * now LEADS the line rather than closing it.
+   *
+   * The heading reads "[ANSR] By The Numbers", so this field holds only "By The
+   * Numbers". It used to hold "Impact delivered by" with the mark as the sentence's
+   * last word; ANSR asked for the shorter title, in which the brand comes first, so
+   * the component draws the mark then this string. The accessible name is still one
+   * phrase, assembled the same way round.
+   *
+   * The 40-character cap is unchanged and is still the same measurement: the heading
+   * is words plus a 2.78:1 lockup on ONE line at 320px, and what a longer phrase
+   * costs is the mark dropping to a line of its own with its rays reaching into the
+   * first.
+   */
   impactTitleLead: nonEmpty.max(40),
   /* The result band, shared by both screens. Capped to hold one line. */
   headerPeers: nonEmpty.max(40),
@@ -762,8 +831,18 @@ export const publicCopySchema = z.object({
   /* The view switch. Two equal halves, so neither may wrap. */
   viewPeers: nonEmpty.max(24),
   viewFunctions: nonEmpty.max(24),
-  /* Peer landscape section headings. */
-  peersTitle: nonEmpty.max(60),
+  /**
+   * Peer landscape section headings.
+   *
+   * **`peersTitle` was here and is REMOVED, under this object's own rule.** It held
+   * "India GCCs closest to your profile" — a fixed string, and therefore legitimately
+   * data. ANSR's new wording names the visitor's own company ("GCC details of peers
+   * closest to Nike"), and the company name is optional, so the heading now has two
+   * branches and neither one is a string an admin could fill: whichever they typed,
+   * most visitors would read the other. That is exactly the reasoning recorded on the
+   * snapshot's opening label below, which never became a field for the same reason.
+   * It is `peersTitle()` in `screen1/copy.ts` now, beside the other derived wording.
+   */
   industryTitle: nonEmpty.max(40),
   /* The peer card's three small-caps labels. */
   peerHeadcountLabel: nonEmpty.max(24),
@@ -778,10 +857,18 @@ export const publicCopySchema = z.object({
    * — "GCCs in your industry" or "GCCs in your sub-industry" — so a flat string
    * could hold only one of its two branches, and an admin editing it would change
    * neither. It stays in `copy.ts` with the other derived wording.
+   *
+   * **The cap is 56, up from 32, because the labels are SENTENCE PREDICATES now.**
+   * ANSR reworded all four from noun phrases naming the metric ("Typical GCC
+   * headcount") to clauses completing the figure above them ("average employees in
+   * each GCC"), which is the shape the terminating scale strip has always used — and
+   * those three caps are 120 and 140 for the same reason. 56 is what fits three lines
+   * of a `lg:grid-cols-4` cell at 14px, which is where a fourth line starts pushing
+   * one cell's label visibly deeper than its neighbours'.
    */
-  snapshotHeadcountLabel: nonEmpty.max(32),
-  snapshotCitiesLabel: nonEmpty.max(32),
-  snapshotLeadingCityLabel: nonEmpty.max(32),
+  snapshotHeadcountLabel: nonEmpty.max(56),
+  snapshotCitiesLabel: nonEmpty.max(56),
+  snapshotLeadingCityLabel: nonEmpty.max(56),
   /* The terminating scale strip. Each label is a whole sentence's predicate. */
   scaleTitle: nonEmpty.max(60),
   scaleFortuneLabel: nonEmpty.max(120),
@@ -834,10 +921,22 @@ export const siteContentSchema = z.object({
     ...DEFAULT_COMMON_FUNCTIONS,
   ]),
   /**
-   * The customer strip. Defaulted, and capped at twelve — the strip scrolls, so a
-   * longer set is not a layout failure, but it stops being a curated set of proof.
+   * The customer strip. Defaulted, and capped at twenty-four.
+   *
+   * **The cap is a curation limit rather than a layout one and it moved because the
+   * SERVED set moved.** The strip scrolls, so a longer list costs no height and
+   * breaks nothing; what a long list costs is the band's meaning, which is a chosen
+   * set of proof rather than every mark anybody could find. Twelve was the ceiling
+   * while ten files existed. Twenty-two are served now, so twelve would put the
+   * shipped default itself over the cap — the schema would refuse the dataset it
+   * defaults to, which is a check that has stopped describing anything.
+   *
+   * Twenty-four is the served count plus the room to commit two more adaptations
+   * without a schema edit, and `MAX_LOGOS` in `site-content-manager.tsx` mirrors it
+   * so the Add button disables with a reason instead of the publish failing on a
+   * list somebody spent ten minutes filling.
    */
-  logos: z.array(customerLogoSchema).max(12).default(() => [...DEFAULT_LOGOS]),
+  logos: z.array(customerLogoSchema).max(24).default(() => [...DEFAULT_LOGOS]),
   copy: publicCopySchema.default(() => DEFAULT_PUBLIC_COPY),
 });
 
@@ -846,10 +945,43 @@ export const siteContentSchema = z.object({
  * without forward-referencing the larger object it is a member of.
  */
 export const DEFAULT_CLOSE_COPY: CloseCopy = {
+  /**
+   * **The offer is now the visitor's OWN profile rather than the rest of the dataset,
+   * at ANSR's request, and that changes what the band is asking.** It read "Access the
+   * complete dataset, deeper benchmarks and detailed cost structures behind your
+   * results" — an offer of more rows, which is a weak ask after a page that has just
+   * shown a visitor five named peers and thirty national figures. "The hyper-custom GCC
+   * profile built for your company" is an offer of work done ON their answers, which is
+   * the thing the free layer genuinely cannot supply.
+   *
+   * It does not become a claim about the dataset and so does not move out of data: the
+   * band still collects nothing and still states no count, a share or an ordering.
+   */
+  /**
+   * **No em dash, at ANSR's request, and a colon rather than a comma.** The clause after
+   * the break is a list of what the profile contains, so it is an expansion of the thing
+   * named before it — which is what a colon says. A comma could not: the list already
+   * holds two of its own ("deeper benchmarks, cost structures, and more"), so a third
+   * comma at the join would read as a fourth item rather than as the break.
+   */
   body:
-    "Access the complete dataset, deeper benchmarks and detailed cost " +
-    "structures behind your results.",
-  ctaLabel: "Unlock full intelligence",
+    "Access the hyper-custom GCC profile built for your company: " +
+    "deeper benchmarks, cost structures, and more.",
+  ctaLabel: "See the full report",
+  /**
+   * **Both links ship BLANK, and blank is a real answer rather than an unfinished
+   * field.** The shipped default has to reproduce today's behaviour exactly, and today's
+   * behaviour is `NEXT_PUBLIC_GCC_CTA_URL` with ansr.com behind it — so seeding a URL here
+   * would silently take the deployment's configured link out of the path on the next
+   * publish. Empty means "whatever is configured", which is what a dataset that has never
+   * been told about UTM tagging should say.
+   *
+   * It also keeps the default free of a guessed deep path, on the same argument as the
+   * fallback in `page.tsx`: a plausible-looking URL that 404s is worse than a general one
+   * that works.
+   */
+  ctaHrefPeers: "",
+  ctaHrefFunctions: "",
 };
 
 /**
@@ -868,21 +1000,51 @@ export const DEFAULT_COMMON_FUNCTIONS: readonly string[] = [
 ];
 
 /**
- * The ten marks, with the ink bounds each was measured at. Walmart's export
- * arrived with a `viewBox` nine tenths too small, so only "Wal" rendered; the
- * corrected file is what these dimensions describe.
+ * The twenty-two marks, with the ink bounds each was measured at.
+ *
+ * **Every one of these is produced by `npm run logo:crop`, and a hand-typed pair is a
+ * layout shift waiting to happen.** The dimensions are the RATIO an `<img>` reserves
+ * before the file arrives, so a wrong one moves the band directly under the form. An
+ * earlier Walmart export arrived with a `viewBox` nine tenths too small and rendered only
+ * "Wal"; the script exists because that is invisible until somebody looks at the file.
+ * `company-marks.test.ts` checks every vector's stated ratio against its own `viewBox`.
+ *
+ * **THE ORDER ALTERNATES ASPECT RATIO RATHER THAN GROUPING THE NEW MARKS AFTER THE
+ * OLD, and that is the same measurement the dual cap in `customer-logos.tsx` exists
+ * for.** These twenty-two span 0.78:1 (Target) to 5.18:1 (lululemon). Appended in the
+ * order they were supplied, the second half is a run of six wide wordmarks — every
+ * one of them pinned to the 128px width cap and therefore rendering SHORT — so a
+ * third of the strip reads as small type while the first third reads as marks. Reading
+ * a wide, a mid and a narrow in rotation keeps each screenful of the moving row at a
+ * comparable optical weight, which is what stops one mark deciding the rhythm.
+ *
+ * Nothing about the order is a claim: the band states no ranking and no relationship
+ * between adjacent marks, which is precisely why it is free to be arranged for
+ * legibility. An admin reorder is still reported by the diff.
  */
 export const DEFAULT_LOGOS: readonly CustomerLogo[] = [
+  { name: "Walmart", src: "/logos/walmart.svg", width: 128, height: 30 },
   { name: "Best Buy", src: "/logos/bestbuy.png", width: 106, height: 64 },
   { name: "Target", src: "/logos/target.svg", width: 62, height: 79 },
-  { name: "Walmart", src: "/logos/walmart.svg", width: 107, height: 22 },
-  { name: "Lowe's", src: "/logos/lowes.svg", width: 125, height: 62 },
+  { name: "JCPenney", src: "/logos/jcpenney.svg", width: 128, height: 30 },
   { name: "Nike", src: "/logos/nike.svg", width: 98, height: 51 },
   { name: "Airbnb", src: "/logos/airbnb.svg", width: 86, height: 72 },
+  { name: "lululemon", src: "/logos/lululemon.svg", width: 128, height: 25 },
+  { name: "Lowe's", src: "/logos/lowes.svg", width: 125, height: 62 },
   { name: "X", src: "/logos/x.svg", width: 55, height: 50 },
+  { name: "Kenvue", src: "/logos/kenvue.svg", width: 128, height: 30 },
   { name: "Wells Fargo", src: "/logos/wellsfargo.png", width: 127, height: 64 },
   { name: "PepsiCo", src: "/logos/pepsico.png", width: 81, height: 64 },
+  { name: "DocuSign", src: "/logos/docusign.svg", width: 128, height: 26 },
   { name: "Goldman Sachs", src: "/logos/goldmansachs.png", width: 154, height: 64 },
+  { name: "7-Eleven", src: "/logos/7eleven.svg", width: 128, height: 121 },
+  { name: "Land O'Lakes", src: "/logos/landolakes.svg", width: 128, height: 28 },
+  { name: "3M", src: "/logos/3m.svg", width: 128, height: 67 },
+  { name: "Rakuten", src: "/logos/rakuten.svg", width: 128, height: 38 },
+  { name: "FedEx", src: "/logos/fedex.svg", width: 128, height: 36 },
+  { name: "Victoria's Secret", src: "/logos/victoriassecret.svg", width: 128, height: 42 },
+  { name: "Hudson's Bay Company", src: "/logos/hudsonsbay.svg", width: 128, height: 85 },
+  { name: "Uber", src: "/logos/uber.svg", width: 128, height: 45 },
 ];
 
 /**
@@ -894,25 +1056,39 @@ export const DEFAULT_LOGOS: readonly CustomerLogo[] = [
  * live site on the next publish; changing the reasoning is still a code edit.
  */
 export const DEFAULT_PUBLIC_COPY: PublicCopy = {
-  askTitle: "Build your GCC intelligence view",
+  askTitle: "Find your peers",
   askLead:
     "Share your company details to identify relevant companies with GCCs in " +
     "India and explore talent, capability and location metrics.",
-  askSubmit: "See my results",
+  askSubmit: "Build my GCC Landscape",
   customersLabel: "Companies ANSR has worked with in India",
-  impactTitleLead: "Impact delivered by",
+  impactTitleLead: "By The Numbers",
   headerPeers: "How your industry operates in India",
   headerFunctions: "The India market beyond your industry",
   viewPeers: "Peer Landscape",
   viewFunctions: "Function Metrics",
-  peersTitle: "India GCCs closest to your profile",
   industryTitle: "Inside India's GCC base",
   peerHeadcountLabel: "GCC headcount",
   peerCitiesLabel: "Cities",
   peerSinceLabel: "In India since",
-  snapshotHeadcountLabel: "Typical GCC headcount",
-  snapshotCitiesLabel: "Indian cities with a GCC",
-  snapshotLeadingCityLabel: "Leading GCC city",
+  snapshotHeadcountLabel: "average employees in each GCC",
+  /**
+   * **"your industry", NOT "your sub-industry", and the difference is the figure this
+   * label sits under.** ANSR's wording named the sub-industry; the count is
+   * `view.map.cities.length`, which is the industry's own city spread — the map block
+   * is filtered to `input.industry` and there is no per-sub-industry city derivation to
+   * read. A label claiming the narrower population over the wider figure is the one
+   * thing copy on this surface may not do. The same correction is made on the leading
+   * city below and on `mapTitle`.
+   */
+  snapshotCitiesLabel: "cities in India host GCCs from your industry",
+  /**
+   * **"these GCCs", not "peer GCCs".** The leading city is `view.map.cities[0]` — the
+   * industry's top city, not the five-company peer set's — and "peer" would name a
+   * population this cell was not measured over. "These" refers to the section heading
+   * directly above, which names the industry once for all four cells.
+   */
+  snapshotLeadingCityLabel: "the city where most of these GCCs are based",
   scaleTitle: "The world's largest companies, in India",
   scaleFortuneLabel: "Fortune Global 500 companies run a GCC in India.",
   scaleForbesLabel: "Forbes Global 2000 companies run a GCC in India.",
@@ -946,10 +1122,33 @@ export const DEFAULT_PUBLIC_COPY: PublicCopy = {
  */
 export const DEFAULT_SITE_CONTENT: SiteContent = {
   hero: {
-    title: "ANSR GCC Intelligence",
+    /**
+     * **The product has a NAME now — Atlas — and the headline states what the tool does
+     * with it.** "ANSR GCC Intelligence" named a category; this names the product and
+     * the promise in one line.
+     *
+     * **The literal substrings "ANSR" and "ATLAS" are both load-bearing and must survive
+     * any rewording.** `withBrandMark` and `withProductMark` in `ask-hero.tsx` find them
+     * and swap each for its drawn wordmark, so a headline that spells either differently
+     * silently renders that half as plain type and loses a mark from the band.
+     *
+     * **No punctuation after the name, at the project owner's request.** It read
+     * "ANSR ATLAS: Benchmark against your peers" while the name was typed; with both
+     * halves now drawn, the colon was a typed character sitting against the trailing
+     * edge of an outlined mark. What it was doing — separating the name from the promise
+     * — the lockup now does on its own.
+     */
+    title: "ANSR ATLAS Benchmark against your peers",
+    /**
+     * **No em dash, at ANSR's request, and a colon for the reason the close's body takes
+     * one.** What follows the break names the three kinds of data the sentence before it
+     * promises, so it expands the clause rather than continuing it — and "talent, cost and
+     * location" already carries a comma, so a comma at the join would read as a fourth
+     * item in that list instead of as the break between the two halves.
+     */
     lead:
-      "A tool to evaluate your GCC opportunity using competitor data and " +
-      "benchmarks from 1,800+ global companies operating centres in India.",
+      "See how the top companies in your industry run their India GCCs today: " +
+      "talent, cost and location data drawn from our research into 1,800+ centres.",
   },
   impactStats: [
     { id: "professionals-hired", value: "225K+", label: "Professionals hired" },

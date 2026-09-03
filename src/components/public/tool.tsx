@@ -1,9 +1,13 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { fetchPeerView } from "@/app/actions";
+import type { AnswerEditing } from "@/components/public/answer-editor";
 import { PublicCopyProvider } from "@/components/public/copy-context";
+/* `derive.ts` is pure and holds no dataset, so it is safe in a client component —
+   the same reason `search.ts` is. `resolveCtaHref` is the one thing read from it. */
+import { resolveCtaHref } from "@/data/derive";
 import type {
   CloseCopy,
   CustomerLogo,
@@ -28,10 +32,12 @@ import { FunctionViewScreen } from "@/components/screen2/function-view";
  * View. What follows from it, and what would otherwise look like something missing:
  *
  *   - No deep link into a result or a function tab. The parent page owns the URL.
- *   - The browser's back button does not step back a phase. Every phase therefore
- *     carries its own way back as a real control in the normal flow — never
- *     something pinned to an edge, because nothing in the public screens may be
- *     fixed or sticky.
+ *   - **The browser's back button DOES step back a phase now — see `pushPhase`.** It did
+ *     not, and it was the most reported problem with the tool: submitting the form is the
+ *     only navigation-shaped act on the entry point, so pressing Back on a result did
+ *     what Back does on any other page and left the tool entirely. Every phase still
+ *     carries its own way back as a real control in the normal flow, because Back is
+ *     something a visitor may or may not reach for and never the only route.
  *   - Nothing announces a phase change, because no navigation happened. So focus
  *     is moved to the new screen's `h1` on every transition, which both tells a
  *     screen-reader user the screen changed and puts the keyboard at the top of it.
@@ -78,9 +84,16 @@ export interface GccLandscapeToolProps {
    * prop rather than an environment variable and a redeploy. That turned out to be
    * exactly what it took.
    *
-   * `NEXT_PUBLIC_GCC_CTA_URL` is unset in production, so this resolves to the
-   * fallback in `page.tsx` — ansr.com itself. It is now a live path rather than a
-   * dormant one, which makes setting that variable a real deployment step.
+   * **This is now the FALLBACK rather than the link, and the rename it did not get is
+   * deliberate.** `siteContent.close` carries a link per result screen so the two presses
+   * can be told apart in ANSR's analytics, and `resolveCtaHref` prefers those. This prop
+   * is what a screen whose field is blank falls back to: `NEXT_PUBLIC_GCC_CTA_URL`, and
+   * behind that the fallback in `page.tsx` — ansr.com itself. Both paths stay live, so a
+   * deployment with one landing page and no tagging needs no data edit.
+   *
+   * The name is kept because it is still literally the href for any screen the admin has
+   * not tagged, and every screen below it takes a resolved `ctaHref` rather than a
+   * fallback plus a rule.
    */
   ctaHref: string;
   /**
@@ -115,6 +128,28 @@ type Phase =
   | { kind: "peers"; view: PeerView }
   | { kind: "functions"; view: PeerView };
 
+/**
+ * The key each history entry is stamped with, holding an INDEX into the phase trail and
+ * never a phase.
+ *
+ * **A `PeerView` cannot go into `history.state` and must not be asked to.** It is the
+ * whole matched result — five peers, the industry counts, the city map — so serialising
+ * one per entry would put tens of kilobytes into the session history on every tab press,
+ * and `history.state` is a structured clone that would have to survive a shape change in
+ * the view model. An index into a trail held in a ref costs a number.
+ *
+ * The cost of the ref is that the trail does not survive a RELOAD, so a restored entry
+ * resolves to the ask. That is the correct fallback rather than a limitation to fix: the
+ * result is produced by a server action over answers the tool deliberately does not store,
+ * so there is nothing to rebuild a reloaded result from. It is the same reason there are
+ * no deep links.
+ *
+ * **`pushState` is called with no URL argument, so the address never changes.** The rule
+ * that the tool does not own the URL bar is intact — what is added is an entry in the
+ * session history at the URL the parent page already put there.
+ */
+const HISTORY_MARK = "gccLandscapePhase";
+
 export function GccLandscapeTool({
   industries,
   revenueBands,
@@ -134,6 +169,96 @@ export function GccLandscapeTool({
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [lastInput, setLastInput] = useState<PeerViewInput | null>(null);
+
+  /**
+   * Every phase the visitor has stood on, and where in it they are.
+   *
+   * Refs rather than state: nothing renders off either, and a `popstate` handler
+   * registered once has to read the CURRENT trail rather than the one that existed when
+   * it was registered. A state value in that closure would be the first one forever.
+   */
+  const phaseTrail = useRef<Phase[]>([{ kind: "ask" }]);
+  const trailAt = useRef(0);
+
+  /**
+   * Stamp the entry the tool was LOADED on.
+   *
+   * Without this the visitor's first `pushState` is preceded by an entry with no mark on
+   * it, so stepping back onto it reads `event.state` as null — which resolves to the ask
+   * by the fallback and happens to be right. It is right by accident: the parent page may
+   * have put its own state on that entry, and `replaceState` here preserves it by
+   * spreading rather than replacing. Explicit, so the ask is reached because it is index
+   * 0 and not because nothing was found.
+   */
+  useEffect(() => {
+    window.history.replaceState(
+      { ...window.history.state, [HISTORY_MARK]: 0 },
+      "",
+    );
+  }, []);
+
+  /**
+   * Move to a phase and record it as a step the visitor can come back from.
+   *
+   * **Truncating the trail at the current position is what makes a branch behave.** Step
+   * back to the peer view and then press the function tab, and the entry that held the
+   * old function view is no longer reachable — the browser drops its forward entries on a
+   * push, so the trail has to drop the same ones or an index would resolve to a phase the
+   * history no longer contains.
+   */
+  const pushPhase = useCallback((next: Phase) => {
+    const at = trailAt.current + 1;
+    phaseTrail.current = [...phaseTrail.current.slice(0, at), next];
+    trailAt.current = at;
+    window.history.pushState({ ...window.history.state, [HISTORY_MARK]: at }, "");
+    setPhase(next);
+  }, []);
+
+  /**
+   * Replace the phase the visitor is standing on, WITHOUT adding a history entry.
+   *
+   * For a refined result: the answers changed, the screen did not, so there is nothing to
+   * step back from — and an entry per correction would mean four presses of Back to leave
+   * a result someone had adjusted four dropdowns on.
+   *
+   * The trail write is inside the updater because it needs the current phase, and it is
+   * idempotent so React's double-invoke cannot corrupt it: the same index is overwritten
+   * with the same value.
+   */
+  const replacePhase = useCallback((update: (current: Phase) => Phase) => {
+    setPhase((current) => {
+      const next = update(current);
+      phaseTrail.current = phaseTrail.current.map((entry, index) =>
+        index === trailAt.current ? next : entry,
+      );
+      return next;
+    });
+  }, []);
+
+  useEffect(() => {
+    const onPop = (event: PopStateEvent) => {
+      const marked = (event.state as Record<string, unknown> | null)?.[
+        HISTORY_MARK
+      ];
+      const at = typeof marked === "number" ? marked : 0;
+      const target = phaseTrail.current[at];
+      // An entry we did not stamp, or one whose phase the trail lost to a reload.
+      // The ask is the only phase reachable without a result, so it is the floor.
+      if (!target) {
+        trailAt.current = 0;
+        fromHistory.current = true;
+        setPhase({ kind: "ask" });
+        setError(null);
+        return;
+      }
+      trailAt.current = at;
+      fromHistory.current = true;
+      setPhase(target);
+      setError(null);
+    };
+    window.addEventListener("popstate", onPop);
+    return () => window.removeEventListener("popstate", onPop);
+  }, []);
 
   const askHeadingRef = useRef<HTMLHeadingElement>(null);
   /**
@@ -243,6 +368,21 @@ export function GccLandscapeTool({
       (phase.kind === "peers" || phase.kind === "functions");
     target?.focus({ preventScroll: true });
 
+    /**
+     * **A transition the BROWSER drove states no position at all, and that is the third
+     * case.** Back and Forward restore their own scroll offset — the browser recorded it
+     * on the entry being returned to, which is a better answer than either of ours: it is
+     * where the visitor actually was on that screen, not where they were when they left
+     * the current one. Writing 0 over it, which is what the `betweenViews` branch would
+     * do on a `popstate`, would make Back mean "go to that screen's top" and lose the
+     * whole point of stepping back to something you were reading.
+     *
+     * Read and clear, so one press cannot inherit the flag.
+     */
+    const popped = fromHistory.current;
+    fromHistory.current = false;
+    if (popped) return;
+
     // Read and clear together, so an ask transition cannot inherit a position from a
     // view swap two states ago.
     const restore = restoreScroll.current;
@@ -261,7 +401,7 @@ export function GccLandscapeTool({
           setError(result.reason);
           return;
         }
-        setPhase({ kind: "peers", view: result.view });
+        pushPhase({ kind: "peers", view: result.view });
       } catch {
         setError(
           "Something went wrong reaching our data. Please try again in a moment.",
@@ -270,13 +410,64 @@ export function GccLandscapeTool({
         setPending(false);
       }
     },
-    [],
+    [pushPhase],
   );
 
+  /**
+   * The same request, applied to the screen the visitor is already on.
+   *
+   * **This is what the answer editor submits to, and the difference from `submit` is the
+   * phase KIND.** `submit` always lands on the peer view, which is right for the entry
+   * point: a visitor who has just described their company is being shown their peers.
+   * It is wrong for a correction made from Screen 2 — reading function metrics, fixing a
+   * revenue band, and being thrown onto a different screen is the same defect as being
+   * thrown onto the form, one screen shallower. So the kind is carried across and only
+   * the view is replaced.
+   *
+   * Returns whether it worked, because the editor has to stay open on a failure: closing
+   * a panel whose error message is the only explanation of what went wrong leaves a
+   * visitor looking at an unchanged result with no reason given.
+   */
+  const refine = useCallback(
+    async (input: PeerViewInput): Promise<boolean> => {
+      setPending(true);
+      setError(null);
+      setLastInput(input);
+      try {
+        const result = await fetchPeerView(input);
+        if (!result.ok) {
+          setError(result.reason);
+          return false;
+        }
+        replacePhase((current) =>
+          current.kind === "ask" ? current : { ...current, view: result.view },
+        );
+        return true;
+      } catch {
+        setError(
+          "Something went wrong reaching our data. Please try again in a moment.",
+        );
+        return false;
+      } finally {
+        setPending(false);
+      }
+    },
+    [replacePhase],
+  );
+
+  /**
+   * Back to the entry point.
+   *
+   * **Its one caller is the band's lockup now**, not "Edit answers" — see `AnswerEditor`
+   * for why correcting an answer stopped being a trip to the form. A push rather than a
+   * `history.back()`: the ask is a phase the visitor chose to move to, so it gets an
+   * entry of its own and Back from it returns to the result they left, which is the only
+   * route back to a result the entry point cannot rebuild on its own.
+   */
   const backToAsk = useCallback(() => {
-    setPhase({ kind: "ask" });
+    pushPhase({ kind: "ask" });
     setError(null);
-  }, []);
+  }, [pushPhase]);
 
   /**
    * Where the visitor was standing when they pressed a view tab, so the switch can put
@@ -305,19 +496,64 @@ export function GccLandscapeTool({
    */
   const restoreScroll = useRef<number | null>(null);
 
+  /**
+   * Set for exactly one transition when Back or Forward caused it, so the focus effect
+   * leaves the scroll offset to the browser. See the effect for why that is the better
+   * answer on a history move than either position the tool would otherwise state.
+   */
+  const fromHistory = useRef(false);
+
+  /**
+   * The two view swaps, which read the current phase rather than updating from it.
+   *
+   * They were functional updaters, which cannot work now: the new phase has to be recorded
+   * in the trail and pushed onto the history at the same time, and neither of those can
+   * happen inside a `setState` updater — React may call it twice, and a doubled
+   * `pushState` puts an unreachable entry in the visitor's history. So the guard against
+   * the ask phase is an early return here instead of a branch in the updater.
+   */
   const openFunctions = useCallback(() => {
+    if (phase.kind === "ask") return;
     restoreScroll.current = window.scrollY;
-    setPhase((current) =>
-      current.kind === "ask" ? current : { kind: "functions", view: current.view },
-    );
-  }, []);
+    pushPhase({ kind: "functions", view: phase.view });
+  }, [phase, pushPhase]);
 
   const backToPeers = useCallback(() => {
+    if (phase.kind === "ask") return;
     restoreScroll.current = window.scrollY;
-    setPhase((current) =>
-      current.kind === "ask" ? current : { kind: "peers", view: current.view },
-    );
-  }, []);
+    pushPhase({ kind: "peers", view: phase.view });
+  }, [phase, pushPhase]);
+
+  /**
+   * What both result screens need in order to offer the answer editor.
+   *
+   * Memoised on its parts rather than rebuilt per render, because it is a prop on a screen
+   * that mounts a ~2,900px tree: a fresh object every render is a fresh identity for every
+   * memo below it. The four option lists are props and never change for the life of the
+   * tool, so the only members that actually move are `pending` and `error`.
+   */
+  const editing = useMemo<AnswerEditing>(
+    () => ({
+      options: {
+        industries,
+        revenueBands,
+        hqCountries,
+        businessTypesByIndustry,
+      },
+      pending,
+      error,
+      onApply: refine,
+    }),
+    [
+      industries,
+      revenueBands,
+      hqCountries,
+      businessTypesByIndustry,
+      pending,
+      error,
+      refine,
+    ],
+  );
 
   return (
     /**
@@ -366,13 +602,15 @@ export function GccLandscapeTool({
       {phase.kind === "peers" ? (
         <PeerViewAnswer
           // Remounted per answer, so the entry stagger replays for a new result
-          // rather than only on the first one.
+          // rather than only on the first one — which is also what closes the answer
+          // editor and confirms, visibly, that a correction landed.
           key={JSON.stringify(phase.view.input)}
           panelRef={peersPanelRef}
           view={phase.view}
-          onChangeDetails={backToAsk}
+          onHome={backToAsk}
+          editing={editing}
           onOpenFunctions={openFunctions}
-          ctaHref={ctaHref}
+          ctaHref={resolveCtaHref(closeCopy, "peers", ctaHref)}
           closeCopy={closeCopy}
         />
       ) : null}
@@ -382,9 +620,10 @@ export function GccLandscapeTool({
           view={functionView}
           input={phase.view.input}
           onBack={backToPeers}
-          onEditProfile={backToAsk}
+          onHome={backToAsk}
+          editing={editing}
           panelRef={functionsPanelRef}
-          ctaHref={ctaHref}
+          ctaHref={resolveCtaHref(closeCopy, "functions", ctaHref)}
           closeCopy={closeCopy}
         />
       ) : null}

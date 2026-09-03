@@ -52,9 +52,16 @@ const CAPABILITY_SCALE = ["Developing", "Moderate", "Strong", "Very strong"] as 
  * beneath it had nothing to attach to, and repeating "7 days" 20px under the 7 already
  * on the mark is the duplication this project removes everywhere else. `RangeBar` drops
  * the prefix to match, so the operations tab reads the same way.
+ *
+ * **Shortened at ANSR's request, and they still read on their own.** They were
+ * "Hiring through an employer of record" and "Hiring directly into your own entity".
+ * What the shorter pair had to keep is the fact that these name an OPERATING MODEL
+ * rather than a function or a seniority — "Through …" carries that, and it is the
+ * distinction the metric exists to draw, since the operations tab used to show an
+ * unlabelled 42–70 and hid the fastest route entirely.
  */
-const FIRST_HIRE_EOR = "Hiring through an employer of record";
-const FIRST_HIRE_DIRECT = "Hiring directly into your own entity";
+const FIRST_HIRE_EOR = "Through EOR model";
+const FIRST_HIRE_DIRECT = "Through own entity";
 
 /* ==========================================================================
    Shared metrics — authored once, shown on more than one tab
@@ -155,7 +162,12 @@ const GRADUATE_OUTPUT: SharedMetric = {
  */
 const LEADERSHIP_DEPTH: SharedMetric = {
   lens: "supply",
-  title: "Professionals with 10+ years",
+  /* **"of experience" restored at ANSR's request, on BOTH tabs by construction.** It is
+     a shared metric, so the one edit here covers the technology and HR cards and they
+     cannot drift apart. The title now matches `unit` word for word, which is harmless:
+     the tabs that draw this draw it as a figure-row cell, where the title is the cell's
+     only line and the unit is never rendered separately. */
+  title: "Professionals with 10+ years of experience",
   question: "Is there a senior layer here we could hire our leadership from?",
   unit: "professionals with 10+ years of experience",
   format: "number",
@@ -258,7 +270,9 @@ export const METRIC_CATALOGUE: readonly Metric[] = [
     id: "tech-manager-depth",
     functionArea: "tech",
     lens: "supply",
-    title: "Managers and above",
+    /* "Manager-level and above" at ANSR's request. The hyphenated form reads as one
+       seniority band rather than as a plural of people, which is what the figure is. */
+    title: "Manager-level and above",
     question: "Is there a management layer here, or would every lead be an import?",
     unit: "professionals in manager and above roles",
     format: "number",
@@ -304,8 +318,10 @@ export const METRIC_CATALOGUE: readonly Metric[] = [
     functionArea: "tech",
     lens: "supply",
     /* Renamed in admin and published, so the catalogue follows the datum rather than
-       the other way round — left behind, a `--reseed-metrics` would silently undo it. */
-    title: "Technology Graduate Pipeline",
+       the other way round — left behind, a `--reseed-metrics` would silently undo it.
+       "Graduate pipeline for technology" at ANSR's request, in sentence case: it was the
+       one title on the tab in Title Case, which read as a proper noun for a product. */
+    title: "Graduate pipeline for technology",
     question: "Will the talent pool still be deep enough tomorrow, as we grow?",
     unit: "graduates a year",
     format: "number",
@@ -353,7 +369,12 @@ export const METRIC_CATALOGUE: readonly Metric[] = [
     id: "tech-gcc-scale-count",
     functionArea: "tech",
     lens: "supply",
-    title: "GCCs above 100 tech FTEs",
+    /* **A sentence predicate, at ANSR's request, and the card it draws is why it works.**
+       This metric is a bare scalar, so it lands in the tab's figure ROW rather than in a
+       card — and there the title is the one line under the figure, so "1,250" above
+       "GCCs have tech teams of 100+ FTEs" reads as a whole sentence. "GCCs above 100 tech
+       FTEs" was a noun phrase naming the measure instead. */
+    title: "GCCs have tech teams of 100+ FTEs",
     question: "How many centres have already grown past the size we are aiming for?",
     unit: "GCCs",
     format: "number",
@@ -439,9 +460,20 @@ export const METRIC_CATALOGUE: readonly Metric[] = [
     id: "ops-grade-a-office-stock",
     functionArea: "operations",
     lens: "supply",
-    title: "Grade A stock, top 7 cities, mn sq ft",
+    /* **The unit has left the title and now sits beside the figure**, at ANSR's request:
+       "854 mn sq ft" over "Grade A stock in top 7 cities". The title had been carrying it
+       because a figure-row cell is one line and there was nowhere else for it to go; the
+       cell takes an explicit `unit` now, so the title states the scope alone. The scope
+       must stay in it — this cell lifts the leading PART of a two-part breakdown, so
+       without "in top 7 cities" the figure would read as national stock. */
+    title: "Grade A stock in top 7 cities",
     question: "Is there space we could move into at the quality our people expect?",
-    unit: "million sq ft",
+    /* **"mn sq ft", not "million sq ft", because this string is now DRAWN beside the
+       figure** rather than read as prose in an axis note. At two scale steps under a 48px
+       numeral, "million sq ft" is wider than the numeral it qualifies and overruns a
+       fifth of the figure row; the abbreviation is what fits the cell. Still one authored
+       string and still admin-editable — the renderer abbreviates nothing. */
+    unit: "mn sq ft",
     format: "number",
     /**
      * The one real containment in the catalogue, and now it is authored.
@@ -735,7 +767,12 @@ export const METRIC_CATALOGUE: readonly Metric[] = [
     id: "fin-cost-growth",
     functionArea: "finance",
     lens: "cost",
-    title: "India wage growth, year on year",
+    /* "Salary growth in India, YoY" at ANSR's request. All three finance growth titles
+       were reworded together to "YoY" — they draw as three cells of one figure row, so
+       the abbreviation is what keeps the three labels one line each at 3 columns, and a
+       row where one cell spells out what its neighbours abbreviate reads as three
+       different measures. "Salary" rather than "wage" is ANSR's own vocabulary. */
+    title: "Salary growth in India, YoY",
     question: "Is the cost of the same person here rising faster than we can plan for?",
     format: "percent",
     note:
@@ -777,7 +814,7 @@ export const METRIC_CATALOGUE: readonly Metric[] = [
     id: "fin-operating-cost-growth",
     functionArea: "finance",
     lens: "cost",
-    title: "Operating cost growth, year on year",
+    title: "Increase in operating costs, YoY",
     question:
       "Is the cost of running the centre — utilities, transport, facilities management, local support — rising faster than the wage bill?",
     format: "percent",
@@ -793,7 +830,7 @@ export const METRIC_CATALOGUE: readonly Metric[] = [
     id: "fin-workplace-cost-growth",
     functionArea: "finance",
     lens: "cost",
-    title: "Workplace cost growth, year on year",
+    title: "Increase in workplace costs, YoY",
     question:
       "Is the cost of the space itself rising, and by enough to change a five-year plan?",
     format: "percent",

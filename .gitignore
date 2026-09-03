@@ -79,3 +79,8 @@ public/fonts/
 # transient artefact rather than a source. `data/dataset.json` is the committed truth.
 data/domains.csv
 data/domains-unmatched.csv
+
+# Variants harness build output. The harness runs on a separate distDir
+# (.next-variants/) so the two dev servers don't collide; the output is
+# ephemeral — `GCC_DIST_DIR=.next-variants npx next dev -p 3400` recreates it.
+.next-variants/

@@ -187,6 +187,50 @@ export function canonicalDomain(value: unknown): string {
 }
 
 /**
+ * The cap on a stored CTA link, and it is a UTM allowance rather than a URL limit.
+ *
+ * A bare landing-page URL is ~40 characters; the five UTM parameters ANSR would attach
+ * to one, with campaign names spelled out, run to about 200. 500 leaves room for a
+ * click id a paid channel appends without letting the field become a place to paste
+ * something that is not a link.
+ */
+export const CTA_URL_MAX_LENGTH = 500;
+
+/**
+ * Whether a string is a usable outbound CTA link.
+ *
+ * **A predicate rather than a reducer, and this is the one place the domain pairing's
+ * shape does NOT apply.** `canonicalDomain` exists because a domain has one canonical
+ * form and a pasted browser URL has to be reduced to it. A CTA link is the opposite: the
+ * pasted form IS the stored form, query string and all, because the query string is the
+ * UTM tagging and reducing it would silently destroy the attribution the field exists to
+ * carry. So there is nothing to clean, and validating without transforming means the
+ * value in the admin form, the value in the diff and the value in the `href` are one
+ * string.
+ *
+ * **`http:` and `https:` only, and that is a security boundary rather than tidiness.**
+ * The value lands in an `href` on a page served from ansr.com's own domain, so accepting
+ * an arbitrary scheme would make this field a way to put `javascript:` into the one
+ * outbound link on both result screens. Parsed with `URL` rather than matched with a
+ * regex because a UTM-tagged link is exactly the case a URL regex gets wrong.
+ *
+ * Blank is NOT accepted here. Whether an empty field is legal is the schema's decision —
+ * it is, and it means "fall back to the configured default" — so this answers only
+ * whether a non-empty value is a link.
+ */
+export function isCtaUrl(value: unknown): boolean {
+  const text = cleanText(value);
+  if (text.length === 0 || text.length > CTA_URL_MAX_LENGTH) return false;
+  let url: URL;
+  try {
+    url = new URL(text);
+  } catch {
+    return false;
+  }
+  return url.protocol === "https:" || url.protocol === "http:";
+}
+
+/**
  * `2022` and `2022.0` are stored as distinct values in the source, which breaks
  * any grouping by year. Excel readers hand back either a number or a string
  * depending on the cell, so both are handled here.

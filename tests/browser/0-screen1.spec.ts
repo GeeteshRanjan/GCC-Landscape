@@ -50,7 +50,7 @@ async function ask(
  * The submit label, named once. Three tests press this button, and a copy change
  * that had to be made in three places is a copy change that gets made in two.
  */
-const SUBMIT = "See my results";
+const SUBMIT = "Build my GCC Landscape";
 
 test.describe("the ask", () => {
   test("offers exactly the four controls, and asks for no revenue figure", async ({
@@ -133,7 +133,9 @@ test.describe("the ask", () => {
   }) => {
     await page.goto("/");
 
-    await expect(page.locator("h1#ask-title")).toHaveText("ANSR GCC Intelligence");
+    await expect(page.locator("h1#ask-title")).toHaveText(
+      "ANSR ATLAS Benchmark against your peers",
+    );
     // "ANSR" is set in the action orange, which is only legible against the top of
     // the gradient — 4.27:1 falling to 2.95:1 by 45% down the band. It is the
     // leading token, so it is always on the headline's first line and therefore
@@ -152,7 +154,7 @@ test.describe("the ask", () => {
     await expect(page.getByText("1,800+", { exact: false }).first()).toBeVisible();
 
     const text = (await page.locator("body").innerText()).toLowerCase();
-    expect(text).not.toContain("1,834 global companies");
+    expect(text).not.toContain("1,834");
     expect(text).not.toContain("twenty seconds");
     expect(text).not.toContain("or sent to us");
     // The reassurance line was removed with the hero rework. It was true; it
@@ -173,7 +175,7 @@ test.describe("the ask", () => {
     // The form card's own heading and the line under it, which ANSR supplied
     // verbatim. Asserted here rather than used to locate anything.
     await expect(
-      page.getByRole("heading", { name: "Build your GCC intelligence view" }),
+      page.getByRole("heading", { name: "Find your peers" }),
     ).toBeVisible();
     await expect(
       page.getByText(/Share your company details to identify relevant companies/),
@@ -289,15 +291,27 @@ test.describe("the entry point's bands", () => {
     const strip = page.locator("section#customers");
     await expect(strip).toHaveAttribute("aria-label", /worked with/i);
 
-    // Ten marks, twice: the duplicate is what makes the loop seamless.
-    await expect(strip.locator("img")).toHaveCount(20);
-    // Only the first copy is announced. Ten company names read out twice is the
+    /**
+     * Every mark, twice: the duplicate is what makes the loop seamless.
+     *
+     * **The count is DERIVED from the fixture rather than written down, because the
+     * shipped set is data and it has already changed once.** Two hardcoded numbers here
+     * were the whole cost of going from ten marks to twenty-two — a spec failing on a
+     * deliberate content change describes nothing and teaches whoever hits it to edit
+     * the number without reading the assertion. What is being asserted is the RELATION:
+     * exactly two copies, and only one of them announced.
+     */
+    const named = strip.locator('img:not([alt=""])');
+    const shipped = await named.count();
+    expect(shipped).toBeGreaterThan(1);
+    await expect(strip.locator("img")).toHaveCount(shipped * 2);
+    // Only the first copy is announced. Every company name read out twice is the
     // bug the `aria-hidden` on the second list prevents.
-    await expect(strip.locator('img:not([alt=""])')).toHaveCount(10);
+    await expect(strip.locator('img[alt=""]')).toHaveCount(shipped);
 
-    // Every mark actually rendered. Six of the ten are SVGs that were served with
-    // no intrinsic size once, and all six collapsed to 0x0 inside the capped flex
-    // row — visible as an empty strip and caught by nothing else.
+    // Every mark actually rendered. The vector marks were served with no intrinsic
+    // size once, and every one collapsed to 0x0 inside the capped flex row — visible
+    // as an empty strip and caught by nothing else.
     const collapsed = await strip.locator("img").evaluateAll((imgs) =>
       imgs
         .filter((i) => i.getBoundingClientRect().width < 8)
@@ -401,9 +415,15 @@ test.describe("the answer", () => {
      * region asserted below, which every reader is told once rather than only the ones
      * who scroll.
      */
+    /**
+     * **"ANSR ATLAS", where this read "ANSR GCC Intelligence".** The lockup names the
+     * product now rather than a category, matching the entry point's own headline. The
+     * name is still computed — `alt="ANSR"` on the drawn lockup plus the typed word — so
+     * this assertion is also what catches the mark being dropped from the heading.
+     */
     const heading = page.getByRole("heading", {
       level: 1,
-      name: "ANSR GCC Intelligence",
+      name: "ANSR ATLAS",
     });
     await expect(heading).toBeVisible();
     /**
@@ -479,15 +499,23 @@ test.describe("the answer", () => {
     await expect(
       snapshot.getByRole("heading", { name: "Snapshot of BFSI GCCs in India" }),
     ).toBeVisible();
-    await expect(snapshot.getByText("GCCs in your industry")).toBeVisible();
+    await expect(
+      snapshot.getByText("companies in this industry have a GCC in India"),
+    ).toBeVisible();
     // The share's own label and its unit are both gone with it.
     await expect(snapshot.getByText("Of every GCC in India")).toHaveCount(0);
-    await expect(snapshot.getByText("Typical GCC headcount")).toBeVisible();
+    await expect(
+      snapshot.getByText("average employees in each GCC"),
+    ).toBeVisible();
     // **Not "Indian cities in play"**, which was consultants' shorthand and made a
     // plain count of cities sound like a shortlist somebody had drawn up.
-    await expect(snapshot.getByText("Indian cities with a GCC")).toBeVisible();
+    await expect(
+      snapshot.getByText("cities in India host GCCs from your industry"),
+    ).toBeVisible();
     await expect(snapshot.getByText(/in play/)).toHaveCount(0);
-    await expect(snapshot.getByText("Leading GCC city")).toBeVisible();
+    await expect(
+      snapshot.getByText("the city where most of these GCCs are based"),
+    ).toBeVisible();
     // Two earlier headings, and the label that carried the concentration finding.
     await expect(snapshot.getByText("Your industry in India")).toHaveCount(0);
     await expect(snapshot.getByText(/^BFSI in India$/)).toHaveCount(0);
@@ -508,7 +536,7 @@ test.describe("the answer", () => {
         .getByText("Bengaluru")
         .evaluate((el) => getComputedStyle(el.closest("p")!).color),
       snapshot
-        .getByText("Typical GCC headcount")
+        .getByText("average employees in each GCC")
         .evaluate((el) =>
           getComputedStyle(el.previousElementSibling as Element).color,
         ),
@@ -541,6 +569,20 @@ test.describe("the answer", () => {
      * anything. Five rows, five row headers, one chip marking the ranking.
      */
     const peers = band(page, "peers");
+    /**
+     * **The block's heading names the visitor's own company**, which is why it stopped
+     * being published copy: the name is optional, so the heading has two branches and no
+     * single string an admin could type would serve both. The no-name branch is asserted
+     * in the profile-pills test below, and both branches are unit-tested.
+     *
+     * Located by the band's `id` as every band is; this reads the heading's words
+     * deliberately, which is the one thing this assertion is for.
+     */
+    await expect(
+      peers.getByRole("heading", {
+        name: "GCC details of peers closest to Northwind Financial",
+      }),
+    ).toBeVisible();
     /**
      * **A packed grid of five cards, not a table, and each company name is an `h3`.**
      * The table was one pass and it was a spreadsheet dropped into a brand page — four
@@ -760,20 +802,81 @@ test.describe("the answer", () => {
       await largest.locator("li span.rounded-full").count(),
     ).toBeGreaterThanOrEqual(10);
     /**
-     * **The overlap marker's wording changed with its job.** "Also in your peer set" on
-     * a duplicate card admitted the repeat; on a chart row the marker lets a reader map
-     * the ranking onto the set they were given, and the sentence under the block states
-     * what that mapping amounts to — which is a finding rather than an apology.
+     * **The overlap marker's wording changed with its job, and then again with the
+     * product's vocabulary.** "Also in your peer set" on a duplicate card admitted the
+     * repeat; on a chart row the marker lets a reader map the ranking onto the set they
+     * were given, which is a finding rather than an apology. It read "in your comparison
+     * set" for one pass and is "in your peer set" now, at ANSR's request — the shorter
+     * phrase, and the one the rest of the product uses.
      */
     await expect(largest.getByText("Also in your peer set")).toHaveCount(0);
     await expect(
       largest.getByText("in your comparison set", { exact: true }),
-    ).toHaveCount(3);
+    ).toHaveCount(0);
     await expect(
-      largest.getByText(
-        "3 of the 5 largest BFSI GCCs in India are in your comparison set above.",
-      ),
-    ).toBeVisible();
+      largest.getByText("in your peer set", { exact: true }),
+    ).toHaveCount(3);
+    /**
+     * **The overlap SENTENCE is gone, at ANSR's request, and so is the universal Fortune
+     * sentence.** Two full-measure lines under a five-row chart, neither stating a
+     * quantity the chart does not already carry: the per-row marker asserted three lines
+     * above names which rows overlap, one row at a time, and the badge names the index
+     * membership on every row where it is not universal.
+     *
+     * `largestOverlapLine` is still exported and still unit-tested, so restoring it is
+     * one line. Both wordings are asserted absent so a rename cannot smuggle the
+     * sentence back.
+     */
+    await expect(largest.getByText(/in your (peer|comparison) set above/)).toHaveCount(
+      0,
+    );
+    await expect(
+      largest.getByText(/Every company here is in the Fortune Global 500/),
+    ).toHaveCount(0);
+    /**
+     * **The badge is what replaced that sentence, so it draws on every Fortune row here —
+     * universal or mixed — at the project owner's instruction.** The suppression existed
+     * to stop the block drawing the same accent CHIP five times and then saying it a
+     * sixth time underneath; with the chip now Fortune's own 16px badge and the sentence
+     * gone, keeping the suppression would have left the universal case stating the
+     * membership in neither place.
+     *
+     * Asserted as a property rather than a count: which of the industry's biggest centres
+     * are on the index is a dataset fact, so a spec naming five fails on a legitimate
+     * publish. What must hold is that at least one row carries it, that the ONLY named
+     * image in this block is that badge — a company mark takes `alt=""` because the name
+     * is the adjacent heading — and that no image is present without a source, which is
+     * the reserved-placeholder case.
+     */
+    const largestBadges = largest.locator("img[alt='Fortune Global 500']");
+    expect(await largestBadges.count()).toBeGreaterThan(0);
+    /**
+     * **The badge's hover pop, which is the ONE pointer response on this whole surface.**
+     * Asserted because it is a deliberate exception to "nothing here rises on hover" and an
+     * exception nobody can see in a diff is one a later pass deletes as an oddity. It is
+     * also the assertion that would catch the dependency coming back: this is
+     * `.gcc-badge-pop` in `globals.css`, and `motion` was installed for one pass and
+     * removed at 40KB gzipped — see the style lock's Motion section.
+     *
+     * Resting transform is `none` and the hovered one is the 1.6 matrix. The ROW's height
+     * is asserted unchanged either side, which is the property that makes a pop safe on a
+     * five-row ranking at all: a transform takes no part in layout, so nothing beside it
+     * moves. Playwright's default is `prefers-reduced-motion: no-preference` and Desktop
+     * Chrome matches `hover: hover`, which are the two gates on the rule.
+     */
+    const popBadge = largestBadges.first();
+    const popRow = popBadge.locator("xpath=ancestor::li[1]");
+    const rowHeightBefore = (await popRow.boundingBox())!.height;
+    await expect(popBadge).toHaveCSS("transform", "none");
+    await popBadge.hover();
+    await expect(popBadge).toHaveCSS("transform", "matrix(1.6, 0, 0, 1.6, 0, 0)");
+    expect((await popRow.boundingBox())!.height).toBe(rowHeightBefore);
+    // Off the badge, so the hover state cannot leak into the assertions below.
+    await largest.getByRole("heading", { level: 3 }).first().hover();
+    await expect(largest.locator("img[alt]:not([alt=''])")).toHaveCount(
+      await largestBadges.count(),
+    );
+    await expect(largest.locator("img:not([src])")).toHaveCount(0);
     /**
      * **The ordering qualifier is GONE, at ANSR's request, and of the six leads removed in
      * that pass this is the one with the sharpest edge on it.**
@@ -839,16 +942,27 @@ test.describe("the answer", () => {
      * across India GCCs… Not a per-company breakdown of the companies above." and
      * "Ordered by how common each function is. We hold no per-company function
      * record…". They were true and load-bearing, so the job moved into the HEADING —
-     * "Functions most GCCs run from India" is a claim about GCCs in general and cannot
-     * be read as one about the five companies above.
+     * "Common functions run from the India GCCs" is a claim about India GCCs at large
+     * and cannot be read as one about the five companies above.
      */
     await expect(
       functions.getByText(/no per-company function record/),
     ).toHaveCount(0);
     await expect(functions.getByText(/general pattern across India GCCs/)).toHaveCount(0);
+    /**
+     * **Asserted on the word "Common" rather than on the whole string**, because that is
+     * the word doing the work: it says the set is typical of India GCCs generally rather
+     * than measured off anything on this page. ANSR reworded the heading from "Functions
+     * most GCCs run from India", and the two wordings carry the generality in different
+     * words — so what is pinned is the property, plus the absence of any possessive
+     * tying the list to the grid above.
+     */
     await expect(
-      functions.getByRole("heading", { name: /most GCCs run from India/ }),
+      functions.getByRole("heading", { name: /^Common functions run from the India GCCs$/ }),
     ).toBeVisible();
+    await expect(functions.getByRole("heading", { name: /these companies|their/ })).toHaveCount(
+      0,
+    );
     // The property those sentences protected, still asserted: no share is drawn or
     // stated against any function.
     await expect(functions.getByText(/%/)).toHaveCount(0);
@@ -1261,15 +1375,96 @@ test.describe("the answer", () => {
     await expect(
       page.getByRole("heading", { level: 1, name: /Northwind Financial/ }),
     ).toHaveCount(0);
-    // Pressing it returns to the form with the answers intact.
+    /**
+     * **Pressing it opens the editor HERE and does not leave the result, which is the
+     * reversal worth a spec of its own.** It used to go to the entry point, so the act of
+     * correcting one dropdown tore down the whole result and rebuilt the form. Three
+     * things are asserted together because any one of them alone would pass on the old
+     * behaviour: the entry point's `h1` is absent, this screen's card is still mounted,
+     * and the editor's own submit is on the page.
+     */
     await profile.getByRole("button", { name: "Edit answers" }).click();
-    await expect(page.locator("h1#ask-title")).toBeVisible();
+    await expect(page.locator("h1#ask-title")).toHaveCount(0);
+    await expect(band(page, "peers")).toBeVisible();
+    await expect(
+      page.getByRole("button", { name: "Update my results" }),
+    ).toBeVisible();
+    // A disclosure, so the control reports its own state — it was a navigation and
+    // reported nothing.
+    await expect(
+      profile.getByRole("button", { name: "Edit answers" }),
+    ).toHaveAttribute("aria-expanded", "true");
+    // And it closes again from the same control, which a navigation could not do.
+    await profile.getByRole("button", { name: "Edit answers" }).click();
+    await expect(
+      page.getByRole("button", { name: "Update my results" }),
+    ).toHaveCount(0);
     // Without a name: three pills, no empty fourth, no stub — and still one control.
     await page.goto("/");
     await ask(page, { industry: "BFSI", revenueBand: "Above $20 Bn" });
+    /**
+     * **The comparable-companies heading's other branch, asserted here because this is
+     * the test that has the anonymous visitor.** With no company name it falls back to
+     * "your profile" — and NOT to "yours", which would presume the visitor already runs
+     * an India centre. `gccStatus` is a constant the form never asks for, so the tool
+     * cannot know either way.
+     */
+    await expect(
+      band(page, "peers").getByRole("heading", {
+        name: "GCC details of peers closest to your profile",
+      }),
+    ).toBeVisible();
+    await expect(band(page, "peers").getByText(/closest to yours/)).toHaveCount(0);
     const anon = page.getByRole("group", { name: /Your profile/ });
     await expect(anon.getByRole("button")).toHaveCount(1);
     await expect(anon.getByText("Company")).toHaveCount(0);
+  });
+
+  /**
+   * The two routes OFF a result that are not the view switch, both of which changed in
+   * the same pass and neither of which existed in this form before it.
+   *
+   * The lockup is the way to the entry point, because "Edit answers" stopped being one.
+   * And Back steps a phase rather than leaving the tool — the phases push real history
+   * entries now, at the same URL, which is what makes the browser's own control mean what
+   * a visitor expects it to mean on a page that never navigates.
+   */
+  test("the lockup goes home and Back steps a phase", async ({ page }) => {
+    await page.goto("/");
+    await ask(page, { industry: "BFSI", revenueBand: "Above $20 Bn" });
+    await expect(band(page, "peers")).toBeVisible();
+
+    /**
+     * **Back returns to the form, which is the whole point of the history entries.** The
+     * result is a state change with no navigation behind it, so before this Back left the
+     * tool for whatever the visitor was on beforehand — on the entry point, that is
+     * wherever they came from.
+     */
+    await page.goBack();
+    await expect(page.locator("h1#ask-title")).toBeVisible();
+    // Forward returns to the result, from the trail rather than from a refetch.
+    await page.goForward();
+    await expect(band(page, "peers")).toBeVisible();
+
+    /**
+     * **The lockup is a control, and it is the ONLY route back to the entry point now.**
+     * Load-bearing rather than cosmetic: a pass that reverted the button would leave both
+     * result screens with no way home and nothing else here would fail.
+     *
+     * Its accessible name is the product's name and not the destination — an `aria-label`
+     * would be read into the `h1`'s own name by name-from-content, which would put an
+     * instruction in the document outline of both result screens.
+     */
+    const lockup = page
+      .getByRole("heading", { level: 1, name: "ANSR ATLAS" })
+      .getByRole("button", { name: "ANSR ATLAS" });
+    await expect(lockup).toBeVisible();
+    await lockup.click();
+    await expect(page.locator("h1#ask-title")).toBeVisible();
+    // Going home is itself a step, so Back from the entry point returns to the result
+    // that was left — which the entry point cannot rebuild on its own.
+    await page.goBack();
+    await expect(band(page, "peers")).toBeVisible();
   });
   /**
    * The density map draws India now, and three properties of that are worth pinning
@@ -1538,17 +1733,19 @@ test.describe("the answer", () => {
     await expect(band(page, "peers")).toBeVisible();
 
     /**
-     * **The way back is one labelled control beside the answers.** It was four chevroned
-     * panels for a pass, one per answer, all of them reaching the same form — see the
-     * profile test above for why that went back to a summary plus one button.
+     * **The way to correct an answer is one labelled control beside the answers, and it
+     * opens the editor on this screen.** It was four chevroned panels for a pass, one per
+     * answer, all of them reaching the form — see the profile test above for why that
+     * became a summary plus one button, and then a disclosure rather than a navigation.
      */
     await page
       .getByRole("group", { name: /Your profile/ })
       .getByRole("button", { name: "Edit answers" })
       .click();
 
-    // Back on the form, and a correction starts from the last answer rather than
-    // from an empty form.
+    // The editor holds the SAME four controls as the entry point — it mounts the entry
+    // point's own `InputPanel` — and a correction starts from the last answer rather
+    // than from an empty form.
     await expect(page.getByLabel(/^Company name/)).toHaveValue("Northwind Financial");
     // The three dropdowns are a custom listbox now, not `<select>`, so what carries
     // the answer is the trigger's own label rather than a `value` property. A button
@@ -1675,8 +1872,12 @@ test.describe("a thin industry", () => {
     await expect(
       strip.getByRole("heading", { name: "Snapshot of Electrical & Electronics GCCs in India" }),
     ).toBeVisible();
-    await expect(strip.getByText("GCCs in your industry")).toBeVisible();
-    await expect(strip.getByText("Typical GCC headcount")).toBeVisible();
+    await expect(
+      strip.getByText("companies in this industry have a GCC in India"),
+    ).toBeVisible();
+    await expect(
+      strip.getByText("average employees in each GCC"),
+    ).toBeVisible();
     await expect(strip.getByText(/^(—|n\/a)$/i)).toHaveCount(0);
     /**
      * **The thinnest industry in the dataset, and the opening cell still reads as a

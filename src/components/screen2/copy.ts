@@ -290,8 +290,8 @@ export const FLOOR_NOTE = "+ indicates a floor, not a point measurement";
  * of which one was a claim: "velocity" is consultant register for the thing the two
  * cards measure in days, and "benchmarks" names what kind of object the section is
  * rather than what it tells the reader. The peer view's headings are all of this shape —
- * "India GCCs closest to your profile", "Functions most GCCs run from India" — a subject
- * stated, no noun for the artefact.
+ * "GCC details of peers closest to {company}", "Common functions run from the India GCCs"
+ * — a subject stated, no noun for the artefact.
  */
 /**
  * **One schema KEY, which is the published form of "one constant rather than the same

@@ -1,3 +1,4 @@
+import { AtlasWordmark } from "@/components/public/atlas-wordmark";
 import type { HeroCopy } from "@/data/schema";
 import { AnsrWordmark } from "./ansr-wordmark";
 import { DottedWorldMap } from "./dotted-world-map";
@@ -15,14 +16,15 @@ import { DottedWorldMap } from "./dotted-world-map";
  * not: reword the title however you like and the brand name is still the brand
  * name. Remove it and there is simply no highlight, which is the right degradation.
  *
- * **Only the first occurrence is highlighted, and that is a contrast bound rather
+ * **Only a LEADING occurrence is highlighted, and that is a contrast bound rather
  * than a stylistic preference.** Orange on `--ansr-gradient-hero` measures 4.27:1
  * at the top of the band falling to 2.95:1 by 45% down — so it clears the 3:1
  * large-text floor on the headline's FIRST line (3.62:1 at worst) and fails on its
  * second. The first line always begins at the hero's top padding and is exactly one
  * line-height tall whatever the title's length, so a leading "ANSR" is legal by
- * construction. A second occurrence deeper in a wrapped headline would not be, and
- * is therefore left white.
+ * construction. An "ANSR" anywhere else — mid-sentence, or pushed onto a wrapped
+ * line — is not, so it is left to inherit the headline's white ink rather than
+ * shipped orange below the floor where it would look deliberate.
  *
  * **What lands there is now the drawn lockup rather than the typed word**, which is
  * the one place on either screen where a brand asset is used literally — logos are
@@ -36,14 +38,75 @@ import { DottedWorldMap } from "./dotted-world-map";
  */
 const BRAND = "ANSR";
 
+/**
+ * The product's own name, drawn where the headline types it.
+ *
+ * **Matched as a literal token on exactly the reasoning `BRAND` is**, and it has to
+ * be for the same reason: the title is admin-editable free text, so the alternative
+ * is a second copy field an admin has to know to split their headline across. Absent
+ * from the title, there is simply no mark — which is the right degradation, and is
+ * also what makes this safe to leave in place if the wording ever stops leading with
+ * the product name.
+ *
+ * **No contrast bound on this one, and that is the difference from `BRAND`.** The ANSR
+ * mark is orange only where it leads, because `--ansr-action` clears the 3:1 floor on
+ * this ground's first line alone. This mark is `currentColor` and nothing may make it
+ * anything else, so it is legal wherever the wording puts it.
+ */
+const PRODUCT = "ATLAS";
+
+/**
+ * The product name, swapped for the drawn wordmark in whatever follows the ANSR mark.
+ *
+ * Applied to the REMAINDER rather than to the whole title, so the two substitutions
+ * cannot overlap or reorder: the brand mark is found first and the product mark is
+ * found in what is left after it, which is the order the lockup reads in.
+ */
+function withProductMark(rest: string): React.ReactNode {
+  const at = rest.indexOf(PRODUCT);
+  if (at === -1) return rest;
+  const after = rest.slice(at + PRODUCT.length);
+  // **The punctuation that follows the mark is tied to it, and that is a line-break
+  // fix rather than a preference.** An inline SVG is an atomic inline, and the line
+  // breaker takes a break opportunity on either side of one — so the shipped title's
+  // colon came off the mark and started the second line on its own, which reads as a
+  // typo rather than as punctuation. Nothing did that while the word was typed,
+  // because there is no break opportunity inside a word.
+  //
+  // What is held is the run up to the first SPACE, so only characters that were
+  // never allowed to wrap away from the word are pulled back: the colon here, or
+  // nothing at all where the title puts a space after the name. The words after that
+  // space stay outside the span and wrap as normal, so the headline is still the
+  // width's decision.
+  const tight = /^\S*/.exec(after)?.[0] ?? "";
+  return (
+    <>
+      {rest.slice(0, at)}
+      <span className="whitespace-nowrap">
+        <AtlasWordmark />
+        {tight}
+      </span>
+      {after.slice(tight.length)}
+    </>
+  );
+}
+
 function withBrandMark(title: string): React.ReactNode {
   const at = title.indexOf(BRAND);
-  if (at === -1) return title;
+  if (at === -1) return withProductMark(title);
+  // The orange is applied ONLY when the wordmark LEADS the headline. A leading
+  // "ANSR" is the one occurrence guaranteed to sit on the first line whatever the
+  // admin's wording, and the first line is the only place `--ansr-action` clears
+  // the 3:1 large-text floor on this ground. A mark anywhere else inherits the
+  // line's white ink — it is `currentColor` — so an author cannot ship an
+  // out-of-contrast orange wordmark on a wrapped line, silently and looking
+  // deliberate.
+  const leads = at === 0;
   return (
     <>
       {title.slice(0, at)}
-      <AnsrWordmark className="text-action" />
-      {title.slice(at + BRAND.length)}
+      <AnsrWordmark className={leads ? "text-action" : undefined} />
+      {withProductMark(title.slice(at + BRAND.length))}
     </>
   );
 }
@@ -106,20 +169,15 @@ export function AskHero({
       {/* Decorative and redundant: everything it could convey is in the text
           beside it. Out of the tab order and out of the accessibility tree.
 
-          **Desktop only, and it is `lg` rather than the `md` the fan used.** This
-          was read at 768 before it was decided: India lands about seven tenths of
-          the way across the frame WHEREVER the frame is, because that is where it
-          is on the Earth relative to the window the map draws — and at 768 the
-          headline runs nearly the full band, so those seven tenths are behind the
-          last word of it. The orange came out from under "Intelligence" and was
-          clipped by the viewport at the same time. Nothing about opacity fixes
-          that; the collision is geometric.
-
-          So the rule is the one the fan followed for the same reason, one
-          breakpoint later: the band has spare ground only when the copy is capped
-          well inside it. Below `lg` the gradient carries the band alone, which it
-          does well — and on a phone the frame is narrow enough that India's dots
-          would merge into a blob anyway.
+          **It renders at every width now, but as two different graphics.** From `lg`
+          it is the subject: India picked out at ~75% across the band, clear of a
+          headline capped well inside the band's leading half. Below `lg` the headline
+          runs nearly the full band and India's dots merge into a blob at that pitch,
+          so the two cannot sit side by side — instead the map becomes ambient
+          TEXTURE: dimmed hard and held to the lower band, below the copy, by a
+          vertical fade. The switch is in `.gcc-hero-map`'s mobile block, not here.
+          Contrast is unaffected — at the mobile opacity white copy clears the floor
+          over the field even where they meet.
 
           **The block-end inset lives in `.gcc-hero-map` and is the FORM CARD's
           overlap**, which is the one measurement this composition duplicates. It
@@ -127,7 +185,7 @@ export function AskHero({
           bottom of this box is covered by the card — so the number that matters is
           the card's negative top margin in `peer-view.tsx`, not the padding below.
           Change either and the other has to move. */}
-      <div className="gcc-hero-map hidden lg:flex" aria-hidden="true">
+      <div className="gcc-hero-map flex" aria-hidden="true">
         <DottedWorldMap />
       </div>
 
@@ -168,44 +226,20 @@ export function AskHero({
             No manual break anywhere: the wrap is the width's job, so it responds
             to the viewport instead of snapping at one. */}
         <div className="mx-auto max-w-card">
-          {/* **The copy now sits a step OUTSIDE the card's leading edge, and the
-              outdent is deliberately expressed against that edge rather than
-              replacing it.** ANSR asked for the hero to start further left than the
-              form. The derivation stays — `max-w-card` above is still what puts the
-              two in the same place at every width — and this pulls a fixed step off
-              it, so the relationship is "one step left of the card" instead of a
-              second independently-tuned inset. The failure the derivation exists to
-              prevent was three edges within 130px of each other that agreed on
-              nothing; two edges a deliberate 48px apart is a composition.
+          {/* **The copy sits a step OUTSIDE the card's leading edge, at the project
+              owner's preference.** `max-w-card` above puts the two in the same place at
+              every width, and this pulls a fixed step LEFT off that edge: 24px at `lg`,
+              where the card has margin to give, and the whole 144px container gutter
+              from `xl`, where the copy sits on the page's own gutter. So the hero and
+              the form are a deliberate step apart rather than flush.
 
-              **Desktop only, because the room is only there on a desktop.** At `md`
-              the card already fills the container between its gutters, so an outdent
-              would spend the gutter itself and leave the headline 8px off the
-              viewport edge. It engages at `lg` at half strength — 24px, where the
-              card has 16px of margin to give — and reaches the full step from `xl`,
-              where there is 144px.
-
-              **From `xl` the step is the WHOLE margin — 144px — so the copy sits on
-              the container's own gutter.** ANSR asked for it further left again, and
-              the gutter is where "further left" runs out: past it the copy is off the
-              page's own edge. So the two bands are now a deliberate 144px apart at
-              desktop rather than 48, and the derivation is still what says WHERE
-              apart — `max-w-card` above minus the card's full margin is exactly the
-              container gutter at every width from `xl`, without this file knowing
-              either number.
-
-              **The cap moved off this block and onto the two children, and that is
-              the other half of the same change.** A single cap here made the
-              paragraph inherit a limit chosen for the headline: `max-w-hero` is what
-              keeps an 80px display line from running out as a strapline, and it broke
-              a 137-character sentence to three lines with a two-word orphan. The h1
-              keeps it; the lead takes `max-w-lead`, 6rem wider.
-
-              **The two numbers are one decision: the copy shifts LEFT by the same 6rem
-              the lead gains on the right.** So the block's trailing edge is unchanged
-              at every width, and the dot map's leading mask fade — measured against
-              where this copy ends — did not have to move at all. Widen the lead without
-              shifting, and the sentence runs onto the map's visible field. */}
+              **The dot map's leading fade is coupled to where this copy ENDS, not
+              where it starts.** With the outdent, the copy ends ~64% of the band and
+              India sits at ~75%; the fade in `.gcc-hero-map` completes between them.
+              The child caps below hold the trailing edge steady — `max-w-hero` on the
+              headline, `max-w-lead` on the lead — so the fade does not move when the
+              font size does. `max-w-card` here, the fade there, and those caps are one
+              composition in two files. */}
           <div className="flex flex-col items-start gap-6 text-left lg:-ms-6 xl:-ms-36">
           {/* **Medium 500 at 80px, and the weight is MEASURED off the wordmark
               rather than chosen.** This heading is the one place in the tool where
@@ -230,11 +264,12 @@ export function AskHero({
               it; it is the only one that should differ.
 
               The weight drop costs presence against the white card rising into the
-              band from below, which is what the Bold pass was buying. Two things pay
-              it back: the block is now leading-aligned, so it owns a column instead
-              of competing across the middle, and 80px is kept rather than dropped to
-              72 — it still wraps to two lines at the hero cap, and two lines are a
-              block where one is a strapline.
+              band from below, which is what the Bold pass was buying. The
+              leading-aligned block pays some of it back by owning a column instead of
+              competing across the middle. The display size steps 30 / 48 / 72px
+              (`text-3xl` / `md:text-5xl` / `lg:text-7xl`), one stop down from the
+              scale's 80px top at the project owner's request — large enough to lead
+              the band, not so large it crowds the wordmark beside it.
 
               `text-balance` still earns its place, though less than it did centred:
               on a left-aligned block a stranded last word is at the leading edge
@@ -244,49 +279,28 @@ export function AskHero({
             tabIndex={-1}
             id="ask-title"
             className={
-              "gcc-enter max-w-hero text-4xl leading-display font-medium tracking-body " +
-              "text-balance text-text-inverse md:text-6xl lg:text-8xl"
+              "gcc-enter max-w-hero text-3xl leading-display font-medium tracking-body " +
+              "text-balance text-text-inverse md:text-5xl lg:text-7xl"
             }
             style={{ "--gcc-enter-index": 0 } as React.CSSProperties}
           >
             {withBrandMark(copy.title)}
           </h1>
 
-          {/* White rather than a muted tint, because a muted tint on this ground
-              is 2.23:1. The size drop from 72px to 20px is doing the hierarchy on
-              its own, which is what the reference relies on too.
-
-              `text-pretty`, not `text-balance`: this is a long single sentence
-              that reads better ragged, and pretty only refuses to leave the last
-              word stranded. Capped at the reading measure inside the already
-              narrower block, so the line length stays comfortable even when the
-              headline above it is short. */}
-          {/* Light 300 stays — it is the brand's single biggest typographic tell,
-              and ansr.com sets it on every paragraph. What changed is the size: at
-              18/20px under an 80px bold headline the line read as small print rather
-              than as the second element of a two-part block. 24px Light against 80px
-              Bold is a real interval in both axes, which is what carries hierarchy on
-              a ground that allows only one ink. */}
-          {/* **`max-w-lead`, not `max-w-measure`, and the size step moved from `lg` to
-              `xl`.** Two lines is the target and each breakpoint gets there its own
-              way: from `xl` the block has shifted onto the container gutter and this
-              cap is 6rem wider, so 24px fits in two; between `lg` and `xl` the outdent
-              is only 24px — the card has 16px of margin to give there — so the room is
-              not available and the size stays at 20px instead, which fits two lines at
-              the narrower cap. A three-line lead under a two-line headline puts a
-              two-word orphan at the block's leading edge.
-
-              **The wider cap is gated on `xl` for the same reason the outdent is.** Set
-              unconditionally it widened the block at `lg` too, where nothing shifted
-              left to pay for it — the sentence's trailing edge moved 96px right, onto
-              the part of the band the dot map's mask actually lets through. Measured on
-              the render: 744 before, 840 after, against a leading fade that completes
-              around 625 at that width. */}
+          {/* `text-pretty`, not `text-balance`: a long single sentence that reads
+              better ragged, and pretty only refuses to leave the last word stranded. */}
+          {/* **`max-w-hero` normally, widening to `max-w-lead` (6rem more) from
+              `xl`.** The wider cap is the paired half of the outdent: the block shifts
+              6rem left and the lead gains the same 6rem on the right, so its trailing
+              edge is unchanged and stays off the map's visible field. Below `xl` the
+              outdent is smaller, so the lead keeps the headline's own cap. Light 300 is
+              the brand's biggest typographic tell; the size carries the hierarchy
+              under the headline rather than a muted ink, which this ground forbids. */}
           <p
             className={
-              "gcc-enter max-w-hero text-lg leading-normal font-light text-pretty " +
+              "gcc-enter max-w-hero text-base leading-normal font-light text-pretty " +
               "xl:max-w-lead " +
-              "text-text-inverse md:text-xl xl:text-2xl"
+              "text-text-inverse md:text-lg xl:text-xl"
             }
             style={{ "--gcc-enter-index": 1 } as React.CSSProperties}
           >

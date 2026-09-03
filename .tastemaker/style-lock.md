@@ -209,6 +209,32 @@ the close is the one orange pill, once per screen — not being the only dark ba
   tokens because it floats on `--ansr-teal-deep` and the shadow tokens are fitted at 8-14% of
   that same colour. `Panel` briefly had `shadow-sm` and the comparison cards `shadow-xs`; both
   are gone. Elevation tokens exist for admin's overlays.
+- **A LOGO is the third thing on the public screens allowed a radius, and it takes two
+  different steps for one reason: how the file is cropped.** A peer card's `CompanyMark` takes
+  `md` (4px) — the mark is requested inside a fixed box and Brandfetch letterboxes into it, so
+  its corners are padding and a brand supplied as a full-bleed coloured tile stops being the
+  only hard-cut object on a card whose own radius is `none`. The customer strip takes `sm`
+  (2px): those ten files are cropped to their own ink bounds and the `<img>` box IS that crop
+  for nine of them, so every pixel a radius removes there is trademark. `lg` on either was not
+  tried and should not be — at a 20–28px mark height it eats the tile's ink, and a clipped logo
+  is a damaged trademark. The Fortune badge stays square-cut: its artboard is cropped to the
+  lockup's own bounds, so any radius at 16px cuts the `500`.
+- **An unmarked comparison card holds the mark's height open, and the thing that makes a
+  reserved band acceptable where a reserved BOX never was is that nothing is drawn in it.**
+  At the project owner's instruction, reversing "nothing reserved when there is no mark". The
+  cost of not reserving was measured on a five-card row where every mark fails: each name,
+  figure and city row sat 32px above where a marked card puts it, so the row lost the shared
+  baseline the block exists to compare across. An empty band reads as air; a fill, border or
+  hatch would read as a slot that failed to load, which is the placeholder tile still banned.
+  The ranking row reserves nothing — its mark leads one line, so a reserved width would
+  indent an unmarked company's name past its own bar.
+- **A radius on an `<img>` only shows on the edges the ARTWORK reaches, which is why
+  `CompanyMark` needs `self-start`.** The comparison card's interior is a flex column, so an
+  img with `w-auto` took the column's cross size and clamped to `max-w` — a 112px box at every
+  ratio, with the fitted mark flush left under `object-left` and every pixel of slack on the
+  right. The leading corners curved and the trailing two could not, because there was nothing
+  in them to clip. Measured in a headless browser: 112px before, 102.4px after, and the ink
+  does not move. The ranking row never had it — its mark is inside a span on a flex ROW.
 
 ## Motion
 
@@ -221,7 +247,55 @@ flow threshold per band.
 **No scroll-driven motion, ever, on the public screens.** The tool is iframed and does not
 own the scroll container, so an IntersectionObserver against our own viewport fires for
 content the visitor cannot see — the parent decides what is on screen. This is a correctness
-constraint, not a taste preference, and it is why no GSAP/ScrollTrigger dependency was added.
+constraint, not a taste preference, and it is why no GSAP/ScrollTrigger dependency was added — and
+why `motion` was removed again, below.
+
+**One POINTER moment exists and it is the Fortune badge, at the project owner's instruction.**
+`.gcc-badge-pop` in `globals.css`: `scale(1.6)` on hover, so a 16px badge reaches 25.6px.
+**1.25 was tried first and read as not clearly visible**, correctly — the resting height is a name's
+cap height, so a quarter of 16px is 4px of growth on a mark whose own detail is already below the
+resolving threshold. At 1.6 the badge is about a third taller than the row's tallest resting item and
+`FORTUNE` begins to resolve, which is the point: the pop is for LEGIBILITY, not affordance. It costs
+nothing in layout — a transform takes no part in it, so no row grows and the `Panel`'s
+`overflow-hidden` never reaches it, the badge sitting mid-row inside the card's own padding on every
+side. `--ansr-duration-base` and `--ansr-ease-spring`, the one token with an overshoot, which is what
+makes it read as a pop rather than a swell; the token's own note allows one accent use and this is it.
+
+**Built with `motion` (framer-motion) for one pass, then rebuilt in CSS, and the CSS version is
+better on four counts rather than only cheaper.** The values stay on the tokens where `brand_lint`
+can see them, instead of being mirrored as JS numbers Motion needs because it cannot resolve a custom
+property. `tokens.css`'s global `reduce` clamp reaches a CSS transition and cannot reach a scripted
+transform, so the `useReducedMotion` hook goes. The `hover: hover` gate — `.gcc-lift`'s own reasoning
+— stops a touch device holding the state after a tap and leaving one badge permanently enlarged,
+which `whileHover` did not handle. And `FortuneBadge` goes back to being a server component. The
+weight was the prompt rather than the argument: 40KB gzipped for `motion.img` plus
+`useReducedMotion`, measured with an esbuild probe, on the entry point of a tool loaded inside
+ansr.com's own page.
+
+**A COMPANY MARK POPS TOO, at the project owner's instruction — `.gcc-mark-pop`, 1.12, in
+`CompanyMark` so the comparison card and the ranking row cannot end up with two scales.** The
+lesson worth keeping is that **a scale is a ratio and a reader sees the distance**, so one number
+cannot serve two object sizes: 1.6 on a 112px-wide logo adds 34px a side and puts the mark outside
+its own card. **1.2 was measured and rejected on a collision** — worst case it left 2.3px between a
+ranking row's logo and the company name, the 10px gap almost entirely eaten, which reads as
+touching. 1.12 leaves 5.4px there and 11.7px inside the comparison card's 16px padding, and holds at
+1440, 768 and 390. Both figures are from a fully-inked mark at the max-width cap, so they are the
+worst case rather than the typical one. **Centre origin, not `left`**: growing only rightward keeps a
+card's leading edge clean but drives the entire increase into the row's gap.
+
+**The customer-logo strip is deliberately left out.** Its marks are inside a running marquee, and a
+hover target that is moving under the pointer is a different interaction with a different answer.
+
+**Still a deliberate exception to "nothing on the peer surface rises on hover", not a repeal of
+it.** That rule exists because a hover response is an affordance and none of these objects is
+pressable, which is true of the badge and the marks too — neither opens anything, and neither takes a
+tap or focus variant. Under `reduce` the pop simply does not happen, and unlike `.gcc-lift` nothing is
+substituted, because there is no affordance being withheld.
+
+**Neither pop can be asserted on a MARK in the browser suite, and that is structural.** The suite
+pins the Brandfetch tier off, so no company mark renders in it at all — the badge's hover is asserted
+in `0-screen1.spec.ts` and the mark's cannot be. Verified by hand instead, by routing the CDN to a
+synthetic inked box; see the Brandfetch trap in the handoff.
 
 **Two AMBIENT periods exist, both outside that scale.** The customer-logo marquee
 (`--ansr-duration-marquee`, 48s) and the density map's hub halo (`--ansr-duration-pulse`, 3.2s).
@@ -2419,11 +2493,43 @@ BFSI centre in India is a different fact from its being the closest comparison.
   small-caps label set two ways, and near-black at Bold is the heaviest ink on the surface: five of
   them read as shouting where five teal ones read as evidence. It also retires a type step nothing
   else on the surface used.
-- **The overlap becomes the finding.** `largestOverlapLine` states it once and exactly — "3 of the
-  5 largest BFSI centres in India are in your comparison set above." — which is something the peer
-  block cannot say: this comparison set is not a sample from the middle of the industry, it is most
-  of its top. The per-row marker stays so a reader can map the two blocks, as quiet muted text
-  rather than a pill; three pills down five one-line rows are more chrome than the rows themselves.
+- **The overlap was the finding and is now only the marker, at ANSR's request.**
+  `largestOverlapLine` stated it once and exactly — "4 of the 5 largest Retail GCCs in India are in
+  your comparison set above." — which was something the peer block could not say: the set is not a
+  sample from the middle of the industry, it is most of its top. What killed it is that the marker
+  already says it row by row, and the sentence sat at full measure under a chart that had just spent
+  five rows on the same overlap. So the per-row marker is now the whole statement, as quiet muted
+  text rather than a pill; three pills down five one-line rows are more chrome than the rows
+  themselves. Its wording went from "in your comparison set" to **"in your peer set"** in the same
+  pass — the shorter phrase, and the one the rest of the product uses. The function is kept and
+  unit-tested, so restoring the sentence is one line.
+- **The universal Fortune sentence came off this block too, and the BADGE is what replaced it, at the
+  project owner's instruction.** Removing the sentence and keeping `allFortune` left the one state
+  where the fact is universal and nothing states it — a ranking of the industry's biggest centres
+  silent on the accreditation every row carries. So the suppression is deleted here and the badge
+  draws on every Fortune row. It is not a return to the shape this block was fixed for: what was
+  rejected was an accent CHIP five times over plus a sixth line restating it, and both of those are
+  gone. The comparison cards keep `showFortune`, because that block still has the sentence to fall
+  back on — so the two blocks differ on the universal case, deliberately.
+- **The name line is `items-center` and nothing on it carries `self-center`, and that is a measured
+  fix.** Baseline-aligned, the mark's optical midline sat 2.27px BELOW the name's cap-height midline on
+  every row at 1440 — the name read as sitting high against its own logo. The cause is that the mark is
+  the TALLEST item on the line, so the line's cross size is the mark's own height and `self-center` on it
+  was a no-op, while the name as the max-ascent baseline item was flush to the cross start, where its cap
+  midline sits above its box midline. Centring the line takes the drift to 0.63px and the line's height
+  does not change. The residual is the face's own ascent/descent asymmetry; the only way to close it is a
+  hardcoded offset, so it stays. **Rejected: nesting the name and the marker in their own baseline
+  group.** It buys that 0.63px back and costs a wrapper that wraps as one unit, so a long name cannot
+  break away from its qualifier. The marker and the badge now centre on the name rather than share its
+  baseline, and their cap midlines land within 0.7px of it — the relationship a shared baseline was
+  buying is still visible.
+- **A row needs 24px around it, not 16px, and that only became true when the pill line arrived.**
+  With a two-line row, 16px out against 4px in was a 4:1 ratio and read as five rows. With the tags
+  back, the bar sat 16px above the next company's name and 4px under its own pills — five rows of
+  three lines each reading as one wall of fifteen. 24px between rows, 8px from the name to the
+  figure-and-bar group, and 4px from the figure to its own bar, which is still the tightest gap in
+  the row and is what says those two are one mark. The two deleted sentences paid for the height, so
+  the block is shorter than it was and still matches the containment chart beside it at 1440.
 - **Still an `<ol>`.** Here the order IS the quantity the bars encode, so list semantics are a claim
   the block can support — the opposite of the function tiles, which went from `<ol>` to `<ul>`
   because nothing measured their order.
@@ -5414,3 +5520,157 @@ rectangle parked in the band.
 **`.gcc-close-streaks` is deleted**, and with it the last use of `public/brand/close-streaks.svg`. The
 cropped diagonal texture was the old close's depth; the backdrop is now that, and two textures on one
 band compete. The derived SVG is left in `public/brand/` as reproducible output with no consumer.
+
+## The ANSR Atlas copy pass — twenty strings, and the three that could not be taken literally
+
+ANSR supplied a list of replacement wordings across both screens: the hero and its subhead, the form's
+heading and CTA, the impact band's title, all four snapshot labels, the comparable-companies heading, the
+functions heading, the locations heading, the close's line and button, and nine metric titles and labels.
+Most were a substitution. What is recorded here is the handful that were not, plus what the longer strings
+did to the layout.
+
+### Three requested labels named a population their figure was not measured over
+
+Asked for, and not shipped as asked:
+
+- **"cities in India host GCCs from your sub-industry"** — the count is `view.map.cities.length`.
+- **"the city where most peer GCCs are based"** — the value is `view.map.cities[0]`.
+- **"Cities where {SUB INDUSTRY} companies have set up"** — the map's dots are `density`.
+
+All three read off `MapBlock`, whose `industry` field is `input.industry` verbatim and which is filtered to
+the industry, never to the sub-industry and never to the five-company peer set. So each of the three would
+have put a narrower subject over a wider figure — the one thing copy on these screens may not do.
+
+**The alternative was to narrow the DATA rather than the words, and it was rejected on what it would draw.**
+A sub-industry city derivation is buildable. The thinnest sub-industries hold a handful of companies, so the
+map would resolve to two or three dots on an outline of India and the ranked list beside it to two rows —
+which is not a thin answer, it is a broken-looking one, and it would replace a card that works for every
+visitor with one that works for the ones in large sub-industries. The map is also the only block on the
+surface that has no shortfall sentence to fall back on.
+
+So the labels name the industry: "cities in India host GCCs from your industry", "the city where most of
+these GCCs are based" ("these" resolving to the section heading, which names the industry once for all four
+cells), and "Cities where {industry} companies have set up". Each has a spec asserting the narrower word
+stays out, in both directions, because the obvious future "fix" is to reach for
+`view.industry.businessType.name` — which passes a no-sub-industry loop and breaks only for the visitors who
+answered the optional field.
+
+### The snapshot labels became sentence predicates, which is a shape the surface already had
+
+All four moved from noun phrases naming the measure ("Typical GCC headcount") to clauses completing the
+figure ("average employees in each GCC"). That is the terminating scale strip's own shape, whose three
+labels are capped at 120 and 140 characters for exactly this reason, so the three published snapshot caps
+went from 32 to 56.
+
+"Average" replaced "typical", and "typical" had been carrying the figure's honesty through three earlier
+rewordings — it is a rounded mean of FTE band midpoints, and "typical" claims a central tendency where
+"average" claims arithmetic. What carries it now is "in each GCC", which frames the number as per-centre
+rather than as a measured distribution, plus the rounding assertions in the unit suite. The one label that
+must never be read as a total is asserted against `/total/i`.
+
+**Measured at five widths, and the row survives it.** Cell heights are equal at every width (96px at
+1440/1280/1024, 76 at 768, 64 at 390) because the grid row stretches them, and the labels all start on one
+line because the figure box is a fixed height. The only unevenness is at 1280 and above, where "average
+employees in each GCC" is 29 characters and fits one line while the other three take two. Reserving a second
+line for all four was considered and does nothing: the short label is still short, and the empty line is
+invisible. Left as it is.
+
+### The comparable-companies heading left the schema
+
+"GCC details of peers closest to {company}" interpolates the one OPTIONAL input, so `peersTitle` could not
+stay a flat published string — whichever branch an admin typed, most visitors would read the other. This is
+the same reasoning that kept the snapshot's opening label in code from the start.
+
+The fallback branch is "closest to your profile", which is the wording the whole heading used to be, kept
+rather than replaced: "closest to yours" presumes the visitor already runs an India centre, and `gccStatus`
+is a constant the form never asks for.
+
+**Removing a published key is not symmetric with adding one.** Adding one is caught by the draft
+provider's shape check; removing one is not, because zod STRIPS an unrecognised key rather than refusing
+it — so a v5 draft holding `peersTitle` would parse, publish cleanly, and drop the string with no diff
+entry. There is no key whose absence marks such a draft, so the storage key went to v6. That is the whole
+argument for the version being a version and not a shape check.
+
+At 1440 a 42-character company name still sets on one line at 30px; at 390 it takes four. It is a section
+heading rather than a fixed box, and it is the visitor's own input.
+
+### The impact band's mark moved to the front of its own heading
+
+"ANSR By The Numbers" puts the brand first, where "Impact delivered by ANSR" put it last. The lockup is
+drawn, not typed, so this is a DOM order change: the `sr-only` word and the image lead, the published phrase
+follows. `ms-[0.1em]` became `me-[0.1em]` — that margin was never symmetric padding, it existed because the
+burst has no left sidebearing and its outermost ray sat about 10px from the preceding "y" at 48px. Leading
+the line the burst has nothing before it; what needs the space is the trailing side, where the wordmark's
+"R" meets "By".
+
+**And the `{" "}` between them is load-bearing for the accessible name only.** JSX strips whitespace
+containing a newline, so the first pass computed "ANSRBy The Numbers" — one word, wrong, and completely
+invisible on screen because `me-[0.1em]` was drawing the gap. It was caught by reading `textContent` in a
+measurement harness, not by looking at the render, which is the point worth remembering: this class of
+defect cannot be seen.
+
+### "Very strong" is drawn a step deeper, and the data makes it ambiguous
+
+ANSR asked for the capability grid's top rating in "the deeper blue that we have the color we used in the
+1.5M of Technology Graduate Pipeline" — that is `--ansr-accent-teal`, the fill on `AdjacentBlocks`' larger
+block. So `ratingFill` draws a top-rated cell's segments in the brand teal and every lower rating's in
+`teal-500`.
+
+**Two steps and not four.** A full ramp across the four ratings would put the weakest cells on a pale teal,
+and these segments are the only visible encoding on the chart — the rating word is `sr-only` — so every fill
+has to clear 3:1 against its own `surface-sunken` track. `teal-400` measures 2.15:1 there, which is the same
+measurement `BarTrack` records, so the legal range is exactly the two deepest steps.
+
+**It keys on the CELL'S rating, not the column, which is what distinguishes it from the emphasis ANSR had
+removed.** `anchorColumn`'s deeper segments were wrong because a darker mark in one column reads as a higher
+rating; here the depth IS the rating, so a top-rated Poland cell would draw identically.
+
+**The open problem is that no reader can tell, because every "Very strong" in today's ratings is India's.**
+Read on screen, the deep teal is four full rows down one column — visually the emphasis that came off. The
+only cue against that reading is India's Cybersecurity row, rated Strong and correctly drawn lighter. This is
+a property of the ratings rather than of the code, and the ratings are themselves provisional (Vietnam's
+column is illustrative and flagged for replacement), so it is on the blocked list rather than being designed
+around. The specs pin the MECHANISM on "Strong", which does span columns, precisely because the top step
+cannot carry that assertion.
+
+### "854 mn sq ft" — a word unit beside a numeral, and the one place the formatter cannot help
+
+ANSR asked for the unit "up near the number" and left the how open. `figureParts` was not an option: it
+splits a CLOSED trailing alphabet (`%`, `M`, `K`, `+`) off a string that module produced itself, and "mn sq
+ft" is not a suffix on the number at all — it is the metric's own `unit`. So `SummaryFigure` gained an
+explicit `unit`, passed by `ops-view.tsx` from the metric, and the title dropped to "Grade A stock in top 7
+cities".
+
+Three things fell out of it. The stored unit changed from "million sq ft" to "mn sq ft", because the string
+is now DRAWN at 24px beside a 48px numeral rather than read as prose — the renderer abbreviates nothing, so
+the abbreviation is the datum. `Unit` gained a `word` flag setting a 4px gap rather than 2px: a symbol is a
+suffix on the numeral and sets tight, a word is a separate token and needs a real space. And both take
+`whitespace-nowrap`, because the figure box is a fixed height and a wrapped unit would be clipped rather
+than shown.
+
+**Measured at the tightest cell it can occupy** — `lg`, four columns, a 192px box — where the ink is 170px.
+It is 139px of 294 at 390 and 170 of 256 at 1440. Re-measure before lengthening it.
+
+The numeral also gained a box of its own. That is layout-neutral (a text run in a flex container is already
+an anonymous flex item) and it exists so a spec can measure the unit's position against the numeral, which
+is the only way to assert "beside, not below". Both carry `data-figure-value` / `data-figure-unit`, added
+because the existing spec located the unit as `span > span` and silently started matching the numeral the
+moment it had a box — a numeral compared against itself, which fails for a reason that has nothing to do
+with the unit.
+
+### The rest of the metric wordings, and what they did to the two figure rows
+
+"Manager-level and above", "Professionals with 10+ years of experience", "GCCs have tech teams of 100+
+FTEs", "Graduate pipeline for technology", "Through EOR model", "Through own entity", "Salary growth in
+India, YoY", "Increase in operating costs, YoY", "Increase in workplace costs, YoY".
+
+Two are worth noting. **The 10+ years title is a shared metric**, so one edit covers the technology and HR
+cards and they cannot drift; the title now matches its own `unit` word for word, which is harmless because
+both tabs draw it as a figure-row cell where the unit is never rendered. And **the two first-hire labels
+had to keep "Through"** — it is what says they name an OPERATING MODEL rather than a function or a
+seniority, which is the distinction the metric exists to draw. A bare "EOR" names a vendor category.
+
+Finance came out better than it went in: three titles at 27, 32 and 32 characters, one line each at every
+width, where "…, year on year" was the wording that had made an earlier third-width row ragged. The
+technology row is five cells of equal height at every width — all five labels on two lines at 1024, three on
+one and two on two at 1440.

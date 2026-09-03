@@ -965,7 +965,7 @@ describe("Screen 1's charts are built from the company rows", () => {
       ),
     );
     expect(counted[0]?.value).not.toBe(before[0]?.value);
-    expect(counted[0]?.label).toBe("GCCs in your industry");
+    expect(counted[0]?.label).toBe("companies in this industry have a GCC in India");
 
     /**
      * The same cell reads the sub-industry population when one is answered — the
@@ -982,7 +982,9 @@ describe("Screen 1's charts are built from the company rows", () => {
     const answered = input({ businessTypeId: type.id });
     const narrowedView = buildPeerView(dataset, answered);
     const narrowed = signals(narrowedView);
-    expect(narrowed[0]?.label).toBe("GCCs in your sub-industry");
+    expect(narrowed[0]?.label).toBe(
+      "companies in this sub-industry have a GCC in India",
+    );
     expect(narrowed[0]?.value).toBe(
       formatCount(narrowedView.industry.businessType?.count ?? -1),
     );

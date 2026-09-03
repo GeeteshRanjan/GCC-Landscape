@@ -171,8 +171,15 @@ function summaryCells(shown: readonly ShownMetric[]): SummaryFigure[] {
    * figure, so there is nowhere for a second string to go — and the reason the label was
    * there at all was that a lifted part must not claim its parent's population: 99.95% is
    * true of a Grade A campus and not of the Tier 1 grid. Both titles state that
-   * themselves now ("Uptime at a Grade A campus", "Grade A stock, mn sq ft, top 7
-   * cities"), which is one authored string rather than two strings that have to agree.
+   * themselves now ("Uptime at a Grade A campus", "Grade A stock in top 7 cities"), which
+   * is one authored string rather than two strings that have to agree.
+   *
+   * **The office cell also carries a UNIT, and it is the only cell on any tab that
+   * does.** Its figure is a bare 854, which is unreadable without "mn sq ft" — where
+   * uptime's is "99.95%" and carries its own unit inside the formatted string. ANSR asked
+   * for that unit up beside the number rather than buried in the title, so it is passed
+   * through as the metric's own `unit` and drawn two scale steps down; see
+   * `SummaryFigure.unit`. Nothing here abbreviates or composes it.
    */
   for (const id of [UPTIME_ID, OFFICE_ID]) {
     const metric = pick(shown, id);
@@ -182,6 +189,10 @@ function summaryCells(shown: readonly ShownMetric[]): SummaryFigure[] {
     cells.push({
       id,
       figure: lead.figure,
+      // Only where the figure cannot be read without it. `ops-power-uptime` declares no
+      // unit at all — its format supplies the `%` — so this is `undefined` there and the
+      // cell renders exactly as it did.
+      unit: id === OFFICE_ID ? metric.metric.unit : undefined,
       title: metric.metric.title,
     });
   }

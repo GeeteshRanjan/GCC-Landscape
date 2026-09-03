@@ -152,14 +152,17 @@ export function ImpactBand({ stats }: { stats: readonly ImpactStat[] }) {
           // previous pass stack the mark instead of inlining it.
           className="text-center text-xl leading-[1.8] font-medium tracking-body text-balance text-text-inverse sm:text-2xl md:text-4xl lg:text-5xl"
         >
-          {/* Published copy — and the 40-character cap on `impactTitleLead` is the
-              measurement above expressed as a schema rule: this heading is words plus a
-              2.78:1 lockup on ONE line at 320, so what a longer phrase costs is the mark
-              dropping to a second line with its rays reaching into the first. */}
-          {copy.impactTitleLead}{" "}
-          {/* The brand name, drawn rather than typed, and set INLINE where the word
-              used to be — so the sentence still reads as one sentence and the mark is
-              its last word rather than a signature under it.
+          {/* **The mark LEADS the line now, where it used to close it.** The heading was
+              "Impact delivered by [ANSR]"; ANSR asked for "ANSR By The Numbers", in which
+              the brand is the first word rather than the last. So the drawn lockup comes
+              first and the published phrase follows it, and `impactTitleLead` holds only
+              "By The Numbers" — the brand is never typed on this band.
+
+              The accessible name is assembled in the same order and is still one phrase,
+              "ANSR By The Numbers": the `sr-only` word below precedes the image, so a
+              screen reader meets the brand exactly where a sighted reader does. */}
+          {/* The brand name, drawn rather than typed, and set INLINE as the sentence's
+              FIRST word rather than as a signature under it.
               
               **Three measurements make it sit on the line, all read off the file's own
               geometry, and none of them is the font size.** The lockup is 253x91 with
@@ -201,13 +204,30 @@ export function ImpactBand({ stats }: { stats: readonly ImpactStat[] }) {
             aria-hidden="true"
             width={253}
             height={91}
-            // `ms-[0.1em]` on top of the word space. The burst has no left
-            // sidebearing — its outermost ray starts at x=0 in the viewBox — so a
-            // plain word space puts a ray about 10px from the "y" at 48px, which
-            // reads as crowding rather than as spacing. In `em` so it holds at every
-            // step of the scale.
-            className="ms-[0.1em] inline-block h-[1.728em] w-auto align-[-0.507em]"
+            // **`me-[0.1em]` rather than the `ms-[0.1em]` this carried, because the mark
+            // changed ends.** The extra space was never symmetric padding: the burst has
+            // no left sidebearing — its outermost ray starts at x=0 in the viewBox — and
+            // when the mark closed the sentence that ray landed about 10px from the
+            // preceding "y" at 48px, which read as crowding rather than as spacing.
+            // Leading the line the burst has nothing before it, so that side needs
+            // nothing; what needs the space now is the trailing side, where the
+            // wordmark's "R" meets the "B" of the words after it. In `em` so it holds at
+            // every step of the scale.
+            className="me-[0.1em] inline-block h-[1.728em] w-auto align-[-0.507em]"
           />
+          {/* **An explicit space, and it is load-bearing for the ACCESSIBLE NAME rather
+              than for the layout.** JSX strips whitespace containing a newline, so
+              without this the name computed to "ANSRBy The Numbers" — one word, wrong,
+              and invisible to anyone not using a screen reader. The visible gap would
+              have survived on `me-[0.1em]` alone, which is exactly why this is the kind
+              of defect that ships. The mark carried the same `{" "}` on its other side
+              when it closed the sentence. */}
+          {" "}
+          {/* Published copy — and the 40-character cap on `impactTitleLead` is the
+              measurement above expressed as a schema rule: this heading is words plus a
+              2.78:1 lockup on ONE line at 320, so what a longer phrase costs is the mark
+              dropping to a line of its own with its rays reaching into the first. */}
+          {copy.impactTitleLead}
         </h2>
 
         {/* A `dl`, because these genuinely are term-and-definition pairs and the

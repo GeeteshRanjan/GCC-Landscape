@@ -3,9 +3,10 @@ import { describe, expect, it } from "vitest";
 import {
   ASK,
   CUSTOMERS,
+  FUNCTIONS_TITLE,
   IMPACT,
   INDUSTRY_TITLE,
-  PEERS_TITLE,
+  peersTitle,
   SCALE,
   signals,
   snapshotLabels,
@@ -79,7 +80,6 @@ describe("the shipped wording is defined once", () => {
     expect(ASK.submit).toBe(DEFAULT_PUBLIC_COPY.askSubmit);
     expect(CUSTOMERS.label).toBe(DEFAULT_PUBLIC_COPY.customersLabel);
     expect(IMPACT.titleLead).toBe(DEFAULT_PUBLIC_COPY.impactTitleLead);
-    expect(PEERS_TITLE).toBe(DEFAULT_PUBLIC_COPY.peersTitle);
     expect(INDUSTRY_TITLE).toBe(DEFAULT_PUBLIC_COPY.industryTitle);
     expect(SCALE.title).toBe(DEFAULT_PUBLIC_COPY.scaleTitle);
     expect(SCALE.fortuneLabel).toBe(DEFAULT_PUBLIC_COPY.scaleFortuneLabel);
@@ -142,8 +142,28 @@ describe("the shipped wording is defined once", () => {
    * the data cannot carry.
    */
   it("keeps the functions heading out of the published copy", () => {
+    expect(Object.values(DEFAULT_PUBLIC_COPY)).not.toContain(FUNCTIONS_TITLE);
+    // The wording it had before ANSR shortened it. Asserted so a revert cannot land
+    // half-done, with the old string back in code and the new one still in the data.
     expect(Object.values(DEFAULT_PUBLIC_COPY)).not.toContain(
       "Functions most GCCs run from India",
+    );
+  });
+
+  /**
+   * **The comparable-companies heading left this object, and the reason is the rule the
+   * object is held to.** It was `peersTitle`, a fixed string and so legitimately data;
+   * ANSR's wording names the visitor's own company, which is the one OPTIONAL input, so
+   * the heading has two branches and neither is a string an admin could type. Same
+   * reasoning as the snapshot's opening label, which never became a field.
+   *
+   * Asserted rather than remembered, because the key looks exactly like the four section
+   * titles still beside it and is the obvious thing to add back.
+   */
+  it("keeps the comparable-companies heading out of the published copy", () => {
+    expect(Object.keys(DEFAULT_PUBLIC_COPY)).not.toContain("peersTitle");
+    expect(Object.values(DEFAULT_PUBLIC_COPY)).not.toContain(
+      "India GCCs closest to your profile",
     );
   });
 });
@@ -236,7 +256,9 @@ describe("the snapshot's labels are an argument", () => {
       const view = buildPeerView(dataset, input(industry));
       const labels = signals(view).map((cell) => cell.label);
 
-      expect(labels[0], industry).toMatch(/^GCCs in your (industry|sub-industry)$/);
+      expect(labels[0], industry).toMatch(
+        /^companies in this (industry|sub-industry) have a GCC in India$/,
+      );
       // The wording this cell used when it stated a share. `0-screen1.spec.ts`
       // asserts its absence from the rendered strip; this asserts no industry can
       // produce it.
@@ -248,7 +270,52 @@ describe("the snapshot's labels are an argument", () => {
     // The rule the removed fourth label broke. Every key in the schema is read by
     // one of the derived shapes above or by a component asserted in the browser
     // suite; the count is the cheap guard that a new key arrived with a consumer.
-    expect(Object.keys(DEFAULT_PUBLIC_COPY)).toHaveLength(29);
+    // 28 since `peersTitle` left; see the assertion above for why it did.
+    expect(Object.keys(DEFAULT_PUBLIC_COPY)).toHaveLength(28);
+  });
+});
+
+/**
+ * The one heading on this screen that composes over the visitor's own answer.
+ *
+ * **Both branches get an assertion, which is this project's standing rule for a derived
+ * sentence** — the branch nobody tests is the branch that ships wrong, and here it is the
+ * one most visitors see, since the company name is optional.
+ */
+describe("the comparable-companies heading", () => {
+  const base: PeerViewInput = {
+    industry: "BFSI",
+    revenueBand: "$1 Bn - $5 Bn",
+    hqCountry: "United States",
+    gccStatus: "evaluating",
+  };
+
+  it("names the company when one was given", async () => {
+    const dataset = await getDataset();
+    const view = buildPeerView(dataset, { ...base, companyName: "Nike" });
+    expect(peersTitle(view)).toBe("GCC details of peers closest to Nike");
+  });
+
+  it("falls back to the profile when no company was given", async () => {
+    const dataset = await getDataset();
+    for (const companyName of [undefined, "", "   "]) {
+      const view = buildPeerView(dataset, { ...base, companyName });
+      expect(peersTitle(view), JSON.stringify(companyName)).toBe(
+        "GCC details of peers closest to your profile",
+      );
+    }
+  });
+
+  /**
+   * It must not presume the visitor already runs an India centre. "Closest to yours" has
+   * to refer to something, and the only candidate on the page is a GCC — which most
+   * readers of this screen do not have, and `gccStatus` is a constant the form never asks
+   * for, so the tool cannot know either way.
+   */
+  it("claims nothing about what the visitor already runs", async () => {
+    const dataset = await getDataset();
+    const view = buildPeerView(dataset, { ...base, companyName: "Nike" });
+    expect(peersTitle(view)).not.toMatch(/closest to yours/);
   });
 });
 

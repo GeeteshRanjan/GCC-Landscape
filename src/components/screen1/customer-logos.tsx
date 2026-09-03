@@ -25,12 +25,19 @@ import type { CustomerLogo } from "@/data/schema";
 
 /**
  * **The marks are DATA now, from `siteContent.logos`, threaded in as a prop.** They were
- * a module constant here; the shipped ten are unchanged and live in `DEFAULT_LOGOS`,
- * which is also what `--reseed-site-content` restores. What an admin controls is which
- * of the files already served from `public/logos/` appear, in what order, and under what
- * name — `customerLogoSchema` validates `src` against that directory, so this cannot
- * become a way to point the strip at an arbitrary URL. Adapting a NEW mark is still a
- * `brand_asset.py` step and a commit.
+ * a module constant here; the shipped twenty-two live in `DEFAULT_LOGOS`, which is also
+ * what `--reseed-site-content` restores. What an admin controls is which of the files
+ * already served from `public/logos/` appear, in what order, and under what name —
+ * `customerLogoSchema` validates `src` against that directory, so this cannot become a
+ * way to point the strip at an arbitrary URL. Adapting a NEW mark is still a commit.
+ *
+ * **Twenty of the twenty-two are ALSO drawn on a peer card, from the same file.** That
+ * is one trademark referenced twice rather than two copies of it — the reasoning, and
+ * the measurement showing one ink-cropped file fits both boxes, is on `COMPANY_MARKS`
+ * in `company-marks.ts`. It does not make the two bands say the same thing: this one
+ * names companies ANSR has worked with, and a peer card names a company in the dataset.
+ * The two that are not are `x.svg`, which matches no company, and `hudsonsbay.svg`,
+ * whose company is a customer and is not one of the 1,834.
  *
  * Everything below about how they are sized is unchanged, and all of it still matters:
  *
@@ -41,13 +48,24 @@ import type { CustomerLogo } from "@/data/schema";
  * one. They are the mark's own ink bounds, which is why the schema requires both and
  * why an admin adding a row has to measure rather than guess.
  *
- * **Four are PNG and six are SVG, and the split is not arbitrary.** Best Buy,
+ * **Four are PNG and eighteen are SVG, and the split is not arbitrary.** Best Buy,
  * Wells Fargo, PepsiCo and Goldman Sachs were supplied as a single base64 raster
  * inside an SVG `<pattern>` — not vectors at all, and ~520 KB between them at
  * full source resolution. They are re-encoded to plain PNGs at 2x their display
- * height, which is 36 KB for the four. The other six are genuine paths and stay
- * as SVG. A future batch of logos should be checked the same way: an `.svg` that
- * is really a raster is invisible until someone looks at its bytes.
+ * height, which is 36 KB for the four. The rest are genuine paths and stay as
+ * SVG. Every batch is checked the same way, by its BYTES rather than its
+ * extension: an `.svg` that is really a raster is invisible until someone looks.
+ * The twelve added most recently were all genuine vectors.
+ *
+ * **Each one's `viewBox` is its own INK bounds, measured by rasterising and scanning
+ * alpha rather than by trusting the artboard or by `getBBox`.** Two reasons it is not
+ * either shortcut. An artboard is routinely padding — Hudson's Bay arrived at
+ * 578x444 around 446x297 of ink, so at a fixed height it would have rendered a third
+ * smaller than everything beside it while claiming the same slot. And `getBBox`
+ * ignores strokes and filters, which these twelve could not be assumed free of,
+ * having come from four different export tools. The CROP is expressed in each file's
+ * own user space and the contours are carried over verbatim, so nothing is traced or
+ * refitted — the same rule the drawn wordmarks follow.
  *
  * Walmart's export also arrived with a `viewBox` nine tenths too small, so only
  * "Wal" rendered. Corrected in `public/logos/walmart.svg` to its real ink bounds.
@@ -86,7 +104,16 @@ import type { CustomerLogo } from "@/data/schema";
  * without it Walmart would be squashed to fit; with it the mark is fitted inside
  * the box and centred instead.
  */
-const LOGO_SIZE = "h-10 w-auto max-w-32 object-contain";
+/**
+ * **`rounded-sm` here and `rounded-md` on a peer card's mark, and the difference is the
+ * files rather than the placement.** A peer mark arrives letterboxed inside a fixed box,
+ * so its corners are padding and a 4px curve costs nothing. These ten are cropped to
+ * their own ink bounds and the element box IS that crop for nine of them, so every pixel
+ * a radius removes is trademark. One step (2px) softens the tile a mark with a fill
+ * brings with it and takes a fraction of a pixel from a corner that is whitespace in all
+ * ten; two steps would be visible on a letterform.
+ */
+const LOGO_SIZE = "h-10 w-auto max-w-32 rounded-sm object-contain";
 
 function LogoRow({
   logos,

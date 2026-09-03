@@ -4,6 +4,8 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 
 import { useDraft } from "@/components/admin/draft-provider";
+import { GlobalSearch } from "@/components/admin/global-search";
+import { NAV_GROUPS } from "@/components/admin/sections";
 import { Button } from "@/components/ui/button";
 
 /**
@@ -22,43 +24,10 @@ import { Button } from "@/components/ui/button";
  */
 
 /**
- * The six sections, grouped the way the product is.
- *
- * Flat, the list said nothing about what a tab reaches: "Site copy" and "Function
- * metrics" edit what a visitor is SHOWN, "Companies" and "Taxonomy" edit what that
- * is drawn FROM, and "Publish" is the one act that makes either live. Three groups
- * in that order, so a change request about a public screen maps to one place.
- *
- * Every label uses the product's own vocabulary, which is why `/admin/business-types`
- * reads "Sub-industries": that is the word on the public dropdown and in the company
- * table. **Only the LABEL moves** — the route, the dataset key and the component all
- * keep their names, and the route is what the browser specs navigate by.
- *
- * "Site copy" is likewise named for the surface it edits rather than for the
- * `siteContent` key behind it: an admin is looking for the headline on the first
- * page, not for a schema field.
+ * The nav's six sections now come from `sections.ts`, which the universal search
+ * indexes from as well — so a renamed tab cannot stay reachable in the palette under
+ * its old name.
  */
-const NAV_GROUPS = [
-  {
-    label: "Public screens",
-    tabs: [
-      { href: "/admin/entry-point", label: "Site copy" },
-      { href: "/admin/metrics", label: "Function metrics" },
-    ],
-  },
-  {
-    label: "Data",
-    tabs: [
-      { href: "/admin", label: "Companies" },
-      { href: "/admin/taxonomy", label: "Taxonomy" },
-      { href: "/admin/business-types", label: "Sub-industries" },
-    ],
-  },
-  {
-    label: "Release",
-    tabs: [{ href: "/admin/publish", label: "Publish" }],
-  },
-] as const;
 
 export function AdminShell({
   publishTarget,
@@ -96,7 +65,11 @@ export function AdminShell({
             GCC data
           </p>
 
+          {/* The palette's trigger leads the trailing group, before the save status.
+              It is the one control on this row that is an ACTION rather than a
+              readout, and it is reachable from every page. */}
           <div className="ms-auto flex items-center gap-4">
+            <GlobalSearch />
             <SaveStatus dirty={dirty} saveState={saveState} />
             <Button variant="ghost" size="sm" onClick={signOut}>
               Sign out

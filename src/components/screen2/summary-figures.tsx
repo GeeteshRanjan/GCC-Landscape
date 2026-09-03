@@ -60,6 +60,22 @@ export interface SummaryFigure {
    */
   high?: string;
   /**
+   * A WORD unit, drawn beside the numeral at the same two-step-down size the symbolic
+   * ones take.
+   *
+   * **Only for a unit `figureParts` cannot find, and that is the whole reason the field
+   * exists.** That function splits a CLOSED trailing alphabet — `%`, `M`, `K`, `+` — off
+   * a formatted figure, because it may only reduce a string it produced itself. A unit
+   * like "mn sq ft" is not in that set and never will be: it is not a suffix on the
+   * number, it is the metric's own `unit`, so the cell is handed it explicitly rather
+   * than having the renderer parse for it.
+   *
+   * One cell uses it — the operations tab's Grade A office stock, whose title used to
+   * carry the unit because a cell had nowhere else to put one. Set only where the figure
+   * cannot be read without it; a unit that merely repeats the title is noise at 24px.
+   */
+  unit?: string;
+  /**
    * The ONE line under the figure, and the only one.
    *
    * **A cell used to carry up to three: the metric's title, its unit, and a note naming
@@ -144,8 +160,21 @@ export function SummaryFigures({
                   unit needs to its own numeral. */}
               <p className="flex h-9 min-w-0 items-end text-4xl leading-none font-bold tracking-display text-action tabular-nums md:h-12 md:text-5xl">
                 <span className="flex min-w-0 items-baseline truncate">
-                  {value.value}
+                  {/* **Wrapped rather than left as a bare text node, and it is
+                      layout-neutral**: inside a flex container a text run becomes an
+                      anonymous flex item anyway, so this box is the one the browser was
+                      already making. What it buys is a real element for the numeral —
+                      which the specs need in order to measure the unit's position against
+                      it, and to match the numeral exactly on the one cell whose unit is a
+                      separate word rather than a suffix on the number. */}
+                  <span data-figure-value="">{value.value}</span>
                   {value.suffix ? <Unit>{value.suffix}</Unit> : null}
+                  {/* A word unit the formatter could not have found. Same component and
+                      therefore the same two scale steps down as a `%` or an `M+`, so the
+                      row has one relationship between a figure and its unit rather than
+                      two. `whitespace-nowrap` lives on `Unit`: "mn sq ft" holding three
+                      words must break as one object or not at all. */}
+                  {cell.unit ? <Unit word>{cell.unit}</Unit> : null}
                   {high ? (
                     <>
                       {/* An en dash, spaced, because both operands are numerals and an
@@ -195,9 +224,37 @@ export function SummaryFigures({
  * the figure, which is where a unit belongs. `tracking-normal` because
  * `tracking-display` is fitted to digits and closes the gap a glyph this size needs.
  */
-function Unit({ children }: { children: React.ReactNode }) {
+function Unit({
+  children,
+  word = false,
+}: {
+  children: React.ReactNode;
+  /**
+   * A WORD unit rather than a symbol, which changes the gap and nothing else.
+   *
+   * A `%` or an `M+` is a suffix ON the numeral and sets tight against it — 2px, which
+   * is a hair of optical separation rather than a space. "mn sq ft" is a separate token
+   * and needs a real word space, so it takes 4px. Same size step either way: the size
+   * is the relationship between a unit and its figure, and that does not depend on
+   * whether the unit is spelled or drawn.
+   */
+  word?: boolean;
+}) {
   return (
-    <span className="ms-0.5 shrink-0 text-xl font-semibold tracking-normal md:text-2xl">
+    // `whitespace-nowrap` because the figure box is a FIXED height with
+    // `overflow: hidden` on the span inside it — a unit that wrapped would be clipped
+    // rather than shown on a second line. `shrink-0` so a wide numeral beside it cannot
+    // squeeze it to an ellipsis.
+    // `data-figure-unit` is a stable hook for the spec that measures this against its own
+    // numeral, and not a style — a spec selecting `span > span` by position broke the
+    // moment the numeral gained a box of its own, which is the fragility this removes.
+    <span
+      data-figure-unit=""
+      className={cn(
+        "shrink-0 whitespace-nowrap text-xl font-semibold tracking-normal md:text-2xl",
+        word ? "ms-1" : "ms-0.5",
+      )}
+    >
       {children}
     </span>
   );

@@ -205,7 +205,7 @@ test("finding the sub-industry changes which companies are shown", async ({ page
     await page.getByLabel(/^Filter/).fill("USA");
     await page.getByRole("option", { name: "USA", exact: true }).click();
 
-    await page.getByRole("button", { name: "See my results" }).click();
+    await page.getByRole("button", { name: "Build my GCC Landscape" }).click();
     const peers = page.locator("#peers");
     await expect(peers).toBeVisible();
     return (await peers.innerText()).toLowerCase();

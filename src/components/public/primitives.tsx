@@ -667,7 +667,30 @@ export function Zone({
    * unusable here, which is why the close's eyebrow is teal-bright where every eyebrow
    * on a light ground is the warm orange.
    */
-  ground: "surface" | "tint" | "pale" | "inverse-soft";
+  /**
+   * **`accent` is `--ansr-surface-accent`, the brand's own teal, and it is the ground a
+   * band takes when it is the surface's primary evidence.** `Section` already documents
+   * the device and reserves it for a FIGURE band — reversing content out of teal is the
+   * most emphatic thing this palette can do without touching orange, which is committed
+   * to the CTA and unusable on the mint at any size (2.63:1). `Zone` was never given a
+   * dark ground because until now no band INSIDE the result card wanted one.
+   *
+   * **It is teal-600 rather than teal-deep, and that is a requirement rather than a
+   * preference.** The result card floats on flat teal-deep, so a teal-deep band would be
+   * the same value as the ground the card is lifted off and the card would lose its side
+   * edges for the height of that band — measured, and it is the same defect
+   * `inverse-soft` records for the card's FOOT. Teal-600 is four ramp steps clear of the
+   * page ground and two clear of the close's own band, so neither boundary is lost and
+   * the two dark bands do not read as a pair.
+   *
+   * Ink: white 8.55:1. **`--ansr-text-inverse-muted` is 2.6:1 here and is forbidden** —
+   * a band on this ground takes white for every line, which is the same constraint
+   * `ask-hero.tsx` carries on the brand gradient. `--ansr-accent-warm` is unusable, as
+   * on `inverse-soft`.
+   *
+   * Exempt from the alternation for the reason `inverse-soft` is.
+   */
+  ground: "surface" | "tint" | "pale" | "accent" | "inverse-soft";
   /** Applied to the inner container, which is what carries the rhythm. */
   className?: string;
   /**
@@ -697,6 +720,7 @@ export function Zone({
     surface: "bg-surface",
     tint: "bg-surface-tint",
     pale: "bg-surface-pale",
+    accent: "bg-surface-accent",
     "inverse-soft": "bg-surface-inverse-soft",
   } as const;
   return (

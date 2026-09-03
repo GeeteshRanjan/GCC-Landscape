@@ -4,6 +4,13 @@ import { useMemo, useState } from "react";
 
 import { useDraft, type TaxonomyKey } from "@/components/admin/draft-provider";
 import { AdminPageHeader, AdminSection } from "@/components/admin/page-header";
+import {
+  AdminSearch,
+  NoSearchMatches,
+  useAdminSearch,
+  useDeepLinkQuery,
+} from "@/components/admin/search-box";
+import { TAXONOMY_LIST_TITLES } from "@/components/admin/sections";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -51,10 +58,15 @@ interface ListConfig {
   rowExtra?: "pin" | "coordinate";
 }
 
+/**
+ * The four lists. **The TITLE comes from `sections.ts`** and the rest is local: the
+ * universal search has to tell an admin which list a value it found belongs to, and one
+ * heading typed in two files is one that eventually disagrees with itself.
+ */
 const LISTS: readonly ListConfig[] = [
   {
     key: "industries",
-    title: "Industries",
+    title: TAXONOMY_LIST_TITLES.industries,
     description:
       "The primary peer match key. Renaming one updates every company that used it.",
     ordered: false,
@@ -63,7 +75,7 @@ const LISTS: readonly ListConfig[] = [
   },
   {
     key: "revenueBands",
-    title: "Revenue bands",
+    title: TAXONOMY_LIST_TITLES.revenueBands,
     description:
       "Order matters. Peer matching falls back to the band either side of the visitor's, counted by position in this list — so this must read lowest to highest. Never sorted alphabetically.",
     ordered: true,
@@ -71,7 +83,7 @@ const LISTS: readonly ListConfig[] = [
   },
   {
     key: "cities",
-    title: "India cities",
+    title: TAXONOMY_LIST_TITLES.cities,
     description:
       "Offered when editing a company, and the source of the city density heatmap.",
     ordered: false,
@@ -80,7 +92,7 @@ const LISTS: readonly ListConfig[] = [
   },
   {
     key: "hqCountries",
-    title: "HQ countries",
+    title: TAXONOMY_LIST_TITLES.hqCountries,
     description:
       "A sort preference for the peer set, never a filter on it.",
     ordered: false,
@@ -90,6 +102,11 @@ const LISTS: readonly ListConfig[] = [
 
 export function TaxonomyManager() {
   const { draft } = useDraft();
+  const search = useAdminSearch();
+  // Arriving from the universal search. No `open`: a taxonomy row has no editor to
+  // open, it has a Rename button, and opening a rename field for somebody is putting
+  // the keyboard in a destructive control they did not ask for.
+  useDeepLinkQuery(search.setQuery);
 
   // Usage counts, so a value cannot be deleted out from under the rows that
   // reference it. Computed once per draft change rather than per list.
@@ -112,6 +129,30 @@ export function TaxonomyManager() {
     return counts;
   }, [draft.companies]);
 
+  /**
+   * One search over all four lists at once, and that is the whole reason it sits
+   * here rather than one box per section.
+   *
+   * The four lists are 24, 7, ~200 and 201 values on ONE page, and an admin who has
+   * been handed "Bengaluru is spelled wrong" does not know or care which list holds
+   * it. So the query filters every list and a list with no matches drops out
+   * entirely, which turns "read four sections" into "read the one that answered".
+   */
+  const results = LISTS.map((config) => ({
+    config,
+    // The original index travels with the value, because reordering and renaming are
+    // both addressed by position in the FULL list. Filtering a list and then handing
+    // a row its filtered index is how Move up moves the wrong value.
+    rows: draft.taxonomy[config.key]
+      .map((value, index) => ({ value, index }))
+      .filter((row) => search.matches(row.value)),
+  }));
+
+  const shown = search.searching
+    ? results.filter((entry) => entry.rows.length > 0)
+    : results;
+  const total = results.reduce((n, entry) => n + entry.rows.length, 0);
+
   return (
     <div className="flex flex-col gap-6">
       <AdminPageHeader
@@ -119,11 +160,29 @@ export function TaxonomyManager() {
         lead="What the public dropdowns offer, live on the next publish."
       />
 
-      {LISTS.map((config) => (
+      <AdminSearch
+        placeholder="Bengaluru, Retail, Netherlands"
+        hint="Searches all four lists. Only the lists with a match are shown."
+        value={search.query}
+        onChange={search.setQuery}
+        status={
+          search.searching
+            ? `${total} value${total === 1 ? "" : "s"} across ${shown.length} list${shown.length === 1 ? "" : "s"}`
+            : undefined
+        }
+      />
+
+      {search.searching && total === 0 ? (
+        <NoSearchMatches query={search.query} what="taxonomy values" />
+      ) : null}
+
+      {shown.map(({ config, rows }) => (
         <TaxonomyList
           key={config.key}
           config={config}
           values={draft.taxonomy[config.key]}
+          rows={rows}
+          filtering={search.searching}
           usage={usage[config.key]}
         />
       ))}
@@ -134,10 +193,23 @@ export function TaxonomyManager() {
 function TaxonomyList({
   config,
   values,
+  rows,
+  filtering,
   usage,
 }: {
   config: ListConfig;
+  /** The whole list. Still needed: add, rename and delete all validate against it. */
   values: readonly string[];
+  /**
+   * The rows to draw, each carrying its index in `values` rather than in this array.
+   *
+   * Two operations here are addressed by position — `moveTaxonomyValue` and the
+   * "is this the last row" test that disables Move down — so a filtered index would
+   * move a value the admin cannot see.
+   */
+  rows: readonly { value: string; index: number }[];
+  /** A filter is applied, so what is on screen is not the whole list. */
+  filtering: boolean;
   usage: Map<string, number>;
 }) {
   const {
@@ -251,7 +323,11 @@ function TaxonomyList({
       title={config.title}
       meta={
         <>
-          <p className="text-sm text-text-muted">{values.length} values</p>
+          <p className="text-sm text-text-muted">
+            {filtering
+              ? `${rows.length} of ${values.length} values`
+              : `${values.length} values`}
+          </p>
           {config.ordered ? (
             <p className="text-xs font-medium uppercase tracking-caps text-action">
               Order is meaningful
@@ -284,8 +360,23 @@ function TaxonomyList({
         </>
       }
     >
+      {filtering && config.ordered ? (
+        /*
+          Reordering is refused while the list is filtered, and refusing it is the
+          honest option rather than the cautious one. Move up swaps with the value at
+          the position ABOVE, which under a filter is a row that is not on screen — so
+          the button would appear to do nothing while quietly rewriting the contract
+          that peer band proximity is index arithmetic over. Nothing about that is
+          recoverable by looking at the list, because the list is filtered.
+        */
+        <p className="border-b border-border-subtle px-5 py-2.5 text-xs text-text-muted">
+          Clear the search to reorder. The arrows move a value past the one above or
+          below it in the full list, which a filtered list is not showing.
+        </p>
+      ) : null}
+
       <ul className="divide-y divide-border-subtle">
-        {values.map((value, index) => {
+        {rows.map(({ value, index }) => {
           const count = usage.get(value) ?? 0;
           const editing = editingIndex === index;
           const plotting = plottingIndex === index;
@@ -489,7 +580,7 @@ function TaxonomyList({
                         variant="outline"
                         size="icon-sm"
                         aria-label={`Move ${value} up`}
-                        disabled={index === 0}
+                        disabled={filtering || index === 0}
                         onClick={() => moveTaxonomyValue(config.key, index, -1)}
                       >
                         <span aria-hidden="true">↑</span>
@@ -498,7 +589,7 @@ function TaxonomyList({
                         variant="outline"
                         size="icon-sm"
                         aria-label={`Move ${value} down`}
-                        disabled={index === values.length - 1}
+                        disabled={filtering || index === values.length - 1}
                         onClick={() => moveTaxonomyValue(config.key, index, 1)}
                       >
                         <span aria-hidden="true">↓</span>

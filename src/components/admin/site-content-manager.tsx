@@ -3,8 +3,21 @@
 import { useDraft } from "@/components/admin/draft-provider";
 import { SelectField, TextField } from "@/components/admin/fields";
 import { AdminPageHeader, AdminSection } from "@/components/admin/page-header";
+import {
+  AdminSearch,
+  NoSearchMatches,
+  useAdminSearch,
+  useDeepLinkQuery,
+  type AdminSearchState,
+} from "@/components/admin/search-box";
 import { Button } from "@/components/ui/button";
 import { PUBLIC_COPY_LABELS } from "@/data/diff";
+/* The gate's own bound and predicate for a CTA link, imported rather than restated for
+   the reason every other cap on this page is read off the schema: a form that states a
+   different rule than the publish endpoint is a form that lies. `closeCopySchema` refines
+   on these two, so `.maxLength` is not readable there. */
+import { CTA_URL_MAX_LENGTH, isCtaUrl } from "@/data/normalize";
+import type { SearchablePart } from "@/data/search";
 import {
   closeCopySchema,
   customerLogoSchema,
@@ -71,27 +84,47 @@ const MAX_STATS = 6;
  * ten minutes filling.
  */
 const MAX_FUNCTIONS = 12;
-const MAX_LOGOS = 12;
+/** Mirrors the schema's own cap on `siteContent.logos`, and must move with it. */
+const MAX_LOGOS = 24;
 
 /**
  * The marks that are actually served from `public/logos/`.
  *
  * **Hardcoded, because it is a list of FILES rather than of data, and admin cannot
- * add to it.** A new mark is a `brand_asset.py` adaptation committed to the repo —
- * six of these are real vectors and four were re-encoded from a raster hidden inside
- * an SVG `<pattern>` — so the set moves with a deploy, not with a publish. What this
- * control decides is which of them appear, in what order and under what name; the
- * schema's own `src` pattern is what stops the field becoming a way to point the
- * strip at an arbitrary URL.
+ * add to it.** A new mark is an adaptation committed to the repo — eighteen of these
+ * are real vectors and four were re-encoded from a raster hidden inside an SVG
+ * `<pattern>` — so the set moves with a deploy, not with a publish. What this control
+ * decides is which of them appear, in what order and under what name; the schema's
+ * own `src` pattern is what stops the field becoming a way to point the strip at an
+ * arbitrary URL.
+ *
+ * **Files under `/logos/companies/` are deliberately absent, and the schema's pattern
+ * excludes the subdirectory rather than leaving it to this list.** That directory is
+ * the uploaded tier for a PEER CARD's mark, which is a different claim: a company in
+ * the dataset is not thereby a company ANSR has worked with, and this band must never
+ * imply otherwise. Twenty of the marks below happen to be both, and each is ONE file
+ * referenced twice rather than two copies of one trademark — see `company-marks.ts`.
  */
 const SERVED_LOGO_FILES: readonly string[] = [
+  "/logos/3m.svg",
+  "/logos/7eleven.svg",
   "/logos/airbnb.svg",
   "/logos/bestbuy.png",
+  "/logos/docusign.svg",
+  "/logos/fedex.svg",
   "/logos/goldmansachs.png",
+  "/logos/hudsonsbay.svg",
+  "/logos/jcpenney.svg",
+  "/logos/kenvue.svg",
+  "/logos/landolakes.svg",
   "/logos/lowes.svg",
+  "/logos/lululemon.svg",
   "/logos/nike.svg",
   "/logos/pepsico.png",
+  "/logos/rakuten.svg",
   "/logos/target.svg",
+  "/logos/uber.svg",
+  "/logos/victoriassecret.svg",
   "/logos/walmart.svg",
   "/logos/wellsfargo.png",
   "/logos/x.svg",
@@ -125,9 +158,73 @@ export function SiteContentManager() {
 
   const { hero, impactStats, close, commonFunctions, logos, copy } =
     draft.siteContent;
+  const search = useAdminSearch();
+  // Arriving from the universal search. No `open`: every field on this page writes
+  // straight to the draft, so there is no editor to open — the query is what reveals
+  // the section, which is why the palette's copy entries seed a word that matches it.
+  useDeepLinkQuery(search.setQuery);
   // Checked against the real gate rather than re-deriving its rules, so the
   // banner cannot say "ready" for something the publish endpoint will reject.
   const blocked = !siteContentSchema.safeParse(draft.siteContent).success;
+
+  /**
+   * Whether a section survives the query.
+   *
+   * **This page is the reason the admin search exists.** It holds every editable
+   * public string in the product — two hero lines, two close lines, six impact
+   * figures, twelve function tags, twenty-two logos and 28 labels across four groups —
+   * and
+   * the admin arriving at it has a sentence, not a location: "change 'GCC headcount'
+   * to 'India headcount'". Finding that meant knowing it was a peer-card label, on
+   * this page, in the third group. Now it means typing it.
+   *
+   * **A section is searched by its own name AND by the words currently inside it**,
+   * which is the half that matters. Nobody knows the field is called "Supporting
+   * line"; they know the page says "Benchmark against your peers". Matching the VALUE
+   * is what makes the request answerable in the form the request arrives in.
+   */
+  const show = (...terms: readonly SearchablePart[]) =>
+    !search.searching || search.matches(...terms);
+
+  const sections = {
+    hero: show(
+      "hero title supporting line headline",
+      hero.title,
+      hero.lead,
+    ),
+    close: show(
+      // The link words are here as well as the copy words, because an admin coming to
+      // retag a campaign arrives with "utm" or "link", not with "closing call to action".
+      // The stored URLs are searched too, so pasting a domain finds the field holding it.
+      "closing call to action button cta supporting line link url utm tracking campaign destination",
+      close.body,
+      close.ctaLabel,
+      close.ctaHrefPeers,
+      close.ctaHrefFunctions,
+    ),
+    impact: show(
+      "impact figures numbers band",
+      impactStats.map((stat) => stat.value),
+      impactStats.map((stat) => stat.label),
+    ),
+    functions: show("function list common functions tags", commonFunctions),
+    logos: show(
+      "customer logo strip",
+      logos.map((logo) => logo.name),
+      logos.map((logo) => logo.src),
+    ),
+  };
+
+  // Copy groups are counted here rather than inside `CopyEditor`, because the
+  // "nothing matched" state is a statement about the whole PAGE and only this
+  // component can see all of it.
+  const copyMatches = COPY_GROUPS.filter((group) =>
+    matchingCopyFields(group, copy, search).length > 0,
+  ).length;
+  const shown =
+    Object.values(sections).filter(Boolean).length +
+    (search.searching ? copyMatches : COPY_GROUPS.length);
+  const total = Object.keys(sections).length + COPY_GROUPS.length;
 
   return (
     <div className="flex flex-col gap-6">
@@ -136,84 +233,152 @@ export function SiteContentManager() {
         lead="The words and figures on the public pages that are not drawn from the company data."
       />
 
+      <AdminSearch
+        placeholder="GCC headcount, Atlas, peers"
+        hint="Searches every field's name, its hint and the words currently in it. Sections with no match are hidden."
+        value={search.query}
+        onChange={search.setQuery}
+        status={
+          search.searching
+            ? `${shown} of ${total} sections`
+            : undefined
+        }
+      />
+
+      {search.searching && shown === 0 ? (
+        <NoSearchMatches
+          query={search.query}
+          what="fields"
+          hint="Try one word from the text as it appears on the public page."
+        />
+      ) : null}
+
       {blocked ? (
         /* Form and words, never colour alone: this palette carries no danger hue.
            See tokens.css. */
         <p className="ansr-field-error text-sm">
           Something below is empty or over its limit. Publishing is blocked until it
           is fixed.
+          {/* The gate is checked against the whole draft, so it can fire for a field
+              the current query has hidden. Saying so is cheaper than a hunt. */}
+          {search.searching ? " It may be in a section the search is hiding." : null}
         </p>
       ) : null}
 
-      <HeroEditor hero={hero} onChange={updateHeroCopy} />
+      {sections.hero ? (
+        <HeroEditor hero={hero} onChange={updateHeroCopy} />
+      ) : null}
 
-      <CloseEditor close={close} onChange={updateCloseCopy} />
+      {sections.close ? (
+        <CloseEditor close={close} onChange={updateCloseCopy} />
+      ) : null}
 
-      <AdminSection
-        id="impact-figures"
-        title="Impact figures"
-        description={
-          <p>
-            ANSR&rsquo;s own numbers, shown as one row on the dark band. The order
-            here is the order a visitor reads them in, left to right. Type the figure
-            exactly as it should appear, including any suffix — &ldquo;225K+&rdquo;,
-            &ldquo;$2.5B+&rdquo;. Nothing here is calculated from the company data or
-            checked against it.
-          </p>
-        }
-      >
-        {impactStats.length === 0 ? (
-          <p className="px-5 py-10 text-center text-sm text-text-muted">
-            No figures. The impact band is hidden on the public page until there is
-            at least one.
-          </p>
-        ) : (
-          <ul className="divide-y divide-border-subtle">
-            {impactStats.map((stat, index) => (
-              <ImpactRow
-                key={stat.id}
-                stat={stat}
-                index={index}
-                total={impactStats.length}
-                onChange={(patch) => updateImpactStat(stat.id, patch)}
-                onRemove={() => removeImpactStat(stat.id)}
-                onMove={(delta) => moveImpactStat(index, delta)}
-              />
-            ))}
-          </ul>
-        )}
+      {sections.impact ? (
+        <ImpactEditor
+          stats={impactStats}
+          onAdd={addImpactStat}
+          onChange={updateImpactStat}
+          onRemove={removeImpactStat}
+          onMove={moveImpactStat}
+        />
+      ) : null}
 
-        <div className="border-t border-border-subtle px-5 py-4">
-          <Button
-            variant="outline"
-            size="sm"
-            disabled={impactStats.length >= MAX_STATS}
-            onClick={() => addImpactStat()}
-          >
-            Add a figure
-          </Button>
-          {impactStats.length >= MAX_STATS ? (
-            <p className="mt-2 text-xs text-text-muted">
-              Six is the maximum. Past that the row either wraps to a second line of
-              one figure or shrinks them all below the size that makes a figure read
-              as a figure.
-            </p>
-          ) : null}
-        </div>
-      </AdminSection>
+      {sections.functions ? (
+        <FunctionsEditor values={commonFunctions} onChange={setCommonFunctions} />
+      ) : null}
 
-      <FunctionsEditor values={commonFunctions} onChange={setCommonFunctions} />
+      {sections.logos ? (
+        <LogoEditor
+          logos={logos}
+          onAdd={addLogo}
+          onChange={updateLogo}
+          onRemove={removeLogo}
+          onMove={moveLogo}
+        />
+      ) : null}
 
-      <LogoEditor
-        logos={logos}
-        onAdd={addLogo}
-        onChange={updateLogo}
-        onRemove={removeLogo}
-        onMove={moveLogo}
-      />
-
-      <CopyEditor copy={copy} onChange={updatePublicCopy} />
+      <CopyEditor copy={copy} onChange={updatePublicCopy} search={search} />
     </div>
+  );
+}
+
+/**
+ * ANSR's own impact figures.
+ *
+ * Extracted from `SiteContentManager` when the search arrived, and only because it was
+ * the one section still spelled out inline while its four neighbours were components.
+ * A conditional wrapped round sixty lines of JSX is a section you cannot see the shape
+ * of; five sibling one-liners is the shape.
+ */
+function ImpactEditor({
+  stats,
+  onAdd,
+  onChange,
+  onRemove,
+  onMove,
+}: {
+  stats: readonly ImpactStat[];
+  onAdd: () => void;
+  onChange: (id: string, patch: Partial<Omit<ImpactStat, "id">>) => void;
+  onRemove: (id: string) => void;
+  onMove: (index: number, delta: number) => void;
+}) {
+  return (
+    <AdminSection
+      id="impact-figures"
+      title="Impact figures"
+      description={
+        <p>
+          ANSR&rsquo;s own numbers, shown as one row on the dark band. The order here
+          is the order a visitor reads them in, left to right. Type the figure exactly
+          as it should appear, including any suffix — &ldquo;225K+&rdquo;,
+          &ldquo;$2.5B+&rdquo;. Nothing here is calculated from the company data or
+          checked against it.
+        </p>
+      }
+    >
+      {stats.length === 0 ? (
+        <p className="px-5 py-10 text-center text-sm text-text-muted">
+          No figures. The impact band is hidden on the public page until there is at
+          least one.
+        </p>
+      ) : (
+        <ul className="divide-y divide-border-subtle">
+          {stats.map((stat, index) => (
+            <ImpactRow
+              key={stat.id}
+              stat={stat}
+              index={index}
+              total={stats.length}
+              onChange={(patch) => onChange(stat.id, patch)}
+              onRemove={() => onRemove(stat.id)}
+              onMove={(delta) => onMove(index, delta)}
+            />
+          ))}
+        </ul>
+      )}
+
+      <div className="border-t border-border-subtle px-5 py-4">
+        <Button
+          variant="outline"
+          size="sm"
+          disabled={stats.length >= MAX_STATS}
+          // Wrapped rather than passed straight through: `addImpactStat` returns the
+          // new id and takes nothing, so handing it to `onClick` would feed it a mouse
+          // event and make its signature a lie the next time it grows a parameter.
+          onClick={() => onAdd()}
+        >
+          Add a figure
+        </Button>
+        {stats.length >= MAX_STATS ? (
+          <p className="mt-2 text-xs text-text-muted">
+            Six is the maximum. Past that the row either wraps to a second line of one
+            figure or shrinks them all below the size that makes a figure read as a
+            figure.
+          </p>
+        ) : null}
+      </div>
+    </AdminSection>
   );
 }
 
@@ -256,13 +421,77 @@ function HeroEditor({
 }
 
 /**
+ * The two result screens that draw the close, in the order a visitor reaches them, each
+ * paired with the field holding its link.
+ *
+ * **A table rather than two hand-written field blocks, and that is what makes the "use
+ * everywhere" button honest.** The button's promise is "every screen", so it has to be
+ * able to enumerate them; written out twice, a third screen gaining a close would get a
+ * field and quietly not get copied into. The keys are checked against `CloseCopy` by the
+ * type, so a renamed field is a compile error rather than a control that edits nothing.
+ *
+ * `label` is what the admin reads and it deliberately matches the view switch's own
+ * wording — "Peer Landscape" and "Function Metrics" — because that is what the tab says
+ * and therefore what an admin describing the link would call it. It must not contain the
+ * words "Button" or "Supporting line": Playwright's `getByLabel` matches on substring, so
+ * either would make the two existing fields in this section ambiguous. See `docs/traps.md`.
+ */
+const CTA_LINK_FIELDS = [
+  {
+    key: "ctaHrefPeers",
+    label: "Peer Landscape link",
+    where: "the peer landscape",
+  },
+  {
+    key: "ctaHrefFunctions",
+    label: "Function Metrics link",
+    where: "the function metrics",
+  },
+] as const satisfies ReadonlyArray<{
+  key: keyof CloseCopy;
+  label: string;
+  where: string;
+}>;
+
+/**
+ * A CTA link's own validator, and it is separate from `lengthError` for one reason:
+ * **blank is legal here and blank is an error everywhere else on this page.**
+ *
+ * Every other field on this page is required, so `lengthError` reads an empty value as
+ * "the public page has no fallback". These two have one — a blank link falls through to
+ * `NEXT_PUBLIC_GCC_CTA_URL` and then to ansr.com, see `resolveCtaHref` — so an empty field
+ * is the admin declining to override, not a mistake.
+ *
+ * The rule quoted is the gate's own: `isCtaUrl` and `CTA_URL_MAX_LENGTH` are the same two
+ * things `closeCopySchema` refines on, imported rather than restated, so this cannot tell
+ * an admin a link is fine that the publish then refuses.
+ */
+function ctaLinkError(value: string): string | undefined {
+  const trimmed = value.trim();
+  if (trimmed.length === 0) return undefined;
+  if (trimmed.length > CTA_URL_MAX_LENGTH) {
+    return `${trimmed.length} characters. The limit is ${CTA_URL_MAX_LENGTH}; publishing is blocked above it.`;
+  }
+  if (!isCtaUrl(trimmed)) {
+    return "Must be a full link starting with https:// — paste it from the browser's address bar, with any tracking parameters left on the end.";
+  }
+  return undefined;
+}
+
+/**
  * The closing call to action, on both result screens.
  *
- * **Two fields, because the band renders two strings and has no heading.** It had one —
- * "Unlock the full GCC landscape" — and it was removed so the supporting line and the
- * button carry the band on their own. There is deliberately no heading field here: a
- * field an admin can fill that nothing draws is worse than no field, and restoring the
- * heading is a schema addition and a component change together.
+ * **Two strings and one link PER SCREEN, and there is still no heading field.** The band
+ * had a heading — "Unlock the full GCC landscape" — and it was removed so the supporting
+ * line and the button carry the band on their own. A field an admin can fill that nothing
+ * draws is worse than no field, so restoring the heading is a schema addition and a
+ * component change together.
+ *
+ * **The links are here rather than on a tab of their own, because they are part of this
+ * band and nothing else in the product links out.** The band's two strings and the address
+ * they lead to are one editorial decision — changing "See the full report" to name a
+ * specific offer and pointing it at that offer's page is one act — so splitting them
+ * across two pages would mean doing half of it and publishing.
  *
  * The hints name where the words appear rather than describing them, because this is the
  * one editable band an admin cannot see from the entry point — it is three clicks into
@@ -275,6 +504,21 @@ function CloseEditor({
   close: CloseCopy;
   onChange: (patch: Partial<CloseCopy>) => void;
 }) {
+  /**
+   * Copy one screen's link onto every screen.
+   *
+   * Built here rather than in the row so the patch is ONE edit covering both fields: two
+   * calls would be two entries in the autosave and, more to the point, a moment where the
+   * two screens disagree. `Object.fromEntries` over the table is what keeps the promise
+   * true for a third screen that has not been added yet.
+   */
+  const applyEverywhere = (value: string) =>
+    onChange(
+      Object.fromEntries(
+        CTA_LINK_FIELDS.map((field) => [field.key, value]),
+      ) as Partial<CloseCopy>,
+    );
+
   return (
     <AdminSection
       id="close-copy"
@@ -302,8 +546,115 @@ function CloseEditor({
           error={lengthError(close.ctaLabel, MAX.closeLabel)}
           onChange={(value) => onChange({ ctaLabel: value })}
         />
+
+        {/* Separated from the two strings by a rule and its own explanation, because the
+            fields below are the only ones on this page whose value is not words a visitor
+            reads — and the only ones where leaving the box empty is a real answer. */}
+        <div className="flex flex-col gap-5 border-t border-border-subtle pt-5">
+          <div className="flex flex-col gap-1">
+            <h3 className="text-sm font-medium text-text">Where the button goes</h3>
+            <p className="text-xs text-text-muted">
+              One link per screen, so the two presses can be told apart in analytics —
+              put each screen&rsquo;s own tracking parameters on the end. Leave a box
+              empty to use the link configured for the deployment, which is
+              ansr.com unless it has been set.
+            </p>
+          </div>
+
+          {CTA_LINK_FIELDS.map((field) => (
+            <CtaLinkRow
+              key={field.key}
+              label={field.label}
+              where={field.where}
+              value={close[field.key]}
+              matchesEveryScreen={CTA_LINK_FIELDS.every(
+                (other) => close[other.key].trim() === close[field.key].trim(),
+              )}
+              onChange={(value) => onChange({ [field.key]: value })}
+              onApplyEverywhere={() => applyEverywhere(close[field.key].trim())}
+            />
+          ))}
+        </div>
       </div>
     </AdminSection>
+  );
+}
+
+/**
+ * One screen's link, and the button that copies it to the others.
+ *
+ * **The button is per ROW rather than one button for the section, and that is what makes
+ * it unambiguous.** A single "use the same link everywhere" control has to pick a source,
+ * and whichever it picked would be a rule an admin has to know; a button attached to a
+ * field copies THAT field, which is legible from where the press happens. It also scales:
+ * a third screen brings its own.
+ *
+ * **Disabled on a blank value and on a value already everywhere**, with the reason on the
+ * button rather than beside it. Enabled-and-inert is the worse option here: the press
+ * would look identical to a real one and the admin would have no way to tell whether the
+ * link had been copied or the field had been empty.
+ *
+ * `title` rather than a second visible string, and `aria-label` carrying the screen name,
+ * because two buttons reading "Use everywhere" are two identically-named controls to a
+ * screen-reader user — the same defect the impact rows solved by putting the figure's
+ * identity in every one of their accessible names.
+ */
+function CtaLinkRow({
+  label,
+  where,
+  value,
+  matchesEveryScreen,
+  onChange,
+  onApplyEverywhere,
+}: {
+  label: string;
+  where: string;
+  value: string;
+  matchesEveryScreen: boolean;
+  onChange: (value: string) => void;
+  onApplyEverywhere: () => void;
+}) {
+  const error = ctaLinkError(value);
+  const blank = value.trim().length === 0;
+  // A broken link must not be copyable: one bad paste spread across every screen is the
+  // same mistake made twice, and the publish would then name two fields instead of one.
+  const disabled = blank || matchesEveryScreen || error !== undefined;
+
+  return (
+    <div className="flex flex-col gap-3 sm:flex-row sm:items-start">
+      <TextField
+        label={label}
+        className="flex-1"
+        optional
+        hint={`Where the button leads from ${where}. The full address, tracking parameters included.`}
+        placeholder="https://www.ansr.com/…?utm_source=atlas"
+        value={value}
+        error={error}
+        inputMode="url"
+        onChange={onChange}
+      />
+
+      <div className="shrink-0 sm:pt-6">
+        <Button
+          variant="outline"
+          size="sm"
+          disabled={disabled}
+          aria-label={`Use the ${where} link on every screen`}
+          title={
+            blank
+              ? "Enter a link first."
+              : error !== undefined
+                ? "Fix the link first."
+                : matchesEveryScreen
+                  ? "Already used on every screen."
+                  : "Copy this link to every screen."
+          }
+          onClick={onApplyEverywhere}
+        >
+          Use everywhere
+        </Button>
+      </div>
+    </div>
   );
 }
 
@@ -426,10 +777,10 @@ function FunctionsEditor({
       title="Function list"
       description={
         <p>
-          The tags under &ldquo;Functions most GCCs run from India&rdquo; on the peer
-          landscape. They are a claim about GCCs in general, not about the companies
-          above them, so keep each one a function rather than a company&rsquo;s
-          department. The set wraps as one row with no columns, so an item much longer
+          The tags under &ldquo;Common functions run from the India GCCs&rdquo; on the
+          peer landscape. They are a claim about India GCCs in general, not about the
+          companies above them, so keep each one a function rather than a
+          company&rsquo;s department. The set wraps as one row with no columns, so an item much longer
           than the rest is the one that decides the layout — the shipped eight sit
           between 16 and 28 characters.
         </p>
@@ -585,14 +936,14 @@ function LogoEditor({
         </Button>
         {logos.length >= MAX_LOGOS ? (
           <p className="mt-2 text-xs text-text-muted">
-            Twelve is the maximum. The strip scrolls, so a longer set is not a layout
-            failure — it just stops being a curated set of proof.
+            Twenty-four is the maximum. The strip scrolls, so a longer set is not a
+            layout failure — it just stops being a curated set of proof.
           </p>
         ) : unusedFiles.length === 0 ? (
-          /* The real ceiling is usually this one rather than the cap: ten files are
-             served and every one of them is already in the strip. Said here, because
-             a new row with no file left to choose is a blocked publish with no way
-             out of it from this page. */
+          /* The real ceiling is usually this one rather than the cap: every file that
+             is served is already in the strip. Said here, because a new row with no
+             file left to choose is a blocked publish with no way out of it from this
+             page. */
           <p className="mt-2 text-xs text-text-muted">
             Every mark that is served is already in the strip. A new one is an
             adaptation committed to <code>public/logos/</code> — a developer step.
@@ -768,7 +1119,7 @@ const COPY_GROUPS: readonly CopyGroupConfig[] = [
       },
       {
         key: "impactTitleLead",
-        hint: "The words before the ANSR lockup, which is drawn rather than typed.",
+        hint: "The words AFTER the ANSR lockup, which is drawn rather than typed and leads the line. The heading reads \u201cANSR\u201d then this.",
       },
     ],
   },
@@ -799,14 +1150,26 @@ const COPY_GROUPS: readonly CopyGroupConfig[] = [
     description:
       "Section headings and cell labels on the first result screen. Nothing here states a count — the sentences that do are in code, beside the logic that counts.",
     fields: [
-      { key: "peersTitle" },
+      /* The comparable-companies heading was here and is gone: it names the visitor's
+         own company now, which is an optional input, so the heading has two branches and
+         no single string an admin types could serve both. `peersTitle()` in
+         `screen1/copy.ts`. */
       { key: "industryTitle" },
       { key: "peerHeadcountLabel" },
       { key: "peerCitiesLabel" },
       { key: "peerSinceLabel" },
-      { key: "snapshotHeadcountLabel" },
-      { key: "snapshotCitiesLabel" },
-      { key: "snapshotLeadingCityLabel" },
+      {
+        key: "snapshotHeadcountLabel",
+        hint: "These three complete the figure above them rather than naming it \u2014 \u201c3,600 / average employees in each GCC\u201d. Lower case, no full stop.",
+      },
+      {
+        key: "snapshotCitiesLabel",
+        hint: "Say INDUSTRY, never sub-industry: the count is every city in the visitor's industry, not in the narrower set they may have picked.",
+      },
+      {
+        key: "snapshotLeadingCityLabel",
+        hint: "The leading city in the visitor's INDUSTRY, not in the five peers shown below. Do not call them peers here.",
+      },
       { key: "scaleTitle" },
       {
         key: "scaleFortuneLabel",
@@ -837,24 +1200,73 @@ const COPY_GROUPS: readonly CopyGroupConfig[] = [
   },
 ];
 
+/**
+ * The fields of one copy group that survive the query.
+ *
+ * **A hit on the group's own HEADING keeps every field in it**, because "peer
+ * landscape" is a question about a surface rather than about a string — and a group
+ * whose name matched while its rows all vanished would be a section header over
+ * nothing.
+ *
+ * Otherwise a field is matched on its label, its hint, its current value AND its
+ * schema key. The key is in there for one specific reader: everything else on this
+ * page is prose an admin recognises, but a developer arriving from `copy.ts` or from
+ * a diff is holding `snapshotCitiesLabel`, and that is the only handle they have.
+ *
+ * Lives outside `CopyEditor` because the page's own empty state has to count what
+ * this returns; two implementations of "does this field match" is how a search starts
+ * hiding a field the count says is there.
+ */
+function matchingCopyFields(
+  group: CopyGroupConfig,
+  copy: PublicCopy,
+  search: AdminSearchState,
+): readonly CopyFieldConfig[] {
+  if (!search.searching) return group.fields;
+  if (search.matches(group.heading, group.description)) return group.fields;
+  return group.fields.filter((field) =>
+    search.matches(
+      PUBLIC_COPY_LABELS[field.key],
+      field.hint,
+      copy[field.key],
+      field.key,
+    ),
+  );
+}
+
 function CopyEditor({
   copy,
   onChange,
+  search,
 }: {
   copy: PublicCopy;
   onChange: (patch: Partial<PublicCopy>) => void;
+  search: AdminSearchState;
 }) {
   return (
     <>
-      {COPY_GROUPS.map((group) => (
+      {COPY_GROUPS.map((group) => {
+        const fields = matchingCopyFields(group, copy, search);
+        if (fields.length === 0) return null;
+        return (
         <AdminSection
           key={group.id}
           id={group.id}
           title={group.heading}
-          description={<p>{group.description}</p>}
+          description={
+            <>
+              <p>{group.description}</p>
+              {fields.length < group.fields.length ? (
+                <p>
+                  {fields.length} of {group.fields.length} fields in this group match
+                  the search.
+                </p>
+              ) : null}
+            </>
+          }
         >
           <div className="grid gap-5 px-5 py-5 lg:grid-cols-2">
-            {group.fields.map((field) => {
+            {fields.map((field) => {
               // Every key in the schema carries a cap, so this is a bound rather than
               // a default. If one ever lost its cap the count disappears and the
               // field stays required, which is the honest reading of "no limit".
@@ -876,7 +1288,8 @@ function CopyEditor({
             })}
           </div>
         </AdminSection>
-      ))}
+        );
+      })}
     </>
   );
 }

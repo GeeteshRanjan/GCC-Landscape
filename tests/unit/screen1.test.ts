@@ -45,6 +45,7 @@ import {
   largestOverlapLine,
   largestTitle,
   mapHeading,
+  mapTitle,
   peerCountLine,
   peerLead,
   SCALE,
@@ -1169,7 +1170,9 @@ describe("the snapshot", () => {
        * These views carry no sub-industry — see `input` — so this loop exercises the
        * industry branch; the sub-industry branch is asserted below.
        */
-      expect(cells[0]!.label, industry).toBe("GCCs in your industry");
+      expect(cells[0]!.label, industry).toBe(
+        "companies in this industry have a GCC in India",
+      );
       expect(cells[0]!.kind, industry).toBe("figure");
       // A grouped count and no unit, where the share carried "%" as its `suffix`.
       expect(cells[0]!.value, industry).toMatch(/^[\d,]+$/);
@@ -1178,12 +1181,27 @@ describe("the snapshot", () => {
       // treatment — a city name in a numeral slot, letter-spaced for digits, was the
       // loudest element on the page and the visible seam of a filled template.
       expect(cells[3]!.kind, industry).toBe("place");
-      expect(cells[1]!.label, industry).toBe("Typical GCC headcount");
-      // **Not "Indian cities in play".** That was consultants' shorthand, and it made
-      // a plain count of cities sound like a shortlist somebody had drawn up. The
-      // figure is the number of Indian cities where this industry operates a centre.
-      expect(cells[2]!.label, industry).toBe("Indian cities with a GCC");
-      expect(cells[3]!.label, industry).toBe("Leading GCC city");
+      // **All four are SENTENCE PREDICATES now, at ANSR's request**, completing the
+      // figure above them rather than naming the measure. Asserted verbatim because the
+      // three published ones are render-capped at 56 and the caps are measured on this
+      // exact wording.
+      expect(cells[1]!.label, industry).toBe("average employees in each GCC");
+      // **"your industry", NOT "your sub-industry", and ANSR asked for the narrower
+      // word.** The figure is `view.map.cities.length` — the industry's own city spread,
+      // because the map block is filtered to `input.industry` and there is no
+      // per-sub-industry city derivation to read. A label naming the narrower population
+      // over the wider figure is the one thing copy here may not do.
+      expect(cells[2]!.label, industry).toBe(
+        "cities in India host GCCs from your industry",
+      );
+      expect(cells[2]!.label, industry).not.toMatch(/sub-industry/);
+      // **"these GCCs", not "peer GCCs", for the same reason.** The leading city is
+      // `view.map.cities[0]`, the industry's top city rather than the five-company peer
+      // set's, so "peer" would name a population this cell was not measured over.
+      expect(cells[3]!.label, industry).toBe(
+        "the city where most of these GCCs are based",
+      );
+      expect(cells[3]!.label, industry).not.toMatch(/peer/);
     }
   });
 
@@ -1203,7 +1221,9 @@ describe("the snapshot", () => {
       input({ industry: "Retail", businessTypeId: "ret-apparel" }),
     );
     const cells = signals(view);
-    expect(cells[0]!.label).toBe("GCCs in your sub-industry");
+    expect(cells[0]!.label).toBe(
+      "companies in this sub-industry have a GCC in India",
+    );
     expect(view.industry.businessType).not.toBeNull();
     expect(cells[0]!.value).toBe(formatCount(view.industry.businessType!.count));
     // Scoped below the industry, which is what makes the cell worth scoping at all.
@@ -1238,15 +1258,22 @@ describe("the snapshot", () => {
        * half a test can actually hold.
        */
       const cell = signals(view)[1]!;
-      // **"Typical GCC headcount".** The word carrying the honesty is "Typical" and it is
-      // unchanged through three rewordings; what moved is the subject — "centre size",
-      // then "GCC size in {industry}", now the plain noun the comparison cards use for
-      // the same quantity, with the industry named by the section heading instead.
-      expect(cell.label, industry).toMatch(/^Typical GCC headcount/);
-      expect(cell.label, industry).not.toMatch(/^(Average|Total)/);
+      // **"average employees in each GCC", and the honest word is now "each".** Four
+      // rewordings: "centre size", "GCC size in {industry}", "Typical GCC headcount",
+      // and now a sentence predicate completing the figure above it, at ANSR's request.
+      // "Typical" was what carried the honesty for three of those — the figure IS a
+      // rounded mean of band midpoints — and ANSR asked for "average", which is the
+      // arithmetic word. What stops it overclaiming is "in each GCC": the cell states a
+      // per-centre average rather than a measured central tendency, and the rounding
+      // assertions above are what actually hold the figure honest.
+      //
+      // **It must still never read as a TOTAL**, which is the one misreading that would
+      // change the figure's meaning rather than its precision.
+      expect(cell.label, industry).toBe("average employees in each GCC");
+      expect(cell.label, industry).not.toMatch(/total/i);
       // **The note is gone entirely**, at ANSR's request — it was the last trace of a
-      // method line on a figure that IS a rounded mean of band midpoints, so "Typical" is
-      // now carrying the honesty alone. Asserted absent so nobody restores half of it.
+      // method line on a figure that IS a rounded mean of band midpoints. Asserted absent
+      // so nobody restores half of it.
       expect(cell).not.toHaveProperty("note");
     }
   });
@@ -1315,6 +1342,39 @@ describe("the snapshot", () => {
  * a percentage. That is asserted over every line the block renders rather than over
  * the one function that happened to be at risk.
  */
+/**
+ * The locations card's heading, and the one property it must not lose.
+ *
+ * **ANSR asked for it to name the SUB-INDUSTRY and it names the industry**, because the
+ * map is built from `density`, which is filtered to `input.industry` — `MapBlock.industry`
+ * is `input.industry` verbatim. A heading naming the narrower population over dots drawn
+ * from the wider one is the failure this asserts against, and it is asserted over every
+ * industry AND with a sub-industry answered, which is the case that would regress: a
+ * future pass reaching for `view.industry.businessType.name` here would pass the
+ * no-sub-industry loop and break only for the visitors who answered the optional field.
+ */
+describe("the locations card's heading", () => {
+  it("names the industry the map was actually filtered to", () => {
+    for (const industry of dataset.taxonomy.industries) {
+      const view = buildPeerView(dataset, input({ industry }));
+      expect(mapTitle(view), industry).toBe(
+        `Cities where ${industry} companies have set up`,
+      );
+      expect(mapTitle(view), industry).toContain(view.map.industry);
+    }
+  });
+
+  it("still names the industry when a sub-industry was answered", () => {
+    const view = buildPeerView(
+      dataset,
+      input({ industry: "Retail", businessTypeId: "ret-apparel" }),
+    );
+    expect(view.industry.businessType).not.toBeNull();
+    expect(mapTitle(view)).toBe("Cities where Retail companies have set up");
+    expect(mapTitle(view)).not.toContain(view.industry.businessType!.name);
+  });
+});
+
 describe("the largest-centres block's copy", () => {
   const blockLines = (view: ReturnType<typeof buildPeerView>) => [
     largestTitle(view),
@@ -1387,7 +1447,7 @@ describe("the largest-centres block's copy", () => {
       expect(overlap).toBeGreaterThan(0);
       expect(overlap).toBeLessThan(view.largest.entries.length);
       expect(largestOverlapLine(view)).toBe(
-        `${overlap} of the ${view.largest.entries.length} largest BFSI GCCs in India are in your comparison set above.`,
+        `${overlap} of the ${view.largest.entries.length} largest BFSI GCCs in India are in your peer set above.`,
       );
     });
 

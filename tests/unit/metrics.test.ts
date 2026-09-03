@@ -650,7 +650,7 @@ describe("the seeded catalogue", () => {
     // shared definition spread across tabs, which is what this invariant is about.
     expect(shared.map(([title]) => title).sort()).toEqual([
       "Graduate output by discipline",
-      "Professionals with 10+ years",
+      "Professionals with 10+ years of experience",
       "Technology professionals",
       "Time to backfill a role",
       "Time to first hire",

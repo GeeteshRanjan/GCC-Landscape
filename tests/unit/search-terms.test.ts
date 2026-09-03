@@ -9,6 +9,7 @@ import {
   normaliseSearchText,
   searchHaystack,
   searchTokens,
+  searchableText,
 } from "@/data/search";
 import {
   HQ_COUNTRY_TERMS,
@@ -136,6 +137,40 @@ describe("normaliseSearchText", () => {
   });
 });
 
+/**
+ * The variadic haystack builder, which is what the admin surfaces search through.
+ *
+ * Two properties are worth pinning. A boolean is DROPPED rather than coerced, which is
+ * the whole reason a caller can write `flag && "fortune"` inline — coercing would put
+ * the word `false` in every unset row and make it matchable. And a nested list is
+ * flattened into words, so a company's cities are five searchable words rather than
+ * one comma-joined string that only matches if typed in order.
+ */
+describe("searchableText", () => {
+  it("flattens lists and folds punctuation, so any field of a row is findable", () => {
+    const haystack = searchableText(
+      "Dassault Systèmes",
+      ["Pune", "Bengaluru"],
+      "Property & Casualty",
+    );
+    for (const query of ["systemes", "pune", "bengaluru", "property and casualty"]) {
+      expect(matchesTokens(searchTokens(query), haystack), query).toBe(true);
+    }
+  });
+
+  it("drops a false flag rather than writing the word into the row", () => {
+    expect(searchableText("Acme", false && "fortune")).not.toContain("false");
+    expect(matchesSearch("false", "Acme")).toBe(false);
+    // Set, the same expression makes the flag a real query.
+    const listed = searchableText("Acme", true && "fortune global 500");
+    expect(matchesTokens(searchTokens("fortune"), listed)).toBe(true);
+  });
+
+  it("skips null and undefined, so an optional field costs nothing", () => {
+    expect(searchableText("Acme", null, undefined, ["", "Pune"])).toBe(" acme pune ");
+  });
+});
+
 describe("matchesTokens", () => {
   it("is vacuously true with no query, so an empty filter hides nothing", () => {
     expect(matchesTokens(searchTokens("   "), "anything")).toBe(true);
@@ -171,15 +206,48 @@ describe("matchesTokens", () => {
 
   /**
    * The deliberate narrowing, pinned so it reads as a decision. As a substring `ai`
-   * reached 39 sub-industries through `retail` and `chain`; as a whole word it reaches
-   * the AI platform row, which is what the visitor typing it meant.
+   * reached 39 sub-industries through `retail` and `chain`; anchored to a word
+   * boundary it reaches the AI platform row and the aviation rows, which is what a
+   * visitor typing two letters is plausibly heading for either way.
    */
-  it("treats a token of three characters or fewer as a whole word", () => {
+  it("anchors a token of three characters or fewer to a word boundary", () => {
     expect(matchesSearch("ai", "Retail")).toBe(false);
+    expect(matchesSearch("ai", "Domain & Hosting")).toBe(false);
     expect(matchesSearch("ai", "AI & Machine Learning Platform")).toBe(true);
     expect(matchesSearch("si", "Business Process Outsourcing")).toBe(false);
-    const aiRows = hits("ai").filter((row) => row.kind === "sub-industry");
-    expect(aiRows.length).toBeLessThanOrEqual(3);
+  });
+
+  /**
+   * THE REPORTED DEFECT: the filter did nothing for the first three characters.
+   *
+   * A short token used to have to match a WHOLE word, so `r`, `re` and `ret` matched
+   * no row in the taxonomy and the list only resolved on the fourth letter. A visitor
+   * reads an unresponsive filter as a filter that cannot find them, and the fallback
+   * from "cannot find my row" is the broad answer — which is the findability failure
+   * the term tables exist to prevent. Every prefix of a real row's first word must
+   * now reach that row, from one character up.
+   */
+  it("finds a row from the FIRST letter, at every prefix length", () => {
+    for (const [word, expectKey] of [
+      ["retail", "Retail"],
+      ["insurance", "fin-insurance-pc"],
+      ["payments", "sw-payments"],
+      ["semiconductor", "Semiconductors"],
+    ] as const) {
+      for (let length = 1; length <= word.length; length += 1) {
+        const query = word.slice(0, length);
+        expect(
+          hits(query).map((row) => row.key),
+          `"${query}" must still reach ${expectKey}`,
+        ).toContain(expectKey);
+      }
+    }
+  });
+
+  /** The prefix rule is anchored, so it is still a filter and not a pass-through. */
+  it("still narrows on a single letter", () => {
+    expect(hits("z").length).toBeLessThan(rows.length);
+    expect(visibleIndustries("q").length).toBeLessThan(industries.length);
   });
 });
 
@@ -328,6 +396,23 @@ describe("SUB_INDUSTRY_TERMS", () => {
     expect(wrong).toEqual([]);
   });
 
+  /** Every authored sub-industry term, once, whatever row it is filed under. */
+  const everyTerm = [...new Set(Object.values(SUB_INDUSTRY_TERMS).flat())];
+
+  /** How many sub-industry rows a query reaches. */
+  const subIndustryHits = (query: string) =>
+    hits(query).filter((row) => row.kind === "sub-industry").length;
+
+  /**
+   * A term that CONTAINS a short token — two or three letters — anywhere in it, like
+   * `bi`, `si`, `pr`, `p and c` or `ci cd`. A short token prefix-matches a word's
+   * opening letters wherever it sits in the query, so any term holding one has a breadth
+   * that is a property of the MATCHER rather than of the table, and it is measured by
+   * the fraction test below instead of the count ceiling.
+   */
+  const hasShortToken = (term: string) =>
+    searchTokens(term).some((token) => token.length <= WHOLE_WORD_MAX_LENGTH);
+
   /**
    * The anti-keyword-stuffing assertion, and the only one here with a number in it.
    *
@@ -336,22 +421,40 @@ describe("SUB_INDUSTRY_TERMS", () => {
    * of them is the point. What is not allowed is a term so generic that it stops the
    * filter narrowing anything. Six rows out of 182 is the ceiling; a new term that
    * breaks it belongs on fewer rows, or belongs on the INDUSTRY instead.
+   *
+   * **A term holding a short token is measured by the test below instead**, and the
+   * split is what keeps this one meaning what it says. `bi`, `si`, `pr`, and initialisms
+   * like `p and c` reach many rows, and not one of those is the table's fault: a short
+   * token matches a word's opening letters, so `pr` reaching every `product`, `process`
+   * and `private` row is the prefix rule working. Holding them to six here would report
+   * correctly-filed acronyms as keyword stuffing and say nothing about breadth that the
+   * matcher had not already decided.
    */
   it("has no term broad enough to stop the filter narrowing", () => {
     const AMBIGUITY_CEILING = 6;
-    const tooBroad: string[] = [];
-    const seen = new Set<string>();
-    for (const terms of Object.values(SUB_INDUSTRY_TERMS)) {
-      for (const term of terms) {
-        if (seen.has(term)) continue;
-        seen.add(term);
-        const matched = hits(term).filter((row) => row.kind === "sub-industry");
-        if (matched.length > AMBIGUITY_CEILING) {
-          tooBroad.push(`"${term}" reaches ${matched.length} sub-industries`);
-        }
-      }
-    }
+    const tooBroad = everyTerm
+      .filter((term) => !hasShortToken(term))
+      .filter((term) => subIndustryHits(term) > AMBIGUITY_CEILING)
+      .map((term) => `"${term}" reaches ${subIndustryHits(term)} sub-industries`);
     expect(tooBroad).toEqual([]);
+  });
+
+  /**
+   * The short terms, held to the thing that is actually true of them.
+   *
+   * A short token is an UNFINISHED word, so reaching a lot of rows is correct — what
+   * would be wrong is reaching so many that the panel is the unfiltered list and the
+   * visitor learns the filter does nothing. Stated as a fraction rather than a count so
+   * it survives the taxonomy growing, and applied to every term holding a short token
+   * rather than only a lone one, since a short token is a prefix wherever it sits.
+   */
+  it("keeps even a two-letter term a filter rather than a pass-through", () => {
+    const ceiling = businessTypes.length / 2;
+    const useless = everyTerm
+      .filter(hasShortToken)
+      .filter((term) => subIndustryHits(term) >= ceiling)
+      .map((term) => `"${term}" reaches ${subIndustryHits(term)} of ${businessTypes.length}`);
+    expect(useless).toEqual([]);
   });
 
   it("never duplicates a term inside one row", () => {

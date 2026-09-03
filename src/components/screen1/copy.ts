@@ -1,6 +1,6 @@
 import { formatCount } from "@/components/public/primitives";
 import { DEFAULT_PUBLIC_COPY, type PublicCopy } from "@/data/schema";
-import type { PeerView } from "@/data/screen1";
+import { companyName, type PeerView } from "@/data/screen1";
 
 /**
  * **Every STATIC heading and label in this file is now DERIVED from
@@ -171,14 +171,18 @@ export const IMPACT = {
    * Two fields, and the split now does something different from what it was written
    * for. It existed because the brand name was set in the action orange and a
    * highlight inside a heading is structure rather than styling. The name is no
-   * longer typed at all — it is the drawn lockup, stacked under the lead — so
+   * longer typed at all — it is the drawn lockup, inline and LEADING the heading — so
    * `titleBrand` is now the ACCESSIBLE NAME for a graphic rather than a styled span.
+   *
+   * The rendered heading is "ANSR By The Numbers": this field is the first word and
+   * `impactTitleLead` is the rest. The mark used to close the sentence instead; see
+   * `impact-band.tsx`.
    *
    * Still two fields rather than one string the component slices on the last word:
    * a slice would silently move if the heading were reworded, and the point of
    * holding copy in one file is that rewording it is safe.
    *
-   * The rendered heading is still one accessible name, "Impact delivered by ANSR".
+   * The rendered heading is still one accessible name, "ANSR By The Numbers".
    *
    * The band's one orange is now the lockup's burst rather than the word. Same rule,
    * spent once — and it no longer has to be measured as text, because it is not text.
@@ -724,7 +728,28 @@ export function largestLine(view: PeerView): string {
  * the band directly above — so the heading now names the real comparison and claims
  * nothing about what the visitor runs.
  */
-export const PEERS_TITLE = DEFAULT_PUBLIC_COPY.peersTitle;
+/**
+ * **It names the visitor's company now, at ANSR's request, and that is why it stopped
+ * being published copy.** It was `siteContent.copy.peersTitle` — a fixed string, so
+ * legitimately a field an admin could edit. "GCC details of peers closest to {company}"
+ * is not fixed: the company name is the one OPTIONAL input, so the heading has two
+ * branches, and a flat field could hold only one of them. Same reasoning as the
+ * snapshot's opening label, which never became a field; see `publicCopySchema`.
+ *
+ * **The fallback branch is "your profile", which is the wording the whole heading used
+ * to be.** It is kept rather than replaced because of what it was chosen to avoid:
+ * "closest to yours" presumes the visitor already runs an India centre, and `gccStatus`
+ * is a constant the form never asks for, so the tool cannot know. "Your profile" is
+ * exactly what the matching consumed — the four answers echoed on the band above — so it
+ * names the real comparison and claims nothing about what the visitor runs.
+ *
+ * `companyName` in `screen1.ts` is the single definition of "did they type one", so this
+ * branches on the same call the context pills do and the two cannot disagree.
+ */
+export function peersTitle(view: PeerView): string {
+  const name = companyName(view.input);
+  return `GCC details of peers closest to ${name ?? "your profile"}`;
+}
 
 /**
  * How many are shown, out of what.
@@ -897,6 +922,12 @@ export function largestCountLine(view: PeerView): string {
  * Nothing overlapping means there is nothing to say. Everything overlapping never
  * reaches here — `repeatsPeers` collapses the whole block to one line rather than
  * redrawing the peer set under a second heading.
+ *
+ * **Rendered nowhere, at ANSR's request, and kept for the reason every other removed
+ * sentence is kept.** It sat as a full-measure line under the five-row chart and states
+ * no quantity the chart does not: the per-row "in your peer set" marker already names
+ * which rows overlap, one row at a time. Restoring it is one line in
+ * `LargestBlockView`. On the blocked list.
  */
 export function largestOverlapLine(view: PeerView): string | null {
   const entries = view.largest.entries;
@@ -908,9 +939,13 @@ export function largestOverlapLine(view: PeerView): string | null {
   // judgement where the two figures are available and say it themselves.
   // "GCCs", as the heading and the count line above it both say. See `largestCountLine`.
   const of = `${formatCount(overlap)} of the ${formatCount(entries.length)} largest ${industry} GCCs in India`;
+  // "peer set", the word the per-row marker uses and the word the product uses. It said
+  // "comparison set" while the marker did; ANSR asked for the shorter one, and one
+  // vocabulary matters more here than in most places, since the sentence and the marker
+  // are two readings of the same overlap.
   return overlap === 1
-    ? `${of} is in your comparison set above.`
-    : `${of} are in your comparison set above.`;
+    ? `${of} is in your peer set above.`
+    : `${of} are in your peer set above.`;
 }
 
 /**
@@ -929,7 +964,18 @@ export function largestOverlapLine(view: PeerView): string | null {
  * states the ordering in six words rather than in two sentences. Nothing on the
  * block draws or implies a share, which is the property a spec still asserts.
  */
-export const FUNCTIONS_TITLE = "Functions most GCCs run from India";
+/**
+ * **Reworded at ANSR's request, and the generality claim is what had to survive it.**
+ * It was "Functions most GCCs run from India". "Common functions run from the India
+ * GCCs" keeps the two words the block depends on: "common", which says the set is
+ * typical of India GCCs at large rather than measured off anything on this page, and
+ * the plural "GCCs" with no possessive tying it to the five cards above. There is no
+ * per-company function record in this dataset, so a heading a reader could take as a
+ * claim about those five companies would be a claim with nothing behind it.
+ *
+ * It stays in code for that reason and is asserted absent from published copy.
+ */
+export const FUNCTIONS_TITLE = "Common functions run from the India GCCs";
 
 /**
  * What the list is, and deliberately not what order it is in.
@@ -968,7 +1014,17 @@ export function mapTitle(view: PeerView): string {
    * which is the same defect as the six headings, one card down. The interrogative
    * noun phrase asks the block's question without taking the lead's opening.
    */
-  return `Which cities ${view.industry.industry} has chosen`;
+  /**
+   * **The INDUSTRY, not the sub-industry, and ANSR asked for the sub-industry.** The
+   * map is built from `density`, which is filtered to `input.industry` — see `MapBlock`,
+   * whose own `industry` field is `input.industry` verbatim — so a heading naming the
+   * sub-industry would name a population the dots were not drawn from. Narrowing the
+   * map itself is a data change rather than a copy one and is not free: the thinnest
+   * sub-industries hold a handful of companies, which is two or three dots on an outline
+   * of India. The same correction is made on two snapshot labels; see
+   * `snapshotCitiesLabel`.
+   */
+  return `Cities where ${view.industry.industry} companies have set up`;
 }
 
 /* ==========================================================================
@@ -1196,7 +1252,8 @@ export interface Signal {
  * The three snapshot labels that are published strings, and NOT the fourth.
  *
  * **The opening cell's label is composed, which is why it is not here and cannot be.**
- * It reads "GCCs in your sub-industry" or "GCCs in your industry" depending on whether
+ * It reads "companies in this sub-industry have a GCC in India" or "…this industry…"
+ * depending on whether
  * the visitor named a sub-industry, so it is a function of the input rather than a fixed
  * string — the same reason every derived sentence in this file stayed in code. A flat
  * field could only hold one of the two branches, and the branch it dropped would be the
@@ -1317,14 +1374,21 @@ export function signals(
       // branch nothing is lost: `industry.total` IS every GCC in the industry, so the
       // shorter label is the more exact of the two. On the sub-industry branch the figure
       // is the population above the similarity floor rather than everything sharing one
-      // sub-industry label, so "GCCs in your sub-industry" now reads very slightly wider
+      // sub-industry label, so "companies in this sub-industry" reads very slightly wider
       // than what is counted. Accepted because it cannot mislead in the direction that
       // matters: the count is the population the five cards below were drawn from, so the
       // cell and the cards still agree, which is the failure the count was chosen to avoid.
       //
       // "your" stays — it is the one place on this strip the visitor's own answer is
       // addressed, the other three cells being national facts.
-      label: `GCCs in your ${comparable.scope}`,
+      // **A sentence predicate now, completing the figure above it, which is the shape
+      // ANSR reworded all four cells into** — the terminating scale strip has always
+      // read this way. Still composed over the visitor's own scope, and still the one
+      // label on the strip that addresses their answer; the other three are national
+      // facts. "this sub-industry" rather than "your sub-industry" because the clause
+      // already has a subject, and "companies in your sub-industry have a GCC" reads as
+      // though the visitor owns the population.
+      label: `companies in this ${comparable.scope} have a GCC in India`,
     },
     {
       kind: "figure",

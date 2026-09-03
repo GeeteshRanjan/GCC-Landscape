@@ -5,6 +5,13 @@ import { useMemo, useState } from "react";
 import { MetricEditor } from "@/components/admin/metric-editor";
 import { useDraft } from "@/components/admin/draft-provider";
 import { AdminPageHeader, AdminSection } from "@/components/admin/page-header";
+import {
+  AdminSearch,
+  NoSearchMatches,
+  useAdminSearch,
+  useDeepLinkOpen,
+  useDeepLinkQuery,
+} from "@/components/admin/search-box";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -34,10 +41,56 @@ import type { Metric } from "@/data/schema";
 
 export function MetricsManager() {
   const { draft } = useDraft();
+  const search = useAdminSearch();
   const [editing, setEditing] = useState<string | null>(null);
 
+  // Arriving from the universal search. `open` is a metric id, which is what the
+  // editing state already holds, so no lookup is needed — an unknown id resolves to
+  // `null` below and the page simply shows the filtered list.
+  useDeepLinkQuery(search.setQuery);
+  useDeepLinkOpen(setEditing);
+
+  /**
+   * The catalogue, narrowed by the query BEFORE it is grouped.
+   *
+   * Grouping first and filtering the groups would leave empty function sections and
+   * empty lens headings on screen — thirteen headings over nothing, which reads as a
+   * page that failed rather than as a search that narrowed. `groupMetrics` drops a
+   * group with no members, so filtering first gets the collapse for free.
+   *
+   * **What is searchable is wider than what is drawn, deliberately.** The title and
+   * question are what an admin reads; the id, the unit and the function and lens names
+   * are how they arrive. An id in particular: `data:verify` reports by id, the gated
+   * set is recorded by id, and `metric-catalogue.ts` is authored by id — so the thing
+   * an admin is holding when they come here is usually not a sentence.
+   *
+   * `gated` goes in as the words on its own badge, so "gate" collects the four
+   * metrics behind it, and the completeness state goes in as "empty" — which turns
+   * the figure row above into something you can act on rather than just read.
+   */
+  const filtered = useMemo(
+    () =>
+      draft.metrics.filter((metric) =>
+        search.matches(
+          metric.title,
+          metric.question,
+          metric.id,
+          metric.unit,
+          METRIC_FUNCTION_LABELS[metric.functionArea],
+          METRIC_LENS_ADMIN_LABELS[metric.lens],
+          metric.gated && "behind the gate gated",
+          isMetricComplete(metric) ? "complete" : "empty incomplete",
+        ),
+      ),
+    // `search.matches` is stable per query.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [draft.metrics, search.matches],
+  );
+
+  // Progress describes the CATALOGUE, so it is never filtered: "9 empty" has to mean
+  // nine in the dataset, not nine among whatever is on screen.
   const progress = useMemo(() => metricProgress(draft.metrics), [draft.metrics]);
-  const grouped = useMemo(() => groupMetrics(draft.metrics), [draft.metrics]);
+  const grouped = useMemo(() => groupMetrics(filtered), [filtered]);
   const editingMetric = editing
     ? draft.metrics.find((metric) => metric.id === editing) ?? null
     : null;
@@ -62,6 +115,22 @@ export function MetricsManager() {
             <Figure label="Empty" value={progress.empty} />
             <Figure label="Behind the gate" value={progress.gated} />
           </dl>
+
+          <AdminSearch
+            placeholder="Attrition, hr-, empty, cost"
+            hint="Searches the title, question, id, unit and the internal filing labels. Try “empty” for everything still unentered."
+            value={search.query}
+            onChange={search.setQuery}
+            status={
+              search.searching
+                ? `${filtered.length} of ${draft.metrics.length} metrics`
+                : undefined
+            }
+          />
+
+          {search.searching && filtered.length === 0 ? (
+            <NoSearchMatches query={search.query} what="metrics" />
+          ) : null}
 
           {grouped.map((entry) => (
             <AdminSection

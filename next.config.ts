@@ -37,6 +37,15 @@ const MARK_CDN = process.env.NEXT_PUBLIC_GCC_BRANDFETCH_CLIENT_ID?.trim()
 const PUBLIC_IMG_SRC = `img-src 'self' data:${MARK_CDN}`;
 
 const nextConfig: NextConfig = {
+  /**
+   * TEMPORARY — lets a SECOND dev server run beside the first without either touching
+   * the other's build directory. Two `next dev` processes sharing one `.next/` is the
+   * failure recorded in `docs/traps.md`: every request 500s with a
+   * `TurbopackInternalError`. Unset, this is `.next` and nothing changes.
+   *
+   * Goes with the variant harness.
+   */
+  distDir: process.env.GCC_DIST_DIR ?? ".next",
   outputFileTracingIncludes: {
     "/**": ["./data/**"],
   },

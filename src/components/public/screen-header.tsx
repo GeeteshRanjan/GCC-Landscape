@@ -2,6 +2,7 @@
 
 import { Pencil } from "lucide-react";
 
+import { AtlasWordmark } from "@/components/public/atlas-wordmark";
 import { usePublicCopy } from "@/components/public/copy-context";
 import { DottedWorldMap } from "@/components/screen1/dotted-world-map";
 import { DEFAULT_PUBLIC_COPY, type PublicCopy } from "@/data/schema";
@@ -93,12 +94,29 @@ export function ResultSurface({
   motif,
   tabs,
   card,
+  editor,
   footer,
   children,
 }: {
   motif: HeaderMotif;
   tabs: React.ReactNode;
   card: React.ReactNode;
+  /**
+   * The answer editor, when the visitor has opened it — see `AnswerEditor`.
+   *
+   * **A slot here rather than a node inside `children`, and `.gcc-result-band`'s
+   * `overflow: hidden` is the whole reason.** The band clips: it has to, because the
+   * dotted map, the lattice and the motif all overhang it. Every control in the editor
+   * opens a popup taller than the room below it, so an editor rendered among the band's
+   * children would have all four dropdowns cut off at the band's bottom edge — silently,
+   * and looking like a broken control rather than a clipping ancestor.
+   *
+   * So it renders as a SIBLING of the band, overlapping its lower edge with the same
+   * negative pull the card uses. Which is also the entry point's own composition — a
+   * white form card lifted onto the teal — and that is the right reading rather than a
+   * coincidence: it is the same form.
+   */
+  editor?: React.ReactNode;
   /**
    * One caption line UNDER the card, on the page ground.
    *
@@ -169,10 +187,40 @@ export function ResultSurface({
         </div>
       </div>
 
+      {/* **The answer editor, occupying the overlap the card normally has.** It takes the
+          card's own pull, so the panel is lifted onto the band exactly as far as the card
+          would have been — the surface's silhouette is unchanged and only what sits in
+          the notch differs.
+
+          `z-20` is what lets its dropdowns overhang the card below it. Everything else on
+          this page is `z-auto`, so a single positive step is enough and no other layer
+          had to be given a number to make room for it. */}
+      {editor ? (
+        <div className="relative z-20 mx-auto -mt-20 max-w-content px-6 md:-mt-24 md:px-12">
+          {/* Radius `xl` and a shadow, matching `.gcc-result-card` rather than the entry
+              point's `lg` form card: this panel is the same width as the card beneath it
+              and stacked directly above it, so a smaller radius on the upper of two
+              concentric white boxes reads as a mistake. */}
+          <div className="rounded-xl bg-surface px-5 py-6 shadow-lg sm:px-8 md:px-10 md:py-8">
+            {editor}
+          </div>
+        </div>
+      ) : null}
+
       {/* The card, pulled up onto the band. The bottom padding is the page ground
           showing under the card, which is what makes it float rather than sit on a
-          shelf — and it is where the document ends. */}
-      <div className="relative mx-auto -mt-20 max-w-content px-6 pb-10 md:-mt-24 md:px-12 md:pb-16">
+          shelf — and it is where the document ends.
+
+          **The pull is DROPPED while the editor is open**, because the editor is already
+          in the notch. Two elements sharing one negative margin would put the card's top
+          edge over the editor's foot, which is the one place the editor's submit button
+          is. A plain gap instead, so the two read as stacked panels on the page ground. */}
+      <div
+        className={cn(
+          "relative mx-auto max-w-content px-6 pb-10 md:px-12 md:pb-16",
+          editor ? "mt-6 md:mt-8" : "-mt-20 md:-mt-24",
+        )}
+      >
         <div className="gcc-result-card">
           {/* The card's first row and the rest of it. No wrapper between them and
               nothing positioned: the bar is in the flow, so its corners are the
@@ -327,8 +375,29 @@ export function HeaderFinding({ children }: { children: React.ReactNode }) {
 }
 
 /**
- * `ANSR GCC Intelligence` — the product lockup, and the `h1` of both result
- * screens.
+ * `ANSR ATLAS` — the product lockup, and the `h1` of both result screens.
+ *
+ * **"ATLAS", where this read "GCC Intelligence", at ANSR's request.** The old wording
+ * named a CATEGORY, and it named it in three words directly above a finding line that
+ * also describes what the screen is about — so the `h1` and the sentence under it were
+ * doing the same job and neither was the product's name. Atlas is the name, it is already
+ * the entry point's own headline (`siteContent.hero.title` opens "ANSR ATLAS"), and the
+ * two surfaces now say the same thing about what a visitor is in.
+ *
+ * Set in CAPS, matching the headline rather than the sentence case the old phrase used:
+ * the wordmark beside it is all-caps drawn letters, so a title-case word next to it read
+ * as a caption appended to the mark rather than as the second half of a lockup.
+ *
+ * **BOTH HALVES ARE DRAWN NOW — see `AtlasWordmark`.** The name was typed for a pass,
+ * which put a font beside artwork inside one lockup and made the two halves answer to
+ * different things: the drawn half is fixed and the typed half moves with whatever face
+ * is loaded, so the day Moderat replaces the stand-in the lockup changes shape. The
+ * substitution keeps the composition — the drawn name's caps are set to the display
+ * face's own cap height, so it occupies the cap band the typed word occupied — and the
+ * heading's accessible name is unchanged, the mark being out of the accessibility tree
+ * with the word carried beside it.
+ *
+ * **It is a CONTROL now — see `onHome`.**
  *
  * **The full lockup, mark and wordmark together, and the typed period is gone.**
  * It was the wordmark alone with a period typed after it in the action orange,
@@ -363,7 +432,71 @@ export function HeaderFinding({ children }: { children: React.ReactNode }) {
  * headline and the impact band's, and the only three places a drawn mark sits in a
  * line of type.
  */
-export function ProductIdentity({ id }: { id: string }) {
+export function ProductIdentity({
+  id,
+  onHome,
+}: {
+  id: string;
+  /**
+   * Back to the entry point, at ANSR's request: the lockup is the way home.
+   *
+   * **This is the ONE affordance on the band that leaves the result, and it exists
+   * because the other one stopped leaving.** "Edit answers" used to go to the form; it
+   * now opens the answer editor in place — see `ContextPanels` — so without this there
+   * would be no route back to the entry point from either result screen at all. A mark
+   * that returns you to the start is the most reproduced pattern on the web and needs no
+   * label to explain it, which is why it is the control that took the job rather than a
+   * second button added to a band that has one.
+   *
+   * Optional, so the lockup is still renderable as a plain heading. Nothing passes it
+   * absent today; the branch is what keeps the `h1` from being unconditionally
+   * interactive, which is a claim about the surface rather than about this component.
+   */
+  onHome?: () => void;
+}) {
+  /**
+   * The lockup's own contents, drawn identically whether or not they are inside a
+   * button.
+   *
+   * **One copy, deliberately.** The two branches differ by exactly one element, and the
+   * measurements below — 1.7em off the artboard, the `ps-3` gap — are the reason this
+   * component exists. Two copies of them is how a pressable lockup and a plain one start
+   * being drawn at two different sizes.
+   */
+  const lockup = (
+    <>
+      {/* The lockup carries the heading's first word. `alt="ANSR"` rather than an
+          empty alt with an `sr-only` node beside it: this is a real image with real
+          text in it, so the accessible name belongs on the element, and the heading
+          computes to "ANSR ATLAS" — the product's name, unchanged in meaning from
+          the version that typed the word. */}
+      {/* eslint-disable-next-line @next/next/no-img-element -- a fixed-ratio SVG
+          lockup, which the optimiser cannot improve on. */}
+      <img
+        src="/brand/ansr-logo-on-dark.svg"
+        alt="ANSR"
+        width={253}
+        height={91}
+        // 1.7em off the artboard puts the wordmark's caps at 0.71em, which is the
+        // display face's cap height. See the block comment for the arithmetic — it
+        // is the reason this is not `h-[1em]`.
+        className="h-[1.7em] w-auto shrink-0"
+      />
+      {/* **The product name is DRAWN here too, so the `h1` is two marks and no type.**
+          It was the typed word, which meant half the lockup was a font and half was
+          artwork — and the half that was a font changes with the face, so the two
+          would have drifted the moment Moderat replaced the stand-in. `AtlasWordmark`
+          carries the measurement that keeps them one object: its caps are set to the
+          display face's own cap height, which is within 1.6% of what the ANSR lockup's
+          wordmark sets beside it, so the substitution changed what the letters are
+          drawn from and nothing about the composition. `ms-3` is the gap the typed
+          word's `ps-3` was, moved from padding to margin because the flex item is the
+          mark itself now rather than a span around it — see `AtlasWordmark`, where
+          the wrapper is what put it 1.1px off the lockup. */}
+      <AtlasWordmark className="ms-3" />
+    </>
+  );
+
   return (
     <h1
       id={id}
@@ -387,26 +520,45 @@ export function ProductIdentity({ id }: { id: string }) {
       // the drawn wordmark, whose stem is 0.137 of its cap height — the display face's
       // Medium — and whose sidebearings are normal rather than tight. Bold beside it is
       // two fonts on one line.
-      className="flex items-center text-2xl leading-tight font-medium tracking-body text-text-inverse md:text-3xl"
+      // `flex` on the heading itself only where the lockup is NOT wrapped — a button
+      // child would otherwise be a flex item and the alignment would have to be stated
+      // twice. Where there is a button, the button is the flex row.
+      className={cn(
+        "text-2xl leading-tight font-medium tracking-body text-text-inverse md:text-3xl",
+        onHome ? undefined : "flex items-center",
+      )}
     >
-      {/* The lockup carries the heading's first word. `alt="ANSR"` rather than an
-          empty alt with an `sr-only` node beside it: this is a real image with real
-          text in it, so the accessible name belongs on the element, and the heading
-          computes to "ANSR GCC Intelligence" — the product's name, unchanged in
-          meaning from the version that typed the word. */}
-      {/* eslint-disable-next-line @next/next/no-img-element -- a fixed-ratio SVG
-          lockup, which the optimiser cannot improve on. */}
-      <img
-        src="/brand/ansr-logo-on-dark.svg"
-        alt="ANSR"
-        width={253}
-        height={91}
-        // 1.7em off the artboard puts the wordmark's caps at 0.71em, which is the
-        // display face's cap height. See the block comment for the arithmetic — it
-        // is the reason this is not `h-[1em]`.
-        className="h-[1.7em] w-auto shrink-0"
-      />
-      <span className="ps-3">GCC Intelligence</span>
+      {onHome ? (
+        <button
+          type="button"
+          onClick={onHome}
+          /**
+           * **The accessible name is the product's name and nothing else, which is
+           * deliberate.** An `aria-label` here would be read by name-from-content when
+           * the `h1` computes its own name — so "ANSR ATLAS, back to the form" would
+           * become the heading of both result screens, and the outline would carry an
+           * instruction. `title` says where it goes to a pointer user without touching
+           * either name; the pattern itself is what says it to everyone else.
+           */
+          title="Back to the start"
+          className={cn(
+            "flex items-center text-start",
+            // The one hover state anywhere on this band, and it is legal here for the
+            // reason it is banned on the pills: this object is pressable. Opacity
+            // rather than a rise or a fill — the lockup is a brand asset used
+            // literally, so nothing may recolour it, and a transform on a 1.7em image
+            // beside type would move the wordmark off the line the type sits on.
+            "transition-opacity duration-fast ease-standard hover:opacity-80",
+            // The band is a dark gradient, so the ring has to be the inverse ink or it
+            // is invisible on the one surface it has to be visible on.
+            "rounded-sm outline-none focus-visible:ring-2 focus-visible:ring-text-inverse focus-visible:ring-offset-2 focus-visible:ring-offset-transparent",
+          )}
+        >
+          {lockup}
+        </button>
+      ) : (
+        lockup
+      )}
     </h1>
   );
 }
@@ -481,9 +633,23 @@ export interface ContextFact {
 export function ContextPanels({
   facts,
   onEdit,
+  editing = false,
+  controls,
 }: {
   facts: readonly ContextFact[];
+  /**
+   * Opens — and closes — the answer editor.
+   *
+   * **It no longer leaves the result screen**, which is the change and the reason
+   * `editing` exists beside it. See `AnswerEditor` for why the trip to the form was
+   * dropped. The label is unchanged, because "Edit answers" was already the honest
+   * description of what the control does and is now more so.
+   */
   onEdit: () => void;
+  /** Whether the editor is open, which the button reports and reflects. */
+  editing?: boolean;
+  /** The editor's id, for `aria-controls`. */
+  controls?: string;
 }) {
   return (
     /**
@@ -518,6 +684,13 @@ export function ContextPanels({
       <button
         type="button"
         onClick={onEdit}
+        /* **A disclosure, not a link out.** The editor opens below the band rather than
+           replacing the screen, so the control is a toggle and says so: `aria-expanded`
+           is the machine reading, and `aria-controls` points at the panel it opens. Both
+           were absent while pressing this was a navigation, and adding them is what stops
+           a screen-reader user pressing it, hearing nothing change, and pressing again. */
+        aria-expanded={editing}
+        aria-controls={editing ? controls : undefined}
         /* **It is the size of a pill again, and the 44px target is kept off-screen.**
            `min-h-11` was added because the control measured 38px on one axis, under the
            minimum — and it bought that by making the only button in the band 44px tall

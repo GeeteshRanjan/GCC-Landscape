@@ -171,7 +171,7 @@ test.describe("a breakdown", () => {
      * this pair is the technology tab's graduate blocks, and it is at the floor for the
      * same reason: two entries is the schema's minimum for a breakdown.
      */
-    await openMetric(page, "Technology Graduate Pipeline");
+    await openMetric(page, "Graduate pipeline for technology");
 
     // Disabled rather than allowed and then rejected at the publish gate.
     await expect(page.getByRole("button", { name: "Remove part 1" })).toBeDisabled();
@@ -379,6 +379,51 @@ test.describe("the couplings an admin cannot otherwise see", () => {
     await expect(
       page.getByRole("status").filter({ hasText: heading }),
     ).toContainText("500 FTEs (20)");
+  });
+
+  /**
+   * The fourth notice, on the one metric whose `unit` the public screen DRAWS.
+   *
+   * `ops-grade-a-office-stock` is promoted into the operations figure row, so its unit is
+   * set two scale steps under a 48px numeral in a cell measured at 192px — where every
+   * other metric's unit is prose in an axis note. `unitSchema` caps a unit at 60
+   * characters and cannot be tightened, because two other metrics' units are already 39
+   * and 42, so nothing but this notice stands between an admin and a clipped figure.
+   *
+   * Two properties, and the second is what stops it being noise: it fires on a length no
+   * cell could hold, and it says nothing about the shipped value.
+   */
+  test("warns when the one DRAWN unit is too long for the cell it is set in", async ({
+    page,
+  }) => {
+    await page.goto("/admin/metrics");
+    await openMetric(page, "Grade A stock in top 7 cities", "Operations");
+    // The shipped "mn sq ft" is inside the cell, so the editor opens silent.
+    await expect(page.getByText(heading)).toHaveCount(0);
+
+    await page.getByLabel("Unit").fill("million square feet");
+    const notice = page.getByRole("status").filter({ hasText: heading });
+    await expect(notice).toBeVisible();
+    await expect(notice).toContainText("million square feet");
+    // Advisory, like its three siblings: a wording call, not a typo.
+    await expect(page.getByRole("button", { name: "Save to draft" })).toBeEnabled();
+
+    await page.getByLabel("Unit").fill("mn sq ft");
+    await expect(page.getByText(heading)).toHaveCount(0);
+  });
+
+  /**
+   * And it is scoped to that one metric. Every other unit is read as prose, so a long one
+   * is legitimate there — a notice that fired on all of them is one an admin learns to
+   * ignore, which is the standing rule for this whole group.
+   */
+  test("says nothing about a unit that is only ever read as prose", async ({ page }) => {
+    await page.goto("/admin/metrics");
+    await openMetric(page, "Manager-level and above", "Technology");
+    await expect(page.getByLabel("Unit")).toHaveValue(
+      "professionals in manager and above roles",
+    );
+    await expect(page.getByText(heading)).toHaveCount(0);
   });
 });
 
