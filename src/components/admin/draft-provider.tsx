@@ -199,6 +199,14 @@ interface DraftContextValue {
   /** `null` removes the coordinate, which is how a city goes back to carrying no dot. */
   setCityCoordinate: (city: string, coord: LatLon | null) => void;
 
+  /**
+   * Undo one pending change, restoring its baseline value. The surgical
+   * counterpart to `discardDraft`: an admin sitting on a month of edits with a
+   * few stale ones mixed in can drop the stale ones one at a time rather than
+   * throwing the whole draft away.
+   */
+  revert: (target: RevertTarget) => void;
+
   /** Throw the draft away and go back to what is published. */
   discardDraft: () => void;
   /** Keep the local draft but re-pin it to the current baseline. */
@@ -208,6 +216,163 @@ interface DraftContextValue {
 }
 
 const DraftContext = createContext<DraftContextValue | null>(null);
+
+/**
+ * One pending change, addressed precisely enough to put it back.
+ *
+ * The publish diff carries the coordinates of every change — an id, a field, a
+ * collection — and this is the same set expressed as an instruction to undo one.
+ * The grain follows what the diff draws: a company or a copy string is reverted
+ * field by field, because that is how they read; a metric, a business type or a
+ * whole taxonomy list is reverted as one entity, because a single field of one
+ * is not independently meaningful.
+ *
+ * The value put back always comes from the baseline, never from the diff's own
+ * `before`, which is formatted for display (tags are comma-joined, coordinates
+ * are stringified) and does not round-trip.
+ */
+export type RevertTarget =
+  | { kind: "companyField"; id: string; field: keyof Company }
+  | { kind: "company"; id: string }
+  | { kind: "metric"; id: string }
+  | { kind: "businessType"; id: string }
+  | { kind: "taxonomy"; key: keyof Dataset["taxonomy"] }
+  | { kind: "heroField"; field: keyof HeroCopy }
+  | { kind: "closeField"; field: keyof CloseCopy }
+  | { kind: "copyField"; field: keyof PublicCopy }
+  | { kind: "commonFunctions" }
+  | { kind: "logos" }
+  | { kind: "impactStats" };
+
+/**
+ * Put one entity back to its baseline, handling the three shapes a change can
+ * take: an edit (present both sides — replace it), an addition (present only in
+ * the draft — drop it), and a removal (present only in the baseline — reinsert it
+ * where it sits there, so order is not disturbed).
+ */
+function revertById<T extends { id: string }>(
+  current: readonly T[],
+  base: readonly T[],
+  id: string,
+): T[] {
+  const baseItem = base.find((item) => item.id === id);
+  const inCurrent = current.some((item) => item.id === id);
+  if (baseItem && inCurrent) {
+    return current.map((item) => (item.id === id ? baseItem : item));
+  }
+  if (baseItem && !inCurrent) {
+    const at = base.findIndex((item) => item.id === id);
+    const next = [...current];
+    next.splice(Math.min(at, next.length), 0, baseItem);
+    return next;
+  }
+  if (!baseItem && inCurrent) {
+    return current.filter((item) => item.id !== id);
+  }
+  return [...current];
+}
+
+/**
+ * Pure: the editable slice with one change undone against the baseline. Kept out
+ * of the component so the logic is a data transform rather than a closure over
+ * render state, the same reasoning the metric mutators are written under.
+ */
+function revertEditable(
+  current: EditableDataset,
+  base: EditableDataset,
+  target: RevertTarget,
+): EditableDataset {
+  switch (target.kind) {
+    case "companyField": {
+      const baseCompany = base.companies.find((c) => c.id === target.id);
+      // A field revert only reaches an edited company, which is present in both.
+      // A company added in the draft has no baseline field to restore to.
+      if (!baseCompany) return current;
+      return {
+        ...current,
+        companies: current.companies.map((company) =>
+          company.id === target.id
+            ? ({ ...company, [target.field]: baseCompany[target.field] } as Company)
+            : company,
+        ),
+      };
+    }
+    case "company":
+      return {
+        ...current,
+        companies: revertById(current.companies, base.companies, target.id),
+      };
+    case "metric":
+      return {
+        ...current,
+        metrics: revertById(current.metrics, base.metrics, target.id),
+      };
+    case "businessType":
+      return {
+        ...current,
+        businessTypes: revertById(current.businessTypes, base.businessTypes, target.id),
+      };
+    case "taxonomy":
+      return {
+        ...current,
+        taxonomy: {
+          ...current.taxonomy,
+          [target.key]: base.taxonomy[target.key],
+        } as Dataset["taxonomy"],
+      };
+    case "heroField":
+      return {
+        ...current,
+        siteContent: {
+          ...current.siteContent,
+          hero: {
+            ...current.siteContent.hero,
+            [target.field]: base.siteContent.hero[target.field],
+          } as HeroCopy,
+        },
+      };
+    case "closeField":
+      return {
+        ...current,
+        siteContent: {
+          ...current.siteContent,
+          close: {
+            ...current.siteContent.close,
+            [target.field]: base.siteContent.close[target.field],
+          } as CloseCopy,
+        },
+      };
+    case "copyField":
+      return {
+        ...current,
+        siteContent: {
+          ...current.siteContent,
+          copy: {
+            ...current.siteContent.copy,
+            [target.field]: base.siteContent.copy[target.field],
+          } as PublicCopy,
+        },
+      };
+    case "commonFunctions":
+      return {
+        ...current,
+        siteContent: {
+          ...current.siteContent,
+          commonFunctions: [...base.siteContent.commonFunctions],
+        },
+      };
+    case "logos":
+      return {
+        ...current,
+        siteContent: { ...current.siteContent, logos: [...base.siteContent.logos] },
+      };
+    case "impactStats":
+      return {
+        ...current,
+        siteContent: { ...current.siteContent, impactStats: [...base.siteContent.impactStats] },
+      };
+  }
+}
 
 function editableOf(dataset: Dataset): EditableDataset {
   return {
@@ -1007,6 +1172,15 @@ export function DraftProvider({
     });
   }, [applyEdit]);
 
+  const revert = useCallback(
+    (target: RevertTarget) => {
+      applyEdit((current) =>
+        revertEditable(current, editableOf(currentBaseline), target),
+      );
+    },
+    [applyEdit, currentBaseline],
+  );
+
   const discardDraft = useCallback(() => {
     setEditable(editableOf(currentBaseline));
     pinnedBaseline.current = currentBaseline.generatedAt;
@@ -1084,6 +1258,7 @@ export function DraftProvider({
       moveTaxonomyValue,
       setPinnedIndustry,
       setCityCoordinate,
+      revert,
       discardDraft,
       keepDraftAgainstNewBaseline,
       markPublished,
@@ -1123,6 +1298,7 @@ export function DraftProvider({
       moveTaxonomyValue,
       setPinnedIndustry,
       setCityCoordinate,
+      revert,
       discardDraft,
       keepDraftAgainstNewBaseline,
       markPublished,

@@ -340,7 +340,7 @@ export const METRIC_CATALOGUE: readonly Metric[] = [
     lens: "supply",
     /* Renamed in admin and published; the catalogue follows the datum. See the
        `tech-graduate-pipeline` note above for why leaving it behind is not neutral. */
-    title: "Talent Depth by Specialisation",
+    title: "Talent depth by discipline",
     question: "Is the depth spread across the specialisms we need, or concentrated in one?",
     unit: "professionals",
     format: "number",
@@ -388,9 +388,11 @@ export const METRIC_CATALOGUE: readonly Metric[] = [
     id: "tech-open-source-signal",
     functionArea: "tech",
     lens: "supply",
-    title: "Developers on GitHub",
+    /* Renamed in admin and published; the catalogue follows the datum, title and
+       unit both, so `--reseed-metrics` does not quietly revert the published copy. */
+    title: "Active github contributors",
     question: "Are engineers here building in the open, or only inside their employers?",
-    unit: "developers on GitHub",
+    unit: "active GitHub contributors",
     format: "number",
     note:
       "Second largest developer population globally, around 13% of global public contributions, with roughly 2.9M new accounts a year. GitLab and Kaggle were seeded parts with no figures and were removed, which makes this a single figure rather than a split.",

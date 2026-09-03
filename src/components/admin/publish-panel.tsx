@@ -1,8 +1,9 @@
 "use client";
 
+import { X } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 
-import { useDraft } from "@/components/admin/draft-provider";
+import { useDraft, type RevertTarget } from "@/components/admin/draft-provider";
 import { AdminPageHeader, AdminSection } from "@/components/admin/page-header";
 import { Button } from "@/components/ui/button";
 import {
@@ -42,7 +43,8 @@ type Phase =
   | { kind: "blocked"; error: string; issues?: string[] };
 
 export function PublishPanel() {
-  const { draft, dirty, conflict, markPublished, discardDraft } = useDraft();
+  const { draft, dirty, conflict, markPublished, discardDraft, revert } =
+    useDraft();
   const [phase, setPhase] = useState<Phase>({ kind: "idle" });
 
   const check = useCallback(async () => {
@@ -165,7 +167,7 @@ export function PublishPanel() {
         <PublishedState diff={phase.diff} />
       ) : (
         <>
-          <DiffView diff={phase.preview.diff} />
+          <DiffView diff={phase.preview.diff} onRevert={revert} />
           <div className="flex flex-wrap items-center gap-4 border-t border-border-subtle pt-5">
             <Button
               onClick={() => void publish(phase.preview)}
@@ -296,7 +298,39 @@ function summarise(diff: DatasetDiff): string {
   return parts.length > 0 ? parts.join(", ") : "No changes";
 }
 
-function DiffView({ diff }: { diff: DatasetDiff }) {
+/**
+ * The cross on a change row. Removing a change is undoing a local draft edit,
+ * never a destructive act on published data, so it is a quiet ghost control
+ * rather than an `.ansr-destructive` one. Admin is exempt from the public
+ * target-size floor; the negative margins keep it from growing the row.
+ */
+function RemoveButton({
+  label,
+  onClick,
+}: {
+  label: string;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-label={label}
+      title={label}
+      className="-my-2 -me-2 ms-auto inline-flex size-9 shrink-0 items-center justify-center rounded-full text-text-muted transition-colors hover:bg-surface-sunken hover:text-text focus-visible:bg-surface-sunken focus-visible:text-text"
+    >
+      <X aria-hidden="true" className="size-4" />
+    </button>
+  );
+}
+
+function DiffView({
+  diff,
+  onRevert,
+}: {
+  diff: DatasetDiff;
+  onRevert: (target: RevertTarget) => void;
+}) {
   if (diff.isEmpty) {
     return (
       <div className="border border-border-subtle bg-surface px-6 py-12 text-center">
@@ -330,34 +364,46 @@ function DiffView({ diff }: { diff: DatasetDiff }) {
         <DiffSection title={`Site copy (${diff.counts.siteContent})`}>
           <ul className="divide-y divide-border-subtle">
             {diff.siteContent.hero.map((change) => (
-              <li key={change.field} className="px-5 py-3 text-sm">
-                <p className="text-xs uppercase tracking-caps text-text-muted">
-                  Hero {change.field}
-                </p>
-                <p className="mt-1 text-text-muted line-through">{change.before}</p>
-                <p className="mt-0.5 text-text">{change.after}</p>
+              <li key={change.field} className="flex items-start gap-3 px-5 py-3 text-sm">
+                <div className="min-w-0 flex-1">
+                  <p className="text-xs uppercase tracking-caps text-text-muted">
+                    Hero {change.field}
+                  </p>
+                  <p className="mt-1 text-text-muted line-through">{change.before}</p>
+                  <p className="mt-0.5 text-text">{change.after}</p>
+                </div>
+                <RemoveButton
+                  label={`Remove this change to the hero ${change.field}`}
+                  onClick={() => onRevert({ kind: "heroField", field: change.field })}
+                />
               </li>
             ))}
             {/* The close's copy, beside the hero's and in the same shape. It is the one
                 part of this category that is not on the entry point, which is why the
                 label says so rather than leaving a reviewer to guess which band moved. */}
             {diff.siteContent.close.map((change) => (
-              <li key={change.field} className="px-5 py-3 text-sm">
-                <p className="text-xs uppercase tracking-caps text-text-muted">
-                  {/* `CLOSE_FIELD_LABELS` rather than the key, because two of the four
-                      are `ctaHrefPeers` and `ctaHrefFunctions` and neither names a
-                      screen an admin would recognise. Shared with the text renderer so
-                      the same change reads the same way in both. */}
-                  Result close {CLOSE_FIELD_LABELS[change.field]}
-                </p>
-                {/* A link field may legitimately be blank, meaning "use the configured
-                    default" — and a struck-through empty string renders as nothing at
-                    all, which would show a change with only one side of it. So a blank
-                    is named rather than drawn. */}
-                <p className="mt-1 text-text-muted line-through">
-                  {change.before || "(not set)"}
-                </p>
-                <p className="mt-0.5 text-text">{change.after || "(not set)"}</p>
+              <li key={change.field} className="flex items-start gap-3 px-5 py-3 text-sm">
+                <div className="min-w-0 flex-1">
+                  <p className="text-xs uppercase tracking-caps text-text-muted">
+                    {/* `CLOSE_FIELD_LABELS` rather than the key, because two of the four
+                        are `ctaHrefPeers` and `ctaHrefFunctions` and neither names a
+                        screen an admin would recognise. Shared with the text renderer so
+                        the same change reads the same way in both. */}
+                    Result close {CLOSE_FIELD_LABELS[change.field]}
+                  </p>
+                  {/* A link field may legitimately be blank, meaning "use the configured
+                      default" — and a struck-through empty string renders as nothing at
+                      all, which would show a change with only one side of it. So a blank
+                      is named rather than drawn. */}
+                  <p className="mt-1 text-text-muted line-through">
+                    {change.before || "(not set)"}
+                  </p>
+                  <p className="mt-0.5 text-text">{change.after || "(not set)"}</p>
+                </div>
+                <RemoveButton
+                  label={`Remove this change to the result close ${CLOSE_FIELD_LABELS[change.field]}`}
+                  onClick={() => onRevert({ kind: "closeField", field: change.field })}
+                />
               </li>
             ))}
             {/* The static strings, spelled out for the same reason the hero is: these
@@ -365,103 +411,189 @@ function DiffView({ diff }: { diff: DatasetDiff }) {
                 names the slot rather than the key, because "figuresHr" tells an admin
                 nothing about which screen moved. */}
             {diff.siteContent.copy.map((change) => (
-              <li key={change.field} className="px-5 py-3 text-sm">
-                <p className="text-xs uppercase tracking-caps text-text-muted">
-                  {PUBLIC_COPY_LABELS[change.field] ?? change.field}
-                </p>
-                <p className="mt-1 text-text-muted line-through">{change.before}</p>
-                <p className="mt-0.5 text-text">{change.after}</p>
+              <li key={change.field} className="flex items-start gap-3 px-5 py-3 text-sm">
+                <div className="min-w-0 flex-1">
+                  <p className="text-xs uppercase tracking-caps text-text-muted">
+                    {PUBLIC_COPY_LABELS[change.field] ?? change.field}
+                  </p>
+                  <p className="mt-1 text-text-muted line-through">{change.before}</p>
+                  <p className="mt-0.5 text-text">{change.after}</p>
+                </div>
+                <RemoveButton
+                  label={`Remove this change to ${PUBLIC_COPY_LABELS[change.field] ?? change.field}`}
+                  onClick={() => onRevert({ kind: "copyField", field: change.field })}
+                />
               </li>
             ))}
             {diff.siteContent.commonFunctions.added.map((value) => (
-              <li key={`fn-add-${value}`} className="px-5 py-2.5 text-sm text-text">
-                Function added: {value}
+              <li
+                key={`fn-add-${value}`}
+                className="flex items-center gap-3 px-5 py-2.5 text-sm text-text"
+              >
+                <span className="min-w-0 flex-1">Function added: {value}</span>
+                <RemoveButton
+                  label="Undo all changes to the function list"
+                  onClick={() => onRevert({ kind: "commonFunctions" })}
+                />
               </li>
             ))}
             {diff.siteContent.commonFunctions.removed.map((value) => (
-              <li key={`fn-del-${value}`} className="px-5 py-2.5 text-sm text-text">
-                Function removed: {value}
+              <li
+                key={`fn-del-${value}`}
+                className="flex items-center gap-3 px-5 py-2.5 text-sm text-text"
+              >
+                <span className="min-w-0 flex-1">Function removed: {value}</span>
+                <RemoveButton
+                  label="Undo all changes to the function list"
+                  onClick={() => onRevert({ kind: "commonFunctions" })}
+                />
               </li>
             ))}
             {diff.siteContent.commonFunctions.reordered ? (
-              <li className="px-5 py-2.5 text-sm text-text">
-                Function list reordered. The tags render in this order, so the page
-                changes even though no tag did.
+              <li className="flex items-center gap-3 px-5 py-2.5 text-sm text-text">
+                <span className="min-w-0 flex-1">
+                  Function list reordered. The tags render in this order, so the page
+                  changes even though no tag did.
+                </span>
+                <RemoveButton
+                  label="Undo all changes to the function list"
+                  onClick={() => onRevert({ kind: "commonFunctions" })}
+                />
               </li>
             ) : null}
             {diff.siteContent.logos.changed.map((logo) => (
-              <li key={`logo-${logo.src}`} className="px-5 py-3 text-sm">
-                <p className="font-medium text-text">{logo.name || logo.src}</p>
-                <ul className="mt-1.5 flex flex-col gap-1">
-                  {logo.changes.map((change) => (
-                    <li key={change.field} className="flex flex-wrap gap-x-2">
-                      <span className="text-xs uppercase tracking-caps text-text-muted">
-                        {change.field}
-                      </span>
-                      <span className="text-text-muted line-through">
-                        {change.before}
-                      </span>
-                      <span aria-hidden="true" className="text-text-muted">
-                        →
-                      </span>
-                      <span className="text-text">{change.after}</span>
-                    </li>
-                  ))}
-                </ul>
+              <li key={`logo-${logo.src}`} className="flex items-start gap-3 px-5 py-3 text-sm">
+                <div className="min-w-0 flex-1">
+                  <p className="font-medium text-text">{logo.name || logo.src}</p>
+                  <ul className="mt-1.5 flex flex-col gap-1">
+                    {logo.changes.map((change) => (
+                      <li key={change.field} className="flex flex-wrap gap-x-2">
+                        <span className="text-xs uppercase tracking-caps text-text-muted">
+                          {change.field}
+                        </span>
+                        <span className="text-text-muted line-through">
+                          {change.before}
+                        </span>
+                        <span aria-hidden="true" className="text-text-muted">
+                          →
+                        </span>
+                        <span className="text-text">{change.after}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+                <RemoveButton
+                  label="Undo all changes to the logo strip"
+                  onClick={() => onRevert({ kind: "logos" })}
+                />
               </li>
             ))}
             {diff.siteContent.logos.added.map((logo) => (
-              <li key={`logo-add-${logo.src}`} className="px-5 py-2.5 text-sm text-text">
-                Logo added: {logo.name || "unnamed"}
-                <span className="ms-2 font-mono text-xs text-text-muted">{logo.src}</span>
+              <li
+                key={`logo-add-${logo.src}`}
+                className="flex items-center gap-3 px-5 py-2.5 text-sm text-text"
+              >
+                <span className="min-w-0 flex-1">
+                  Logo added: {logo.name || "unnamed"}
+                  <span className="ms-2 font-mono text-xs text-text-muted">{logo.src}</span>
+                </span>
+                <RemoveButton
+                  label="Undo all changes to the logo strip"
+                  onClick={() => onRevert({ kind: "logos" })}
+                />
               </li>
             ))}
             {diff.siteContent.logos.removed.map((logo) => (
-              <li key={`logo-del-${logo.src}`} className="px-5 py-2.5 text-sm text-text">
-                Logo removed: {logo.name || "unnamed"}
-                <span className="ms-2 font-mono text-xs text-text-muted">{logo.src}</span>
+              <li
+                key={`logo-del-${logo.src}`}
+                className="flex items-center gap-3 px-5 py-2.5 text-sm text-text"
+              >
+                <span className="min-w-0 flex-1">
+                  Logo removed: {logo.name || "unnamed"}
+                  <span className="ms-2 font-mono text-xs text-text-muted">{logo.src}</span>
+                </span>
+                <RemoveButton
+                  label="Undo all changes to the logo strip"
+                  onClick={() => onRevert({ kind: "logos" })}
+                />
               </li>
             ))}
             {diff.siteContent.logos.reordered ? (
-              <li className="px-5 py-2.5 text-sm text-text">
-                Logo strip reordered. The strip scrolls in this order.
+              <li className="flex items-center gap-3 px-5 py-2.5 text-sm text-text">
+                <span className="min-w-0 flex-1">
+                  Logo strip reordered. The strip scrolls in this order.
+                </span>
+                <RemoveButton
+                  label="Undo all changes to the logo strip"
+                  onClick={() => onRevert({ kind: "logos" })}
+                />
               </li>
             ) : null}
             {diff.siteContent.impactStats.changed.map((stat) => (
-              <li key={stat.id} className="px-5 py-3 text-sm">
-                <p className="font-medium text-text">{stat.label || stat.id}</p>
-                <ul className="mt-1.5 flex flex-col gap-1">
-                  {stat.changes.map((change) => (
-                    <li key={change.field} className="flex flex-wrap gap-x-2">
-                      <span className="text-xs uppercase tracking-caps text-text-muted">
-                        {change.field}
-                      </span>
-                      <span className="text-text-muted line-through">
-                        {change.before}
-                      </span>
-                      <span aria-hidden="true" className="text-text-muted">
-                        →
-                      </span>
-                      <span className="text-text">{change.after}</span>
-                    </li>
-                  ))}
-                </ul>
+              <li key={stat.id} className="flex items-start gap-3 px-5 py-3 text-sm">
+                <div className="min-w-0 flex-1">
+                  <p className="font-medium text-text">{stat.label || stat.id}</p>
+                  <ul className="mt-1.5 flex flex-col gap-1">
+                    {stat.changes.map((change) => (
+                      <li key={change.field} className="flex flex-wrap gap-x-2">
+                        <span className="text-xs uppercase tracking-caps text-text-muted">
+                          {change.field}
+                        </span>
+                        <span className="text-text-muted line-through">
+                          {change.before}
+                        </span>
+                        <span aria-hidden="true" className="text-text-muted">
+                          →
+                        </span>
+                        <span className="text-text">{change.after}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+                <RemoveButton
+                  label="Undo all changes to the impact figures"
+                  onClick={() => onRevert({ kind: "impactStats" })}
+                />
               </li>
             ))}
             {diff.siteContent.impactStats.added.map((stat) => (
-              <li key={stat.id} className="px-5 py-2.5 text-sm text-text">
-                Figure added: {stat.value} {stat.label}
+              <li
+                key={stat.id}
+                className="flex items-center gap-3 px-5 py-2.5 text-sm text-text"
+              >
+                <span className="min-w-0 flex-1">
+                  Figure added: {stat.value} {stat.label}
+                </span>
+                <RemoveButton
+                  label="Undo all changes to the impact figures"
+                  onClick={() => onRevert({ kind: "impactStats" })}
+                />
               </li>
             ))}
             {diff.siteContent.impactStats.removed.map((stat) => (
-              <li key={stat.id} className="px-5 py-2.5 text-sm text-text">
-                Figure removed: {stat.value} {stat.label}
+              <li
+                key={stat.id}
+                className="flex items-center gap-3 px-5 py-2.5 text-sm text-text"
+              >
+                <span className="min-w-0 flex-1">
+                  Figure removed: {stat.value} {stat.label}
+                </span>
+                <RemoveButton
+                  label="Undo all changes to the impact figures"
+                  onClick={() => onRevert({ kind: "impactStats" })}
+                />
               </li>
             ))}
             {diff.siteContent.impactStats.reordered ? (
-              <li className="px-5 py-2.5 text-sm text-text">
-                Impact figures reordered. The order is what a visitor reads left to
-                right, so this changes the page even though no figure changed.
+              <li className="flex items-center gap-3 px-5 py-2.5 text-sm text-text">
+                <span className="min-w-0 flex-1">
+                  Impact figures reordered. The order is what a visitor reads left to
+                  right, so this changes the page even though no figure changed.
+                </span>
+                <RemoveButton
+                  label="Undo all changes to the impact figures"
+                  onClick={() => onRevert({ kind: "impactStats" })}
+                />
               </li>
             ) : null}
           </ul>
@@ -474,7 +606,8 @@ function DiffView({ diff }: { diff: DatasetDiff }) {
         <DiffSection title="Taxonomy">
           <ul className="divide-y divide-border-subtle">
             {diff.taxonomy.map((entry) => (
-              <li key={entry.key} className="px-5 py-3 text-sm">
+              <li key={entry.key} className="flex items-start gap-3 px-5 py-3 text-sm">
+                <div className="min-w-0 flex-1">
                 <p className="font-medium text-text">
                   {TAXONOMY_LABELS[entry.key]}
                 </p>
@@ -492,6 +625,11 @@ function DiffView({ diff }: { diff: DatasetDiff }) {
                     </li>
                   ) : null}
                 </ul>
+                </div>
+                <RemoveButton
+                  label={`Undo all changes to ${TAXONOMY_LABELS[entry.key]}`}
+                  onClick={() => onRevert({ kind: "taxonomy", key: entry.key })}
+                />
               </li>
             ))}
           </ul>
@@ -514,32 +652,50 @@ function DiffView({ diff }: { diff: DatasetDiff }) {
           </p>
           <ul className="divide-y divide-border-subtle">
             {diff.businessTypes.changed.map((type) => (
-              <li key={type.id} className="px-5 py-3 text-sm">
-                <p className="font-medium text-text">{type.name}</p>
-                <p className="text-xs text-text-muted">{type.id}</p>
-                <ul className="mt-1.5 flex flex-col gap-1">
-                  {type.changes.map((change) => (
-                    <li key={change.field} className="text-sm text-text-muted">
-                      <span className="text-text">{change.field}</span>:{" "}
-                      {String(change.before) || "—"} → {String(change.after) || "—"}
-                    </li>
-                  ))}
-                </ul>
+              <li key={type.id} className="flex items-start gap-3 px-5 py-3 text-sm">
+                <div className="min-w-0 flex-1">
+                  <p className="font-medium text-text">{type.name}</p>
+                  <p className="text-xs text-text-muted">{type.id}</p>
+                  <ul className="mt-1.5 flex flex-col gap-1">
+                    {type.changes.map((change) => (
+                      <li key={change.field} className="text-sm text-text-muted">
+                        <span className="text-text">{change.field}</span>:{" "}
+                        {String(change.before) || "—"} → {String(change.after) || "—"}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+                <RemoveButton
+                  label={`Remove these changes to ${type.name}`}
+                  onClick={() => onRevert({ kind: "businessType", id: type.id })}
+                />
               </li>
             ))}
             {diff.businessTypes.added.map((type) => (
-              <li key={type.id} className="px-5 py-2.5 text-sm text-text">
-                Added: {type.name}
-                <span className="text-text-muted"> ({type.id})</span>
+              <li key={type.id} className="flex items-center gap-3 px-5 py-2.5 text-sm text-text">
+                <span className="min-w-0 flex-1">
+                  Added: {type.name}
+                  <span className="text-text-muted"> ({type.id})</span>
+                </span>
+                <RemoveButton
+                  label={`Remove the added business type ${type.name}`}
+                  onClick={() => onRevert({ kind: "businessType", id: type.id })}
+                />
               </li>
             ))}
             {diff.businessTypes.removed.map((type) => (
-              <li key={type.id} className="px-5 py-2.5 text-sm text-text">
-                Removed: {type.name}
-                <span className="text-text-muted">
-                  {" "}
-                  ({type.id}) — its companies fall back to industry-level matching
+              <li key={type.id} className="flex items-center gap-3 px-5 py-2.5 text-sm text-text">
+                <span className="min-w-0 flex-1">
+                  Removed: {type.name}
+                  <span className="text-text-muted">
+                    {" "}
+                    ({type.id}) — its companies fall back to industry-level matching
+                  </span>
                 </span>
+                <RemoveButton
+                  label={`Restore the removed business type ${type.name}`}
+                  onClick={() => onRevert({ kind: "businessType", id: type.id })}
+                />
               </li>
             ))}
           </ul>
@@ -550,44 +706,62 @@ function DiffView({ diff }: { diff: DatasetDiff }) {
         <DiffSection title={`Function metrics (${diff.counts.metrics})`}>
           <ul className="divide-y divide-border-subtle">
             {diff.metrics.changed.slice(0, 100).map((metric) => (
-              <li key={metric.id} className="px-5 py-3 text-sm">
-                <p className="font-medium text-text">{metric.title}</p>
-                <ul className="mt-1.5 flex flex-col gap-1">
-                  {metric.changes.map((change) => (
-                    <li key={change.field} className="flex flex-col gap-0.5">
-                      <span className="text-xs uppercase tracking-caps text-text-muted">
-                        {METRIC_FIELD_LABELS[change.field]}
-                      </span>
-                      <span className="flex flex-wrap gap-x-2">
-                        <span className="text-text-muted line-through">
-                          {formatMetricFieldValue(change.field, change.before)}
+              <li key={metric.id} className="flex items-start gap-3 px-5 py-3 text-sm">
+                <div className="min-w-0 flex-1">
+                  <p className="font-medium text-text">{metric.title}</p>
+                  <ul className="mt-1.5 flex flex-col gap-1">
+                    {metric.changes.map((change) => (
+                      <li key={change.field} className="flex flex-col gap-0.5">
+                        <span className="text-xs uppercase tracking-caps text-text-muted">
+                          {METRIC_FIELD_LABELS[change.field]}
                         </span>
-                        <span aria-hidden="true" className="text-text-muted">
-                          →
+                        <span className="flex flex-wrap gap-x-2">
+                          <span className="text-text-muted line-through">
+                            {formatMetricFieldValue(change.field, change.before)}
+                          </span>
+                          <span aria-hidden="true" className="text-text-muted">
+                            →
+                          </span>
+                          <span className="text-text">
+                            {formatMetricFieldValue(change.field, change.after)}
+                          </span>
                         </span>
-                        <span className="text-text">
-                          {formatMetricFieldValue(change.field, change.after)}
-                        </span>
-                      </span>
-                    </li>
-                  ))}
-                </ul>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+                <RemoveButton
+                  label={`Remove these changes to ${metric.title}`}
+                  onClick={() => onRevert({ kind: "metric", id: metric.id })}
+                />
               </li>
             ))}
             {diff.metrics.added.map((metric) => (
-              <li key={metric.id} className="px-5 py-2.5 text-sm text-text">
-                Added: {metric.title}
-                <span className="ms-2 font-mono text-xs text-text-muted">
-                  {metric.id}
+              <li key={metric.id} className="flex items-center gap-3 px-5 py-2.5 text-sm text-text">
+                <span className="min-w-0 flex-1">
+                  Added: {metric.title}
+                  <span className="ms-2 font-mono text-xs text-text-muted">
+                    {metric.id}
+                  </span>
                 </span>
+                <RemoveButton
+                  label={`Remove the added metric ${metric.title}`}
+                  onClick={() => onRevert({ kind: "metric", id: metric.id })}
+                />
               </li>
             ))}
             {diff.metrics.removed.map((metric) => (
-              <li key={metric.id} className="px-5 py-2.5 text-sm text-text">
-                Removed: {metric.title}
-                <span className="ms-2 font-mono text-xs text-text-muted">
-                  {metric.id}
+              <li key={metric.id} className="flex items-center gap-3 px-5 py-2.5 text-sm text-text">
+                <span className="min-w-0 flex-1">
+                  Removed: {metric.title}
+                  <span className="ms-2 font-mono text-xs text-text-muted">
+                    {metric.id}
+                  </span>
                 </span>
+                <RemoveButton
+                  label={`Restore the removed metric ${metric.title}`}
+                  onClick={() => onRevert({ kind: "metric", id: metric.id })}
+                />
               </li>
             ))}
           </ul>
@@ -608,19 +782,34 @@ function DiffView({ diff }: { diff: DatasetDiff }) {
                 <p className="font-medium text-text">{company.name}</p>
                 <ul className="mt-1.5 flex flex-col gap-1">
                   {company.changes.map((change) => (
-                    <li key={change.field} className="flex flex-wrap gap-x-2">
-                      <span className="text-xs uppercase tracking-caps text-text-muted">
-                        {change.field}
+                    <li
+                      key={change.field}
+                      className="flex items-center gap-3"
+                    >
+                      <span className="flex flex-1 flex-wrap gap-x-2">
+                        <span className="text-xs uppercase tracking-caps text-text-muted">
+                          {change.field}
+                        </span>
+                        <span className="text-text-muted line-through">
+                          {formatFieldValue(change.before)}
+                        </span>
+                        <span aria-hidden="true" className="text-text-muted">
+                          →
+                        </span>
+                        <span className="text-text">
+                          {formatFieldValue(change.after)}
+                        </span>
                       </span>
-                      <span className="text-text-muted line-through">
-                        {formatFieldValue(change.before)}
-                      </span>
-                      <span aria-hidden="true" className="text-text-muted">
-                        →
-                      </span>
-                      <span className="text-text">
-                        {formatFieldValue(change.after)}
-                      </span>
+                      <RemoveButton
+                        label={`Remove the change to ${change.field} for ${company.name}`}
+                        onClick={() =>
+                          onRevert({
+                            kind: "companyField",
+                            id: company.id,
+                            field: change.field,
+                          })
+                        }
+                      />
                     </li>
                   ))}
                 </ul>
@@ -638,13 +827,21 @@ function DiffView({ diff }: { diff: DatasetDiff }) {
 
       {diff.added.length > 0 ? (
         <DiffSection title={`Added (${diff.added.length})`}>
-          <NameList items={diff.added} />
+          <NameList
+            items={diff.added}
+            onRemove={(id) => onRevert({ kind: "company", id })}
+            removeLabel={(name) => `Remove the added company ${name}`}
+          />
         </DiffSection>
       ) : null}
 
       {diff.removed.length > 0 ? (
         <DiffSection title={`Removed (${diff.removed.length})`}>
-          <NameList items={diff.removed} />
+          <NameList
+            items={diff.removed}
+            onRemove={(id) => onRevert({ kind: "company", id })}
+            removeLabel={(name) => `Restore the removed company ${name}`}
+          />
         </DiffSection>
       ) : null}
     </div>
@@ -673,13 +870,32 @@ function DiffSection({
   );
 }
 
-function NameList({ items }: { items: Array<{ id: string; name: string }> }) {
+function NameList({
+  items,
+  onRemove,
+  removeLabel,
+}: {
+  items: Array<{ id: string; name: string }>;
+  onRemove?: (id: string) => void;
+  removeLabel?: (name: string) => string;
+}) {
   return (
     <ul className="divide-y divide-border-subtle">
       {items.slice(0, 100).map((item) => (
-        <li key={item.id} className="px-5 py-2.5 text-sm text-text">
-          {item.name}
-          <span className="ms-2 font-mono text-xs text-text-muted">{item.id}</span>
+        <li
+          key={item.id}
+          className="flex items-center gap-3 px-5 py-2.5 text-sm text-text"
+        >
+          <span className="min-w-0 flex-1">
+            {item.name}
+            <span className="ms-2 font-mono text-xs text-text-muted">{item.id}</span>
+          </span>
+          {onRemove ? (
+            <RemoveButton
+              label={removeLabel ? removeLabel(item.name) : `Remove ${item.name}`}
+              onClick={() => onRemove(item.id)}
+            />
+          ) : null}
         </li>
       ))}
       {items.length > 100 ? (

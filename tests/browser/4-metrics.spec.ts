@@ -125,7 +125,7 @@ test("editing a figure back to its original clears the unpublished warning", asy
 });
 
 test.describe("a breakdown", () => {
-  const title = "Talent Depth by Specialisation";
+  const title = "Talent depth by discipline";
 
   test("keeps figures already typed when a part is added", async ({ page }) => {
     await page.goto("/admin/metrics");
