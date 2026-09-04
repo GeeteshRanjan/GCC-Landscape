@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generatedAt": "2026-09-04T18:02:46.406Z",
+  "generatedAt": "2026-09-04T18:19:47.176Z",
   "source": "Consolidated_GCC_India_Database_2026_New.xlsx",
   "taxonomy": {
     "industries": [
@@ -1511,8 +1511,8 @@
     },
     {
       "id": "altiostar",
-      "name": "Altiostar",
-      "domain": "altiostar.com",
+      "name": "Altiostar (Rakuten Symphony)",
+      "domain": "symphony.rakuten.com",
       "hqCountry": "USA",
       "industry": "Telecom",
       "revenueBand": "< $100 Mn",
@@ -43075,7 +43075,7 @@
       "gridRowHeader": "Capability",
       "industryTitle": "Inside India's GCC base",
       "industryBasisNote": "Indicative counts, drawn from the GCCs ANSR tracks rather than every centre in India.",
-      "snapshotHeading": "Snapshot of {industry} GCCs in India",
+      "snapshotHeading": "Snapshot of {industry} GCC's in India",
       "peersTitle": "GCC details of peers closest to {company}",
       "peersTitleFallback": "your profile",
       "largestTitle": "The largest {industry} GCCs in India",
