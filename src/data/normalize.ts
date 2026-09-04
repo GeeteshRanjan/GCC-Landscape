@@ -58,6 +58,37 @@ export function canonicalIndustry(value: unknown): string {
 }
 
 /**
+ * City names the spreadsheet supplies in a form a visitor should not read, mapped to
+ * the published one.
+ *
+ * **`INDUSTRY_ALIASES` on the city axis, and it exists for the same reason and pays
+ * the same debt.** "NCR" is the source's own abbreviation for a region — Gurgaon,
+ * Noida and Delhi under one label — and ANSR asked for "Delhi NCR" everywhere a
+ * visitor or an admin can read it. Renaming the published dataset alone was the
+ * obvious move and is the broken one: a city string is the key `CITY_COORDINATES` in
+ * geo.ts and `TIER1_CITIES` in derive.ts both look up, and the importer is this
+ * project's recovery path, so the next import would put "NCR" back and the city
+ * would be counted, ranked and listed with no dot on the map and no tier-1 standing.
+ *
+ * **Expansions only, exactly as above.** Merging two cities or fixing a typo in one
+ * belongs in the taxonomy editor, where the rename cascades through every company
+ * and the diff reports it. What belongs here is a name the SOURCE will keep
+ * supplying in a form we have decided not to publish.
+ */
+const CITY_ALIASES: Readonly<Record<string, string>> = {
+  NCR: "Delhi NCR",
+};
+
+/**
+ * The one spelling of a city name. Idempotent, so it is safe on a value that has
+ * already been through it — which matters because the admin upload path and the
+ * importer both run it.
+ */
+export function canonicalCity(value: string): string {
+  return CITY_ALIASES[value] ?? value;
+}
+
+/**
  * Company names the spreadsheet writes in a shape the company does not, keyed by
  * the source's own spelling.
  *
@@ -256,12 +287,16 @@ export function parseYesNo(value: unknown): boolean | null {
 /**
  * Splits the comma-joined "GCC Location(s)" cell into a city list, preserving
  * source order and dropping duplicates.
+ *
+ * **Each name goes through `canonicalCity` BEFORE the de-duplication**, so a cell
+ * listing both the source's spelling and the published one collapses to one entry
+ * rather than two names for one place.
  */
 export function parseCities(value: unknown): string[] {
   const seen = new Set<string>();
   const cities: string[] = [];
   for (const part of cleanText(value).split(",")) {
-    const city = part.trim();
+    const city = canonicalCity(part.trim());
     if (!city || seen.has(city)) continue;
     seen.add(city);
     cities.push(city);

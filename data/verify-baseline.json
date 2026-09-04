@@ -1,6 +1,6 @@
 {
   "describedAs": "1834 companies, from Consolidated_GCC_India_Database_2026_New.xlsx",
-  "recordedAt": "2026-08-31T13:16:07.819Z",
+  "recordedAt": "2026-09-04T11:53:44.263Z",
   "figures": {
     "companies": 1834,
     "industries": 24,
@@ -27,7 +27,7 @@
       "Bengaluru 1004",
       "Hyderabad 434",
       "Pune 372",
-      "NCR 332",
+      "Delhi NCR 332",
       "Chennai 282",
       "Mumbai 224"
     ],

@@ -173,12 +173,15 @@ If per-field sourcing is wanted later it needs to be a real column, not cell not
 Six cities carry the database; the tail is long and thin. Counts are company-appearances, so they
 sum past 1834 because 626 companies list more than one city.
 
-Bengaluru 1004 · Hyderabad 434 · Pune 372 · NCR 334 · Chennai 282 · Mumbai 224 · Coimbatore 36 ·
-Ahmedabad 27 · Kolkata 26 · Trivandrum 24 · Vadodara 19 · Kochi 12 · Jaipur 12 · Chandigarh 9 ·
-Mangaluru 8 · tail below 8.
+Bengaluru 1004 · Hyderabad 434 · Pune 372 · Delhi NCR 334 · Chennai 282 · Mumbai 224 ·
+Coimbatore 36 · Ahmedabad 27 · Kolkata 26 · Trivandrum 24 · Vadodara 19 · Kochi 12 · Jaipur 12 ·
+Chandigarh 9 · Mangaluru 8 · tail below 8.
 
-`NCR` is a region rather than a city, and stands in for Gurgaon/Noida/Delhi. Fine as a label, but
-it needs a deliberate decision if the UI ever maps or ranks cities.
+`Delhi NCR` is a region rather than a city, and stands in for Gurgaon/Noida/Delhi. Fine as a label,
+but it needs a deliberate decision if the UI ever maps or ranks cities. **The source spells it
+`NCR`**; `CITY_ALIASES` / `canonicalCity` in `src/data/normalize.ts` expands it where the sheet is
+read, on the same argument `CPG` is expanded there, so the published name is the only one downstream
+and a re-import cannot put the abbreviation back.
 
 ## Industry sizes, and the top-band problem
 
@@ -364,7 +367,7 @@ different entities, and merging them is an admin decision, not an importer's.
 
 **Two rows list the same city twice** — `Precisely` and `SMEC`. This is the whole explanation for
 their supplied Location Presence being one higher than their city list. De-duplicating within a row
-drops NCR's appearance count from 334 to **332**; every other city count above is unaffected.
+drops Delhi NCR's appearance count from 334 to **332**; every other city count above is unaffected.
 
 **128 distinct FTE ranges, not 130.** Two of the 130 source strings are dash variants of a range
 already present, so normalising to an integer pair collapses them. The drop is the dash fix working,
@@ -377,7 +380,7 @@ scored against the source's own flag (166 Yes):
 
 | Candidate tier-1 set | Agrees with source |
 | --- | --- |
-| Six majors (Bengaluru, Hyderabad, Pune, NCR, Chennai, Mumbai) | 1798 / 1834 |
+| Six majors (Bengaluru, Hyderabad, Pune, Delhi NCR, Chennai, Mumbai) | 1798 / 1834 |
 | **Six majors + Kolkata** | **1822 / 1834** |
 | Six majors + Kolkata + Ahmedabad | 1796 / 1834 |
 

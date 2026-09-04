@@ -91,8 +91,27 @@ describe("parseCities", () => {
 
   it("drops the within-row duplicate two source rows contain", () => {
     // Two rows list NCR twice in one cell, which is why the audit's raw NCR
-    // count of 334 becomes 332 after de-duplication.
-    expect(parseCities("NCR, Bengaluru, NCR")).toEqual(["NCR", "Bengaluru"]);
+    // count of 334 becomes 332 after de-duplication. The alias runs before the
+    // de-duplication, so both spellings collapse to the one published name.
+    expect(parseCities("NCR, Bengaluru, NCR")).toEqual([
+      "Delhi NCR",
+      "Bengaluru",
+    ]);
+  });
+
+  it("publishes the source's NCR abbreviation as Delhi NCR", () => {
+    // The rename ANSR asked for, pinned at the one place the source is read: a
+    // re-import must reproduce the published name, or the city loses its map dot
+    // and its tier-1 standing, both of which key on the exact string.
+    expect(parseCities("NCR")).toEqual(["Delhi NCR"]);
+    expect(parseCities("Bengaluru, NCR, Pune")).toEqual([
+      "Bengaluru",
+      "Delhi NCR",
+      "Pune",
+    ]);
+    // Idempotent, because the admin upload path runs the same parser over data
+    // that has already been through it once.
+    expect(parseCities("Delhi NCR")).toEqual(["Delhi NCR"]);
   });
 
   it("tolerates ragged separators and empty segments", () => {

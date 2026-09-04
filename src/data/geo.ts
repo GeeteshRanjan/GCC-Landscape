@@ -61,9 +61,15 @@ export interface LatLon {
 }
 
 /**
- * Keyed by the exact `taxonomy.cities` value. "NCR" is a region rather than a
- * city — it stands in for Gurgaon, Noida and Delhi, the same compromise
+ * Keyed by the exact `taxonomy.cities` value. "Delhi NCR" is a region rather than
+ * a city — it stands in for Gurgaon, Noida and Delhi, the same compromise
  * `TIER1_CITIES` in derive.ts makes — so it is plotted at Delhi.
+ *
+ * **The seed spells it "NCR" and the alias in `normalize.ts` is what makes the two
+ * agree.** The name here is the one a visitor and an admin read, so it must be the
+ * published string; a re-import that reintroduced the bare abbreviation would leave
+ * the city counted, ranked and listed with no dot, which is the one failure mode this
+ * table's own contract calls out.
  */
 export const CITY_COORDINATES: Readonly<Record<string, LatLon>> = {
   Ahmedabad: { lat: 23.03, lon: 72.58 },
@@ -73,6 +79,7 @@ export const CITY_COORDINATES: Readonly<Record<string, LatLon>> = {
   Chandigarh: { lat: 30.73, lon: 76.78 },
   Chennai: { lat: 13.08, lon: 80.27 },
   Coimbatore: { lat: 11.02, lon: 76.96 },
+  "Delhi NCR": { lat: 28.61, lon: 77.21 },
   Goa: { lat: 15.49, lon: 73.83 },
   Guntur: { lat: 16.31, lon: 80.44 },
   Hyderabad: { lat: 17.39, lon: 78.49 },
@@ -89,7 +96,6 @@ export const CITY_COORDINATES: Readonly<Record<string, LatLon>> = {
   Mysuru: { lat: 12.3, lon: 76.64 },
   Nagpur: { lat: 21.15, lon: 79.09 },
   "Navi Mumbai": { lat: 19.03, lon: 73.03 },
-  NCR: { lat: 28.61, lon: 77.21 },
   Pune: { lat: 18.52, lon: 73.86 },
   Salem: { lat: 11.66, lon: 78.15 },
   Surat: { lat: 21.17, lon: 72.83 },

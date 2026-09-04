@@ -46,6 +46,7 @@
       "Chandigarh",
       "Chennai",
       "Coimbatore",
+      "Delhi NCR",
       "Goa",
       "Guntur",
       "Hyderabad",
@@ -62,7 +63,6 @@
       "Mysuru",
       "Nagpur",
       "Navi Mumbai",
-      "NCR",
       "Pune",
       "Salem",
       "Surat",
@@ -498,7 +498,7 @@
       "revenueBand": "< $100 Mn",
       "establishedYear": 2000,
       "cities": [
-        "NCR"
+        "Delhi NCR"
       ],
       "fte": {
         "min": 1100,
@@ -604,7 +604,7 @@
       "revenueBand": "$5 Bn \u2013 $10 Bn",
       "establishedYear": 2012,
       "cities": [
-        "NCR"
+        "Delhi NCR"
       ],
       "fte": {
         "min": 1300,
@@ -626,7 +626,7 @@
       "establishedYear": 1997,
       "cities": [
         "Bengaluru",
-        "NCR"
+        "Delhi NCR"
       ],
       "fte": {
         "min": 8400,
@@ -693,7 +693,7 @@
       "establishedYear": 2001,
       "cities": [
         "Bengaluru",
-        "NCR",
+        "Delhi NCR",
         "Hyderabad",
         "Mumbai"
       ],
@@ -739,7 +739,7 @@
       "establishedYear": 2008,
       "cities": [
         "Bengaluru",
-        "NCR"
+        "Delhi NCR"
       ],
       "fte": {
         "min": 1400,
@@ -760,7 +760,7 @@
       "revenueBand": "$5 Bn \u2013 $10 Bn",
       "establishedYear": 2016,
       "cities": [
-        "NCR",
+        "Delhi NCR",
         "Chennai",
         "Bengaluru"
       ],
@@ -783,7 +783,7 @@
       "revenueBand": "Above $20 Bn",
       "establishedYear": 1994,
       "cities": [
-        "NCR",
+        "Delhi NCR",
         "Bengaluru"
       ],
       "fte": {
@@ -826,7 +826,7 @@
       "revenueBand": "$5 Bn \u2013 $10 Bn",
       "establishedYear": 1999,
       "cities": [
-        "NCR"
+        "Delhi NCR"
       ],
       "fte": {
         "min": 1500,
@@ -889,7 +889,7 @@
       "revenueBand": "Above $20 Bn",
       "establishedYear": 1992,
       "cities": [
-        "NCR",
+        "Delhi NCR",
         "Hyderabad"
       ],
       "fte": {
@@ -913,7 +913,7 @@
       "cities": [
         "Pune",
         "Vadodara",
-        "NCR"
+        "Delhi NCR"
       ],
       "fte": {
         "min": 1700,
@@ -977,7 +977,7 @@
       "establishedYear": 2017,
       "cities": [
         "Bengaluru",
-        "NCR"
+        "Delhi NCR"
       ],
       "fte": {
         "min": 1400,
@@ -1275,7 +1275,7 @@
       "revenueBand": "Above $20 Bn",
       "establishedYear": 2021,
       "cities": [
-        "NCR"
+        "Delhi NCR"
       ],
       "fte": {
         "min": 100,
@@ -1296,7 +1296,7 @@
       "revenueBand": "$100 Mn \u2013 $500 Mn",
       "establishedYear": 2024,
       "cities": [
-        "NCR"
+        "Delhi NCR"
       ],
       "fte": {
         "min": 100,
@@ -1341,7 +1341,7 @@
         "Pune",
         "Trivandrum",
         "Mumbai",
-        "NCR"
+        "Delhi NCR"
       ],
       "fte": {
         "min": 5400,
@@ -1496,7 +1496,7 @@
         "Pune",
         "Hyderabad",
         "Mumbai",
-        "NCR",
+        "Delhi NCR",
         "Chennai"
       ],
       "fte": {
@@ -1561,7 +1561,7 @@
       "revenueBand": "$1 Bn \u2013 $5 Bn",
       "establishedYear": 2023,
       "cities": [
-        "NCR",
+        "Delhi NCR",
         "Mumbai"
       ],
       "fte": {
@@ -1647,7 +1647,7 @@
       "revenueBand": "$10 Bn \u2013 $20 Bn",
       "establishedYear": 2008,
       "cities": [
-        "NCR",
+        "Delhi NCR",
         "Bengaluru"
       ],
       "fte": {
@@ -1670,7 +1670,7 @@
       "establishedYear": 2004,
       "cities": [
         "Bengaluru",
-        "NCR",
+        "Delhi NCR",
         "Hyderabad",
         "Chennai",
         "Pune"
@@ -1695,7 +1695,7 @@
       "establishedYear": 2004,
       "cities": [
         "Pune",
-        "NCR",
+        "Delhi NCR",
         "Mumbai"
       ],
       "fte": {
@@ -1760,7 +1760,7 @@
       "establishedYear": 2006,
       "cities": [
         "Bengaluru",
-        "NCR",
+        "Delhi NCR",
         "Chennai"
       ],
       "fte": {
@@ -1804,7 +1804,7 @@
       "revenueBand": "$10 Bn \u2013 $20 Bn",
       "establishedYear": 2005,
       "cities": [
-        "NCR",
+        "Delhi NCR",
         "Hyderabad"
       ],
       "fte": {
@@ -1973,7 +1973,7 @@
       "revenueBand": "$5 Bn \u2013 $10 Bn",
       "establishedYear": 1998,
       "cities": [
-        "NCR",
+        "Delhi NCR",
         "Chennai",
         "Bengaluru"
       ],
@@ -1998,7 +1998,7 @@
       "cities": [
         "Bengaluru",
         "Chennai",
-        "NCR",
+        "Delhi NCR",
         "Hyderabad",
         "Coimbatore"
       ],
@@ -2064,7 +2064,7 @@
       "establishedYear": 2001,
       "cities": [
         "Bengaluru",
-        "NCR",
+        "Delhi NCR",
         "Pune"
       ],
       "fte": {
@@ -2150,7 +2150,7 @@
       "establishedYear": 2002,
       "cities": [
         "Bengaluru",
-        "NCR"
+        "Delhi NCR"
       ],
       "fte": {
         "min": 2700,
@@ -2365,7 +2365,7 @@
       "revenueBand": "$100 Mn \u2013 $500 Mn",
       "establishedYear": 2021,
       "cities": [
-        "NCR"
+        "Delhi NCR"
       ],
       "fte": {
         "min": 300,
@@ -2644,7 +2644,7 @@
       "revenueBand": "$5 Bn \u2013 $10 Bn",
       "establishedYear": 2009,
       "cities": [
-        "NCR"
+        "Delhi NCR"
       ],
       "fte": {
         "min": 1400,
@@ -2708,7 +2708,7 @@
       "establishedYear": 2004,
       "cities": [
         "Bengaluru",
-        "NCR",
+        "Delhi NCR",
         "Hyderabad"
       ],
       "fte": {
@@ -2835,7 +2835,7 @@
       "revenueBand": "$10 Bn \u2013 $20 Bn",
       "establishedYear": 2014,
       "cities": [
-        "NCR",
+        "Delhi NCR",
         "Chennai"
       ],
       "fte": {
@@ -3029,7 +3029,7 @@
       "revenueBand": "< $100 Mn",
       "establishedYear": 2004,
       "cities": [
-        "NCR"
+        "Delhi NCR"
       ],
       "fte": {
         "min": 50,
@@ -3075,7 +3075,7 @@
       "cities": [
         "Mumbai",
         "Bengaluru",
-        "NCR",
+        "Delhi NCR",
         "Pune"
       ],
       "fte": {
@@ -3181,7 +3181,7 @@
       "revenueBand": "$1 Bn \u2013 $5 Bn",
       "establishedYear": 2015,
       "cities": [
-        "NCR",
+        "Delhi NCR",
         "Bengaluru"
       ],
       "fte": {
@@ -3310,7 +3310,7 @@
       "revenueBand": "$10 Bn \u2013 $20 Bn",
       "establishedYear": 2020,
       "cities": [
-        "NCR"
+        "Delhi NCR"
       ],
       "fte": {
         "min": 500,
@@ -3374,7 +3374,7 @@
       "establishedYear": 2006,
       "cities": [
         "Pune",
-        "NCR"
+        "Delhi NCR"
       ],
       "fte": {
         "min": 2500,
@@ -3417,7 +3417,7 @@
       "establishedYear": 2000,
       "cities": [
         "Bengaluru",
-        "NCR"
+        "Delhi NCR"
       ],
       "fte": {
         "min": 2300,
@@ -3441,7 +3441,7 @@
         "Pune",
         "Hyderabad",
         "Bengaluru",
-        "NCR"
+        "Delhi NCR"
       ],
       "fte": {
         "min": 800,
@@ -3547,7 +3547,7 @@
       "revenueBand": "$1 Bn \u2013 $5 Bn",
       "establishedYear": 2002,
       "cities": [
-        "NCR",
+        "Delhi NCR",
         "Pune",
         "Bengaluru",
         "Chennai"
@@ -3615,7 +3615,7 @@
       "revenueBand": "$5 Bn \u2013 $10 Bn",
       "establishedYear": 2012,
       "cities": [
-        "NCR"
+        "Delhi NCR"
       ],
       "fte": {
         "min": 400,
@@ -3657,7 +3657,7 @@
       "revenueBand": "$100 Mn \u2013 $500 Mn",
       "establishedYear": 2010,
       "cities": [
-        "NCR",
+        "Delhi NCR",
         "Bengaluru",
         "Pune",
         "Hyderabad"
@@ -3725,7 +3725,7 @@
       "revenueBand": "< $100 Mn",
       "establishedYear": 2008,
       "cities": [
-        "NCR"
+        "Delhi NCR"
       ],
       "fte": {
         "min": 300,
@@ -3895,7 +3895,7 @@
       "establishedYear": 2008,
       "cities": [
         "Bengaluru",
-        "NCR"
+        "Delhi NCR"
       ],
       "fte": {
         "min": 300,
@@ -3982,7 +3982,7 @@
       "establishedYear": 1996,
       "cities": [
         "Bengaluru",
-        "NCR"
+        "Delhi NCR"
       ],
       "fte": {
         "min": 100,
@@ -4025,7 +4025,7 @@
       "establishedYear": 1996,
       "cities": [
         "Bengaluru",
-        "NCR",
+        "Delhi NCR",
         "Ahmedabad"
       ],
       "fte": {
@@ -4153,7 +4153,7 @@
       "revenueBand": "$10 Bn \u2013 $20 Bn",
       "establishedYear": 1998,
       "cities": [
-        "NCR",
+        "Delhi NCR",
         "Vadodara"
       ],
       "fte": {
@@ -4472,7 +4472,7 @@
       "revenueBand": "$100 Mn \u2013 $500 Mn",
       "establishedYear": 2016,
       "cities": [
-        "NCR"
+        "Delhi NCR"
       ],
       "fte": {
         "min": 700,
@@ -4661,7 +4661,7 @@
       "revenueBand": "Above $20 Bn",
       "establishedYear": 2004,
       "cities": [
-        "NCR",
+        "Delhi NCR",
         "Mumbai"
       ],
       "fte": {
@@ -4683,7 +4683,7 @@
       "revenueBand": "$5 Bn \u2013 $10 Bn",
       "establishedYear": 2019,
       "cities": [
-        "NCR"
+        "Delhi NCR"
       ],
       "fte": {
         "min": 50,
@@ -4961,7 +4961,7 @@
       "establishedYear": 2003,
       "cities": [
         "Bengaluru",
-        "NCR",
+        "Delhi NCR",
         "Hyderabad",
         "Vadodara"
       ],
@@ -5090,7 +5090,7 @@
       "establishedYear": 1998,
       "cities": [
         "Bengaluru",
-        "NCR",
+        "Delhi NCR",
         "Hyderabad",
         "Pune",
         "Coimbatore"
@@ -5114,7 +5114,7 @@
       "revenueBand": "$10 Bn \u2013 $20 Bn",
       "establishedYear": 2014,
       "cities": [
-        "NCR",
+        "Delhi NCR",
         "Pune"
       ],
       "fte": {
@@ -5264,7 +5264,7 @@
       "establishedYear": 2019,
       "cities": [
         "Hyderabad",
-        "NCR"
+        "Delhi NCR"
       ],
       "fte": {
         "min": 100,
@@ -5433,7 +5433,7 @@
       "revenueBand": "$1 Bn \u2013 $5 Bn",
       "establishedYear": 2010,
       "cities": [
-        "NCR"
+        "Delhi NCR"
       ],
       "fte": {
         "min": 400,
@@ -5498,7 +5498,7 @@
       "revenueBand": "< $100 Mn",
       "establishedYear": 2015,
       "cities": [
-        "NCR"
+        "Delhi NCR"
       ],
       "fte": {
         "min": 0,
@@ -5541,7 +5541,7 @@
       "establishedYear": 1992,
       "cities": [
         "Bengaluru",
-        "NCR",
+        "Delhi NCR",
         "Mumbai",
         "Pune",
         "Chennai",
@@ -5653,7 +5653,7 @@
       "establishedYear": 2006,
       "cities": [
         "Bengaluru",
-        "NCR",
+        "Delhi NCR",
         "Pune"
       ],
       "fte": {
@@ -5697,7 +5697,7 @@
       "revenueBand": "$100 Mn \u2013 $500 Mn",
       "establishedYear": 2024,
       "cities": [
-        "NCR"
+        "Delhi NCR"
       ],
       "fte": {
         "min": 200,
@@ -5803,7 +5803,7 @@
       "revenueBand": "$1 Bn \u2013 $5 Bn",
       "establishedYear": 2005,
       "cities": [
-        "NCR"
+        "Delhi NCR"
       ],
       "fte": {
         "min": 2800,
@@ -5952,7 +5952,7 @@
       "cities": [
         "Bengaluru",
         "Hyderabad",
-        "NCR"
+        "Delhi NCR"
       ],
       "fte": {
         "min": 14600,
@@ -5975,7 +5975,7 @@
       "cities": [
         "Bengaluru",
         "Mumbai",
-        "NCR"
+        "Delhi NCR"
       ],
       "fte": {
         "min": 300,
@@ -5996,7 +5996,7 @@
       "revenueBand": "Above $20 Bn",
       "establishedYear": 1999,
       "cities": [
-        "NCR",
+        "Delhi NCR",
         "Bengaluru"
       ],
       "fte": {
@@ -6039,7 +6039,7 @@
       "revenueBand": "$10 Bn \u2013 $20 Bn",
       "establishedYear": 2025,
       "cities": [
-        "NCR"
+        "Delhi NCR"
       ],
       "fte": {
         "min": 50,
@@ -6466,7 +6466,7 @@
       "establishedYear": 2016,
       "cities": [
         "Hyderabad",
-        "NCR"
+        "Delhi NCR"
       ],
       "fte": {
         "min": 300,
@@ -6783,7 +6783,7 @@
       "revenueBand": "< $100 Mn",
       "establishedYear": 2022,
       "cities": [
-        "NCR"
+        "Delhi NCR"
       ],
       "fte": {
         "min": 1900,
@@ -7021,7 +7021,7 @@
         "Pune",
         "Chennai",
         "Bengaluru",
-        "NCR"
+        "Delhi NCR"
       ],
       "fte": {
         "min": 5600,
@@ -7042,7 +7042,7 @@
       "revenueBand": "< $100 Mn",
       "establishedYear": 2005,
       "cities": [
-        "NCR"
+        "Delhi NCR"
       ],
       "fte": {
         "min": 100,
@@ -7065,7 +7065,7 @@
       "cities": [
         "Hyderabad",
         "Mumbai",
-        "NCR",
+        "Delhi NCR",
         "Bengaluru"
       ],
       "fte": {
@@ -7171,7 +7171,7 @@
       "revenueBand": "$100 Mn \u2013 $500 Mn",
       "establishedYear": 2019,
       "cities": [
-        "NCR"
+        "Delhi NCR"
       ],
       "fte": {
         "min": 500,
@@ -7192,7 +7192,7 @@
       "revenueBand": "$1 Bn \u2013 $5 Bn",
       "establishedYear": 2006,
       "cities": [
-        "NCR",
+        "Delhi NCR",
         "Hyderabad"
       ],
       "fte": {
@@ -7300,7 +7300,7 @@
       "revenueBand": "Above $20 Bn",
       "establishedYear": 2004,
       "cities": [
-        "NCR",
+        "Delhi NCR",
         "Chennai",
         "Mumbai"
       ],
@@ -7345,7 +7345,7 @@
       "establishedYear": 2021,
       "cities": [
         "Bengaluru",
-        "NCR"
+        "Delhi NCR"
       ],
       "fte": {
         "min": 500,
@@ -7366,7 +7366,7 @@
       "revenueBand": "$1 Bn \u2013 $5 Bn",
       "establishedYear": 1997,
       "cities": [
-        "NCR",
+        "Delhi NCR",
         "Bengaluru"
       ],
       "fte": {
@@ -7578,7 +7578,7 @@
       "establishedYear": 2007,
       "cities": [
         "Bengaluru",
-        "NCR",
+        "Delhi NCR",
         "Mumbai",
         "Hyderabad"
       ],
@@ -7623,7 +7623,7 @@
       "revenueBand": "$1 Bn \u2013 $5 Bn",
       "establishedYear": 2004,
       "cities": [
-        "NCR",
+        "Delhi NCR",
         "Bengaluru",
         "Pune"
       ],
@@ -7843,7 +7843,7 @@
       "revenueBand": "$1 Bn \u2013 $5 Bn",
       "establishedYear": 2025,
       "cities": [
-        "NCR",
+        "Delhi NCR",
         "Bengaluru"
       ],
       "fte": {
@@ -7867,7 +7867,7 @@
       "establishedYear": 2009,
       "cities": [
         "Bengaluru",
-        "NCR"
+        "Delhi NCR"
       ],
       "fte": {
         "min": 5300,
@@ -8249,7 +8249,7 @@
       "revenueBand": "$1 Bn \u2013 $5 Bn",
       "establishedYear": 1998,
       "cities": [
-        "NCR",
+        "Delhi NCR",
         "Chennai"
       ],
       "fte": {
@@ -8356,7 +8356,7 @@
       "establishedYear": 2005,
       "cities": [
         "Bengaluru",
-        "NCR",
+        "Delhi NCR",
         "Pune",
         "Chennai"
       ],
@@ -8443,7 +8443,7 @@
       "establishedYear": 2022,
       "cities": [
         "Hyderabad",
-        "NCR"
+        "Delhi NCR"
       ],
       "fte": {
         "min": 200,
@@ -8573,7 +8573,7 @@
         "Bengaluru",
         "Mumbai",
         "Chennai",
-        "NCR"
+        "Delhi NCR"
       ],
       "fte": {
         "min": 600,
@@ -8678,7 +8678,7 @@
       "revenueBand": "$1 Bn \u2013 $5 Bn",
       "establishedYear": 2006,
       "cities": [
-        "NCR"
+        "Delhi NCR"
       ],
       "fte": {
         "min": 2700,
@@ -8825,7 +8825,7 @@
       "revenueBand": "Above $20 Bn",
       "establishedYear": 2025,
       "cities": [
-        "NCR"
+        "Delhi NCR"
       ],
       "fte": {
         "min": 4700,
@@ -8889,7 +8889,7 @@
       "revenueBand": "$500 Mn \u2013 $1 Bn",
       "establishedYear": 2025,
       "cities": [
-        "NCR",
+        "Delhi NCR",
         "Pune"
       ],
       "fte": {
@@ -9361,7 +9361,7 @@
       "establishedYear": 2013,
       "cities": [
         "Bengaluru",
-        "NCR"
+        "Delhi NCR"
       ],
       "fte": {
         "min": 1500,
@@ -9403,7 +9403,7 @@
       "revenueBand": "Above $20 Bn",
       "establishedYear": 2012,
       "cities": [
-        "NCR"
+        "Delhi NCR"
       ],
       "fte": {
         "min": 2000,
@@ -9554,7 +9554,7 @@
       "establishedYear": 2019,
       "cities": [
         "Bengaluru",
-        "NCR",
+        "Delhi NCR",
         "Pune"
       ],
       "fte": {
@@ -9618,7 +9618,7 @@
       "revenueBand": "$100 Mn \u2013 $500 Mn",
       "establishedYear": 2010,
       "cities": [
-        "NCR"
+        "Delhi NCR"
       ],
       "fte": {
         "min": 50,
@@ -9744,7 +9744,7 @@
       "revenueBand": "< $100 Mn",
       "establishedYear": 2006,
       "cities": [
-        "NCR"
+        "Delhi NCR"
       ],
       "fte": {
         "min": 0,
@@ -9938,7 +9938,7 @@
       "cities": [
         "Mumbai",
         "Bengaluru",
-        "NCR",
+        "Delhi NCR",
         "Hyderabad"
       ],
       "fte": {
@@ -10067,7 +10067,7 @@
       "revenueBand": "Above $20 Bn",
       "establishedYear": 2025,
       "cities": [
-        "NCR"
+        "Delhi NCR"
       ],
       "fte": {
         "min": 1000,
@@ -10152,7 +10152,7 @@
       "revenueBand": "$100 Mn \u2013 $500 Mn",
       "establishedYear": 2008,
       "cities": [
-        "NCR"
+        "Delhi NCR"
       ],
       "fte": {
         "min": 900,
@@ -10216,7 +10216,7 @@
       "establishedYear": 2017,
       "cities": [
         "Bengaluru",
-        "NCR"
+        "Delhi NCR"
       ],
       "fte": {
         "min": 300,
@@ -10407,7 +10407,7 @@
       "revenueBand": "$1 Bn \u2013 $5 Bn",
       "establishedYear": 2003,
       "cities": [
-        "NCR",
+        "Delhi NCR",
         "Hyderabad"
       ],
       "fte": {
@@ -10538,7 +10538,7 @@
       "establishedYear": 2010,
       "cities": [
         "Chandigarh",
-        "NCR"
+        "Delhi NCR"
       ],
       "fte": {
         "min": 600,
@@ -10602,7 +10602,7 @@
       "establishedYear": 2001,
       "cities": [
         "Mumbai",
-        "NCR"
+        "Delhi NCR"
       ],
       "fte": {
         "min": 500,
@@ -10665,7 +10665,7 @@
       "revenueBand": "$1 Bn \u2013 $5 Bn",
       "establishedYear": 2009,
       "cities": [
-        "NCR"
+        "Delhi NCR"
       ],
       "fte": {
         "min": 200,
@@ -10686,7 +10686,7 @@
       "revenueBand": "$1 Bn \u2013 $5 Bn",
       "establishedYear": 2005,
       "cities": [
-        "NCR",
+        "Delhi NCR",
         "Bengaluru"
       ],
       "fte": {
@@ -10709,7 +10709,7 @@
       "establishedYear": 2019,
       "cities": [
         "Bengaluru",
-        "NCR"
+        "Delhi NCR"
       ],
       "fte": {
         "min": 200,
@@ -10814,7 +10814,7 @@
       "revenueBand": "< $100 Mn",
       "establishedYear": 2006,
       "cities": [
-        "NCR",
+        "Delhi NCR",
         "Bengaluru"
       ],
       "fte": {
@@ -10968,7 +10968,7 @@
       "establishedYear": 2016,
       "cities": [
         "Kolkata",
-        "NCR"
+        "Delhi NCR"
       ],
       "fte": {
         "min": 100,
@@ -10989,7 +10989,7 @@
       "revenueBand": "$1 Bn \u2013 $5 Bn",
       "establishedYear": 2005,
       "cities": [
-        "NCR"
+        "Delhi NCR"
       ],
       "fte": {
         "min": 2900,
@@ -11415,7 +11415,7 @@
       "establishedYear": 2005,
       "cities": [
         "Bengaluru",
-        "NCR",
+        "Delhi NCR",
         "Chennai"
       ],
       "fte": {
@@ -11542,7 +11542,7 @@
       "revenueBand": "$1 Bn \u2013 $5 Bn",
       "establishedYear": 1996,
       "cities": [
-        "NCR"
+        "Delhi NCR"
       ],
       "fte": {
         "min": 700,
@@ -12052,7 +12052,7 @@
       "establishedYear": 2012,
       "cities": [
         "Bengaluru",
-        "NCR"
+        "Delhi NCR"
       ],
       "fte": {
         "min": 3000,
@@ -12246,7 +12246,7 @@
       "establishedYear": 2010,
       "cities": [
         "Hyderabad",
-        "NCR",
+        "Delhi NCR",
         "Mumbai",
         "Bengaluru"
       ],
@@ -12376,7 +12376,7 @@
       "revenueBand": "$100 Mn \u2013 $500 Mn",
       "establishedYear": 2005,
       "cities": [
-        "NCR",
+        "Delhi NCR",
         "Pune"
       ],
       "fte": {
@@ -12611,7 +12611,7 @@
       "revenueBand": "< $100 Mn",
       "establishedYear": 2001,
       "cities": [
-        "NCR",
+        "Delhi NCR",
         "Mumbai",
         "Bengaluru"
       ],
@@ -12946,7 +12946,7 @@
       "cities": [
         "Chennai",
         "Mumbai",
-        "NCR"
+        "Delhi NCR"
       ],
       "fte": {
         "min": 1900,
@@ -12988,7 +12988,7 @@
       "revenueBand": "$10 Bn \u2013 $20 Bn",
       "establishedYear": 1995,
       "cities": [
-        "NCR"
+        "Delhi NCR"
       ],
       "fte": {
         "min": 1500,
@@ -13293,7 +13293,7 @@
       "revenueBand": "< $100 Mn",
       "establishedYear": 2010,
       "cities": [
-        "NCR"
+        "Delhi NCR"
       ],
       "fte": {
         "min": 100,
@@ -13359,7 +13359,7 @@
       "revenueBand": "$5 Bn \u2013 $10 Bn",
       "establishedYear": 1995,
       "cities": [
-        "NCR",
+        "Delhi NCR",
         "Pune"
       ],
       "fte": {
@@ -13381,7 +13381,7 @@
       "revenueBand": "Above $20 Bn",
       "establishedYear": 2011,
       "cities": [
-        "NCR",
+        "Delhi NCR",
         "Bengaluru"
       ],
       "fte": {
@@ -13688,7 +13688,7 @@
       "revenueBand": "$100 Mn \u2013 $500 Mn",
       "establishedYear": 2023,
       "cities": [
-        "NCR"
+        "Delhi NCR"
       ],
       "fte": {
         "min": 0,
@@ -13816,7 +13816,7 @@
       "revenueBand": "$5 Bn \u2013 $10 Bn",
       "establishedYear": 2012,
       "cities": [
-        "NCR"
+        "Delhi NCR"
       ],
       "fte": {
         "min": 100,
@@ -13858,7 +13858,7 @@
       "revenueBand": "$500 Mn \u2013 $1 Bn",
       "establishedYear": 2006,
       "cities": [
-        "NCR",
+        "Delhi NCR",
         "Mumbai"
       ],
       "fte": {
@@ -13901,7 +13901,7 @@
       "revenueBand": "$1 Bn \u2013 $5 Bn",
       "establishedYear": 2005,
       "cities": [
-        "NCR",
+        "Delhi NCR",
         "Chennai",
         "Pune"
       ],
@@ -13989,7 +13989,7 @@
       "establishedYear": 2010,
       "cities": [
         "Bengaluru",
-        "NCR"
+        "Delhi NCR"
       ],
       "fte": {
         "min": 800,
@@ -14053,7 +14053,7 @@
       "establishedYear": 2008,
       "cities": [
         "Mumbai",
-        "NCR",
+        "Delhi NCR",
         "Hyderabad",
         "Bengaluru"
       ],
@@ -14141,7 +14141,7 @@
       "revenueBand": "$1 Bn \u2013 $5 Bn",
       "establishedYear": 2025,
       "cities": [
-        "NCR",
+        "Delhi NCR",
         "Pune"
       ],
       "fte": {
@@ -14315,7 +14315,7 @@
       "revenueBand": "$5 Bn \u2013 $10 Bn",
       "establishedYear": 2017,
       "cities": [
-        "NCR",
+        "Delhi NCR",
         "Bengaluru",
         "Mumbai"
       ],
@@ -14338,7 +14338,7 @@
       "revenueBand": "$100 Mn \u2013 $500 Mn",
       "establishedYear": 1996,
       "cities": [
-        "NCR"
+        "Delhi NCR"
       ],
       "fte": {
         "min": 100,
@@ -14572,7 +14572,7 @@
       "establishedYear": 2003,
       "cities": [
         "Chennai",
-        "NCR"
+        "Delhi NCR"
       ],
       "fte": {
         "min": 1800,
@@ -14615,7 +14615,7 @@
       "revenueBand": "< $100 Mn",
       "establishedYear": 2013,
       "cities": [
-        "NCR",
+        "Delhi NCR",
         "Bengaluru"
       ],
       "fte": {
@@ -14764,7 +14764,7 @@
       "revenueBand": "$5 Bn \u2013 $10 Bn",
       "establishedYear": 2025,
       "cities": [
-        "NCR"
+        "Delhi NCR"
       ],
       "fte": {
         "min": 0,
@@ -14809,7 +14809,7 @@
         "Bengaluru",
         "Hyderabad",
         "Pune",
-        "NCR",
+        "Delhi NCR",
         "Mumbai",
         "Chennai"
       ],
@@ -14895,7 +14895,7 @@
       "revenueBand": "$10 Bn \u2013 $20 Bn",
       "establishedYear": 2005,
       "cities": [
-        "NCR",
+        "Delhi NCR",
         "Bengaluru",
         "Mumbai"
       ],
@@ -15452,7 +15452,7 @@
       "establishedYear": 2006,
       "cities": [
         "Bengaluru",
-        "NCR"
+        "Delhi NCR"
       ],
       "fte": {
         "min": 100,
@@ -15497,7 +15497,7 @@
       "establishedYear": 2006,
       "cities": [
         "Bengaluru",
-        "NCR"
+        "Delhi NCR"
       ],
       "fte": {
         "min": 500,
@@ -16099,7 +16099,7 @@
       "establishedYear": 2000,
       "cities": [
         "Indore",
-        "NCR",
+        "Delhi NCR",
         "Bengaluru",
         "Pune",
         "Hyderabad"
@@ -16346,7 +16346,7 @@
       "establishedYear": 1996,
       "cities": [
         "Mumbai",
-        "NCR",
+        "Delhi NCR",
         "Chennai",
         "Bengaluru"
       ],
@@ -16601,7 +16601,7 @@
       "revenueBand": "$1 Bn \u2013 $5 Bn",
       "establishedYear": 2018,
       "cities": [
-        "NCR",
+        "Delhi NCR",
         "Chennai"
       ],
       "fte": {
@@ -16669,7 +16669,7 @@
       "revenueBand": "$1 Bn \u2013 $5 Bn",
       "establishedYear": 2004,
       "cities": [
-        "NCR"
+        "Delhi NCR"
       ],
       "fte": {
         "min": 400,
@@ -16753,7 +16753,7 @@
       "revenueBand": "< $100 Mn",
       "establishedYear": 2001,
       "cities": [
-        "NCR",
+        "Delhi NCR",
         "Bengaluru"
       ],
       "fte": {
@@ -16777,7 +16777,7 @@
       "cities": [
         "Kolkata",
         "Bengaluru",
-        "NCR"
+        "Delhi NCR"
       ],
       "fte": {
         "min": 400,
@@ -16865,7 +16865,7 @@
       "cities": [
         "Hyderabad",
         "Bengaluru",
-        "NCR"
+        "Delhi NCR"
       ],
       "fte": {
         "min": 100,
@@ -16951,7 +16951,7 @@
       "cities": [
         "Bengaluru",
         "Pune",
-        "NCR",
+        "Delhi NCR",
         "Hyderabad"
       ],
       "fte": {
@@ -17016,7 +17016,7 @@
       "establishedYear": 2002,
       "cities": [
         "Bengaluru",
-        "NCR",
+        "Delhi NCR",
         "Hyderabad",
         "Mumbai",
         "Pune",
@@ -17732,7 +17732,7 @@
       "revenueBand": "$5 Bn \u2013 $10 Bn",
       "establishedYear": 2009,
       "cities": [
-        "NCR",
+        "Delhi NCR",
         "Pune",
         "Chennai",
         "Bengaluru"
@@ -17756,7 +17756,7 @@
       "revenueBand": "Above $20 Bn",
       "establishedYear": 2007,
       "cities": [
-        "NCR"
+        "Delhi NCR"
       ],
       "fte": {
         "min": 50,
@@ -17841,7 +17841,7 @@
       "establishedYear": 2013,
       "cities": [
         "Bengaluru",
-        "NCR",
+        "Delhi NCR",
         "Kolkata"
       ],
       "fte": {
@@ -17907,7 +17907,7 @@
       "cities": [
         "Bengaluru",
         "Pune",
-        "NCR"
+        "Delhi NCR"
       ],
       "fte": {
         "min": 800,
@@ -17993,7 +17993,7 @@
       "revenueBand": "Above $20 Bn",
       "establishedYear": 2023,
       "cities": [
-        "NCR"
+        "Delhi NCR"
       ],
       "fte": {
         "min": 50,
@@ -18143,7 +18143,7 @@
       "establishedYear": 2001,
       "cities": [
         "Pune",
-        "NCR"
+        "Delhi NCR"
       ],
       "fte": {
         "min": 800,
@@ -18271,7 +18271,7 @@
       "revenueBand": "$100 Mn \u2013 $500 Mn",
       "establishedYear": 2022,
       "cities": [
-        "NCR"
+        "Delhi NCR"
       ],
       "fte": {
         "min": 0,
@@ -18314,7 +18314,7 @@
       "revenueBand": "Above $20 Bn",
       "establishedYear": 2010,
       "cities": [
-        "NCR",
+        "Delhi NCR",
         "Mumbai"
       ],
       "fte": {
@@ -18337,7 +18337,7 @@
       "establishedYear": 1999,
       "cities": [
         "Bengaluru",
-        "NCR"
+        "Delhi NCR"
       ],
       "fte": {
         "min": 100,
@@ -18442,7 +18442,7 @@
       "revenueBand": "$1 Bn \u2013 $5 Bn",
       "establishedYear": 2007,
       "cities": [
-        "NCR"
+        "Delhi NCR"
       ],
       "fte": {
         "min": 900,
@@ -18633,7 +18633,7 @@
       "establishedYear": 2005,
       "cities": [
         "Bengaluru",
-        "NCR",
+        "Delhi NCR",
         "Mumbai"
       ],
       "fte": {
@@ -18719,7 +18719,7 @@
       "establishedYear": 1996,
       "cities": [
         "Bengaluru",
-        "NCR",
+        "Delhi NCR",
         "Mumbai",
         "Chennai"
       ],
@@ -18786,7 +18786,7 @@
       "establishedYear": 2009,
       "cities": [
         "Bengaluru",
-        "NCR",
+        "Delhi NCR",
         "Mumbai"
       ],
       "fte": {
@@ -18811,7 +18811,7 @@
         "Mumbai",
         "Chennai",
         "Bengaluru",
-        "NCR"
+        "Delhi NCR"
       ],
       "fte": {
         "min": 2000,
@@ -19068,7 +19068,7 @@
       "revenueBand": "Above $20 Bn",
       "establishedYear": 2009,
       "cities": [
-        "NCR",
+        "Delhi NCR",
         "Bengaluru"
       ],
       "fte": {
@@ -19197,7 +19197,7 @@
       "establishedYear": 2003,
       "cities": [
         "Bengaluru",
-        "NCR"
+        "Delhi NCR"
       ],
       "fte": {
         "min": 2900,
@@ -19218,7 +19218,7 @@
       "revenueBand": "$100 Mn \u2013 $500 Mn",
       "establishedYear": 2009,
       "cities": [
-        "NCR"
+        "Delhi NCR"
       ],
       "fte": {
         "min": 100,
@@ -19485,7 +19485,7 @@
       "establishedYear": 1998,
       "cities": [
         "Bengaluru",
-        "NCR",
+        "Delhi NCR",
         "Pune",
         "Coimbatore",
         "Chennai"
@@ -19572,7 +19572,7 @@
       "revenueBand": "$10 Bn \u2013 $20 Bn",
       "establishedYear": 2017,
       "cities": [
-        "NCR",
+        "Delhi NCR",
         "Bengaluru",
         "Pune"
       ],
@@ -19679,7 +19679,7 @@
       "revenueBand": "Above $20 Bn",
       "establishedYear": 2007,
       "cities": [
-        "NCR",
+        "Delhi NCR",
         "Mumbai",
         "Pune"
       ],
@@ -19749,7 +19749,7 @@
       "establishedYear": 2015,
       "cities": [
         "Bengaluru",
-        "NCR"
+        "Delhi NCR"
       ],
       "fte": {
         "min": 50,
@@ -19792,7 +19792,7 @@
       "establishedYear": 2004,
       "cities": [
         "Bengaluru",
-        "NCR",
+        "Delhi NCR",
         "Chennai"
       ],
       "fte": {
@@ -19860,7 +19860,7 @@
         "Bengaluru",
         "Mumbai",
         "Pune",
-        "NCR"
+        "Delhi NCR"
       ],
       "fte": {
         "min": 2400,
@@ -19926,7 +19926,7 @@
         "Coimbatore",
         "Bengaluru",
         "Chennai",
-        "NCR"
+        "Delhi NCR"
       ],
       "fte": {
         "min": 700,
@@ -19948,7 +19948,7 @@
       "establishedYear": 2004,
       "cities": [
         "Bengaluru",
-        "NCR",
+        "Delhi NCR",
         "Hyderabad",
         "Mumbai",
         "Chennai",
@@ -19996,7 +19996,7 @@
       "revenueBand": "< $100 Mn",
       "establishedYear": 2024,
       "cities": [
-        "NCR"
+        "Delhi NCR"
       ],
       "fte": {
         "min": 50,
@@ -20017,7 +20017,7 @@
       "revenueBand": "$5 Bn \u2013 $10 Bn",
       "establishedYear": 2021,
       "cities": [
-        "NCR"
+        "Delhi NCR"
       ],
       "fte": {
         "min": 100,
@@ -20039,7 +20039,7 @@
       "establishedYear": 2006,
       "cities": [
         "Chennai",
-        "NCR",
+        "Delhi NCR",
         "Pune"
       ],
       "fte": {
@@ -20147,7 +20147,7 @@
       "establishedYear": 2004,
       "cities": [
         "Bengaluru",
-        "NCR",
+        "Delhi NCR",
         "Mumbai"
       ],
       "fte": {
@@ -20425,7 +20425,7 @@
       "revenueBand": "Above $20 Bn",
       "establishedYear": 2007,
       "cities": [
-        "NCR",
+        "Delhi NCR",
         "Hyderabad",
         "Pune",
         "Jaipur"
@@ -20533,7 +20533,7 @@
       "revenueBand": "Above $20 Bn",
       "establishedYear": 2014,
       "cities": [
-        "NCR",
+        "Delhi NCR",
         "Pune"
       ],
       "fte": {
@@ -20602,7 +20602,7 @@
       "establishedYear": 1998,
       "cities": [
         "Bengaluru",
-        "NCR",
+        "Delhi NCR",
         "Hyderabad",
         "Pune"
       ],
@@ -20711,7 +20711,7 @@
       "revenueBand": "$100 Mn \u2013 $500 Mn",
       "establishedYear": 2024,
       "cities": [
-        "NCR"
+        "Delhi NCR"
       ],
       "fte": {
         "min": 0,
@@ -20818,7 +20818,7 @@
       "establishedYear": 2002,
       "cities": [
         "Bengaluru",
-        "NCR",
+        "Delhi NCR",
         "Hyderabad",
         "Pune",
         "Chennai",
@@ -21164,7 +21164,7 @@
       "revenueBand": "$100 Mn \u2013 $500 Mn",
       "establishedYear": 2007,
       "cities": [
-        "NCR"
+        "Delhi NCR"
       ],
       "fte": {
         "min": 400,
@@ -21185,7 +21185,7 @@
       "revenueBand": "$1 Bn \u2013 $5 Bn",
       "establishedYear": 2013,
       "cities": [
-        "NCR",
+        "Delhi NCR",
         "Bengaluru",
         "Coimbatore"
       ],
@@ -21230,7 +21230,7 @@
       "establishedYear": 1994,
       "cities": [
         "Bengaluru",
-        "NCR",
+        "Delhi NCR",
         "Mumbai",
         "Chennai"
       ],
@@ -21321,7 +21321,7 @@
         "Chennai",
         "Mumbai",
         "Ahmedabad",
-        "NCR"
+        "Delhi NCR"
       ],
       "fte": {
         "min": 1600,
@@ -21771,7 +21771,7 @@
         "Pune",
         "Chennai",
         "Mumbai",
-        "NCR"
+        "Delhi NCR"
       ],
       "fte": {
         "min": 11800,
@@ -21813,7 +21813,7 @@
       "revenueBand": "$100 Mn \u2013 $500 Mn",
       "establishedYear": 2022,
       "cities": [
-        "NCR"
+        "Delhi NCR"
       ],
       "fte": {
         "min": 50,
@@ -21882,7 +21882,7 @@
       "cities": [
         "Chennai",
         "Hyderabad",
-        "NCR",
+        "Delhi NCR",
         "Bengaluru",
         "Mumbai"
       ],
@@ -21906,7 +21906,7 @@
       "establishedYear": 2006,
       "cities": [
         "Bengaluru",
-        "NCR"
+        "Delhi NCR"
       ],
       "fte": {
         "min": 1200,
@@ -21970,7 +21970,7 @@
       "establishedYear": 2012,
       "cities": [
         "Bengaluru",
-        "NCR",
+        "Delhi NCR",
         "Hyderabad"
       ],
       "fte": {
@@ -22081,7 +22081,7 @@
       "cities": [
         "Bengaluru",
         "Chennai",
-        "NCR",
+        "Delhi NCR",
         "Mumbai"
       ],
       "fte": {
@@ -22254,7 +22254,7 @@
       "establishedYear": 2009,
       "cities": [
         "Mumbai",
-        "NCR",
+        "Delhi NCR",
         "Bengaluru",
         "Vadodara",
         "Pune",
@@ -22324,7 +22324,7 @@
       "revenueBand": "< $100 Mn",
       "establishedYear": 2000,
       "cities": [
-        "NCR"
+        "Delhi NCR"
       ],
       "fte": {
         "min": 0,
@@ -22370,7 +22370,7 @@
       "establishedYear": 2001,
       "cities": [
         "Bengaluru",
-        "NCR",
+        "Delhi NCR",
         "Chennai",
         "Mumbai",
         "Jaipur"
@@ -22416,7 +22416,7 @@
       "revenueBand": "$100 Mn \u2013 $500 Mn",
       "establishedYear": 2018,
       "cities": [
-        "NCR",
+        "Delhi NCR",
         "Hyderabad",
         "Jaipur"
       ],
@@ -22651,7 +22651,7 @@
       "establishedYear": 2005,
       "cities": [
         "Bengaluru",
-        "NCR",
+        "Delhi NCR",
         "Hyderabad",
         "Mumbai",
         "Pune"
@@ -22676,7 +22676,7 @@
       "establishedYear": 2006,
       "cities": [
         "Bengaluru",
-        "NCR",
+        "Delhi NCR",
         "Hyderabad",
         "Pune"
       ],
@@ -23044,7 +23044,7 @@
       "establishedYear": 2000,
       "cities": [
         "Bengaluru",
-        "NCR",
+        "Delhi NCR",
         "Hyderabad",
         "Chennai"
       ],
@@ -23366,7 +23366,7 @@
       "establishedYear": 1994,
       "cities": [
         "Bengaluru",
-        "NCR",
+        "Delhi NCR",
         "Hyderabad",
         "Mumbai",
         "Pune",
@@ -23393,7 +23393,7 @@
       "revenueBand": "Above $20 Bn",
       "establishedYear": 2000,
       "cities": [
-        "NCR"
+        "Delhi NCR"
       ],
       "fte": {
         "min": 2800,
@@ -23608,7 +23608,7 @@
         "Bengaluru",
         "Chennai",
         "Pune",
-        "NCR"
+        "Delhi NCR"
       ],
       "fte": {
         "min": 200,
@@ -23694,7 +23694,7 @@
       "establishedYear": 2021,
       "cities": [
         "Bengaluru",
-        "NCR",
+        "Delhi NCR",
         "Pune"
       ],
       "fte": {
@@ -23825,7 +23825,7 @@
       "establishedYear": 1994,
       "cities": [
         "Pune",
-        "NCR",
+        "Delhi NCR",
         "Bengaluru"
       ],
       "fte": {
@@ -23980,7 +23980,7 @@
       "revenueBand": "< $100 Mn",
       "establishedYear": 2023,
       "cities": [
-        "NCR"
+        "Delhi NCR"
       ],
       "fte": {
         "min": 100,
@@ -24002,7 +24002,7 @@
       "establishedYear": 2000,
       "cities": [
         "Bengaluru",
-        "NCR",
+        "Delhi NCR",
         "Chennai"
       ],
       "fte": {
@@ -24153,7 +24153,7 @@
       "revenueBand": "$10 Bn \u2013 $20 Bn",
       "establishedYear": 2018,
       "cities": [
-        "NCR"
+        "Delhi NCR"
       ],
       "fte": {
         "min": 1600,
@@ -24175,7 +24175,7 @@
       "establishedYear": 2003,
       "cities": [
         "Mumbai",
-        "NCR",
+        "Delhi NCR",
         "Chennai"
       ],
       "fte": {
@@ -24326,7 +24326,7 @@
       "revenueBand": "$1 Bn \u2013 $5 Bn",
       "establishedYear": 2023,
       "cities": [
-        "NCR",
+        "Delhi NCR",
         "Bengaluru"
       ],
       "fte": {
@@ -24348,7 +24348,7 @@
       "revenueBand": "< $100 Mn",
       "establishedYear": 2007,
       "cities": [
-        "NCR",
+        "Delhi NCR",
         "Pune"
       ],
       "fte": {
@@ -24666,7 +24666,7 @@
       "revenueBand": "$500 Mn \u2013 $1 Bn",
       "establishedYear": 2017,
       "cities": [
-        "NCR",
+        "Delhi NCR",
         "Chandigarh",
         "Pune",
         "Bengaluru"
@@ -24966,7 +24966,7 @@
         "Bengaluru",
         "Pune",
         "Mumbai",
-        "NCR"
+        "Delhi NCR"
       ],
       "fte": {
         "min": 2600,
@@ -24988,7 +24988,7 @@
       "establishedYear": 2006,
       "cities": [
         "Pune",
-        "NCR"
+        "Delhi NCR"
       ],
       "fte": {
         "min": 500,
@@ -25053,7 +25053,7 @@
       "cities": [
         "Pune",
         "Mumbai",
-        "NCR"
+        "Delhi NCR"
       ],
       "fte": {
         "min": 400,
@@ -25095,7 +25095,7 @@
       "revenueBand": "< $100 Mn",
       "establishedYear": 2005,
       "cities": [
-        "NCR"
+        "Delhi NCR"
       ],
       "fte": {
         "min": 100,
@@ -25180,7 +25180,7 @@
       "establishedYear": 2004,
       "cities": [
         "Bengaluru",
-        "NCR",
+        "Delhi NCR",
         "Hyderabad",
         "Chennai"
       ],
@@ -25374,7 +25374,7 @@
       "establishedYear": 2006,
       "cities": [
         "Bengaluru",
-        "NCR",
+        "Delhi NCR",
         "Hyderabad"
       ],
       "fte": {
@@ -25396,7 +25396,7 @@
       "revenueBand": "$1 Bn \u2013 $5 Bn",
       "establishedYear": 2013,
       "cities": [
-        "NCR",
+        "Delhi NCR",
         "Hyderabad",
         "Bengaluru"
       ],
@@ -25420,7 +25420,7 @@
       "establishedYear": 2004,
       "cities": [
         "Bengaluru",
-        "NCR"
+        "Delhi NCR"
       ],
       "fte": {
         "min": 1500,
@@ -25525,7 +25525,7 @@
       "revenueBand": "$1 Bn \u2013 $5 Bn",
       "establishedYear": 2014,
       "cities": [
-        "NCR",
+        "Delhi NCR",
         "Chennai",
         "Hyderabad",
         "Mumbai"
@@ -25634,7 +25634,7 @@
       "revenueBand": "$1 Bn \u2013 $5 Bn",
       "establishedYear": 2024,
       "cities": [
-        "NCR"
+        "Delhi NCR"
       ],
       "fte": {
         "min": 50,
@@ -25719,7 +25719,7 @@
       "revenueBand": "$10 Bn \u2013 $20 Bn",
       "establishedYear": 2012,
       "cities": [
-        "NCR",
+        "Delhi NCR",
         "Hyderabad"
       ],
       "fte": {
@@ -26082,7 +26082,7 @@
       "revenueBand": "$1 Bn \u2013 $5 Bn",
       "establishedYear": 2023,
       "cities": [
-        "NCR"
+        "Delhi NCR"
       ],
       "fte": {
         "min": 1700,
@@ -26105,7 +26105,7 @@
       "cities": [
         "Bengaluru",
         "Mumbai",
-        "NCR"
+        "Delhi NCR"
       ],
       "fte": {
         "min": 700,
@@ -26149,7 +26149,7 @@
       "cities": [
         "Hyderabad",
         "Bengaluru",
-        "NCR"
+        "Delhi NCR"
       ],
       "fte": {
         "min": 600,
@@ -26171,7 +26171,7 @@
       "establishedYear": 2020,
       "cities": [
         "Bengaluru",
-        "NCR"
+        "Delhi NCR"
       ],
       "fte": {
         "min": 400,
@@ -26192,7 +26192,7 @@
       "revenueBand": "Above $20 Bn",
       "establishedYear": 2015,
       "cities": [
-        "NCR"
+        "Delhi NCR"
       ],
       "fte": {
         "min": 1100,
@@ -26255,7 +26255,7 @@
       "revenueBand": "$100 Mn \u2013 $500 Mn",
       "establishedYear": 2007,
       "cities": [
-        "NCR"
+        "Delhi NCR"
       ],
       "fte": {
         "min": 400,
@@ -26450,7 +26450,7 @@
       "establishedYear": 2015,
       "cities": [
         "Bengaluru",
-        "NCR",
+        "Delhi NCR",
         "Pune"
       ],
       "fte": {
@@ -26684,7 +26684,7 @@
       "revenueBand": "$100 Mn \u2013 $500 Mn",
       "establishedYear": 2013,
       "cities": [
-        "NCR",
+        "Delhi NCR",
         "Bengaluru"
       ],
       "fte": {
@@ -26727,7 +26727,7 @@
       "revenueBand": "$10 Bn \u2013 $20 Bn",
       "establishedYear": 2004,
       "cities": [
-        "NCR",
+        "Delhi NCR",
         "Hyderabad"
       ],
       "fte": {
@@ -26792,7 +26792,7 @@
       "establishedYear": 2013,
       "cities": [
         "Bengaluru",
-        "NCR",
+        "Delhi NCR",
         "Mumbai"
       ],
       "fte": {
@@ -26815,7 +26815,7 @@
       "establishedYear": 2004,
       "cities": [
         "Bengaluru",
-        "NCR"
+        "Delhi NCR"
       ],
       "fte": {
         "min": 1200,
@@ -27052,7 +27052,7 @@
       "establishedYear": 2005,
       "cities": [
         "Bengaluru",
-        "NCR",
+        "Delhi NCR",
         "Hyderabad",
         "Mumbai",
         "Pune",
@@ -27099,7 +27099,7 @@
       "establishedYear": 1996,
       "cities": [
         "Bengaluru",
-        "NCR",
+        "Delhi NCR",
         "Hyderabad"
       ],
       "fte": {
@@ -27227,7 +27227,7 @@
       "establishedYear": 1998,
       "cities": [
         "Bengaluru",
-        "NCR",
+        "Delhi NCR",
         "Pune",
         "Mumbai",
         "Hyderabad"
@@ -27253,7 +27253,7 @@
       "cities": [
         "Mumbai",
         "Bengaluru",
-        "NCR"
+        "Delhi NCR"
       ],
       "fte": {
         "min": 2500,
@@ -27400,7 +27400,7 @@
       "revenueBand": "< $100 Mn",
       "establishedYear": 2004,
       "cities": [
-        "NCR"
+        "Delhi NCR"
       ],
       "fte": {
         "min": 0,
@@ -27464,7 +27464,7 @@
       "establishedYear": 1998,
       "cities": [
         "Mumbai",
-        "NCR"
+        "Delhi NCR"
       ],
       "fte": {
         "min": 6900,
@@ -27615,7 +27615,7 @@
       "revenueBand": "< $100 Mn",
       "establishedYear": 2014,
       "cities": [
-        "NCR"
+        "Delhi NCR"
       ],
       "fte": {
         "min": 100,
@@ -27812,7 +27812,7 @@
       "cities": [
         "Bengaluru",
         "Pune",
-        "NCR"
+        "Delhi NCR"
       ],
       "fte": {
         "min": 100,
@@ -27856,7 +27856,7 @@
       "cities": [
         "Bengaluru",
         "Pune",
-        "NCR"
+        "Delhi NCR"
       ],
       "fte": {
         "min": 2700,
@@ -27920,7 +27920,7 @@
       "revenueBand": "$100 Mn \u2013 $500 Mn",
       "establishedYear": 2022,
       "cities": [
-        "NCR",
+        "Delhi NCR",
         "Mumbai",
         "Bengaluru"
       ],
@@ -27943,7 +27943,7 @@
       "revenueBand": "$10 Bn \u2013 $20 Bn",
       "establishedYear": 2000,
       "cities": [
-        "NCR",
+        "Delhi NCR",
         "Mumbai",
         "Bengaluru"
       ],
@@ -28050,7 +28050,7 @@
       "establishedYear": 2004,
       "cities": [
         "Bengaluru",
-        "NCR",
+        "Delhi NCR",
         "Pune",
         "Chennai"
       ],
@@ -28073,7 +28073,7 @@
       "revenueBand": "Above $20 Bn",
       "establishedYear": 1997,
       "cities": [
-        "NCR",
+        "Delhi NCR",
         "Bengaluru",
         "Hyderabad"
       ],
@@ -28181,7 +28181,7 @@
       "establishedYear": 2017,
       "cities": [
         "Bengaluru",
-        "NCR"
+        "Delhi NCR"
       ],
       "fte": {
         "min": 1100,
@@ -28245,7 +28245,7 @@
       "establishedYear": 2026,
       "cities": [
         "Hyderabad",
-        "NCR"
+        "Delhi NCR"
       ],
       "fte": {
         "min": 200,
@@ -28625,7 +28625,7 @@
       "revenueBand": "$1 Bn \u2013 $5 Bn",
       "establishedYear": 2006,
       "cities": [
-        "NCR",
+        "Delhi NCR",
         "Bengaluru",
         "Mumbai",
         "Kolkata",
@@ -28798,7 +28798,7 @@
       "revenueBand": "< $100 Mn",
       "establishedYear": 2010,
       "cities": [
-        "NCR",
+        "Delhi NCR",
         "Hyderabad"
       ],
       "fte": {
@@ -28820,7 +28820,7 @@
       "revenueBand": "$500 Mn \u2013 $1 Bn",
       "establishedYear": 2011,
       "cities": [
-        "NCR",
+        "Delhi NCR",
         "Bengaluru"
       ],
       "fte": {
@@ -29012,7 +29012,7 @@
       "revenueBand": "$100 Mn \u2013 $500 Mn",
       "establishedYear": 2013,
       "cities": [
-        "NCR",
+        "Delhi NCR",
         "Kochi"
       ],
       "fte": {
@@ -29159,7 +29159,7 @@
       "establishedYear": 2017,
       "cities": [
         "Bengaluru",
-        "NCR",
+        "Delhi NCR",
         "Hyderabad"
       ],
       "fte": {
@@ -29229,7 +29229,7 @@
       "establishedYear": 2012,
       "cities": [
         "Mumbai",
-        "NCR",
+        "Delhi NCR",
         "Hyderabad",
         "Pune",
         "Bengaluru",
@@ -29295,7 +29295,7 @@
       "establishedYear": 2006,
       "cities": [
         "Bengaluru",
-        "NCR",
+        "Delhi NCR",
         "Mumbai",
         "Pune"
       ],
@@ -29445,7 +29445,7 @@
       "revenueBand": "< $100 Mn",
       "establishedYear": 2012,
       "cities": [
-        "NCR",
+        "Delhi NCR",
         "Pune"
       ],
       "fte": {
@@ -29492,7 +29492,7 @@
       "establishedYear": 2004,
       "cities": [
         "Bengaluru",
-        "NCR"
+        "Delhi NCR"
       ],
       "fte": {
         "min": 1000,
@@ -29597,7 +29597,7 @@
       "revenueBand": "$1 Bn \u2013 $5 Bn",
       "establishedYear": 2016,
       "cities": [
-        "NCR",
+        "Delhi NCR",
         "Chennai",
         "Bengaluru"
       ],
@@ -29704,7 +29704,7 @@
       "revenueBand": "Above $20 Bn",
       "establishedYear": 2006,
       "cities": [
-        "NCR",
+        "Delhi NCR",
         "Bengaluru"
       ],
       "fte": {
@@ -29811,7 +29811,7 @@
       "revenueBand": "$100 Mn \u2013 $500 Mn",
       "establishedYear": 2019,
       "cities": [
-        "NCR"
+        "Delhi NCR"
       ],
       "fte": {
         "min": 200,
@@ -29854,7 +29854,7 @@
       "revenueBand": "Above $20 Bn",
       "establishedYear": 2006,
       "cities": [
-        "NCR"
+        "Delhi NCR"
       ],
       "fte": {
         "min": 3100,
@@ -29875,7 +29875,7 @@
       "revenueBand": "$10 Bn \u2013 $20 Bn",
       "establishedYear": 2020,
       "cities": [
-        "NCR"
+        "Delhi NCR"
       ],
       "fte": {
         "min": 0,
@@ -29959,7 +29959,7 @@
       "revenueBand": "Above $20 Bn",
       "establishedYear": 2022,
       "cities": [
-        "NCR"
+        "Delhi NCR"
       ],
       "fte": {
         "min": 0,
@@ -30110,7 +30110,7 @@
       "cities": [
         "Bengaluru",
         "Chennai",
-        "NCR"
+        "Delhi NCR"
       ],
       "fte": {
         "min": 600,
@@ -30283,7 +30283,7 @@
       "revenueBand": "$5 Bn \u2013 $10 Bn",
       "establishedYear": 2018,
       "cities": [
-        "NCR"
+        "Delhi NCR"
       ],
       "fte": {
         "min": 3700,
@@ -30370,7 +30370,7 @@
       "cities": [
         "Bengaluru",
         "Hyderabad",
-        "NCR"
+        "Delhi NCR"
       ],
       "fte": {
         "min": 500,
@@ -30392,7 +30392,7 @@
       "establishedYear": 1995,
       "cities": [
         "Bengaluru",
-        "NCR",
+        "Delhi NCR",
         "Hyderabad",
         "Mumbai",
         "Bhubaneswar"
@@ -30458,7 +30458,7 @@
       "revenueBand": "$1 Bn \u2013 $5 Bn",
       "establishedYear": 2019,
       "cities": [
-        "NCR"
+        "Delhi NCR"
       ],
       "fte": {
         "min": 100,
@@ -30566,7 +30566,7 @@
       "cities": [
         "Indore",
         "Chennai",
-        "NCR",
+        "Delhi NCR",
         "Mumbai"
       ],
       "fte": {
@@ -30697,7 +30697,7 @@
       "establishedYear": 2009,
       "cities": [
         "Coimbatore",
-        "NCR"
+        "Delhi NCR"
       ],
       "fte": {
         "min": 100,
@@ -30803,7 +30803,7 @@
       "revenueBand": "$100 Mn \u2013 $500 Mn",
       "establishedYear": 2019,
       "cities": [
-        "NCR"
+        "Delhi NCR"
       ],
       "fte": {
         "min": 300,
@@ -30845,7 +30845,7 @@
       "revenueBand": "< $100 Mn",
       "establishedYear": 2006,
       "cities": [
-        "NCR"
+        "Delhi NCR"
       ],
       "fte": {
         "min": 50,
@@ -30887,7 +30887,7 @@
       "revenueBand": "$500 Mn \u2013 $1 Bn",
       "establishedYear": 2000,
       "cities": [
-        "NCR",
+        "Delhi NCR",
         "Bengaluru"
       ],
       "fte": {
@@ -30932,7 +30932,7 @@
       "revenueBand": "$10 Bn \u2013 $20 Bn",
       "establishedYear": 2022,
       "cities": [
-        "NCR"
+        "Delhi NCR"
       ],
       "fte": {
         "min": 3000,
@@ -31017,7 +31017,7 @@
       "revenueBand": "$100 Mn \u2013 $500 Mn",
       "establishedYear": 2007,
       "cities": [
-        "NCR",
+        "Delhi NCR",
         "Mumbai",
         "Kolkata",
         "Bengaluru"
@@ -31045,7 +31045,7 @@
         "Hyderabad",
         "Pune",
         "Bengaluru",
-        "NCR"
+        "Delhi NCR"
       ],
       "fte": {
         "min": 1800,
@@ -31233,7 +31233,7 @@
       "establishedYear": 2019,
       "cities": [
         "Bengaluru",
-        "NCR"
+        "Delhi NCR"
       ],
       "fte": {
         "min": 1900,
@@ -31580,7 +31580,7 @@
       "establishedYear": 2020,
       "cities": [
         "Hyderabad",
-        "NCR"
+        "Delhi NCR"
       ],
       "fte": {
         "min": 1300,
@@ -31705,7 +31705,7 @@
       "establishedYear": 2002,
       "cities": [
         "Bengaluru",
-        "NCR",
+        "Delhi NCR",
         "Mumbai"
       ],
       "fte": {
@@ -31748,7 +31748,7 @@
       "revenueBand": "$1 Bn \u2013 $5 Bn",
       "establishedYear": 2017,
       "cities": [
-        "NCR"
+        "Delhi NCR"
       ],
       "fte": {
         "min": 100,
@@ -31811,7 +31811,7 @@
       "revenueBand": "$10 Bn \u2013 $20 Bn",
       "establishedYear": 2007,
       "cities": [
-        "NCR"
+        "Delhi NCR"
       ],
       "fte": {
         "min": 1900,
@@ -31875,7 +31875,7 @@
       "revenueBand": "$100 Mn \u2013 $500 Mn",
       "establishedYear": 2010,
       "cities": [
-        "NCR"
+        "Delhi NCR"
       ],
       "fte": {
         "min": 200,
@@ -31917,7 +31917,7 @@
       "revenueBand": "$5 Bn \u2013 $10 Bn",
       "establishedYear": 2018,
       "cities": [
-        "NCR"
+        "Delhi NCR"
       ],
       "fte": {
         "min": 200,
@@ -32045,7 +32045,7 @@
       "cities": [
         "Bengaluru",
         "Pune",
-        "NCR"
+        "Delhi NCR"
       ],
       "fte": {
         "min": 1200,
@@ -32154,7 +32154,7 @@
       "establishedYear": 1997,
       "cities": [
         "Bengaluru",
-        "NCR",
+        "Delhi NCR",
         "Ahmedabad"
       ],
       "fte": {
@@ -32176,7 +32176,7 @@
       "revenueBand": "$1 Bn \u2013 $5 Bn",
       "establishedYear": 2017,
       "cities": [
-        "NCR",
+        "Delhi NCR",
         "Mumbai"
       ],
       "fte": {
@@ -32198,7 +32198,7 @@
       "revenueBand": "< $100 Mn",
       "establishedYear": 2005,
       "cities": [
-        "NCR",
+        "Delhi NCR",
         "Bengaluru",
         "Mumbai",
         "Ahmedabad"
@@ -32392,7 +32392,7 @@
       "revenueBand": "$500 Mn \u2013 $1 Bn",
       "establishedYear": 2018,
       "cities": [
-        "NCR"
+        "Delhi NCR"
       ],
       "fte": {
         "min": 1000,
@@ -32413,7 +32413,7 @@
       "revenueBand": "Above $20 Bn",
       "establishedYear": 2007,
       "cities": [
-        "NCR",
+        "Delhi NCR",
         "Mumbai",
         "Pune",
         "Chennai",
@@ -32761,7 +32761,7 @@
         "Bengaluru",
         "Mumbai",
         "Pune",
-        "NCR"
+        "Delhi NCR"
       ],
       "fte": {
         "min": 3700,
@@ -32893,7 +32893,7 @@
       "revenueBand": "$100 Mn \u2013 $500 Mn",
       "establishedYear": 2020,
       "cities": [
-        "NCR"
+        "Delhi NCR"
       ],
       "fte": {
         "min": 0,
@@ -32915,7 +32915,7 @@
       "establishedYear": 2015,
       "cities": [
         "Bengaluru",
-        "NCR"
+        "Delhi NCR"
       ],
       "fte": {
         "min": 1000,
@@ -33064,7 +33064,7 @@
       "revenueBand": "$10 Bn \u2013 $20 Bn",
       "establishedYear": 2013,
       "cities": [
-        "NCR",
+        "Delhi NCR",
         "Pune"
       ],
       "fte": {
@@ -33087,7 +33087,7 @@
       "establishedYear": 2001,
       "cities": [
         "Bengaluru",
-        "NCR"
+        "Delhi NCR"
       ],
       "fte": {
         "min": 0,
@@ -33215,7 +33215,7 @@
       "revenueBand": "< $100 Mn",
       "establishedYear": 2007,
       "cities": [
-        "NCR",
+        "Delhi NCR",
         "Bengaluru"
       ],
       "fte": {
@@ -33680,7 +33680,7 @@
       "revenueBand": "Above $20 Bn",
       "establishedYear": 2014,
       "cities": [
-        "NCR",
+        "Delhi NCR",
         "Pune",
         "Bengaluru",
         "Vadodara",
@@ -33820,7 +33820,7 @@
       "cities": [
         "Bengaluru",
         "Pune",
-        "NCR"
+        "Delhi NCR"
       ],
       "fte": {
         "min": 3600,
@@ -33907,7 +33907,7 @@
       "establishedYear": 2004,
       "cities": [
         "Hyderabad",
-        "NCR"
+        "Delhi NCR"
       ],
       "fte": {
         "min": 300,
@@ -33971,7 +33971,7 @@
       "establishedYear": 2011,
       "cities": [
         "Bengaluru",
-        "NCR",
+        "Delhi NCR",
         "Chennai"
       ],
       "fte": {
@@ -34078,7 +34078,7 @@
       "revenueBand": "< $100 Mn",
       "establishedYear": 2018,
       "cities": [
-        "NCR",
+        "Delhi NCR",
         "Bengaluru"
       ],
       "fte": {
@@ -34332,7 +34332,7 @@
       "revenueBand": "$5 Bn \u2013 $10 Bn",
       "establishedYear": 2023,
       "cities": [
-        "NCR",
+        "Delhi NCR",
         "Hyderabad",
         "Pune"
       ],
@@ -34355,7 +34355,7 @@
       "revenueBand": "$5 Bn \u2013 $10 Bn",
       "establishedYear": 1996,
       "cities": [
-        "NCR",
+        "Delhi NCR",
         "Mumbai",
         "Kolkata"
       ],
@@ -34465,7 +34465,7 @@
       "revenueBand": "< $100 Mn",
       "establishedYear": 2017,
       "cities": [
-        "NCR"
+        "Delhi NCR"
       ],
       "fte": {
         "min": 100,
@@ -34487,7 +34487,7 @@
       "establishedYear": 2013,
       "cities": [
         "Indore",
-        "NCR"
+        "Delhi NCR"
       ],
       "fte": {
         "min": 1700,
@@ -34532,7 +34532,7 @@
         "Pune",
         "Chennai",
         "Bengaluru",
-        "NCR",
+        "Delhi NCR",
         "Coimbatore",
         "Vadodara",
         "Mumbai"
@@ -34623,7 +34623,7 @@
         "Pune",
         "Chennai",
         "Mumbai",
-        "NCR",
+        "Delhi NCR",
         "Bengaluru"
       ],
       "fte": {
@@ -34670,7 +34670,7 @@
       "cities": [
         "Bengaluru",
         "Mumbai",
-        "NCR",
+        "Delhi NCR",
         "Chennai"
       ],
       "fte": {
@@ -34863,7 +34863,7 @@
       "revenueBand": "$1 Bn \u2013 $5 Bn",
       "establishedYear": 2002,
       "cities": [
-        "NCR"
+        "Delhi NCR"
       ],
       "fte": {
         "min": 1000,
@@ -34926,7 +34926,7 @@
       "revenueBand": "$1 Bn \u2013 $5 Bn",
       "establishedYear": 2010,
       "cities": [
-        "NCR",
+        "Delhi NCR",
         "Bengaluru"
       ],
       "fte": {
@@ -35011,7 +35011,7 @@
       "revenueBand": "$5 Bn \u2013 $10 Bn",
       "establishedYear": 2021,
       "cities": [
-        "NCR"
+        "Delhi NCR"
       ],
       "fte": {
         "min": 700,
@@ -35080,7 +35080,7 @@
         "Pune",
         "Chennai",
         "Mumbai",
-        "NCR"
+        "Delhi NCR"
       ],
       "fte": {
         "min": 2000,
@@ -35273,7 +35273,7 @@
       "establishedYear": 2010,
       "cities": [
         "Pune",
-        "NCR"
+        "Delhi NCR"
       ],
       "fte": {
         "min": 100,
@@ -35358,7 +35358,7 @@
       "establishedYear": 2019,
       "cities": [
         "Pune",
-        "NCR"
+        "Delhi NCR"
       ],
       "fte": {
         "min": 1400,
@@ -35510,7 +35510,7 @@
       "revenueBand": "$10 Bn \u2013 $20 Bn",
       "establishedYear": 2005,
       "cities": [
-        "NCR",
+        "Delhi NCR",
         "Bengaluru"
       ],
       "fte": {
@@ -35937,7 +35937,7 @@
       "revenueBand": "$500 Mn \u2013 $1 Bn",
       "establishedYear": 2006,
       "cities": [
-        "NCR"
+        "Delhi NCR"
       ],
       "fte": {
         "min": 500,
@@ -35959,7 +35959,7 @@
       "establishedYear": 2014,
       "cities": [
         "Hyderabad",
-        "NCR"
+        "Delhi NCR"
       ],
       "fte": {
         "min": 800,
@@ -36022,7 +36022,7 @@
       "revenueBand": "$1 Bn \u2013 $5 Bn",
       "establishedYear": 2023,
       "cities": [
-        "NCR"
+        "Delhi NCR"
       ],
       "fte": {
         "min": 100,
@@ -36064,7 +36064,7 @@
       "revenueBand": "$500 Mn \u2013 $1 Bn",
       "establishedYear": 2024,
       "cities": [
-        "NCR"
+        "Delhi NCR"
       ],
       "fte": {
         "min": 100,
@@ -36298,7 +36298,7 @@
       "revenueBand": "< $100 Mn",
       "establishedYear": 2015,
       "cities": [
-        "NCR"
+        "Delhi NCR"
       ],
       "fte": {
         "min": 200,
@@ -36320,7 +36320,7 @@
       "revenueBand": "$1 Bn \u2013 $5 Bn",
       "establishedYear": 2012,
       "cities": [
-        "NCR"
+        "Delhi NCR"
       ],
       "fte": {
         "min": 100,
@@ -36509,7 +36509,7 @@
       "revenueBand": "$500 Mn \u2013 $1 Bn",
       "establishedYear": 2022,
       "cities": [
-        "NCR",
+        "Delhi NCR",
         "Hyderabad"
       ],
       "fte": {
@@ -36808,7 +36808,7 @@
       "revenueBand": "$1 Bn \u2013 $5 Bn",
       "establishedYear": 1995,
       "cities": [
-        "NCR",
+        "Delhi NCR",
         "Pune",
         "Bengaluru"
       ],
@@ -36941,7 +36941,7 @@
       "cities": [
         "Hyderabad",
         "Bengaluru",
-        "NCR"
+        "Delhi NCR"
       ],
       "fte": {
         "min": 2100,
@@ -37088,7 +37088,7 @@
       "revenueBand": "$1 Bn \u2013 $5 Bn",
       "establishedYear": 1996,
       "cities": [
-        "NCR"
+        "Delhi NCR"
       ],
       "fte": {
         "min": 500,
@@ -37109,7 +37109,7 @@
       "revenueBand": "$10 Bn \u2013 $20 Bn",
       "establishedYear": 2013,
       "cities": [
-        "NCR",
+        "Delhi NCR",
         "Pune",
         "Mumbai"
       ],
@@ -37239,7 +37239,7 @@
       "establishedYear": 2003,
       "cities": [
         "Bengaluru",
-        "NCR"
+        "Delhi NCR"
       ],
       "fte": {
         "min": 200,
@@ -37304,7 +37304,7 @@
       "cities": [
         "Chennai",
         "Hyderabad",
-        "NCR",
+        "Delhi NCR",
         "Coimbatore",
         "Bengaluru",
         "Kochi"
@@ -37351,7 +37351,7 @@
       "revenueBand": "$500 Mn \u2013 $1 Bn",
       "establishedYear": 2021,
       "cities": [
-        "NCR"
+        "Delhi NCR"
       ],
       "fte": {
         "min": 300,
@@ -37583,7 +37583,7 @@
       "establishedYear": 2016,
       "cities": [
         "Bengaluru",
-        "NCR",
+        "Delhi NCR",
         "Vadodara"
       ],
       "fte": {
@@ -37667,7 +37667,7 @@
       "establishedYear": 2014,
       "cities": [
         "Bengaluru",
-        "NCR"
+        "Delhi NCR"
       ],
       "fte": {
         "min": 700,
@@ -37899,7 +37899,7 @@
       "revenueBand": "$100 Mn \u2013 $500 Mn",
       "establishedYear": 2021,
       "cities": [
-        "NCR"
+        "Delhi NCR"
       ],
       "fte": {
         "min": 900,
@@ -37964,7 +37964,7 @@
       "revenueBand": "$1 Bn \u2013 $5 Bn",
       "establishedYear": 2022,
       "cities": [
-        "NCR"
+        "Delhi NCR"
       ],
       "fte": {
         "min": 500,
@@ -38091,7 +38091,7 @@
       "revenueBand": "$1 Bn \u2013 $5 Bn",
       "establishedYear": 2004,
       "cities": [
-        "NCR"
+        "Delhi NCR"
       ],
       "fte": {
         "min": 1000,
@@ -38301,7 +38301,7 @@
       "revenueBand": "$1 Bn \u2013 $5 Bn",
       "establishedYear": 2008,
       "cities": [
-        "NCR"
+        "Delhi NCR"
       ],
       "fte": {
         "min": 500,
@@ -38430,7 +38430,7 @@
       "establishedYear": 1997,
       "cities": [
         "Bengaluru",
-        "NCR"
+        "Delhi NCR"
       ],
       "fte": {
         "min": 300,
@@ -38514,7 +38514,7 @@
       "revenueBand": "$100 Mn \u2013 $500 Mn",
       "establishedYear": 2023,
       "cities": [
-        "NCR"
+        "Delhi NCR"
       ],
       "fte": {
         "min": 0,
@@ -38535,7 +38535,7 @@
       "revenueBand": "$5 Bn \u2013 $10 Bn",
       "establishedYear": 2007,
       "cities": [
-        "NCR"
+        "Delhi NCR"
       ],
       "fte": {
         "min": 100,
@@ -38578,7 +38578,7 @@
       "establishedYear": 2016,
       "cities": [
         "Hyderabad",
-        "NCR"
+        "Delhi NCR"
       ],
       "fte": {
         "min": 200,
@@ -38770,7 +38770,7 @@
       "revenueBand": "$5 Bn \u2013 $10 Bn",
       "establishedYear": 2008,
       "cities": [
-        "NCR"
+        "Delhi NCR"
       ],
       "fte": {
         "min": 100,
@@ -39025,7 +39025,7 @@
       "revenueBand": "$5 Bn \u2013 $10 Bn",
       "establishedYear": 2001,
       "cities": [
-        "NCR",
+        "Delhi NCR",
         "Mumbai",
         "Kolkata"
       ],
@@ -39048,7 +39048,7 @@
       "revenueBand": "$100 Mn \u2013 $500 Mn",
       "establishedYear": 2011,
       "cities": [
-        "NCR"
+        "Delhi NCR"
       ],
       "fte": {
         "min": 900,
@@ -39404,7 +39404,7 @@
       "revenueBand": "$1 Bn \u2013 $5 Bn",
       "establishedYear": 2026,
       "cities": [
-        "NCR"
+        "Delhi NCR"
       ],
       "fte": {
         "min": 0,
@@ -39466,7 +39466,7 @@
       "revenueBand": "$1 Bn \u2013 $5 Bn",
       "establishedYear": 2026,
       "cities": [
-        "NCR"
+        "Delhi NCR"
       ],
       "fte": {
         "min": 0,
@@ -39615,7 +39615,7 @@
       "revenueBand": "$500 Mn \u2013 $1 Bn",
       "establishedYear": 2006,
       "cities": [
-        "NCR",
+        "Delhi NCR",
         "Bengaluru"
       ],
       "fte": {

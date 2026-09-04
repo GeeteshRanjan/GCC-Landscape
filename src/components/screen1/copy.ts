@@ -540,8 +540,8 @@ export function mapHeading(view: PeerView): string {
 
   /**
    * **A floor on the denominator, not just on the share**, and the thin case is why.
-   * Electrical & Electronics has two presences, one each in Kolkata and NCR, so the
-   * concentration branch fired with a perfectly true "Kolkata holds 50%" — a
+   * Electrical & Electronics has two presences, one each in Kolkata and Delhi NCR, so
+   * the concentration branch fired with a perfectly true "Kolkata holds 50%" — a
    * percentage carrying two decimal places of authority over a sample of two. Below
    * five the spread heading is the honest one.
    *

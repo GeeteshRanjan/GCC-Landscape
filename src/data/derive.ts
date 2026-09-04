@@ -21,8 +21,10 @@ import type { CloseCopy, Company, FteRange } from "./schema";
  * remaining disagreements are reported as import warnings, not reconciled — a
  * mismatch means the source row is stale.
  *
- * NCR is a region standing in for Gurgaon / Noida / Delhi. Fine as a tier-1
- * label; it needs a deliberate decision before any city-level map ranks it.
+ * "Delhi NCR" is a region standing in for Gurgaon / Noida / Delhi. Fine as a
+ * tier-1 label; it needs a deliberate decision before any city-level map ranks it.
+ * The seed spells it "NCR"; `canonicalCity` in normalize.ts is where the two are
+ * reconciled, and this list keys on the published form.
  */
 /**
  * The tier-1 cities in descending GCC prominence, most-established hub first.
@@ -37,7 +39,7 @@ export const TIER1_CITY_ORDER: readonly string[] = [
   "Bengaluru",
   "Hyderabad",
   "Pune",
-  "NCR",
+  "Delhi NCR",
   "Chennai",
   "Mumbai",
   "Kolkata",

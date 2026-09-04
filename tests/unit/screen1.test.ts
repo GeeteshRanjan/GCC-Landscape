@@ -960,12 +960,13 @@ describe("geography", () => {
     it("lets the overlay win, so a wrong coordinate is correctable without a deploy", () => {
       const seeded = projectCity("Bengaluru")!;
       const corrected = projectCity("Bengaluru", {
-        // Delhi's coordinate, which is also NCR's — so the corrected point can be
-        // asserted against a known projection rather than merely "different".
+        // Delhi's coordinate, which is also Delhi NCR's — so the corrected point
+        // can be asserted against a known projection rather than merely
+        // "different".
         Bengaluru: { lat: 28.61, lon: 77.21 },
       })!;
       expect(corrected).not.toEqual(seeded);
-      expect(corrected).toEqual(projectCity("NCR"));
+      expect(corrected).toEqual(projectCity("Delhi NCR"));
     });
 
     it("leaves the seeded table as the source wherever the overlay is silent", () => {
