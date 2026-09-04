@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generatedAt": "2026-09-04T18:19:47.176Z",
+  "generatedAt": "2026-09-04T18:22:06.100Z",
   "source": "Consolidated_GCC_India_Database_2026_New.xlsx",
   "taxonomy": {
     "industries": [
@@ -43075,7 +43075,7 @@
       "gridRowHeader": "Capability",
       "industryTitle": "Inside India's GCC base",
       "industryBasisNote": "Indicative counts, drawn from the GCCs ANSR tracks rather than every centre in India.",
-      "snapshotHeading": "Snapshot of {industry} GCC's in India",
+      "snapshotHeading": "Snapshot of {industry} GCCS in India",
       "peersTitle": "GCC details of peers closest to {company}",
       "peersTitleFallback": "your profile",
       "largestTitle": "The largest {industry} GCCs in India",
