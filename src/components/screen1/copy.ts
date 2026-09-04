@@ -826,6 +826,41 @@ export function peerCountLine(view: PeerView): string {
 export const INDUSTRY_TITLE = DEFAULT_PUBLIC_COPY.industryTitle;
 
 /**
+ * What the containment chart's three counts are counted over, under the chart.
+ *
+ * **Requested by the project owner: the figures have to read as indicative rather than
+ * as a census.** They are exact counts of a tracked base and the base is not the whole
+ * market, so a reader who takes 1,834 for "the number of GCCs in India" has been told
+ * something we cannot support — and this chart is where that reading is likeliest,
+ * because it is the one block whose outermost layer is the national total.
+ *
+ * **It states the SCOPE and never the uncertainty, which is the whole of the
+ * copywriting decision here.** "Approximate figures" and "figures are estimates" both
+ * say the number might be wrong without saying anything about it, and this file's
+ * standing rule is that the tool never narrates its own integrity: a hedge raises a
+ * doubt the reader did not arrive with, in front of an audience that discounts a page
+ * which apologises. Naming what was counted does the same work and adds a fact —
+ * "indicative" is the word this readership already uses for a market figure, and the
+ * clause after it says why. The register to match is the largest block's ordering note
+ * and Screen 2's index base line, not a disclaimer.
+ *
+ * **One sentence, 12px muted, at the foot of the card**, which is the same shape and
+ * the same treatment `CardMeta` uses for "how to read this figure" on the other screen.
+ * It is not a lead: a caveat above the chart is read before there is anything to
+ * qualify, and no section on this surface renders a lead.
+ *
+ * **PUBLISHED COPY, at the project owner's decision, and it shipped in code for one
+ * pass on the opposite argument** — that a sentence which is the only thing between
+ * three exact counts and a claim about the market must not be rewordable, since a
+ * softening is invisible to the schema, the diff and `data:verify` alike. What survives
+ * of that is the guarantee `nonEmpty` gives: the note can be reworded and cannot be
+ * emptied, so the qualification is on the page whatever it says. The wording rule above
+ * is the standard a rewording is held to, and `tests/unit/public-copy.test.ts` pins the
+ * shipped value out of the hedging register.
+ */
+export const INDUSTRY_BASIS_NOTE = DEFAULT_PUBLIC_COPY.industryBasisNote;
+
+/**
  * The largest-centres section's lead.
  *
  * **It was a provenance note at the foot of the block** — "Ranges reflect reported

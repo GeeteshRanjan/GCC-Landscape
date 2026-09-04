@@ -784,6 +784,20 @@ test.describe("the answer", () => {
      */
     await expect(industry.getByText(/selected from the/)).toHaveCount(0);
     /**
+     * **The basis line IS under the chart, at the project owner's request, and it is the
+     * one sentence keeping three exact-looking counts from reading as a census** — the
+     * outermost layer is every GCC in the dataset, which is the figure on this surface a
+     * reader is likeliest to take for a national total.
+     *
+     * Located by its KEY, on this file's convention: it is editable copy, so the fixture
+     * resolves the key to what renders and a rewording in admin cannot turn a working
+     * product red. What the second assertion pins is the REGISTER, which an edit could
+     * cross — "figures are approximate" is the disclaimer voice the wording avoids, and
+     * it is asserted literally because there is no key for a string that must not appear.
+     */
+    await expect(industry.getByText(COPY.industryBasisNote)).toBeVisible();
+    await expect(industry.getByText(/figures are approximate/i)).toHaveCount(0);
+    /**
      * The largest card is a ranking, and it is a CHART rather than a stack of company
      * cards. Neither a table nor a card grid: both were tried, and the card version was
      * what made a third of this page the same data twice — three of these five are in

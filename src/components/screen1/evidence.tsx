@@ -908,6 +908,7 @@ export function PeerBlockView({ view }: { view: PeerView }) {
  * a grid whose own lead says the opposite.
  */
 export function IndustryCountView({ view }: { view: PeerView }) {
+  const copy = usePublicCopy();
   const { total, industry, businessType } = view.industry;
   const base = view.scale.companyCount;
   const share = (count: number) => (base > 0 ? count / base : 0);
@@ -971,7 +972,29 @@ export function IndustryCountView({ view }: { view: PeerView }) {
    * reader left to check that the two agree. The sentence moved up to the section's
    * own lead, where `Panel` renders it, and the chart carries every figure.
    */
-  return <Containment layers={layers} />;
+  /**
+   * **One note under the chart, and it is a scope line rather than a caveat.** The
+   * outermost layer is every GCC in the dataset, which is the one figure on this surface
+   * a reader can mistake for a national total — so the basis is stated where the figure
+   * is, at 12px muted, in the treatment Screen 2's `CardMeta` uses for the same job.
+   * Published copy: read through the context like every other static string here, with
+   * `INDUSTRY_BASIS_NOTE` as the shipped value and the wording rule.
+   *
+   * **A wrapper, because the card stretches and the chart is what may absorb it.** The
+   * panel's body grows to the ranking beside it and passes that growth to its one child;
+   * with a second child that would have stretched the note's own box as well. So the
+   * wrapper takes the growth, the chart takes it from there up to its own
+   * `max-block-size`, and `justify-center` splits whatever is left above and below the
+   * pair — which is the behaviour the body used to get on its own.
+   */
+  return (
+    <div className="flex min-w-0 flex-col gap-3 lg:justify-center">
+      <Containment layers={layers} className="lg:grow" />
+      <p className="max-w-measure text-xs text-text-muted">
+        {copy.industryBasisNote}
+      </p>
+    </div>
+  );
 }
 
 /* ==========================================================================

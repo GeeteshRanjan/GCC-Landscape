@@ -640,7 +640,17 @@ banned scroll logic: it reads nothing and reports nothing, and writes once in re
 
 **2. The industry count, as three OVERLAPPING layers on one z-stack** — national base, industry inside
 it, and inside that either the visitor's sub-industry or the comparison set. **Always three layers.**
-Layers step down from a shared top edge so each label owns an exposed band. Not a divided bar — the
+Layers step down from a shared top edge so each label owns an exposed band. **A LEADING CORNER IS ROUNDED
+ONLY WHERE IT BELONGS TO THE STACK RATHER THAN TO A LAYER INSIDE IT** — every bar shares the leading and
+bottom edges, so their bottom-leading corners coincide and round into one, while the stepped TOP edges put
+an inner layer's top-leading corner mid-stack where a curve cuts a notch showing the fill behind. So
+`--back` keeps that corner and every other layer squares it, flush to the shared zero, which is the axis
+rather than the end of a mark. **The block closes on `copy.industryBasisNote`**, 12px muted, in `CardMeta`'s
+treatment: the outermost layer is every GCC in the dataset, so the one figure a reader can take for a
+national total states what it was counted over. **It names the SCOPE and never the uncertainty** — the tool
+does not narrate its own integrity, so "indicative, drawn from the GCCs ANSR tracks" and never "figures are
+approximate". Editable, and `nonEmpty` is the guarantee that matters: the sentence can be reworded and
+cannot be emptied, so the qualification is on the page whatever it says. Not a divided bar — the
 figures sum to nothing. **EVERY LABEL STARTS AT THE CHART'S OWN LEADING EDGE**; what associates a label
 with its layer is the BAND, not horizontal adjacency. **THE INNERMOST LAYER IS A POSITION MARKER, NOT A
 THIRD BAR, WHENEVER IT IS A SELECTION RATHER THAN A POPULATION** — a fixed-width accent mark capped by
@@ -1321,7 +1331,7 @@ Screen 1 sends five peers and a few counts.
 
 **Three editable collections, one file.** Companies, metrics, and `siteContent` — the entry point's hero
 copy, ANSR's impact figures, the result screens' CLOSE, the peer view's `commonFunctions` tags, the
-entry point's `logos`, and `copy`, the 68 static visitor-facing strings — all live in `dataset.json`. A second file would mean a second write
+entry point's `logos`, and `copy`, the 69 static visitor-facing strings — all live in `dataset.json`. A second file would mean a second write
 target, a second diff, a second cache and a publish that could half-succeed. `metrics` is **defaulted to
 `[]` rather than required**, so a dataset written before it existed still reads — the fs store refuses an
 unrecognised version, so bumping `DATASET_VERSION` would have turned a compatible addition into a broken
@@ -1329,7 +1339,7 @@ read.
 
 **THE LINE BETWEEN AN EDITABLE STRING AND A CODE ONE IS WHETHER IT STATES A CLAIM ABOUT THE DATASET.**
 A heading, a label or an attribution names what a reader is looking at and asserts nothing about it, so it
-is `siteContent.copy` — 62 flat keys and 6 templates, each capped at a render limit measured on the real layout, grouped by
+is `siteContent.copy` — 63 flat keys and 6 templates, each capped at a render limit measured on the real layout, grouped by
 screen in the editor. A sentence that states a count, a share or an ordering has to move when the thing it
 describes moves, so it stays a function in `copy.ts`: `peerCountLine`, `shortfallLine`, `largestLine`,
 `industrySentence`, `largestOverlapLine` and their siblings are derived and have no fixed wording to edit.
@@ -1340,13 +1350,18 @@ a claim about the five companies above them, and there is no per-company functio
 anything narrower; as free text it could be reworded into a falsehood nothing catches. The snapshot's
 opening label is COMPOSED over the visitor's scope, so a flat field could hold only one of its two
 branches. And `ASK.submitPending` is a transient machine state whose length is load-bearing.
+**`industryBasisNote` was a fourth for one pass and is a KEY**, at the project owner's decision: the
+containment chart's basis line is the only thing between three exact counts and a claim about the market,
+which argued for code, and it was overruled because a basis line is ANSR's own voice. `nonEmpty` is what
+survives of the argument — the note can be reworded and cannot be emptied — so the wording rule is enforced
+by a unit test on the shipped value and by the admin hint, not by the schema.
 **Two keys have been removed rather than left unread, and the second is the one worth remembering.**
 `snapshotShareLabel` rendered nowhere, and an editable field nothing draws is a change an admin makes and
 cannot see. `peersTitle` rendered fine and still had to go: ANSR's new wording names the visitor's own
 company, and the company name is optional, so the heading composes over an answer the way the snapshot's
 opening label does. **Removing a key needs the STORAGE KEY bumped too** — zod strips an unrecognised key
 rather than refusing it, so a draft written before the removal would publish cleanly with the extra string
-silently dropped, which no shape check can catch. `draft-provider.tsx` is at v6.
+silently dropped, which no shape check can catch. `draft-provider.tsx` is at v8.
 
 **A STRING THAT NAMES ITS SCOPE RATHER THAN ASSERTING ANYTHING IS A TEMPLATE, NOT A REASON TO STAY IN
 CODE.** `copyTemplate` in `schema.ts` builds a field that MUST contain its declared `{slot}`s, and the
@@ -1382,8 +1397,9 @@ before a new KEY has a `copy` that is present and short by one, so without the m
 refuses the committed dataset and production's alike. **A merge rather than a `.default()` per field**, so
 the shipped value stays in exactly one place — and no future key needs a default of its own. The cost is
 that the merge makes the draft restore's shape check BLIND, since the keys are present after it: that is
-why twenty-nine additions still bumped `STORAGE_KEY` to v7, and a bump is now the only instrument for a
-copy-shape change.
+why twenty-nine additions bumped `STORAGE_KEY` to v7 and ONE more took it to v8 — the merge is per-KEY, so
+a draft short by one string has that gap filled with the shipped value and publishes it as an approved
+edit. A bump is now the only instrument for a copy-shape change, at any size.
 
 **A VISITOR-FACING STRING AN ADMIN CAN REWORD MUST NOT BE A SPEC'S LOCATOR.** `0-screen1.spec.ts` and
 `0-search.spec.ts` import `DEFAULT_PUBLIC_COPY` and read the KEY instead of typing the words, which is

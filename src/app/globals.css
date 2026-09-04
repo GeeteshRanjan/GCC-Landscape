@@ -2679,12 +2679,24 @@ select.gcc-field {
 .gcc-containment__bar {
   inset-inline-start: 0;
   inline-size: var(--gcc-extent);
-  /* Rounded on ALL FOUR corners, at the project owner's request: the leading edge is
-     curved to match the trailing one so each layer reads as a symmetric mark rather
-     than one cut square on the shared zero. Every bar steps down from the shared top
-     edge, so each layer's top-leading corner is exposed in its own band; the bottom-
-     leading corner is carried by the innermost layer that draws on top. */
+  /* Rounded on the trailing edge, and on the leading edge only where that corner
+     belongs to the STACK rather than to one layer inside it.
+
+     **The top-leading corner is square on every layer but the outermost, at the project
+     owner's request, and the geometry is the reason.** All the bars share the leading
+     edge and the bottom edge, so their bottom-leading corners coincide exactly — round
+     them all at one radius and they stack into a single clean corner. Their TOP edges
+     are stepped, so an inner layer's top-leading corner sits in the middle of the
+     stack, where a curve cuts a notch out of the layer it is drawn on and shows the
+     paler fill behind it. Three layers, two notches down the one edge every label is
+     aligned to. Squaring it runs each inner layer flush into the shared zero, which is
+     also what that edge means: it is the axis, not the end of a mark.
+
+     So the silhouette keeps both of its own leading corners — the top one from
+     `--back`, the bottom one from whichever layer draws on top — and nothing inside it
+     curves against a fill. */
   border-radius: var(--ansr-radius-md);
+  border-start-start-radius: 0;
   /* **Depth, not just a colour change.** Two adjacent ramp steps at the widths real
      figures produce are a 1.2:1 difference, so the layering was carried entirely by
      hue and read as one flat block with a lighter patch. A shallow shadow makes each
@@ -2702,6 +2714,10 @@ select.gcc-field {
    have silently given every bar the shadow back. */
 .gcc-containment__bar--back {
   box-shadow: none;
+  /* The one top-leading corner that is the STACK's own outline rather than an internal
+     step, so it takes the radius back. Nothing is drawn behind it for a curve to expose
+     — the card's fill is, which is what makes it read as the chart's corner. */
+  border-start-start-radius: var(--ansr-radius-md);
 }
 
 /* **A position marker, not an extent**, for a level that is a selection rather than a
@@ -2712,9 +2728,10 @@ select.gcc-field {
 
    **Rounded like every bar, at ANSR's request.** The marker read as the one hard-cut
    mark in a chart whose other layers curve their edges, so it looked like a different
-   kind of object rather than the innermost layer. It inherits the bar's own
-   `--ansr-radius-md` on all four corners now — the same as the bars, which now round
-   their leading edge too — so at its ~8px width it reads as a small rounded tick. */
+   kind of object rather than the innermost layer. It takes the bar rule verbatim,
+   including the square top-leading corner every inner layer now has — so at its ~8px
+   width it reads as a small tick that stands on the shared axis, and because it is the
+   layer drawn on top its bottom-leading corner is the stack's own. */
 .gcc-containment__bar--marker {
   inline-size: min(var(--ansr-space-2), var(--gcc-extent));
 }

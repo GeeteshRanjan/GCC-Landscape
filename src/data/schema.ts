@@ -1085,6 +1085,28 @@ export const publicCopySchema = z.object({
    * second slot to fake it would put the choice of noun in an admin's hands.
    */
   industryTitle: nonEmpty.max(40),
+  /**
+   * What the containment chart's three counts are counted over, under the chart.
+   *
+   * **It shipped in code for one pass and is editable at the project owner's decision**,
+   * which reverses the argument that put it there: the sentence is the only thing keeping
+   * three exact counts — one of them the national total — from reading as a census, so a
+   * softening would remove a qualification rather than reword a label, and no schema
+   * check can see the difference. Overruled on the ground that a basis line is exactly
+   * the kind of string ANSR's own voice should own, and it is not `nonEmpty` for nothing:
+   * `nonEmpty` is the guard that survives, so the note can be REWORDED and cannot be
+   * emptied.
+   *
+   * The wording rule it is held to, which lives with the reasoning in
+   * `screen1/copy.ts`: name the SCOPE, never the uncertainty. "Indicative counts, drawn
+   * from the GCCs ANSR tracks" and never "figures are approximate" — this surface does
+   * not narrate its own integrity.
+   *
+   * **120, measured.** The shipped 85 characters set two lines at 12px in the
+   * two-fifths card the chart sits in, ~379px at 1440 and ~287 on a phone; 120 is a
+   * third line, past which the qualification outweighs the three figures it qualifies.
+   */
+  industryBasisNote: nonEmpty.max(120),
   snapshotHeading: copyTemplate("snapshotHeading"),
   peersTitle: copyTemplate("peersTitle"),
   peersTitleFallback: nonEmpty.max(32),
@@ -1414,6 +1436,8 @@ export const DEFAULT_PUBLIC_COPY: PublicCopy = {
   editorSubmit: "Update my results",
   gridRowHeader: "Capability",
   industryTitle: "Inside India's GCC base",
+  industryBasisNote:
+    "Indicative counts, drawn from the GCCs ANSR tracks rather than every centre in India.",
   /* "GCCs", never "GCC's", which ANSR asked never to appear. */
   snapshotHeading: "Snapshot of {industry} GCCs in India",
   peersTitle: "GCC details of peers closest to {company}",

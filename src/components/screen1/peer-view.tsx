@@ -629,11 +629,17 @@ export function PeerViewAnswer({
                     room stays here and is split above and below the chart, which reads as
                     padding where the same space collected underneath read as a card that
                     failed to fill. */}
+                {/* **`lg:justify-center` moved INSIDE the block, and that is what adding
+                    the basis note under the chart cost.** Here it split the leftover room
+                    around the body's ONE child; the block is two elements now — the chart
+                    and a 12px scope line — so the body passes its growth down and the
+                    block centres the pair as a group. The chart still absorbs the stretch
+                    up to its own cap. See `IndustryCountView`. */}
                 <Panel
                   id="industry"
                   title={copy.industryTitle}
                   className="lg:col-span-2 lg:h-full"
-                  bodyClassName="flex flex-col lg:grow lg:justify-center [&>*]:lg:grow"
+                  bodyClassName="flex flex-col lg:grow [&>*]:lg:grow"
                   motif={<PanelArc />}
                 >
                   <IndustryCountView view={view} />

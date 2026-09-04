@@ -1199,8 +1199,19 @@ const LABEL_INSIDE_MIN = 50;
 
 export function Containment({
   layers,
+  className,
 }: {
   layers: readonly ContainmentLayer[];
+  /**
+   * The stack's own box, for a caller that has to place it.
+   *
+   * One consumer, and it passes exactly one thing: the peer view's card stretches to
+   * the ranking beside it, so the chart opts into that stretch with `lg:grow` — capped
+   * by its own `max-block-size`, which is where the stretch is actually bounded. Layout
+   * belongs to the caller because only the caller knows what the chart shares a row
+   * with; every mark inside stays this file's.
+   */
+  className?: string;
 }) {
   const count = layers.length;
   const ramp = CONTAINMENT_RAMP[count] ?? CONTAINMENT_RAMP[3]!;
@@ -1229,7 +1240,7 @@ export function Containment({
   const band = 100 / count;
 
   return (
-    <div className="gcc-containment">
+    <div className={cn("gcc-containment", className)}>
       {layers.map((layer, index) => {
         // A floor, so a genuinely tiny population is a visible sliver rather than an
         // apparently missing layer. A thin industry against the national base is

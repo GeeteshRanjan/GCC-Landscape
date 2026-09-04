@@ -905,6 +905,7 @@ export const PUBLIC_COPY_LABELS: Record<keyof PublicCopy, string> = {
   editorSubmit: "Answer editor, submit button",
   gridRowHeader: "Capability grid, row column name",
   industryTitle: "Industry count heading",
+  industryBasisNote: "Industry count, basis line",
   snapshotHeading: "Snapshot heading",
   peersTitle: "Peer grid heading",
   peersTitleFallback: "Peer grid heading, no company given",

@@ -5,6 +5,7 @@ import {
   CUSTOMERS,
   FUNCTIONS_TITLE,
   IMPACT,
+  INDUSTRY_BASIS_NOTE,
   INDUSTRY_TITLE,
   peersTitle,
   SCALE,
@@ -153,6 +154,24 @@ describe("the shipped wording is defined once", () => {
     expect(Object.values(DEFAULT_PUBLIC_COPY)).not.toContain(
       "Functions most GCCs run from India",
     );
+  });
+
+  /**
+   * **The containment chart's basis line is PUBLISHED copy, and this assertion is the
+   * inverse of the one it replaces.** It shipped in code for one pass on the argument
+   * that a sentence which is the only thing between three exact counts and a claim about
+   * the market must not be rewordable; the project owner overruled that, and what
+   * survives of it is `nonEmpty` — the note can be reworded and cannot be emptied.
+   *
+   * So what is asserted is the SHIPPED value rather than the field: it names the scope
+   * rather than the uncertainty, which is the register the wording rule fixes and the one
+   * an edit is held to. `industryBasisNote` is in `PUBLIC_COPY_LABELS`, so `diff.test.ts`
+   * covers it reaching the publish preview.
+   */
+  it("publishes the industry chart's basis line and keeps it out of the hedging register", () => {
+    expect(INDUSTRY_BASIS_NOTE).toBe(DEFAULT_PUBLIC_COPY.industryBasisNote);
+    expect(INDUSTRY_BASIS_NOTE).not.toMatch(/\b(approximate|estimate[sd]?)\b/i);
+    expect(INDUSTRY_BASIS_NOTE).toMatch(/\bIndicative\b/);
   });
 
   /**
@@ -370,11 +389,13 @@ describe("the snapshot's labels are an argument", () => {
     // The rule the removed fourth label broke. Every key in the schema is read by
     // one of the derived shapes above or by a component asserted in the browser
     // suite; the count is the cheap guard that a new key arrived with a consumer.
-    // 68 since the copy audit moved forty strings out of code: four form field
+    // 68 after the copy audit moved forty strings out of code: four form field
     // labels, six control placeholders and hints, two error strings, the four answer
     // pills shared by both screens, the function panel's name, four city-map toggle
     // labels, the snapshot's missing-figure text, and six templates plus one fallback.
-    expect(Object.keys(DEFAULT_PUBLIC_COPY)).toHaveLength(68);
+    // 69 with the containment chart's basis line, which moved out of code one pass
+    // after it was written in it.
+    expect(Object.keys(DEFAULT_PUBLIC_COPY)).toHaveLength(69);
   });
 });
 

@@ -1110,7 +1110,7 @@ interface CopyGroupConfig {
  * The static strings, grouped by the screen they appear on.
  *
  * **Grouped rather than listed, because the group is the only thing that tells an
- * admin what they are looking at.** Sixty-eight labels in one column is a list of
+ * admin what they are looking at.** Sixty-nine labels in one column is a list of
  * slots with no map; four sections named for the surfaces of the product are four
  * questions an admin can answer one at a time. The order inside each group follows
  * the reading order of the screen it describes.
@@ -1259,6 +1259,10 @@ const COPY_GROUPS: readonly CopyGroupConfig[] = [
         hint: "Substituted for {company} when the visitor did not give a name. Do not write \u201cyours\u201d \u2014 it presumes they already run a centre in India.",
       },
       { key: "industryTitle" },
+      {
+        key: "industryBasisNote",
+        hint: "The line under the three-layer chart. It says what the counts COVER, never that they might be wrong \u2014 the outer layer is every GCC we track, so a reader could otherwise take it for a national census. Keep \u201cindicative\u201d or a word doing its job; do not write \u201capproximate\u201d or \u201cestimates\u201d.",
+      },
       {
         key: "largestTitle",
         hint: "Must keep {industry}.",

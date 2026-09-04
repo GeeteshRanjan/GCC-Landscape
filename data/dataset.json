@@ -43073,6 +43073,7 @@
       "editorSubmit": "Update my results",
       "gridRowHeader": "Capability",
       "industryTitle": "Inside India's GCC base",
+      "industryBasisNote": "Indicative counts, drawn from the GCCs ANSR tracks rather than every centre in India.",
       "snapshotHeading": "Snapshot of {industry} GCCs in India",
       "peersTitle": "GCC details of peers closest to {company}",
       "peersTitleFallback": "your profile",

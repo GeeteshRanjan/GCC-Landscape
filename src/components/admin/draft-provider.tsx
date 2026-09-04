@@ -94,8 +94,14 @@ import { slugify, uniqueSlug } from "@/data/normalize";
  * point of the merge. `peersTitle` also returns here as a TEMPLATE, so a v6 draft that
  * still carried the old flat string would now be validated against a `{company}` slot it
  * has no reason to contain.
+ *
+ * **v8 is ONE key added, `copy.industryBasisNote`, and it needs the bump for exactly the
+ * reason v7 did.** The merge is per-KEY, so a v7 draft is short by one, parses, has the
+ * gap filled with the shipped sentence, and publishes it as an approved edit. One string
+ * is not a smaller version of that problem — it is the same problem — and the bump is now
+ * the only instrument for a copy-shape change.
  */
-const STORAGE_KEY = "gcc-admin-draft-v7";
+const STORAGE_KEY = "gcc-admin-draft-v8";
 const AUTOSAVE_DEBOUNCE_MS = 800;
 
 /** Everything the admin can edit. Metadata is server-owned. */

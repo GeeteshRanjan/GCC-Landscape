@@ -2440,6 +2440,45 @@ the length a lie, which is the same move as truncating an axis and is out for th
   happening to be the first `div` among its siblings — which any wrapper, and any layer drawn as
   something other than a bar, would have silently given the shadow back to. The `Fragment` is
   still required for a different reason: a `display: contents` wrapper leaves a node in the DOM.
+- **A LEADING CORNER IS THE STACK'S OR IT IS SQUARE, at the project owner's instruction, and this
+  narrows the "all four corners" pass before it.** That pass curved the leading edge to match the
+  trailing one so a layer read as a symmetric mark — which is true of a mark drawn on a card and
+  false of one drawn on another mark. The bars share the leading and bottom edges, so their
+  bottom-leading corners coincide and three equal radii stack into one clean corner; their TOP edges
+  are stepped, so the industry layer's and the marker's top-leading corners sit mid-stack, where the
+  curve cuts a notch and shows the paler parent fill through it. Two notches, down the one edge every
+  label is aligned to and the one edge the chart uses as its zero. So `--back` keeps that corner —
+  behind it is the card, which is what makes it read as the chart's own outline — and every inner
+  layer squares it and runs flush into the axis. Measured at 4px, so each notch was 4px of pale fill
+  inside a 39px bar.
+  - **Rejected: squaring the leading edge on every layer, `--back` included.** It removes the notches
+    and gives the chart a hard-cut silhouette against the card, which is the "cut square on the shared
+    zero" reading the earlier pass was right to fix. The stack has an outline; only its interior does
+    not.
+  - **Rejected: squaring the inner layers' bottom-leading corners too, for consistency within a
+    layer.** The corner that would square is the SILHOUETTE's, drawn by whichever layer happens to be
+    on top — so consistency inside one bar buys an inconsistency between the stack's two leading
+    corners, and the innermost layer stops being able to draw the chart's own foot.
+  - **Rejected: insetting each inner layer by a pixel so the notch reads as a deliberate gap.** A gap
+    is the one thing the eye reads as separation, which is what the whole shape exists to avoid.
+- **The block closes on one 12px muted line naming what the counts cover**, at the project owner's
+  request: `copy.industryBasisNote`, in the treatment `CardMeta` uses on Screen 2. The outermost layer is
+  every GCC in the dataset, and 1,834 under a heading reading "Inside India's GCC base" is the one
+  figure on this surface a reader can take for a national census. It shipped in CODE for one pass, on the
+  argument that a sentence carrying a qualification must not be rewordable, and is published copy at the
+  project owner's decision — capped at 120, three lines, which is where the qualification starts
+  outweighing the three figures it qualifies.
+  - **It names the SCOPE, never the uncertainty.** "Figures are approximate" and "estimates" say a
+    number might be wrong and nothing about it, and the surface's standing rule is that the tool does
+    not narrate its own integrity — a hedge raises a doubt a CIO did not arrive with. "Indicative
+    counts, drawn from the GCCs ANSR tracks rather than every centre in India" is the same
+    qualification carried by a fact, in the word this readership already uses for a market figure.
+  - **Under the chart, not over it.** A caveat above the marks is read before there is anything to
+    qualify, and no section on this surface renders a lead.
+  - **`lg:justify-center` moved from the panel body into the block.** The body passed its stretch to
+    its one child; with two children it would have stretched the note's box as well. The chart still
+    absorbs the stretch to its own `max-block-size` and the pair is centred in what is left, so the
+    card's silhouette is unchanged.
 
 ### The largest-centres block stops being a second set of company cards
 
