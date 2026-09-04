@@ -1,5 +1,18 @@
 import { expect, test } from "@playwright/test";
 
+/**
+ * **The shipped copy block, because a string an admin can reword must not be a spec's
+ * LOCATOR.** Every assertion below that names a visitor-facing string reads its key
+ * rather than typing the words, so ANSR rewording a label in admin does not turn a
+ * passing suite red on a product that is working — and a spec naming a string the
+ * schema no longer has fails at the type level rather than at 30 seconds of timeout.
+ *
+ * The fixture dataset publishes the shipped defaults, so these resolve to exactly what
+ * renders. What is still asserted literally is anything that must NOT appear: a removed
+ * sentence has no key to read.
+ */
+import { DEFAULT_PUBLIC_COPY as COPY } from "@/data/schema";
+
 import { band, choose, expectBand, LEAK_CANARY } from "./helpers";
 
 /**
@@ -193,9 +206,9 @@ test.describe("the ask", () => {
     await expect(submit).toBeEnabled();
     await submit.click();
 
-    await expect(page.getByText("Choose one to continue.").first()).toBeVisible();
+    await expect(page.getByText(COPY.askFieldRequired).first()).toBeVisible();
     // First invalid control in DOM order is the industry select.
-    await expect(page.getByLabel("Industry")).toBeFocused();
+    await expect(page.getByLabel(COPY.askIndustryLabel)).toBeFocused();
 
     // Still on the form; nothing was submitted.
     await expect(page.locator("h1#ask-title")).toBeVisible();
@@ -557,7 +570,7 @@ test.describe("the answer", () => {
     // No cell is a placeholder. A missing figure is a stated "Data unavailable", and
     // BFSI is missing none of them.
     await expect(snapshot.getByText(/^(—|n\/a)$/i)).toHaveCount(0);
-    await expect(snapshot.getByText("Data unavailable")).toHaveCount(0);
+    await expect(snapshot.getByText(COPY.figureUnavailable)).toHaveCount(0);
     // "GCCs" is the plural, everywhere. "GCC's" is a possessive and ANSR asked for it
     // never to appear.
     await expect(snapshot.getByText(/GCC's/)).toHaveCount(0);
@@ -609,7 +622,7 @@ test.describe("the answer", () => {
      * change which companies come back. `toCard` no longer carries it, which is asserted
      * in the unit suite by an exhaustive key list.
      */
-    await expect(peers.getByText("Headquarters")).toHaveCount(0);
+    await expect(peers.getByText(COPY.pillHeadquarters)).toHaveCount(0);
     await expect(peers.getByText("USA")).toHaveCount(0);
     /**
      * What each card does carry, at a size worth reading — **and every label names the
@@ -1581,7 +1594,7 @@ test.describe("the answer", () => {
     await noScroll();
 
     // Expanding the list has to expand the map's labels with it.
-    await map.getByRole("button", { name: /Explore all cities/ }).click();
+    await map.getByRole("button", { name: COPY.cityToggleToAll }).click();
     const all = await rows.count();
     expect(all).toBeGreaterThan(leading);
     await expect(labels).toHaveCount(all);
@@ -1725,7 +1738,11 @@ test.describe("the answer", () => {
      */
     await expect(page.getByText("India today")).toHaveCount(0);
     const profile = page.getByRole("group", { name: /Your profile/ });
-    for (const label of ["Industry", "Headquarters", "Revenue band (USD)"]) {
+    for (const label of [
+      COPY.pillIndustry,
+      COPY.pillHeadquarters,
+      COPY.pillRevenueBand,
+    ]) {
       await expect(profile.getByText(label, { exact: true })).toBeVisible();
     }
     // And the one control, which is the only way back from either result screen.
@@ -1902,7 +1919,7 @@ test.describe("a thin industry", () => {
      */
     await expect(strip.getByText(/^0%$/)).toHaveCount(0);
     await expect(strip.getByText("<1%")).toHaveCount(0);
-    await expect(strip.getByText("Data unavailable")).toHaveCount(0);
+    await expect(strip.getByText(COPY.figureUnavailable)).toHaveCount(0);
 
     // The national scale block is unchanged — that is what it is for.
     await expect(band(page, "scale").getByText("181")).toBeVisible();

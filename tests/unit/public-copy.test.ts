@@ -23,7 +23,12 @@ import {
   VELOCITY_HEADING,
 } from "@/components/screen2/copy";
 import {
+  COPY_PLACEHOLDERS,
+  COPY_TEMPLATES,
+  copyFieldMax,
   DEFAULT_PUBLIC_COPY,
+  fillTemplate,
+  isCopyTemplate,
   METRIC_FUNCTIONS,
   publicCopySchema,
   type PublicCopy,
@@ -151,20 +156,115 @@ describe("the shipped wording is defined once", () => {
   });
 
   /**
-   * **The comparable-companies heading left this object, and the reason is the rule the
-   * object is held to.** It was `peersTitle`, a fixed string and so legitimately data;
-   * ANSR's wording names the visitor's own company, which is the one OPTIONAL input, so
-   * the heading has two branches and neither is a string an admin could type. Same
-   * reasoning as the snapshot's opening label, which never became a field.
+   * **The comparable-companies heading is BACK in this object, as a template, and this
+   * assertion is the inverse of the one it replaces.**
    *
-   * Asserted rather than remembered, because the key looks exactly like the four section
-   * titles still beside it and is the obvious thing to add back.
+   * It left because ANSR's wording names the visitor's own company, which is the one
+   * OPTIONAL input: the heading has two branches and a flat field could hold only one of
+   * them. A template holds both — `{company}` plus a `peersTitleFallback` for the branch
+   * where no name was given — so what forced it out is what lets it return.
+   *
+   * What is still asserted is that it came back as a TEMPLATE rather than as the flat
+   * field it used to be, and that the pre-ANSR wording is in neither place, so a revert
+   * cannot land half-done.
    */
-  it("keeps the comparable-companies heading out of the published copy", () => {
-    expect(Object.keys(DEFAULT_PUBLIC_COPY)).not.toContain("peersTitle");
+  it("publishes the comparable-companies heading as a template", () => {
+    expect(Object.keys(DEFAULT_PUBLIC_COPY)).toContain("peersTitle");
+    expect(DEFAULT_PUBLIC_COPY.peersTitle).toContain(COPY_PLACEHOLDERS.company);
     expect(Object.values(DEFAULT_PUBLIC_COPY)).not.toContain(
       "India GCCs closest to your profile",
     );
+    // "your profile", never "yours": the latter presumes the visitor already runs a
+    // centre in India, which `gccStatus` is a constant the form never asks for.
+    expect(DEFAULT_PUBLIC_COPY.peersTitleFallback).toBe("your profile");
+  });
+
+  /**
+   * **The snapshot's opening label is still NOT a key, and templates do not change
+   * that.** It is the one place the two rules meet: `peersTitle` came back because its
+   * branches differ by a VALUE dropped into one slot, and this label's branches differ
+   * by which NOUN the sentence uses ("your industry" / "your sub-industry"). A template
+   * cannot express that, and inventing a slot to fake it would hand an admin the choice
+   * of noun — which is a claim about which population the figure was measured over.
+   */
+  it("keeps the snapshot's opening label out of the published copy", () => {
+    const keys = Object.keys(DEFAULT_PUBLIC_COPY);
+    expect(keys).not.toContain("snapshotComparableLabel");
+    for (const value of Object.values(DEFAULT_PUBLIC_COPY)) {
+      expect(value).not.toMatch(/your sub-industry/);
+    }
+  });
+});
+
+/**
+ * The template contract: every key in `COPY_TEMPLATES` is a real template field, its
+ * shipped default satisfies its own slots, and deleting a slot is REFUSED.
+ *
+ * The refine is the whole reason templates are safe to hand an admin, so it is pinned
+ * per key rather than once — a table this small is exactly where one entry silently
+ * losing its guard would go unnoticed.
+ */
+describe("copy templates keep their placeholders", () => {
+  it("ships a default that satisfies every declared slot", () => {
+    for (const [key, config] of Object.entries(COPY_TEMPLATES)) {
+      const shipped = DEFAULT_PUBLIC_COPY[key as keyof PublicCopy];
+      for (const slot of config.slots) {
+        expect(shipped, key).toContain(COPY_PLACEHOLDERS[slot]);
+      }
+      expect(shipped.length, key).toBeLessThanOrEqual(config.filledMax);
+      expect(isCopyTemplate(key)).toBe(true);
+      expect(copyFieldMax(key as keyof PublicCopy)).toBe(config.filledMax);
+    }
+  });
+
+  it("refuses a template whose slot has been deleted", () => {
+    for (const [key, config] of Object.entries(COPY_TEMPLATES)) {
+      let stripped = DEFAULT_PUBLIC_COPY[key as keyof PublicCopy];
+      for (const slot of config.slots) {
+        stripped = stripped.split(COPY_PLACEHOLDERS[slot]).join("");
+      }
+      const result = publicCopySchema.safeParse({
+        ...DEFAULT_PUBLIC_COPY,
+        [key]: stripped,
+      });
+      expect(result.success, key).toBe(false);
+    }
+  });
+
+  it("fills every slot and leaves an unsupplied one visible", () => {
+    expect(
+      fillTemplate(DEFAULT_PUBLIC_COPY.snapshotHeading, { industry: "Retail" }),
+    ).toBe("Snapshot of Retail GCCs in India");
+    // A slot with nothing supplied stays as typed, so a caller that forgets one shows
+    // a visible `{industry}` rather than an empty gap reading as intended copy.
+    expect(fillTemplate(DEFAULT_PUBLIC_COPY.snapshotHeading, {})).toContain(
+      COPY_PLACEHOLDERS.industry,
+    );
+  });
+
+  /**
+   * The cap is measured on the FILLED string, so a template that validates must still
+   * fit once the widest real industry is substituted. 41 characters is the taxonomy's
+   * longest name ("Architecture, Engineering, & Construction").
+   */
+  it("holds the filled cap against the taxonomy's longest industry", async () => {
+    const dataset = await getDataset();
+    const longest = [...dataset.taxonomy.industries].sort(
+      (a, b) => b.length - a.length,
+    )[0];
+
+    for (const [key, config] of Object.entries(COPY_TEMPLATES)) {
+      // Widened because each entry's `slots` is a tuple of its OWN literals, so
+      // `includes` narrows the argument to `never` for the entries that lack it.
+      const slots: readonly string[] = config.slots;
+      if (!slots.includes("industry")) continue;
+      const filled = fillTemplate(DEFAULT_PUBLIC_COPY[key as keyof PublicCopy], {
+        industry: longest,
+      });
+      expect(filled.length, `${key} with "${longest}"`).toBeLessThanOrEqual(
+        config.filledMax,
+      );
+    }
   });
 });
 
@@ -270,8 +370,11 @@ describe("the snapshot's labels are an argument", () => {
     // The rule the removed fourth label broke. Every key in the schema is read by
     // one of the derived shapes above or by a component asserted in the browser
     // suite; the count is the cheap guard that a new key arrived with a consumer.
-    // 28 since `peersTitle` left; see the assertion above for why it did.
-    expect(Object.keys(DEFAULT_PUBLIC_COPY)).toHaveLength(28);
+    // 68 since the copy audit moved forty strings out of code: four form field
+    // labels, six control placeholders and hints, two error strings, the four answer
+    // pills shared by both screens, the function panel's name, four city-map toggle
+    // labels, the snapshot's missing-figure text, and six templates plus one fallback.
+    expect(Object.keys(DEFAULT_PUBLIC_COPY)).toHaveLength(68);
   });
 });
 

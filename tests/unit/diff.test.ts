@@ -208,9 +208,9 @@ describe("diffDatasets — site content", () => {
    * `public-copy.test.ts` because this is the walk that would silently stop covering a
    * key.
    */
-  it("catches a change in every one of the twenty-eight copy strings", () => {
+  it("catches a change in every one of the sixty-eight copy strings", () => {
     const keys = Object.keys(DEFAULT_PUBLIC_COPY) as Array<keyof PublicCopy>;
-    expect(keys).toHaveLength(28);
+    expect(keys).toHaveLength(68);
 
     for (const field of keys) {
       const copy: PublicCopy = { ...DEFAULT_PUBLIC_COPY, [field]: "Edited" };

@@ -1690,8 +1690,17 @@ export function OrdinalGrid({
   rows,
   labelledBy,
   keyLabel,
+  rowHeader,
 }: {
   columns: readonly string[];
+  /**
+   * The leading `columnheader`'s name, which is `sr-only`.
+   *
+   * A required prop rather than a context read, because this module has no `"use client"`
+   * and is imported by server components — so it cannot hold a hook. Required rather than
+   * defaulted, so a new caller cannot silently reintroduce a hardcoded name.
+   */
+  rowHeader: string;
   /** Weakest first. Drawn as the key. */
   steps: readonly string[];
   rows: ReadonlyArray<{
@@ -1775,7 +1784,7 @@ export function OrdinalGrid({
           <thead role="rowgroup">
             <tr role="row">
               <th role="columnheader" scope="col" className="pb-2 text-start">
-                <span className="sr-only">Capability</span>
+                <span className="sr-only">{rowHeader}</span>
               </th>
               {columns.map((column) => (
                 <th

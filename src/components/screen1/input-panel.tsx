@@ -75,8 +75,6 @@ import { ASK } from "./copy";
  * mean an admin density tweak silently changing the public screen.
  */
 
-const REQUIRED_MESSAGE = "Choose one to continue.";
-
 interface FieldProps {
   label: string;
   error?: string;
@@ -417,9 +415,11 @@ export function InputPanel({
     // has finished answering it is noise, and the browser's own required-field
     // behaviour is suppressed (noValidate) so the messages here can be ours.
     const next: Errors = {};
-    if (!industry) next.industry = REQUIRED_MESSAGE;
-    if (!revenueBand) next.revenueBand = REQUIRED_MESSAGE;
-    if (!hqCountry) next.hqCountry = REQUIRED_MESSAGE;
+    // Published copy, one string for all three fields — `askFieldRequired`. It was a
+    // module constant here; nothing about it states a claim, so it is editable now.
+    if (!industry) next.industry = copy.askFieldRequired;
+    if (!revenueBand) next.revenueBand = copy.askFieldRequired;
+    if (!hqCountry) next.hqCountry = copy.askFieldRequired;
     setErrors(next);
 
     if (Object.keys(next).length > 0) {
@@ -464,7 +464,7 @@ export function InputPanel({
             `FieldProps.optional` — this is the input that personalises every
             sentence in the result, and the marker was talking a visitor out of the
             one field that costs nothing and changes the most. */}
-        <Field label="Company name">
+        <Field label={copy.askCompanyLabel}>
           {({ controlId, describedBy }) => (
             <input
               id={controlId}
@@ -497,7 +497,7 @@ export function InputPanel({
           both would promise a second required choice. The hint inside the panel is
           where the nested level is offered, which is where it can be seen.
         */}
-        <Field label="Industry" error={errors.industry}>
+        <Field label={copy.askIndustryLabel} error={errors.industry}>
           {({ controlId, describedBy }) => (
             <SelectField
               id={controlId}
@@ -505,13 +505,13 @@ export function InputPanel({
               triggerRef={(node) => {
                 controls.current.industry = node;
               }}
-              placeholder="Choose your industry"
+              placeholder={copy.askIndustryPlaceholder}
               /* The one piece of help text on the form, and it is inside the panel
                  rather than under the label — see `InputPanel`'s note on why no
                  field carries a description. It has to name the SECOND pane, which
                  is the only thing here a visitor cannot see the shape of before
                  opening the control. */
-              hint="Pick an industry to see its sub-industries (optional)"
+              hint={copy.askIndustryHint}
               childLabel="sub-industries"
               /* **Widened to the whole form grid, in two columns.** 24 industries in a
                  field-width popup showed eight of them, so a visitor was deciding
@@ -529,7 +529,7 @@ export function InputPanel({
         </Field>
 
         <Field
-          label="Annual revenue"
+          label={copy.askRevenueLabel}
           error={errors.revenueBand}
         >
           {({ controlId, describedBy }) => (
@@ -539,13 +539,13 @@ export function InputPanel({
               triggerRef={(node) => {
                 controls.current.revenueBand = node;
               }}
-              placeholder="Choose a band"
+              placeholder={copy.askRevenuePlaceholder}
               /* **The currency, once.** Every row used to carry its own `$` — up to two
                  each, fourteen across seven rows — which is fourteen marks saying one
                  thing and crowding the figures that differ. The hint is the panel's own
                  place for a statement about the whole list, and it is where the industry
                  control already puts its one piece of help text. */
-              hint="All figures in US dollars."
+              hint={copy.askRevenueHint}
               invalid={Boolean(errors.revenueBand)}
               describedBy={describedBy}
               onChange={(next) => {
@@ -574,7 +574,7 @@ export function InputPanel({
         </Field>
 
         <Field
-          label="Headquarters"
+          label={copy.askHqLabel}
           error={errors.hqCountry}
         >
           {({ controlId, describedBy }) => (
@@ -584,7 +584,7 @@ export function InputPanel({
               triggerRef={(node) => {
                 controls.current.hqCountry = node;
               }}
-              placeholder="Choose a country"
+              placeholder={copy.askHqPlaceholder}
               /* Three columns, where industry takes two: a country name is short, so
                  the list that gains most from density is also the one that can afford
                  it. This is the longest list on the form by a wide margin and the

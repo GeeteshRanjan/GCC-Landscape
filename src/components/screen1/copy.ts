@@ -1,5 +1,5 @@
 import { formatCount } from "@/components/public/primitives";
-import { DEFAULT_PUBLIC_COPY, type PublicCopy } from "@/data/schema";
+import { DEFAULT_PUBLIC_COPY, fillTemplate, type PublicCopy } from "@/data/schema";
 import { companyName, type PeerView } from "@/data/screen1";
 
 /**
@@ -729,26 +729,26 @@ export function largestLine(view: PeerView): string {
  * nothing about what the visitor runs.
  */
 /**
- * **It names the visitor's company now, at ANSR's request, and that is why it stopped
- * being published copy.** It was `siteContent.copy.peersTitle` — a fixed string, so
- * legitimately a field an admin could edit. "GCC details of peers closest to {company}"
- * is not fixed: the company name is the one OPTIONAL input, so the heading has two
- * branches, and a flat field could hold only one of them. Same reasoning as the
- * snapshot's opening label, which never became a field; see `publicCopySchema`.
+ * **It names the visitor's company, at ANSR's request, and it is published copy AGAIN —
+ * as a TEMPLATE.** It was a flat `siteContent.copy.peersTitle`, which ANSR's wording
+ * forced out: the company name is the one OPTIONAL input, so the heading has two
+ * branches and a flat field could hold only one of them. A template holds both, as two
+ * keys — `peersTitle` carries `{company}` and `peersTitleFallback` is the word put in
+ * its place when no name was given.
  *
- * **The fallback branch is "your profile", which is the wording the whole heading used
- * to be.** It is kept rather than replaced because of what it was chosen to avoid:
+ * **The fallback ships as "your profile", which is the wording the whole heading used
+ * to be**, and the reason it was chosen is the reason the admin field carries a warning:
  * "closest to yours" presumes the visitor already runs an India centre, and `gccStatus`
- * is a constant the form never asks for, so the tool cannot know. "Your profile" is
- * exactly what the matching consumed — the four answers echoed on the band above — so it
- * names the real comparison and claims nothing about what the visitor runs.
+ * is a constant the form never asks for, so the tool cannot know.
  *
  * `companyName` in `screen1.ts` is the single definition of "did they type one", so this
  * branches on the same call the context pills do and the two cannot disagree.
  */
-export function peersTitle(view: PeerView): string {
+export function peersTitle(view: PeerView, copy: PublicCopy = DEFAULT_PUBLIC_COPY): string {
   const name = companyName(view.input);
-  return `GCC details of peers closest to ${name ?? "your profile"}`;
+  return fillTemplate(copy.peersTitle, {
+    company: name ?? copy.peersTitleFallback,
+  });
 }
 
 /**
@@ -852,8 +852,11 @@ export const LARGEST_LEAD =
  * copy keeps "centre" where it is the plain-English noun inside a sentence — the
  * heading is where the class of thing has to be stated.
  */
-export function largestTitle(view: PeerView): string {
-  return `The largest ${view.industry.industry} GCCs in India`;
+export function largestTitle(
+  view: PeerView,
+  copy: PublicCopy = DEFAULT_PUBLIC_COPY,
+): string {
+  return fillTemplate(copy.largestTitle, { industry: view.industry.industry });
 }
 
 /**
@@ -1005,7 +1008,10 @@ export const FUNCTIONS_LEAD = "Common across India GCCs, whatever the industry."
  * question the block answers in four words, and the block's own lead — `mapHeading` —
  * gives the exact finding underneath it, with the leading city and its share.
  */
-export function mapTitle(view: PeerView): string {
+export function mapTitle(
+  view: PeerView,
+  copy: PublicCopy = DEFAULT_PUBLIC_COPY,
+): string {
   /**
    * **Not "Where …", because the LEAD already opens that way.** The first attempt at
    * breaking the cadence was "Where {industry} centres cluster", which put "Where
@@ -1022,9 +1028,10 @@ export function mapTitle(view: PeerView): string {
    * map itself is a data change rather than a copy one and is not free: the thinnest
    * sub-industries hold a handful of companies, which is two or three dots on an outline
    * of India. The same correction is made on two snapshot labels; see
-   * `snapshotCitiesLabel`.
+   * `snapshotCitiesLabel`. The admin field carries the same warning, because the string
+   * is editable now and the correction has to survive a reword.
    */
-  return `Cities where ${view.industry.industry} companies have set up`;
+  return fillTemplate(copy.mapTitle, { industry: view.industry.industry });
 }
 
 /* ==========================================================================
@@ -1436,9 +1443,14 @@ export function signals(
  * ragged under four aligned figures. A subject shared by every cell belongs in the
  * section name, said once.
  */
-export function snapshotHeading(view: PeerView): string {
-  // "GCCs", never "GCC's", which ANSR asked never to appear.
-  return `Snapshot of ${view.industry.industry} GCCs in India`;
+export function snapshotHeading(
+  view: PeerView,
+  copy: PublicCopy = DEFAULT_PUBLIC_COPY,
+): string {
+  // "GCCs", never "GCC's", which ANSR asked never to appear. The shipped wording is
+  // `snapshotHeading` in the schema; `{industry}` is required there, so an admin cannot
+  // remove the one thing this heading exists to state.
+  return fillTemplate(copy.snapshotHeading, { industry: view.industry.industry });
 }
 
 /* ==========================================================================

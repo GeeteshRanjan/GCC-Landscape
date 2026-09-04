@@ -452,6 +452,7 @@ export function ProductIdentity({
    * component exists. Two copies of them is how a pressable lockup and a plain one start
    * being drawn at two different sizes.
    */
+  const copy = usePublicCopy();
   const lockup = (
     <>
       {/* The lockup carries the heading's first word. `alt="ANSR"` rather than an
@@ -554,7 +555,7 @@ export function ProductIdentity({
            * instruction. `title` says where it goes to a pointer user without touching
            * either name; the pattern itself is what says it to everyone else.
            */
-          title="Back to the start"
+          title={copy.homeTitle}
           className={cn(
             "flex items-center text-start",
             // The one hover state anywhere on this band, and it is legal here for the
@@ -672,6 +673,7 @@ export function ContextPanels({
   /** The editor's id, for `aria-controls`. */
   controls?: string;
 }) {
+  const copy = usePublicCopy();
   return (
     /**
      * **One wrapping row, with the control immediately after the last pill.** It
@@ -688,7 +690,7 @@ export function ContextPanels({
      */
     <div
       role="group"
-      aria-label="Your profile, as you entered it"
+      aria-label={copy.pillGroupLabel}
       className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-3"
     >
       {facts.map((fact) => (
@@ -730,7 +732,7 @@ export function ContextPanels({
         className="gcc-context-edit group relative inline-flex shrink-0 items-center gap-1.5 px-3 py-1.5 text-sm font-semibold text-text-inverse md:ms-1"
       >
         <Pencil aria-hidden="true" className="size-3.5 shrink-0" />
-        Edit answers
+        {copy.editAnswers}
       </button>
     </div>
   );
@@ -861,7 +863,8 @@ export function ViewTabs({
   // The one component that draws BOTH labels, whichever screen mounted it — so the
   // switch cannot disagree with itself about what the visitor is looking at, and the
   // published pair is read once per render rather than once per cell.
-  const labels = viewLabels(usePublicCopy());
+  const copy = usePublicCopy();
+  const labels = viewLabels(copy);
 
   const move = (from: number, to: number) => {
     const next = VIEW_ORDER[(to + VIEW_ORDER.length) % VIEW_ORDER.length];
@@ -893,7 +896,11 @@ export function ViewTabs({
   };
 
   return (
-    <div role="tablist" aria-label="Result view" className="gcc-result-tabs">
+    <div
+      role="tablist"
+      aria-label={copy.viewSwitchLabel}
+      className="gcc-result-tabs"
+    >
       {VIEW_ORDER.map((view, index) => {
         const selected = view === current;
         return (

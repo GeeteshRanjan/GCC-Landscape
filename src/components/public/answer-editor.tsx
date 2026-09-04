@@ -2,6 +2,7 @@
 
 import { X } from "lucide-react";
 
+import { usePublicCopy } from "@/components/public/copy-context";
 import { InputPanel, type AskOptions } from "@/components/screen1/input-panel";
 import type { PeerViewInput } from "@/data/screen1";
 
@@ -96,6 +97,7 @@ export function AnswerEditor({
   onApply: (input: PeerViewInput) => void;
   onCancel: () => void;
 }) {
+  const copy = usePublicCopy();
   return (
     <section
       id={ANSWER_EDITOR_ID}
@@ -119,13 +121,13 @@ export function AnswerEditor({
             id={ANSWER_EDITOR_HEADING_ID}
             className="text-xl leading-tight font-medium tracking-display text-balance text-accent-teal md:text-2xl"
           >
-            Your answers
+            {copy.editorTitle}
           </h2>
           {/* Light 300 at the reading measure, black rather than muted: it is the one
               sentence that tells a visitor the result updates in place, which is the
               whole change this panel is. */}
           <p className="max-w-measure text-sm leading-normal font-light text-pretty text-text md:text-base">
-            Change anything below and your results update on this page.
+            {copy.editorLead}
           </p>
         </div>
         {/* **A real labelled control, not a bare glyph.** The panel can also be closed
@@ -152,7 +154,7 @@ export function AnswerEditor({
           className="gcc-hit-44 relative inline-flex shrink-0 items-center gap-1.5 rounded-full px-3 py-1.5 text-sm font-semibold text-text-muted transition-colors duration-fast ease-standard hover:bg-surface-pale hover:text-text focus-visible:ring-2 focus-visible:ring-accent-teal focus-visible:outline-none"
         >
           <X aria-hidden="true" className="size-4" />
-          Close
+          {copy.editorClose}
         </button>
       </div>
 
@@ -167,7 +169,7 @@ export function AnswerEditor({
         pending={pending}
         submitError={error}
         onSubmit={onApply}
-        submitLabel="Update my results"
+        submitLabel={copy.editorSubmit}
       />
     </section>
   );

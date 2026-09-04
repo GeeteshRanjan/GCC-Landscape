@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { Tabs as TabsPrimitive } from "radix-ui";
 
-import type { CloseCopy } from "@/data/schema";
+import type { CloseCopy, PublicCopy } from "@/data/schema";
 import { companyName, type PeerViewInput } from "@/data/screen1";
 import type { FunctionAreaView, FunctionView, LaidOutCard } from "@/data/screen2";
 import {
@@ -142,13 +142,13 @@ export function FunctionViewScreen({
    * `ContextPanels`.
    */
   const facts: ContextFact[] = [
-    ...(name ? [{ label: "Company", value: name }] : []),
-    { label: "Industry", value: input.industry },
-    { label: "Headquarters", value: input.hqCountry },
+    ...(name ? [{ label: copy.pillCompany, value: name }] : []),
+    { label: copy.pillIndustry, value: input.industry },
+    { label: copy.pillHeadquarters, value: input.hqCountry },
     // Same treatment as Screen 1's row, from the same function. See `peer-view.tsx`:
     // the band is formatted for the visitor and the currency lives in the label,
     // because the two screens' pill rows must not read differently.
-    { label: "Revenue band (USD)", value: formatRevenueBand(input.revenueBand) },
+    { label: copy.pillRevenueBand, value: formatRevenueBand(input.revenueBand) },
   ];
 
   return (
@@ -184,7 +184,7 @@ export function FunctionViewScreen({
              * mechanism and Screen 1's snapshot strip already uses this one for the same
              * reason. The cards inside are `h2` now, so the outline skips no level.
              */
-            aria-label="India market metrics by function"
+            aria-label={copy.functionPanelLabel}
             /**
              * **White at the top, and alternating grounds below that.** The section
              * itself is white because it is the surface the floating card opens on —
@@ -328,7 +328,12 @@ export function FunctionViewScreen({
               `functionFraming` as its renderer here and gains `peerClosing` on Screen
               1, so both screens now branch on it. */}
           <Zone ground="inverse-soft" behind={<CloseBackdrop />}>
-            <ClosingCta id="close" href={ctaHref} copy={closeCopy} />
+            <ClosingCta
+                  id="close"
+                  href={ctaHref}
+                  copy={closeCopy}
+                  label={copy.closeLabel}
+                />
           </Zone>
         </ViewPanel>
       }
@@ -400,7 +405,13 @@ export function FunctionViewScreen({
  * whose own padding is 40px left the grid reading as three separate objects. The peer
  * view puts its two analytical cards 24/32px apart and they are the same kind of pair.
  */
-function CardGrid({ cards }: { cards: readonly LaidOutCard[] }) {
+function CardGrid({
+  cards,
+  copy,
+}: {
+  cards: readonly LaidOutCard[];
+  copy: PublicCopy;
+}) {
   return (
     /**
      * **`items-stretch`, where this was `items-start`, and it closes the gap ANSR reported
@@ -415,7 +426,7 @@ function CardGrid({ cards }: { cards: readonly LaidOutCard[] }) {
      */
     <div className="grid grid-cols-1 items-stretch gap-6 lg:grid-cols-12 lg:gap-8">
       {cards.map(({ shown, width }) => (
-        <MetricCard key={shown.metric.id} shown={shown} width={width} />
+        <MetricCard key={shown.metric.id} shown={shown} width={width} copy={copy} />
       ))}
     </div>
   );
@@ -534,10 +545,10 @@ function AreaPanel({ area }: { area: FunctionAreaView }) {
     );
   }
   if (narrow.length > 0) {
-    sections.push(<CardGrid key="narrow" cards={narrow} />);
+    sections.push(<CardGrid key="narrow" cards={narrow} copy={copy} />);
   }
   if (wide.length > 0) {
-    sections.push(<CardGrid key="wide" cards={wide} />);
+    sections.push(<CardGrid key="wide" cards={wide} copy={copy} />);
   }
   if (area.heldCards.length > 0) {
     sections.push(

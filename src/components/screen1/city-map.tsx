@@ -11,6 +11,7 @@ import {
   Provenance,
 } from "@/components/public/primitives";
 import { RankedBars, type BarRow } from "@/components/public/charts";
+import { usePublicCopy } from "@/components/public/copy-context";
 
 /**
  * Where in India the visitor's industry actually is.
@@ -762,6 +763,7 @@ export function CityMap({ map }: { map: MapBlock }) {
    * both on the page before anything is pressed. What the toggle adds is the tail,
    * and every figure in it is a repeat of the same encoding.
    */
+  const copy = usePublicCopy();
   const [showAll, setShowAll] = useState(false);
 
   const plotted = map.cities.filter((city) => city.point !== null);
@@ -1208,8 +1210,8 @@ export function CityMap({ map }: { map: MapBlock }) {
             aria-hidden="true"
             className="flex items-baseline justify-between gap-4 border-b border-border-strong pb-2 text-xs font-semibold tracking-caps text-text-muted uppercase"
           >
-            <span>{showAll ? "All cities" : "Top cities"}</span>
-            <span>Companies</span>
+            <span>{showAll ? copy.cityScopeAll : copy.cityScopeTop}</span>
+            <span>{copy.cityCountHeader}</span>
           </div>
           {/**
            * **No bars when every city holds one GCC**, which is the thin-industry
@@ -1270,7 +1272,7 @@ export function CityMap({ map }: { map: MapBlock }) {
                 expanded={showAll}
                 controls={CITY_LIST_ID}
               >
-                {showAll ? "Show the leading cities only" : "Explore all cities"}
+                {showAll ? copy.cityToggleToTop : copy.cityToggleToAll}
               </PanelAction>
             </div>
           ) : null}

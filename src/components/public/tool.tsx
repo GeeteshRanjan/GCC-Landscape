@@ -403,9 +403,7 @@ export function GccLandscapeTool({
         }
         pushPhase({ kind: "peers", view: result.view });
       } catch {
-        setError(
-          "Something went wrong reaching our data. Please try again in a moment.",
-        );
+        setError(publicCopy.askSubmitError);
       } finally {
         setPending(false);
       }
@@ -444,9 +442,7 @@ export function GccLandscapeTool({
         );
         return true;
       } catch {
-        setError(
-          "Something went wrong reaching our data. Please try again in a moment.",
-        );
+        setError(publicCopy.askSubmitError);
         return false;
       } finally {
         setPending(false);

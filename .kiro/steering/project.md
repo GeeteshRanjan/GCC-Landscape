@@ -1321,7 +1321,7 @@ Screen 1 sends five peers and a few counts.
 
 **Three editable collections, one file.** Companies, metrics, and `siteContent` — the entry point's hero
 copy, ANSR's impact figures, the result screens' CLOSE, the peer view's `commonFunctions` tags, the
-entry point's `logos`, and `copy`, the 28 static visitor-facing strings — all live in `dataset.json`. A second file would mean a second write
+entry point's `logos`, and `copy`, the 68 static visitor-facing strings — all live in `dataset.json`. A second file would mean a second write
 target, a second diff, a second cache and a publish that could half-succeed. `metrics` is **defaulted to
 `[]` rather than required**, so a dataset written before it existed still reads — the fs store refuses an
 unrecognised version, so bumping `DATASET_VERSION` would have turned a compatible addition into a broken
@@ -1329,7 +1329,7 @@ read.
 
 **THE LINE BETWEEN AN EDITABLE STRING AND A CODE ONE IS WHETHER IT STATES A CLAIM ABOUT THE DATASET.**
 A heading, a label or an attribution names what a reader is looking at and asserts nothing about it, so it
-is `siteContent.copy` — 28 flat keys, each capped at a render limit measured on the real layout, grouped by
+is `siteContent.copy` — 62 flat keys and 6 templates, each capped at a render limit measured on the real layout, grouped by
 screen in the editor. A sentence that states a count, a share or an ordering has to move when the thing it
 describes moves, so it stays a function in `copy.ts`: `peerCountLine`, `shortfallLine`, `largestLine`,
 `industrySentence`, `largestOverlapLine` and their siblings are derived and have no fixed wording to edit.
@@ -1348,12 +1348,91 @@ opening label does. **Removing a key needs the STORAGE KEY bumped too** — zod 
 rather than refusing it, so a draft written before the removal would publish cleanly with the extra string
 silently dropped, which no shape check can catch. `draft-provider.tsx` is at v6.
 
+**A STRING THAT NAMES ITS SCOPE RATHER THAN ASSERTING ANYTHING IS A TEMPLATE, NOT A REASON TO STAY IN
+CODE.** `copyTemplate` in `schema.ts` builds a field that MUST contain its declared `{slot}`s, and the
+refine BLOCKS the publish when one is deleted — so `snapshotHeading` is editable while `{industry}`,
+the one thing that heading exists to state, cannot be removed. Six things hold it together.
+**`COPY_TEMPLATES` holds the slots AND the cap in ONE table**, because `.refine()` erases `maxLength` and
+the admin reads every other bound off the schema; `copyFieldMax` is the single call, so the editor holds
+no cap of its own. **The cap is measured on the FILLED string** — the taxonomy's longest industry is 41
+characters, so the factory subtracts the slot's own width and a template that validates still fits once
+substituted, asserted against the real taxonomy. **`COPY_PLACEHOLDERS` is a CLOSED set**, each name a
+promise the render path holds that value, so an admin cannot invent a slot that publishes as literal text.
+**`fillTemplate` leaves an unsupplied slot AS TYPED**, so a caller that forgets one draws a visible
+`{industry}` rather than a gap that reads as intended copy. **`peersTitle` came BACK this way and that
+reverses a recorded retreat** — it left because the company name is optional and a flat field could hold
+only one branch; a template plus `peersTitleFallback` holds both. And **the snapshot's opening label is
+still NOT a field**: its branches differ by which NOUN the sentence uses, not by a value in a slot, so a
+template cannot express it and faking one would hand an admin the choice of population.
+
+**A NEW COPY KEY IS WRITTEN INTO `data/dataset.json` IN THE SAME COMMIT, BECAUSE THE MERGE MAKES THE DIFF
+BLIND TO IT.** Both sides of a publish diff are schema-parsed, so the merge fills both and a missing key
+reports NO change — the file then gains those lines silently on the next unrelated publish, under a commit
+about something else. That is the reviewable diff, which is the whole reason there is no database. So the
+keys go in by LINE, in `publicCopySchema`'s DECLARATION order because that is what zod emits and therefore
+what a publish would write, and using the file's own `\uXXXX` escaping rather than the raw character —
+`JSON.stringify` does not escape, which is the standing divergence `docs/traps.md` records on 1,240 existing
+lines and not a thing to fix one key at a time. Verify by parsing the file and asserting the self-diff is
+`isEmpty`.
+
+**THE PUBLISHED COPY BLOCK IS MERGED OVER THE SHIPPED ONE, WHICH IS WHAT MAKES A NEW STRING A COMPATIBLE
+CHANGE.** `siteContentSchema.copy` is a `z.preprocess` spreading `DEFAULT_PUBLIC_COPY` under the stored
+value. Defaulting the whole object only ever helped a dataset with no `copy` at all; every dataset written
+before a new KEY has a `copy` that is present and short by one, so without the merge adding a string
+refuses the committed dataset and production's alike. **A merge rather than a `.default()` per field**, so
+the shipped value stays in exactly one place — and no future key needs a default of its own. The cost is
+that the merge makes the draft restore's shape check BLIND, since the keys are present after it: that is
+why twenty-nine additions still bumped `STORAGE_KEY` to v7, and a bump is now the only instrument for a
+copy-shape change.
+
+**A VISITOR-FACING STRING AN ADMIN CAN REWORD MUST NOT BE A SPEC'S LOCATOR.** `0-screen1.spec.ts` and
+`0-search.spec.ts` import `DEFAULT_PUBLIC_COPY` and read the KEY instead of typing the words, which is
+the convention for every spec that names one from now on — the fixture publishes the shipped defaults, so
+it resolves to what renders, and a spec naming a key the schema dropped fails at the type level rather
+than as a timeout. What stays literal is anything asserted ABSENT: a removed sentence has no key to read.
+**The form field labels are the sharpest case** — `choose(page, …)` and `getByLabel` reach every control
+by label, so those four keys are the most spec-coupled strings in the repo.
+
+**`askIndustryPlaceholder` IS ALSO THE INDUSTRY POPUP'S ACCESSIBLE NAME**, because `select-field.tsx`
+passes `placeholder` to the tree's `aria-label`. One editable key therefore decides both the muted text in
+the closed trigger and the name assistive technology reads for the open list — which is what makes
+`getByLabel("Industry")` ambiguous once open, the trap `docs/traps.md` records. Keep it a NAME rather than
+an instruction.
+
+**A STRING INSIDE A RENDERER NO METRIC ROUTES TO STAYS IN CODE, BECAUSE AN EDITABLE FIELD THAT DRAWS
+NOTHING IS WORSE THAN NONE.** That is the rule `snapshotShareLabel` was deleted under, and `gridDisplay`
+is where it gets decided for the grids: today's data produces `ratings` once (`tech-capability-comparison`,
+so `OrdinalGrid`'s `sr-only` row header IS live and IS a key), `dumbbell` once and `lollipop` three times —
+and `numbers` never. So `NumberGridChart`'s `Measure` and `IndexLollipop`'s `Comparator` stay in code
+however much they look like the row header beside them. **Check the routing before moving a chart string**,
+by reading `ratingScale` off the METRIC and `indexBaseline` and the column count off it — not off
+`structure`, which holds neither.
+
+**A STRING `charts.tsx` DRAWS TAKES A REQUIRED PROP, NEVER A CONTEXT READ.** That module has no
+`"use client"` and is imported by server components, so it cannot hold a hook; `closing-cta.tsx` and
+`snapshot.tsx` are the same case. Required rather than defaulted, so a new caller cannot silently
+reintroduce a hardcoded name. `ClosingCta`'s name arrives as `label` separately from its `copy`, because
+that prop is `siteContent.close` — an offer, edited in its own admin section — while the name is a landmark
+name edited with the others.
+
+**WHAT STAYS IN CODE IS NARROWER THAN IT WAS, AND `ASK.submitPending` IS THE LINE.** The submit error and
+the required-field message are editable now: neither states a claim, and ANSR's voice matters most when
+something has broken. `submitPending` does not move, because its length is load-bearing against the submit
+label's own width — two editable strings whose RELATIVE widths decide whether the button resizes mid-press
+is a coupling no cap can express. `FUNCTIONS_TITLE` and the derived sentences are unchanged.
+
 **Each constant in both `copy.ts` files READS its `DEFAULT_PUBLIC_COPY` key rather than restating the
 string**, so there is one shipped value per string and the wording cannot drift between the code default
 and the schema default. The reasoning for every wording decision stays in `copy.ts`; only the value moved.
 `PublicCopyProvider` in `copy-context.tsx` supplies the published block, and **its context DEFAULT is the
 shipped block** — so a component with no provider above it renders the real wording rather than nothing,
 which is what keeps the provider optional instead of load-bearing.
+**`tests/unit/public-copy.test.ts` IS THE ENFORCEMENT, SO THOSE MIRROR CONSTANTS ARE NOT DEAD CODE HOWEVER
+THEY LOOK FROM `src/components` ALONE.** `ASK`, `CUSTOMERS`, `IMPACT`, `INDUSTRY_TITLE`, `SCALE` and
+`SNAPSHOT_LABELS` are read by that test and frequently by nothing else, because the component reads the same
+key through `usePublicCopy()` instead — a sweep scoped to `src/` reports all six as unused and deleting them
+removes the no-drift guarantee rather than any duplication. A copy audit did exactly that; see
+`docs/copy-audit.md`.
 
 **Why the hero copy and the close are data when no other public string is:** everything else is an argument
 about the dataset and lives beside the logic making the argument. The hero is positioning, the impact figures
@@ -1569,7 +1648,7 @@ What lives where. Never a file listing — the tree is supplied each session.
 | `tests/browser/` | Playwright against a real `next build && next start`, on its own dataset copy. Covers what a unit test structurally cannot: draft lifecycle, autosave, restore after reload, stale-baseline conflict, focus behaviour. **Serial, one worker** — the server holds the rate limiter and dataset cache in memory. **The whole suite is single-tenant and TWO CONCURRENT RUNS CANNOT COEXIST**: one port 3210, one fixture copy, one `test-results/`, and `next build` writes the `.next/` a dev server may be holding. A second run started midway through the first fails the first with `page.goto` timeouts and `ENOENT` on trace artifacts, which reads as a product bug and is not one. Reads, `tsc`, `npm run test` and `brand:lint` are safe in parallel; `test:browser` and `build` are not. Numbered specs run in reading order; `6-lockout.spec.ts` exhausts the limiter and must stay last. The `public` project runs first, before the publish spec rewrites the fixture. **Each project's `testMatch` is narrow, so a spec numbered outside all of them silently never runs.** `helpers.ts` owns `DRAFT_STORAGE_KEY`, `choose()`, `chooseSubIndustry()`, and `band()` / `expectBand()`. **A public spec must never locate a band by its heading text** — twenty did, and a copy pass broke all twenty. The id is the contract; `expectBand` accepts either `aria-labelledby` or `aria-label`, and what must not pass is a band with neither. Peer landscape ids: `snapshot`, `peers`, `industry`, `largest`, `functions`, `map`, `scale`. Screen 2: `function-metrics`, plus `hr-velocity`, `hr-analysis`, `hr-held`, `ops-velocity`, `ops-supporting` — prefixed by function because two composed tabs draw the same section under the same heading. `0-search.spec.ts` drives the dropdown FILTER, and it takes a fresh load per industry — from `md` the cascade pane sits beside the list so both are clickable, but below `md` the second one is behind a drill-in. |
 | `scripts/` | Run by hand, never at request time. Python: `brand_lint.py`, `brand_asset.py`, `brand_status_analysis.py`, `inspect_xlsx.py`, `build_dot_map.py`, `build_india_outline.py`. Node: `crop-logo.mjs` (`npm run logo:crop`), which crops a supplied logo to its own ink bounds and prints the pair to record — node rather than python because it needs a real rasteriser, and playwright is already a dev dependency. TypeScript via `tsx`: `import-seed.ts`, `verify-data.ts`, `admin-hash.ts` (mints the env values from a TTY prompt so the password never lands in shell history), `business-type-map.ts` (601 sub-industry mappings + 568 per-company decisions, keyed `industry||name` because company names are not unique even case-insensitively), `check-business-tags.ts`, `check-company-types.ts`, and the two analysis scripts `sweep-floor.ts` (worthless if its self-check does not say SOUND) and `proto-industry-tag.ts`. Rerun them rather than re-deriving their numbers. |
 | `.kiro/` | `steering/` — always-in-context rules, three files. `hooks/` — `brand-guard` (PostFileSave → `brand_lint.py`) and `handoff-refresh` (Stop → rewrite the handoff). `settings/` — MCP config, permission-guarded against agent writes. `skills/` — one skill, `ansr-brand-assets`, which is ours; **untracked**, and `skill-sources.json` pins the 135 removed third-party packs for restoration. |
-| `docs/` | Reference, read on demand. Not steering. `brief.md` (read it, not the image), `data-audit.md`, `business-types.md`, `design-reference.md`, `ansrx-visual-language.md`, `traps.md`. |
+| `docs/` | Reference, read on demand. Not steering. `brief.md` (read it, not the image), `data-audit.md`, `business-types.md`, `design-reference.md`, `ansrx-visual-language.md`, `traps.md`, `copy-audit.md` + `copy-audit-charts.md` (what each visitor-facing string was judged to be, and why). |
 
 ## Document protocol
 

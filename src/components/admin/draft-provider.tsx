@@ -64,7 +64,7 @@ import { slugify, uniqueSlug } from "@/data/normalize";
  * five are all `.default()`-ed in the schema, which makes the failure quieter and
  * worse. A v5 draft written before them parses on the way out — the defaults fill
  * the gaps — so publishing one would silently RESET the pinned industries, the
- * coordinates, the function list, the logo strip and all thirty copy strings to the
+ * coordinates, the function list, the logo strip and every copy string to the
  * shipped values, and report it as an ordinary edit. So the restore checks the keys
  * it is about to trust and drops a draft that predates them.
  *
@@ -83,8 +83,19 @@ import { slugify, uniqueSlug } from "@/data/normalize";
  * the admin's real edits in that draft with it if the shape had drifted further. There is
  * no key whose ABSENCE marks a v5 draft, so a version bump is the only instrument
  * available here.
+ *
+ * **v7 is twenty-nine keys ADDED, and it needs a bump for a reason the earlier additions
+ * did not: `copy` is now MERGED over the shipped block rather than defaulted as a whole.**
+ * That merge is what makes a new string a compatible change to a published dataset — an
+ * older `dataset.json` reads forward instead of failing validation. Applied to a stored
+ * DRAFT it does the same thing silently, so a v6 draft would parse, fill twenty-nine gaps
+ * with shipped values, and publish them as though an admin had approved each one. The
+ * shape check cannot see it either: the keys are present after the merge, which is the
+ * point of the merge. `peersTitle` also returns here as a TEMPLATE, so a v6 draft that
+ * still carried the old flat string would now be validated against a `{company}` slot it
+ * has no reason to contain.
  */
-const STORAGE_KEY = "gcc-admin-draft-v6";
+const STORAGE_KEY = "gcc-admin-draft-v7";
 const AUTOSAVE_DEBOUNCE_MS = 800;
 
 /** Everything the admin can edit. Metadata is server-owned. */

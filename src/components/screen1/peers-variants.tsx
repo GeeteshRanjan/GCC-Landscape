@@ -217,6 +217,7 @@ function CardFact({
  * sections apart, so they do not read as a pair — but it is ANSR's call, not this file's.
  */
 function ExhibitZone({ view }: { view: PeerView }) {
+  const copy = usePublicCopy();
   const peers = view.peers.peers;
   const showFortune = fortuneVisible(peers);
   const reserveMark = marksInSet(peers);
@@ -239,7 +240,7 @@ function ExhibitZone({ view }: { view: PeerView }) {
               id="peers-heading"
               className="min-w-0 text-2xl leading-tight font-bold tracking-display text-balance text-text-inverse md:text-3xl"
             >
-              {peersTitle(view)}
+              {peersTitle(view, copy)}
             </h2>
           </header>
           <div className="mt-5 flex flex-col gap-5 md:mt-6">
@@ -415,13 +416,14 @@ function AuthorityCard({
 }
 
 function AuthorityZone({ view }: { view: PeerView }) {
+  const copy = usePublicCopy();
   const peers = view.peers.peers;
   const showFortune = fortuneVisible(peers);
   const reserveMark = marksInSet(peers);
   return (
     <Zone ground="tint">
       <Enter>
-        <Block id="peers" title={peersTitle(view)} weight="lead">
+        <Block id="peers" title={peersTitle(view, copy)} weight="lead">
           {peers.length === 0 ? (
             <p className="max-w-measure text-base text-text">{shortfallLine(view)}</p>
           ) : (
@@ -496,7 +498,7 @@ function LedgerZone({ view }: { view: PeerView }) {
   return (
     <Zone ground="tint">
       <Enter>
-        <Block id="peers" title={peersTitle(view)} weight="lead">
+        <Block id="peers" title={peersTitle(view, copy)} weight="lead">
           {peers.length === 0 ? (
             <p className="max-w-measure text-base text-text">{shortfallLine(view)}</p>
           ) : (
@@ -594,6 +596,7 @@ function LedgerZone({ view }: { view: PeerView }) {
  * document whose horizontal scroll the iframe does not own.
  */
 function OverrunZone({ view }: { view: PeerView }) {
+  const copy = usePublicCopy();
   const peers = view.peers.peers;
   const showFortune = fortuneVisible(peers);
   const reserveMark = marksInSet(peers);
@@ -610,7 +613,7 @@ function OverrunZone({ view }: { view: PeerView }) {
             id="peers-heading"
             className="min-w-0 max-w-lead text-3xl leading-tight font-bold tracking-display text-balance text-text md:text-4xl"
           >
-            {peersTitle(view)}
+            {peersTitle(view, copy)}
           </h2>
           <div className="mt-6 flex flex-col gap-5 md:mt-8">
             {peers.length === 0 ? (
@@ -714,11 +717,12 @@ function PeersSection({
   className?: string;
   card: (peer: PeerCard) => React.ReactNode;
 }) {
+  const copy = usePublicCopy();
   const peers = view.peers.peers;
   return (
     <Zone ground={ground} behind={behind} className={className}>
       <Enter>
-        <Block id="peers" title={peersTitle(view)} weight="lead">
+        <Block id="peers" title={peersTitle(view, copy)} weight="lead">
           {peers.length === 0 ? (
             <p className="max-w-measure text-base text-text">{shortfallLine(view)}</p>
           ) : (
@@ -1139,7 +1143,7 @@ function RowsSlab({ view }: { view: PeerView }) {
   return (
     <Zone ground="tint">
       <Enter>
-        <Block id="peers" title={peersTitle(view)} weight="lead">
+        <Block id="peers" title={peersTitle(view, copy)} weight="lead">
           {peers.length === 0 ? (
             <p className="max-w-measure text-base text-text">{shortfallLine(view)}</p>
           ) : (
@@ -1192,6 +1196,7 @@ export function PeersZone({
   view: PeerView;
   variant: PeersVariant;
 }) {
+  const copy = usePublicCopy();
   const peers = view.peers.peers;
   const showFortune = fortuneVisible(peers);
   const reserveMark = marksInSet(peers);
@@ -1273,7 +1278,7 @@ export function PeersZone({
             restore rather than a sentence that was wrong. On the blocked list. */}
         {/* **Derived rather than published, because it names the visitor's own company
             and the company name is optional.** See `peersTitle`. */}
-        <Block id="peers" title={peersTitle(view)} weight="lead">
+        <Block id="peers" title={peersTitle(view, copy)} weight="lead">
           <PeerBlockView view={view} />
         </Block>
       </Enter>

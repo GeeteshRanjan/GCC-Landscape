@@ -2,6 +2,7 @@ import type { MetricShape } from "@/data/metrics";
 import type { PeerViewInput } from "@/data/screen1";
 import {
   DEFAULT_PUBLIC_COPY,
+  fillTemplate,
   type MetricFunction,
   type PublicCopy,
 } from "@/data/schema";
@@ -634,6 +635,9 @@ export const FIN_TABLE_ROW_HEADER = "Function";
  * cities = 100. Lower is cheaper." carries its own direction, which is why there is no
  * separate direction sentence beside it.
  */
-export function indexedNote(baseline: string): string {
-  return `Indexed: ${baseline}`;
+export function indexedNote(
+  baseline: string,
+  copy: PublicCopy = DEFAULT_PUBLIC_COPY,
+): string {
+  return fillTemplate(copy.indexedNote, { baseline });
 }

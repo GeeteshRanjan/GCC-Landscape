@@ -26,6 +26,146 @@ import { CTA_URL_MAX_LENGTH, DOMAIN_PATTERN, isCtaUrl } from "./normalize";
 
 const nonEmpty = z.string().trim().min(1);
 
+/* ==========================================================================
+   Copy TEMPLATES — an editable string with a mandatory slot in it
+   ========================================================================== */
+
+/**
+ * The placeholders a copy template may carry, and the value each one stands for.
+ *
+ * **A closed set, deliberately.** A template's slot is filled from the view model at
+ * render time, so a name here is a promise that the render path has that value in
+ * hand — an admin cannot invent `{headcount}` and have it resolve, and a typo would
+ * otherwise publish as literal text in a heading. `fillTemplate` replaces only these.
+ */
+export const COPY_PLACEHOLDERS = {
+  /** The visitor's industry, as `view.industry.industry`. */
+  industry: "{industry}",
+  /** The visitor's own company name. Only legal where a fallback key exists beside it. */
+  company: "{company}",
+  /** The visitor's own typed text, echoed back by the dropdown filter. */
+  query: "{query}",
+  /** A metric's own `indexBaseline`, which is itself admin-editable. */
+  baseline: "{baseline}",
+} as const;
+
+export type CopyPlaceholder = keyof typeof COPY_PLACEHOLDERS;
+
+/**
+ * An editable string that MUST contain the slots it is declared with.
+ *
+ * **The refine is the whole point: a template with its slot deleted is refused, and
+ * the save is blocked.** These strings exist because ANSR wanted a heading to name the
+ * visitor's own scope, so the slot is not decoration — `Snapshot of {industry} GCCs in
+ * India` with the slot removed reads "Snapshot of GCCs in India" on every industry, and
+ * the snapshot's section heading is the ONE place the industry is named (all four cell
+ * labels stopped naming it precisely so this line could). A silent fallback would make
+ * that a rule an admin can switch off without being told. So the schema refuses it, and
+ * `site-content-manager.tsx` states the requirement on the field rather than letting the
+ * publish be where an admin finds out.
+ *
+ * **The cap is measured on the FILLED string, not this one.** The longest industry name
+ * in the taxonomy is 41 characters, so a caller passes the cap it wants AFTER
+ * substitution and this subtracts the slot's own width — otherwise a template that
+ * validates renders past the measurement its cap was taken from.
+ */
+function copyTemplate(key: CopyTemplateKey): z.ZodType<string> {
+  const { slots: placeholders, filledMax } = COPY_TEMPLATES[key];
+  const slots = placeholders.map((name) => COPY_PLACEHOLDERS[name]);
+  /**
+   * The widest thing each slot can become, so the cap holds for the worst real case
+   * rather than for the template as typed. `industry` is the taxonomy's longest name;
+   * `company`, `query` and `baseline` are visitor or admin values with no bound this
+   * schema can see, so they are budgeted at the slot's own width and the caller's cap
+   * carries the rest.
+   */
+  const widest: Record<CopyPlaceholder, number> = {
+    industry: 41,
+    company: 0,
+    query: 0,
+    baseline: 0,
+  };
+  const budget = placeholders.reduce(
+    (total, name) => total + Math.max(0, widest[name] - COPY_PLACEHOLDERS[name].length),
+    0,
+  );
+
+  return nonEmpty.max(Math.max(1, filledMax - budget)).refine(
+    (value) => slots.every((slot) => value.includes(slot)),
+    {
+      message:
+        slots.length === 1
+          ? `must contain ${slots[0]}, which is replaced with the real value`
+          : `must contain each of ${slots.join(", ")}, which are replaced with the real values`,
+    },
+  );
+}
+
+/**
+ * The character cap the admin editor states for a copy field, template or not.
+ *
+ * One call so the editor has no branch of its own and no number of its own: a plain
+ * string's bound is read off the schema where it is declared, and a template's comes
+ * from `COPY_TEMPLATES` because `.refine()` erased it. Returns `undefined` only if a
+ * field somehow has neither, which the editor renders as "no limit" rather than
+ * guessing.
+ */
+export function copyFieldMax(key: keyof PublicCopy): number | undefined {
+  if (isCopyTemplate(key)) return COPY_TEMPLATES[key].filledMax;
+  const field = publicCopySchema.shape[key];
+  return field instanceof z.ZodString ? (field.maxLength ?? undefined) : undefined;
+}
+
+/**
+ * Substitute a template's slots. The one implementation, used by every render path.
+ *
+ * A slot with no value supplied is left as typed rather than blanked: that can only
+ * happen if a caller forgets to pass one, and a visible `{industry}` in a heading is a
+ * bug that reports itself, where an empty gap reads as intentional copy.
+ */
+export function fillTemplate(
+  template: string,
+  values: Partial<Record<CopyPlaceholder, string>>,
+): string {
+  let filled = template;
+  for (const [name, slot] of Object.entries(COPY_PLACEHOLDERS)) {
+    const value = values[name as CopyPlaceholder];
+    if (value === undefined) continue;
+    filled = filled.split(slot).join(value);
+  }
+  return filled;
+}
+
+/**
+ * Every template key, the slots it requires, and the cap on its FILLED length.
+ *
+ * **This table is the single home for both facts, because `.refine()` erases
+ * `maxLength`.** The admin editor reads every other field's cap straight off
+ * `publicCopySchema.shape`, which is what stops a bound being restated in the UI and
+ * being wrong — a template is a `ZodType` rather than a `ZodString`, so that route is
+ * closed and the cap would have had to be typed a second time in the editor. Both sides
+ * read this instead: the schema builds the field from it, and `copyFieldMax` hands the
+ * editor the same number. `public-copy.test.ts` pins every shipped default against it.
+ */
+export const COPY_TEMPLATES = {
+  snapshotHeading: { slots: ["industry"], filledMax: 72 },
+  peersTitle: { slots: ["company"], filledMax: 80 },
+  largestTitle: { slots: ["industry"], filledMax: 72 },
+  mapTitle: { slots: ["industry"], filledMax: 80 },
+  indexedNote: { slots: ["baseline"], filledMax: 60 },
+  filterEmpty: { slots: ["query"], filledMax: 60 },
+} as const satisfies Record<
+  string,
+  { slots: readonly CopyPlaceholder[]; filledMax: number }
+>;
+
+export type CopyTemplateKey = keyof typeof COPY_TEMPLATES;
+
+/** Whether a copy key is a template, narrowing so callers can reach `COPY_TEMPLATES`. */
+export function isCopyTemplate(key: string): key is CopyTemplateKey {
+  return key in COPY_TEMPLATES;
+}
+
 const slug = z
   .string()
   .regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/, "id must be a lowercase slug");
@@ -807,6 +947,53 @@ export const publicCopySchema = z.object({
   askTitle: nonEmpty.max(48),
   askLead: nonEmpty.max(200),
   askSubmit: nonEmpty.max(32),
+  /**
+   * The four form field LABELS, and the four controls' placeholders and hints.
+   *
+   * **These are the most spec-coupled strings in the repo and that is the thing to know
+   * before rewording one.** The labels are how every browser spec reaches a control
+   * (`choose(page, "Headquarters", …)`, `getByLabel("Industry")`), so a spec must read
+   * these keys rather than typing the words — see the locator note in `project.md`.
+   *
+   * **`askIndustryPlaceholder` is also the industry popup's ACCESSIBLE NAME**, because
+   * `select-field.tsx` passes `placeholder` straight to the tree's `aria-label`. That is
+   * what makes `getByLabel("Industry")` ambiguous once the popup is open, which is a
+   * documented trap — so this one key decides both the muted text in the closed trigger
+   * and the name assistive technology reads for the open list.
+   *
+   * Caps: a label sits on one line above its control; a placeholder is truncated inside
+   * the trigger but is read whole as the popup's name; a hint is 12px on one line inside
+   * the panel, and 80 is what fits without wrapping at the panel's narrowest.
+   */
+  askCompanyLabel: nonEmpty.max(32),
+  askIndustryLabel: nonEmpty.max(32),
+  askRevenueLabel: nonEmpty.max(32),
+  askHqLabel: nonEmpty.max(32),
+  askIndustryPlaceholder: nonEmpty.max(48),
+  askIndustryHint: nonEmpty.max(80),
+  askRevenuePlaceholder: nonEmpty.max(48),
+  askRevenueHint: nonEmpty.max(80),
+  askHqPlaceholder: nonEmpty.max(48),
+  /** The filter above 12 options, in a 40px row. Never the popup's name. */
+  askFilterPlaceholder: nonEmpty.max(40),
+  /**
+   * The two strings a visitor only ever sees when something is WRONG, and they are
+   * editable on the argument that ANSR's voice matters most at that moment.
+   *
+   * `askSubmitError` was typed twice in `tool.tsx`, once in `submit` and once in
+   * `refine`; one key is now the single definition. **What stays in code is
+   * `ASK.submitPending`**, whose length is load-bearing against the submit label's own
+   * width — two editable strings whose RELATIVE widths decide whether the button
+   * resizes mid-press is a coupling no cap can express.
+   */
+  askSubmitError: nonEmpty.max(120),
+  askFieldRequired: nonEmpty.max(48),
+  /**
+   * The dropdown filter's empty state. A TEMPLATE, because it echoes the visitor's own
+   * typed text back — `{query}` is the one placeholder whose value comes from neither
+   * the dataset nor the admin.
+   */
+  filterEmpty: copyTemplate("filterEmpty"),
   /* The logo strip's accessible name, and the impact band's heading. */
   customersLabel: nonEmpty.max(80),
   /**
@@ -832,18 +1019,94 @@ export const publicCopySchema = z.object({
   viewPeers: nonEmpty.max(24),
   viewFunctions: nonEmpty.max(24),
   /**
+   * The four answer pills on both result screens' context band, and the accessible
+   * name of the function view's tab panel.
+   *
+   * **One set of keys for two screens, which is the point.** The labels were two
+   * separate literal arrays, `peer-view.tsx` and `function-view.tsx`, so rewording a
+   * pill meant editing two files by hand and the two screens' rows could disagree —
+   * `project.md` requires they read identically. `pillRevenueBand` carries the currency
+   * because the pill has no hint to put it in; the FORM's own label for the same input is
+   * `askRevenueLabel` and the two are deliberately different strings.
+   */
+  pillCompany: nonEmpty.max(24),
+  pillIndustry: nonEmpty.max(24),
+  pillHeadquarters: nonEmpty.max(24),
+  pillRevenueBand: nonEmpty.max(24),
+  /** Never drawn. The `<section>` would not be a `region` without it. */
+  functionPanelLabel: nonEmpty.max(60),
+  /**
+   * The result band's own controls and landmark names.
+   *
+   * **`editAnswers` names a DISCLOSURE, not a navigation** — it opens the answer editor
+   * in place. Avoid "profile", which implies a stored account this tool does not have.
+   * `homeTitle` is the lockup-as-button's `title`: the destination goes there rather than
+   * in an `aria-label`, which name-from-content would read into the `h1` itself.
+   * `pillGroupLabel` and `viewSwitchLabel` are landmark names, never drawn.
+   */
+  editAnswers: nonEmpty.max(24),
+  pillGroupLabel: nonEmpty.max(60),
+  viewSwitchLabel: nonEmpty.max(40),
+  homeTitle: nonEmpty.max(40),
+  /**
+   * The answer editor — one component with one job, and its whole vocabulary.
+   *
+   * `editorSubmit` is what `InputPanel`'s `submitLabel` carries, and it is the ONE string
+   * that differs between the entry point's form and this panel; that prop exists so the
+   * two can differ without a second copy of the form.
+   */
+  editorTitle: nonEmpty.max(32),
+  editorLead: nonEmpty.max(120),
+  editorClose: nonEmpty.max(16),
+  editorSubmit: nonEmpty.max(32),
+  /**
+   * The capability grid's leading `columnheader`, which is `sr-only`.
+   *
+   * **Read aloud and never seen, which is why it is here rather than left in code**: the
+   * other column names are the metric's own admin-editable strings, so this was the one
+   * name in that table an admin could not reach. It is on the grid `metric-card.tsx`
+   * routes a rated matrix to, which today is the technology capability comparison.
+   */
+  gridRowHeader: nonEmpty.max(24),
+  /**
    * Peer landscape section headings.
    *
-   * **`peersTitle` was here and is REMOVED, under this object's own rule.** It held
-   * "India GCCs closest to your profile" — a fixed string, and therefore legitimately
-   * data. ANSR's new wording names the visitor's own company ("GCC details of peers
-   * closest to Nike"), and the company name is optional, so the heading now has two
-   * branches and neither one is a string an admin could fill: whichever they typed,
-   * most visitors would read the other. That is exactly the reasoning recorded on the
-   * snapshot's opening label below, which never became a field for the same reason.
-   * It is `peersTitle()` in `screen1/copy.ts` now, beside the other derived wording.
+   * **`peersTitle` IS BACK, as a template, and that reverses a documented retreat.** It
+   * left this object when ANSR's wording started naming the visitor's own company:
+   * the name is optional, so the heading has two branches and a flat field could hold
+   * only one of them. A template holds both — `peersTitle` carries `{company}` and
+   * `peersTitleFallback` is the word substituted when no name was given — so the
+   * mechanism that forced it into code is the mechanism that brings it back.
+   *
+   * **The snapshot's opening label is still NOT here**, and its reasoning is unchanged
+   * rather than superseded: it is composed over the visitor's SCOPE, so its two branches
+   * differ by which noun the sentence uses ("your industry" / "your sub-industry"), not
+   * by a value dropped into one slot. A template cannot express that and inventing a
+   * second slot to fake it would put the choice of noun in an admin's hands.
    */
   industryTitle: nonEmpty.max(40),
+  snapshotHeading: copyTemplate("snapshotHeading"),
+  peersTitle: copyTemplate("peersTitle"),
+  peersTitleFallback: nonEmpty.max(32),
+  largestTitle: copyTemplate("largestTitle"),
+  mapTitle: copyTemplate("mapTitle"),
+  /**
+   * The city map's disclosure. Two pairs: the scope word in the panel header, and the
+   * button that switches it. Both members of each pair are drawn in the same place, so
+   * they are capped together.
+   */
+  cityScopeAll: nonEmpty.max(24),
+  cityScopeTop: nonEmpty.max(24),
+  /**
+   * The count column's name, opposite the scope word.
+   *
+   * **It is here because the ranked list carries no other statement of what the trailing
+   * figure IS**, and this page carries companies, centres and people. Capped with the
+   * scope word it shares a line with.
+   */
+  cityCountHeader: nonEmpty.max(24),
+  cityToggleToTop: nonEmpty.max(40),
+  cityToggleToAll: nonEmpty.max(40),
   /* The peer card's three small-caps labels. */
   peerHeadcountLabel: nonEmpty.max(24),
   peerCitiesLabel: nonEmpty.max(24),
@@ -869,6 +1132,14 @@ export const publicCopySchema = z.object({
   snapshotHeadcountLabel: nonEmpty.max(56),
   snapshotCitiesLabel: nonEmpty.max(56),
   snapshotLeadingCityLabel: nonEmpty.max(56),
+  /**
+   * What a snapshot cell draws instead of a figure it does not have.
+   *
+   * **Never a dash, a zero or an estimate** — that is the rule this string exists to
+   * satisfy, and the cap is the fixed-height figure box it sits in, which would clip a
+   * second line rather than grow.
+   */
+  figureUnavailable: nonEmpty.max(24),
   /* The terminating scale strip. Each label is a whole sentence's predicate. */
   scaleTitle: nonEmpty.max(60),
   scaleFortuneLabel: nonEmpty.max(120),
@@ -885,6 +1156,22 @@ export const publicCopySchema = z.object({
   opsSupportingHeading: nonEmpty.max(40),
   /* The attribution under the function view's card. */
   sourceLine: nonEmpty.max(60),
+  /**
+   * The close band's accessible name.
+   *
+   * **The band has no `h2`, so without this it is a `<section>` with no name and
+   * therefore not a `region`.** It is editable alongside the two strings the band draws,
+   * which are `siteContent.close` fields — this one is here because it is a landmark
+   * name rather than an offer, the same category as `functionPanelLabel`.
+   */
+  closeLabel: nonEmpty.max(60),
+  /**
+   * How to read an index card, wrapping the metric's OWN `indexBaseline`.
+   *
+   * A template on `{baseline}`, and the lowest-stakes one here: the value in the slot is
+   * already admin-editable data, so this key only owns the words around it.
+   */
+  indexedNote: copyTemplate("indexedNote"),
 });
 
 export const siteContentSchema = z.object({
@@ -937,7 +1224,31 @@ export const siteContentSchema = z.object({
    * list somebody spent ten minutes filling.
    */
   logos: z.array(customerLogoSchema).max(24).default(() => [...DEFAULT_LOGOS]),
-  copy: publicCopySchema.default(() => DEFAULT_PUBLIC_COPY),
+  /**
+   * **Every key is MERGED over the shipped block, so adding a string is a compatible
+   * change rather than a broken read.** This is the same compatibility rule `metrics`
+   * and `close` are defaulted for, but it has to work one level deeper: defaulting the
+   * whole object only helps a dataset with no `copy` at all, and every dataset written
+   * before a new KEY has a `copy` that is present and now short by one. Without the
+   * merge, adding a string here refuses the committed dataset and production's alike.
+   *
+   * **A merge rather than a `.default()` on each field, because the shipped value must
+   * live in exactly one place.** Per-field defaults would restate all fifty-seven
+   * strings beside `DEFAULT_PUBLIC_COPY`, which is the drift `public-copy.test.ts`
+   * exists to prevent. It also means no FUTURE key needs a default of its own.
+   *
+   * A stored value that is not an object is passed through untouched, so it fails on
+   * the schema's own message rather than being silently replaced by the defaults.
+   */
+  copy: z
+    .preprocess(
+      (value) =>
+        value && typeof value === "object" && !Array.isArray(value)
+          ? { ...DEFAULT_PUBLIC_COPY, ...value }
+          : value,
+      publicCopySchema,
+    )
+    .default(() => DEFAULT_PUBLIC_COPY),
 });
 
 /**
@@ -1061,13 +1372,64 @@ export const DEFAULT_PUBLIC_COPY: PublicCopy = {
     "Share your company details to identify relevant companies with GCCs in " +
     "India and explore talent, capability and location metrics.",
   askSubmit: "Build my GCC Landscape",
+  askCompanyLabel: "Company name",
+  askIndustryLabel: "Industry",
+  /**
+   * **"Annual revenue" on the FORM, "Revenue band (USD)" on the pill**, and the two are
+   * separate keys because they do separate jobs. The form's own currency statement is
+   * `askRevenueHint`, inside the panel; the pill has no hint, so it carries the unit in
+   * its label. See `pillRevenueBand`.
+   */
+  askRevenueLabel: "Annual revenue",
+  askHqLabel: "Headquarters",
+  askIndustryPlaceholder: "Choose your industry",
+  askIndustryHint: "Pick an industry to see its sub-industries (optional)",
+  askRevenuePlaceholder: "Choose a band",
+  askRevenueHint: "All figures in US dollars.",
+  askHqPlaceholder: "Choose a country",
+  askFilterPlaceholder: "Type to narrow the list",
+  askSubmitError:
+    "Something went wrong reaching our data. Please try again in a moment.",
+  askFieldRequired: "Choose one to continue.",
+  /* Curly quotes, matching the typography everywhere else on the surface. */
+  filterEmpty: "Nothing matches \u201C{query}\u201D.",
   customersLabel: "Companies ANSR has worked with in India",
   impactTitleLead: "By The Numbers",
   headerPeers: "How your industry operates in India",
   headerFunctions: "The India market beyond your industry",
   viewPeers: "Peer Landscape",
   viewFunctions: "Function Metrics",
+  pillCompany: "Company",
+  pillIndustry: "Industry",
+  pillHeadquarters: "Headquarters",
+  pillRevenueBand: "Revenue band (USD)",
+  functionPanelLabel: "India market metrics by function",
+  editAnswers: "Edit answers",
+  pillGroupLabel: "Your profile, as you entered it",
+  viewSwitchLabel: "Result view",
+  homeTitle: "Back to the start",
+  editorTitle: "Your answers",
+  editorLead: "Change anything below and your results update on this page.",
+  editorClose: "Close",
+  editorSubmit: "Update my results",
+  gridRowHeader: "Capability",
   industryTitle: "Inside India's GCC base",
+  /* "GCCs", never "GCC's", which ANSR asked never to appear. */
+  snapshotHeading: "Snapshot of {industry} GCCs in India",
+  peersTitle: "GCC details of peers closest to {company}",
+  /**
+   * **"your profile", never "yours".** "Closest to yours" presumes the visitor already
+   * runs an India centre, and `gccStatus` is a constant the form never asks for.
+   */
+  peersTitleFallback: "your profile",
+  largestTitle: "The largest {industry} GCCs in India",
+  /* Not "Where …": the block's own heading would then open the way the lead used to. */
+  mapTitle: "Cities where {industry} companies have set up",
+  cityScopeAll: "All cities",
+  cityScopeTop: "Top cities",
+  cityCountHeader: "Companies",
+  cityToggleToTop: "Show the leading cities only",
+  cityToggleToAll: "Explore all cities",
   peerHeadcountLabel: "GCC headcount",
   peerCitiesLabel: "Cities",
   peerSinceLabel: "In India since",
@@ -1089,6 +1451,7 @@ export const DEFAULT_PUBLIC_COPY: PublicCopy = {
    * directly above, which names the industry once for all four cells.
    */
   snapshotLeadingCityLabel: "the city where most of these GCCs are based",
+  figureUnavailable: "Data unavailable",
   scaleTitle: "The world's largest companies, in India",
   scaleFortuneLabel: "Fortune Global 500 companies run a GCC in India.",
   scaleForbesLabel: "Forbes Global 2000 companies run a GCC in India.",
@@ -1102,6 +1465,8 @@ export const DEFAULT_PUBLIC_COPY: PublicCopy = {
   hrAnalysisHeading: "Scale and salary pressure",
   opsSupportingHeading: "Scale and connectivity",
   sourceLine: "Source: ANSR Research",
+  closeLabel: "Unlock the full GCC landscape",
+  indexedNote: "Indexed: {baseline}",
 };
 
 /**

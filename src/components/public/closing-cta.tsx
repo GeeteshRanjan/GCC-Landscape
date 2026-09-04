@@ -62,7 +62,7 @@ import { cn } from "@/lib/utils";
  * copy, it is never read by a sighted visitor, and a blank one silently removes the
  * landmark.
  */
-const CLOSE_LABEL = "Unlock the full GCC landscape";
+
 
 /**
  * The one outward call to action, once per screen.
@@ -331,6 +331,7 @@ export function ClosingCta({
   id,
   href,
   copy,
+  label,
 }: {
   /**
    * The band's id, which is how the browser suite locates it. **Its accessible name comes
@@ -342,13 +343,22 @@ export function ClosingCta({
   href: string;
   /** The band's two strings, from `siteContent.close`. Admin-editable. */
   copy: CloseCopy;
+  /**
+   * The band's accessible name, from `siteContent.copy.closeLabel`.
+   *
+   * A prop rather than a context read, because this module has no `"use client"`. It is
+   * separate from `copy` because that is `siteContent.close` — an offer, edited under its
+   * own admin section — while this is a landmark name, edited with the other landmark
+   * names. Both are published; they just live in different blocks.
+   */
+  label: string;
 }) {
   return (
     <section
       id={id}
       // Named rather than labelled by a heading, because there is no heading. See
       // `CLOSE_LABEL`.
-      aria-label={CLOSE_LABEL}
+      aria-label={label}
       // Centred and capped at the LEAD measure, which is the display cap: with the heading
       // gone the supporting line IS the display type, so it takes the wider measure the
       // heading used to have rather than the reading measure it had as a subordinate line.

@@ -1,6 +1,9 @@
 "use client";
 
 import { ChevronDown, ChevronLeft, ChevronRight, Search } from "lucide-react";
+
+import { usePublicCopy } from "@/components/public/copy-context";
+import { fillTemplate } from "@/data/schema";
 import { useEffect, useId, useMemo, useRef, useState } from "react";
 
 import {
@@ -348,6 +351,13 @@ export function SelectField({
    */
   onChange: (value: string, parent?: string) => void;
 }) {
+  /**
+   * The widget's OWN two strings — the filter's placeholder and the nothing-matched
+   * line — read here rather than taken as props, because they are the same on all four
+   * controls. A caller supplies what is specific to its field (`placeholder`, `hint`);
+   * the panel's chrome is the panel's business.
+   */
+  const copy = usePublicCopy();
   const [open, setOpen] = useState(false);
   const [filter, setFilter] = useState("");
   const [activeRowId, setActiveRowId] = useState<string | null>(null);
@@ -1003,7 +1013,7 @@ export function SelectField({
                 autoComplete="off"
                 onChange={(event) => setFilter(event.target.value)}
                 onKeyDown={onKeyDown}
-                placeholder="Type to narrow the list"
+                placeholder={copy.askFilterPlaceholder}
                 // 40px and 14px, down from 48 and 16. The chrome above the options is
                 // height taken off the options themselves, and this row is a filter
                 // rather than a field a visitor has to fill in — it keeps a 40px
@@ -1047,7 +1057,9 @@ export function SelectField({
                 )}
               >
                 {paneAOptions.length === 0 ? (
-                  <p className="gcc-select-empty">Nothing matches “{filter.trim()}”.</p>
+                  <p className="gcc-select-empty">
+                    {fillTemplate(copy.filterEmpty, { query: filter.trim() })}
+                  </p>
                 ) : (
                   paneA.map((row) =>
                     row.kind === "heading" ? (

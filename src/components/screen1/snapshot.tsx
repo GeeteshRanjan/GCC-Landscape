@@ -75,10 +75,18 @@ import type { Signal } from "./copy";
 export function Snapshot({
   signals,
   heading,
+  unavailableLabel,
 }: {
   signals: readonly Signal[];
   /** The section's name, which carries the industry for all four cells. */
   heading: string;
+  /**
+   * What a cell draws instead of a figure the dataset cannot supply.
+   *
+   * A prop rather than a context read, because this stays a server component and the
+   * caller already composes `heading` from the same published block.
+   */
+  unavailableLabel: string;
 }) {
   if (signals.length === 0) return null;
 
@@ -158,7 +166,7 @@ export function Snapshot({
                  held at the figure's own box height so its label stays on the same
                  line as its three neighbours'. */
               <p className="flex h-8 items-end text-sm font-semibold text-text-muted sm:h-9 md:h-12">
-                Data unavailable
+                {unavailableLabel}
               </p>
             ) : signal.kind === "place" ? (
               /**

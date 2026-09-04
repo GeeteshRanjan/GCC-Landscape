@@ -24,6 +24,7 @@ import {
   RankedBars,
   StackedShare,
 } from "@/components/public/charts";
+import type { PublicCopy } from "@/data/schema";
 import {
   HELD_CHIP,
   heldShapeNote,
@@ -97,17 +98,23 @@ const WIDTH_CLASS: Record<MetricWidth, string> = {
  * at once.
  */
 function CardMeta({
-  indexBaseline,
+  indexNote,
   asOf,
 }: {
-  indexBaseline?: string;
+  /**
+   * The finished index-base line, composed by the caller.
+   *
+   * **A finished string rather than the baseline, because the wording is published copy
+   * and this file is a server component with no context to read it from.** `indexedNote`
+   * is still the one implementation of the wording; what moved is where its `copy`
+   * argument comes from, so the derived tab and the composed finance cards cannot end up
+   * one editable and one not.
+   */
+  indexNote?: string;
   asOf?: string;
 }) {
   const parts = [
-    // `indexedNote`, not a literal: the composed finance cards state the same string as
-    // a card SUBTITLE rather than as a foot note, and two copies of the prefix would let
-    // one of them be reworded alone.
-    indexBaseline ? indexedNote(indexBaseline) : undefined,
+    indexNote,
     // The floor sentence ("+ indicates a floor…") was removed at ANSR's request; the
     // trailing `+` on the figure carries it now, unexplained.
     // Verbatim, not prefixed with "As of". The schema calls this free-text
@@ -139,6 +146,7 @@ export function MetricCard({
   shown,
   width,
   container = "panel",
+  copy,
 }: {
   shown: ShownMetric;
   /** From `layoutArea`, already packed, so the component does no arithmetic. */
@@ -165,6 +173,11 @@ export function MetricCard({
    * would take, and it is one prop away.
    */
   container?: "panel" | "block";
+  /**
+   * The published strings. A prop rather than a context read, because this stays a
+   * server component; `function-view.tsx` is the one caller and already holds it.
+   */
+  copy: PublicCopy;
 }) {
   const { metric } = shown;
   // Both containers derive their heading id as `${id}-heading`, which is the id the
@@ -248,10 +261,16 @@ export function MetricCard({
           rows={withRowIcons(shown.grid.rows)}
           labelledBy={headingId}
           keyLabel={RATING_KEY_LABEL}
+          rowHeader={copy.gridRowHeader}
         />
       ) : null}
 
-      <CardMeta indexBaseline={metric.indexBaseline} asOf={metric.asOf} />
+      <CardMeta
+        indexNote={
+          metric.indexBaseline ? indexedNote(metric.indexBaseline, copy) : undefined
+        }
+        asOf={metric.asOf}
+      />
       </div>
     </Container>
   );

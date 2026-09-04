@@ -1,5 +1,7 @@
 import { expect, test } from "@playwright/test";
 
+import { DEFAULT_PUBLIC_COPY as COPY, fillTemplate } from "@/data/schema";
+
 /**
  * The industry dropdown's FILTER, against a real build.
  *
@@ -172,7 +174,9 @@ test.describe("finding a sub-industry by the words a visitor uses", () => {
   /** A query nothing matches still says so, rather than showing an empty box. */
   test("says when nothing matches", async ({ page }) => {
     await openIndustryAndFilter(page, "zzzzz");
-    await expect(page.getByText(/Nothing matches/)).toBeVisible();
+    await expect(
+      page.getByText(fillTemplate(COPY.filterEmpty, { query: "zzzzz" })),
+    ).toBeVisible();
   });
 });
 

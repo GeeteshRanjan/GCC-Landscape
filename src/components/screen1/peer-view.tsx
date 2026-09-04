@@ -456,9 +456,9 @@ export function PeerViewAnswer({
    * the value it labelled.
    */
   const facts: ContextFact[] = [
-    ...(name ? [{ label: "Company", value: name }] : []),
-    { label: "Industry", value: view.industry.industry },
-    { label: "Headquarters", value: view.input.hqCountry },
+    ...(name ? [{ label: copy.pillCompany, value: name }] : []),
+    { label: copy.pillIndustry, value: view.industry.industry },
+    { label: copy.pillHeadquarters, value: view.input.hqCountry },
     /**
      * **Formatted, not the raw stored band, and the LABEL is where the currency went.**
      * The dropdown spells `<` out as "Under" and drops the `$` from every row, stating
@@ -468,7 +468,7 @@ export function PeerViewAnswer({
      * of repeated marks. `formatRevenueBand` is the single definition, shared with the
      * control and with Screen 2's identical row.
      */
-    { label: "Revenue band (USD)", value: formatRevenueBand(view.input.revenueBand) },
+    { label: copy.pillRevenueBand, value: formatRevenueBand(view.input.revenueBand) },
   ];
 
   return (
@@ -530,12 +530,14 @@ export function PeerViewAnswer({
                     `SnapshotLabels`. The fourth label stays composed inside it, because
                     it names the visitor's own scope.
 
-                    `snapshotHeading` is unchanged and still derived: it interpolates the
-                    industry, which is the whole reason all four labels stopped naming
-                    it. */}
+                    `snapshotHeading` is still derived, and it is published copy as well:
+                    a TEMPLATE carrying `{industry}`, which the schema requires it to
+                    keep. Interpolating the industry is the whole reason all four labels
+                    stopped naming it, so the slot is not decoration. */}
                 <Snapshot
                   signals={signals(view, snapshotLabels(copy))}
-                  heading={snapshotHeading(view)}
+                  heading={snapshotHeading(view, copy)}
+                  unavailableLabel={copy.figureUnavailable}
                 />
               </Enter>
             </Zone>
@@ -600,7 +602,7 @@ export function PeerViewAnswer({
                     blocked list beside the other provenance removals. */}
                 <Panel
                   id="largest"
-                  title={largestTitle(view)}
+                  title={largestTitle(view, copy)}
                   className="lg:col-span-3"
                   motif={<PanelArc placement="top" />}
                 >
@@ -676,7 +678,7 @@ export function PeerViewAnswer({
                     so the block's one statement of concentration is gone and the ranked
                     list beside the map is what carries it now. Kept in `copy.ts` and
                     still unit-tested on both branches. On the blocked list. */}
-                <Panel id="map" title={mapTitle(view)}>
+                <Panel id="map" title={mapTitle(view, copy)}>
                   <CityMap map={view.map} />
                 </Panel>
               </Enter>
@@ -733,7 +735,12 @@ export function PeerViewAnswer({
                 been the mistake; a stop then a surface is the shape. */}
             <Zone ground="inverse-soft" behind={<CloseBackdrop />}>
               <Enter index={7}>
-                <ClosingCta id="close" href={ctaHref} copy={closeCopy} />
+                <ClosingCta
+                  id="close"
+                  href={ctaHref}
+                  copy={closeCopy}
+                  label={copy.closeLabel}
+                />
               </Enter>
             </Zone>
           </ViewPanel>

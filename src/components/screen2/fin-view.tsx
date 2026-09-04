@@ -1,4 +1,5 @@
 import type { FunctionAreaView, ShownMetric } from "@/data/screen2";
+import type { PublicCopy } from "@/data/schema";
 import { usePublicCopy } from "@/components/public/copy-context";
 import { Panel } from "@/components/public/primitives";
 import {
@@ -107,6 +108,9 @@ function pick(shown: readonly ShownMetric[], id: string): ShownMetric | undefine
    ========================================================================== */
 
 export function FinPanel({ area }: { area: FunctionAreaView }) {
+  // The published strings, threaded into the two cards that state an index base so
+  // the derived tab and this one cannot end up one editable and one not.
+  const copy = usePublicCopy();
   const figures = FIGURE_IDS.map((id) => pick(area.shown, id)).filter(
     (metric): metric is ShownMetric => metric?.shape === "scalar",
   );
@@ -133,7 +137,7 @@ export function FinPanel({ area }: { area: FunctionAreaView }) {
   }
   if (spread?.shape === "grid" && spread.grid.kind === "dumbbell") {
     sections.push(
-      <TierSpread key="spread" shown={spread} rows={spread.grid.rows} />,
+      <TierSpread key="spread" shown={spread} rows={spread.grid.rows} copy={copy} />,
     );
   }
   if (hubs?.shape === "grid" && hubs.grid.kind === "lollipop") {
@@ -143,6 +147,7 @@ export function FinPanel({ area }: { area: FunctionAreaView }) {
         shown={hubs}
         columns={hubs.grid.columns}
         rows={hubs.grid.rows}
+        copy={copy}
       />,
     );
   }
@@ -262,9 +267,11 @@ interface SpreadRow {
 function TierSpread({
   shown,
   rows,
+  copy,
 }: {
   shown: ShownMetric;
   rows: readonly SpreadRow[];
+  copy: PublicCopy;
 }) {
   return (
     <Panel
@@ -276,7 +283,7 @@ function TierSpread({
          figures start 24px below the heading. */
       lead={
         shown.metric.indexBaseline
-          ? indexedNote(shown.metric.indexBaseline)
+          ? indexedNote(shown.metric.indexBaseline, copy)
           : undefined
       }
     >
@@ -354,10 +361,12 @@ function DeliveryLocations({
   shown,
   columns,
   rows,
+  copy,
 }: {
   shown: ShownMetric;
   columns: readonly string[];
   rows: readonly IndexTableRow[];
+  copy: PublicCopy;
 }) {
   return (
     <Panel
@@ -365,7 +374,7 @@ function DeliveryLocations({
       title={shown.metric.title}
       lead={
         shown.metric.indexBaseline
-          ? indexedNote(shown.metric.indexBaseline)
+          ? indexedNote(shown.metric.indexBaseline, copy)
           : undefined
       }
     >

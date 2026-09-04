@@ -20,10 +20,13 @@ import { CTA_URL_MAX_LENGTH, isCtaUrl } from "@/data/normalize";
 import type { SearchablePart } from "@/data/search";
 import {
   closeCopySchema,
+  COPY_PLACEHOLDERS,
+  COPY_TEMPLATES,
+  copyFieldMax,
   customerLogoSchema,
   heroCopySchema,
   impactStatSchema,
-  publicCopySchema,
+  isCopyTemplate,
   siteContentSchema,
   type CloseCopy,
   type CustomerLogo,
@@ -137,6 +140,24 @@ function lengthError(value: string, max: number): string | undefined {
     return `${trimmed.length} characters. The limit is ${max}; publishing is blocked above it.`;
   }
   return undefined;
+}
+
+/**
+ * Whether a template field has lost a slot it is required to carry.
+ *
+ * **Reported in the form rather than only at the publish gate, because the schema
+ * REFUSES this value and an admin deleting `{industry}` has no other way to learn
+ * that.** It reads `COPY_TEMPLATES` — the same table the schema builds the field from
+ * — so the requirement stated here cannot disagree with the one enforced there. A key
+ * that is not a template returns nothing, so the caller needs no branch.
+ */
+function templateError(key: keyof PublicCopy, value: string): string | undefined {
+  if (!isCopyTemplate(key)) return undefined;
+  const missing = COPY_TEMPLATES[key].slots
+    .map((slot) => COPY_PLACEHOLDERS[slot])
+    .filter((token) => !value.includes(token));
+  if (missing.length === 0) return undefined;
+  return `Must contain ${missing.join(" and ")}. Publishing is blocked without it — the real value is substituted there.`;
 }
 
 export function SiteContentManager() {
@@ -1089,7 +1110,7 @@ interface CopyGroupConfig {
  * The static strings, grouped by the screen they appear on.
  *
  * **Grouped rather than listed, because the group is the only thing that tells an
- * admin what they are looking at.** Twenty-nine labels in one column is a list of
+ * admin what they are looking at.** Sixty-eight labels in one column is a list of
  * slots with no map; four sections named for the surfaces of the product are four
  * questions an admin can answer one at a time. The order inside each group follows
  * the reading order of the screen it describes.
@@ -1100,8 +1121,10 @@ interface CopyGroupConfig {
  * lists would let one be reworded alone — so a reviewer would be approving
  * "Attribution line" against a field the editor called something else.
  *
- * Every cap is read off `publicCopySchema` at render, so a bound cannot be stated
- * here and be wrong.
+ * Every cap comes from `copyFieldMax` at render, so a bound cannot be stated here and
+ * be wrong. That call reads the schema for a plain string and `COPY_TEMPLATES` for a
+ * template, whose cap `.refine()` erases — one call so this file holds no branch and no
+ * number of its own.
  */
 const COPY_GROUPS: readonly CopyGroupConfig[] = [
   {
@@ -1113,6 +1136,43 @@ const COPY_GROUPS: readonly CopyGroupConfig[] = [
       { key: "askTitle" },
       { key: "askLead" },
       { key: "askSubmit" },
+      { key: "askCompanyLabel" },
+      { key: "askIndustryLabel" },
+      {
+        key: "askRevenueLabel",
+        hint: "The form's own label. The pill on the result screens says \u201cRevenue band (USD)\u201d and is edited under Peer landscape.",
+      },
+      { key: "askHqLabel" },
+      {
+        key: "askIndustryPlaceholder",
+        hint: "Shown in the control before an answer, AND read out as the name of the open list. It does both jobs, so keep it a name rather than an instruction.",
+      },
+      {
+        key: "askIndustryHint",
+        hint: "Sits inside the open panel. The one place the optional second level is offered.",
+      },
+      { key: "askRevenuePlaceholder" },
+      {
+        key: "askRevenueHint",
+        hint: "States the currency once for the whole list, so no row has to carry a $.",
+      },
+      { key: "askHqPlaceholder" },
+      {
+        key: "askFilterPlaceholder",
+        hint: "The filter above long option lists.",
+      },
+      {
+        key: "askSubmitError",
+        hint: "Shown only when the server cannot be reached. The pending label on the button is not editable \u2014 its width is measured against the submit label.",
+      },
+      {
+        key: "askFieldRequired",
+        hint: "Shown under any required control left unanswered.",
+      },
+      {
+        key: "filterEmpty",
+        hint: "Must keep {query}, which is replaced with what the visitor typed.",
+      },
       {
         key: "customersLabel",
         hint: "The strip's accessible name. Read out, never drawn.",
@@ -1142,6 +1202,42 @@ const COPY_GROUPS: readonly CopyGroupConfig[] = [
         hint: "Two equal halves, so neither may wrap.",
       },
       { key: "viewFunctions" },
+      {
+        key: "pillCompany",
+        hint: "The four answer pills, drawn on BOTH result screens from these four keys. Below md they are read out but not drawn.",
+      },
+      { key: "pillIndustry" },
+      { key: "pillHeadquarters" },
+      {
+        key: "pillRevenueBand",
+        hint: "Carries the currency, because the pill has no hint to put it in.",
+      },
+      {
+        key: "editAnswers",
+        hint: "Opens the answer editor in place. Avoid \u201cprofile\u201d \u2014 it implies a stored account, which this tool does not have.",
+      },
+      {
+        key: "homeTitle",
+        hint: "The tooltip on the ANSR ATLAS lockup, which is the way back to the start.",
+      },
+      {
+        key: "pillGroupLabel",
+        hint: "Describes the row of answers for a screen reader. Read out, never drawn.",
+      },
+      {
+        key: "viewSwitchLabel",
+        hint: "Describes the two-way switch. Read out, never drawn.",
+      },
+      {
+        key: "editorTitle",
+        hint: "The four fields below are the entry point's own form, so its labels are edited under Entry point.",
+      },
+      { key: "editorLead" },
+      { key: "editorClose" },
+      {
+        key: "editorSubmit",
+        hint: "The one label that differs from the entry point's own submit button.",
+      },
     ],
   },
   {
@@ -1150,11 +1246,35 @@ const COPY_GROUPS: readonly CopyGroupConfig[] = [
     description:
       "Section headings and cell labels on the first result screen. Nothing here states a count — the sentences that do are in code, beside the logic that counts.",
     fields: [
-      /* The comparable-companies heading was here and is gone: it names the visitor's
-         own company now, which is an optional input, so the heading has two branches and
-         no single string an admin types could serve both. `peersTitle()` in
-         `screen1/copy.ts`. */
+      {
+        key: "snapshotHeading",
+        hint: "Must keep {industry}. This heading is the ONE place the industry is named \u2014 the four cell labels below it deliberately do not.",
+      },
+      {
+        key: "peersTitle",
+        hint: "Must keep {company}, which is replaced with the visitor's own company name.",
+      },
+      {
+        key: "peersTitleFallback",
+        hint: "Substituted for {company} when the visitor did not give a name. Do not write \u201cyours\u201d \u2014 it presumes they already run a centre in India.",
+      },
       { key: "industryTitle" },
+      {
+        key: "largestTitle",
+        hint: "Must keep {industry}.",
+      },
+      {
+        key: "mapTitle",
+        hint: "Must keep {industry}. Say INDUSTRY rather than sub-industry: the map is filtered to the industry.",
+      },
+      {
+        key: "cityScopeTop",
+        hint: "The scope word in the map panel's header, and the button that switches it. Four keys, two states.",
+      },
+      { key: "cityScopeAll" },
+      { key: "cityCountHeader" },
+      { key: "cityToggleToAll" },
+      { key: "cityToggleToTop" },
       { key: "peerHeadcountLabel" },
       { key: "peerCitiesLabel" },
       { key: "peerSinceLabel" },
@@ -1169,6 +1289,10 @@ const COPY_GROUPS: readonly CopyGroupConfig[] = [
       {
         key: "snapshotLeadingCityLabel",
         hint: "The leading city in the visitor's INDUSTRY, not in the five peers shown below. Do not call them peers here.",
+      },
+      {
+        key: "figureUnavailable",
+        hint: "Drawn in a snapshot cell whose figure cannot be computed. Never a dash, a zero or an estimate.",
       },
       { key: "scaleTitle" },
       {
@@ -1196,6 +1320,22 @@ const COPY_GROUPS: readonly CopyGroupConfig[] = [
       { key: "hrAnalysisHeading" },
       { key: "opsSupportingHeading" },
       { key: "sourceLine" },
+      {
+        key: "functionPanelLabel",
+        hint: "The tab panel's accessible name. Read out, never drawn.",
+      },
+      {
+        key: "indexedNote",
+        hint: "Must keep {baseline}, which is replaced with the metric's own index base.",
+      },
+      {
+        key: "gridRowHeader",
+        hint: "The capability grid's leading column name. Read out, never drawn \u2014 the other column names are the metric's own.",
+      },
+      {
+        key: "closeLabel",
+        hint: "Describes the closing band for a screen reader. Read out, never drawn; the words it shows are under Closing band.",
+      },
     ],
   },
 ];
@@ -1267,21 +1407,27 @@ function CopyEditor({
         >
           <div className="grid gap-5 px-5 py-5 lg:grid-cols-2">
             {fields.map((field) => {
-              // Every key in the schema carries a cap, so this is a bound rather than
-              // a default. If one ever lost its cap the count disappears and the
-              // field stays required, which is the honest reading of "no limit".
-              const max = publicCopySchema.shape[field.key].maxLength;
+              // Every key carries a cap, so this is a bound rather than a default. If
+              // one ever lost its cap the count disappears and the field stays
+              // required, which is the honest reading of "no limit". `copyFieldMax` is
+              // the one call because a TEMPLATE's cap cannot be read off the schema —
+              // `.refine()` erases `maxLength` — and restating it here is exactly the
+              // second place to be wrong that reading the schema exists to avoid.
+              const max = copyFieldMax(field.key);
               return (
                 <TextField
                   key={field.key}
                   label={PUBLIC_COPY_LABELS[field.key]}
                   hint={field.hint}
-                  max={max ?? undefined}
+                  max={max}
                   value={copy[field.key]}
-                  error={lengthError(
-                    copy[field.key],
-                    max ?? Number.MAX_SAFE_INTEGER,
-                  )}
+                  error={
+                    // A missing placeholder is reported BEFORE the length, because it
+                    // is the error that blocks the publish and the one an admin has no
+                    // other way to find out about. See `copyTemplate` in `schema.ts`.
+                    templateError(field.key, copy[field.key]) ??
+                    lengthError(copy[field.key], max ?? Number.MAX_SAFE_INTEGER)
+                  }
                   onChange={(value) => onChange({ [field.key]: value })}
                 />
               );
