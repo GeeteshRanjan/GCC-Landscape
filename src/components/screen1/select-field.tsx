@@ -3,7 +3,13 @@
 import { ChevronDown, ChevronLeft, ChevronRight, Search } from "lucide-react";
 import { useEffect, useId, useMemo, useRef, useState } from "react";
 
-import { matchesTokens, searchHaystack, searchTokens } from "@/data/search";
+import {
+  highlightRanges,
+  matchesTokens,
+  partitionByMatch,
+  searchHaystack,
+  searchTokens,
+} from "@/data/search";
 import { cn } from "@/lib/utils";
 
 /**
@@ -168,6 +174,70 @@ export interface SelectGroup {
 
 /** Above this many options the panel gets a filter box; below it, one is clutter. */
 const FILTER_THRESHOLD = 12;
+
+/**
+ * Whether focusing a text input on this device would raise a keyboard OVER the page.
+ *
+ * **`(pointer: coarse)` and not a width, a user-agent string or `ontouchstart`.** The
+ * question is not how wide the viewport is — a 700px window on a laptop has a hardware
+ * keyboard and wants the filter focused — and it is not whether touch EXISTS, since a
+ * touchscreen laptop has both and its primary pointer is still fine. `pointer: coarse`
+ * is the one query that asks what the visitor's primary input actually is, which is
+ * exactly the thing that decides whether a focused input costs half the screen.
+ *
+ * Read at the moment the panel opens rather than held in state: it can genuinely change
+ * under a visitor who docks a tablet, and there is nothing to re-render when it does.
+ * Guarded for the server render, where `window` does not exist and this runs on the
+ * client-only open transition anyway.
+ */
+function hasVirtualKeyboard(): boolean {
+  if (typeof window === "undefined" || !window.matchMedia) return false;
+  return window.matchMedia("(pointer: coarse)").matches;
+}
+
+/**
+ * A row's label with the matched run marked.
+ *
+ * **Safe to split into elements ONLY because every row carries an explicit
+ * `aria-label`.** A `treeitem`'s name is otherwise computed from its contents, so
+ * chopping the label into three nodes would be the thing this control is careful about
+ * everywhere else — but `aria-label` overrides name-from-content outright, so the
+ * accessible name stays the whole plain label whatever this draws. The specs that look
+ * rows up by exact name are unaffected, and a browser spec pins that.
+ *
+ * `<mark>` rather than a styled `<span>`: the element means "relevant in the current
+ * context", which is exactly what a filter hit is, and it is the standard shape for
+ * search highlighting. Its default yellow is overridden in `.gcc-select-mark`.
+ *
+ * **Nothing is drawn when the row matched on a search TERM instead of its label** —
+ * `highlightRanges` returns no ranges and the label renders as one plain string. That is
+ * the case a shortcut would get wrong by displaying the term, which must never become
+ * visible text. See `highlightRanges`.
+ */
+function HighlightedLabel({
+  label,
+  tokens,
+}: {
+  label: string;
+  tokens: readonly string[];
+}) {
+  const ranges = useMemo(() => highlightRanges(label, tokens), [label, tokens]);
+  if (ranges.length === 0) return <>{label}</>;
+
+  const parts: React.ReactNode[] = [];
+  let at = 0;
+  for (const [start, end] of ranges) {
+    if (start > at) parts.push(label.slice(at, start));
+    parts.push(
+      <mark key={`${start}-${end}`} className="gcc-select-mark">
+        {label.slice(start, end)}
+      </mark>,
+    );
+    at = end;
+  }
+  if (at < label.length) parts.push(label.slice(at));
+  return <>{parts}</>;
+}
 
 /**
  * One rendered line in a pane.
@@ -407,9 +477,35 @@ export function SelectField({
    */
   const paneB = useMemo<readonly Row[]>(() => {
     if (!branch || !branchMeta) return [];
-    const shown = filtering
-      ? branchChildren.filter((child) => rowMatches(child.value))
-      : branchChildren;
+    /**
+     * **The filter RANKS this pane rather than cutting it**, which is the one place the
+     * two panes deliberately behave differently. Filtering to the hits alone showed 2 of
+     * BFSI's 15 sub-industries for `fintech` and 2 of Software & Internet's 31 — so the
+     * visitor could not see the sibling that fitted them better, and the fallback from
+     * "my row is not here" is `All of {industry}`, which drops the primary ordering
+     * signal this control exists to capture.
+     *
+     * Pane A stays a hard filter, and the asymmetry is the point: pane A answers WHICH
+     * INDUSTRY, where narrowing 24 rows to a handful is the whole job; pane B answers
+     * which sub-industry inside an industry the visitor has already committed to, where
+     * the full set IS the decision context and the query is only a hint about where to
+     * look first.
+     */
+    const { matched, others } = partitionByMatch(
+      branchChildren,
+      filtering ? (child) => rowMatches(child.value) : null,
+    );
+
+    const childRow = (child: SelectOption): Row => ({
+      kind: "option",
+      rowId: child.value,
+      value: child.value,
+      label: child.label,
+      parent: branch,
+      branching: false,
+      whole: false,
+    });
+
     const rows: Row[] = [
       {
         kind: "option",
@@ -420,22 +516,35 @@ export function SelectField({
         whole: true,
       },
     ];
-    for (const child of shown) {
+    rows.push(...matched.map(childRow));
+    /**
+     * The breaker, and it is drawn ONLY when both groups exist.
+     *
+     * With every child matched there is nothing on the far side of it, and with none
+     * matched nothing was hoisted — in both cases a heading would be labelling a
+     * division that is not there. `matched.length` is what gates it rather than
+     * `filtering`, so all three states fall out of one condition. Measured cases:
+     * `education` matches both of Education's children, `wholesale` matches neither of
+     * Wholesale's.
+     *
+     * It does not name the industry. The pane's own header sits OUTSIDE the scroll
+     * container, so the industry is permanently on screen directly above this row, and
+     * "Other sub-industries in Architecture, Engineering, & Construction" wraps in a
+     * 400px pane.
+     */
+    if (matched.length > 0 && others.length > 0) {
       rows.push({
-        kind: "option",
-        rowId: child.value,
-        value: child.value,
-        label: child.label,
-        parent: branch,
-        branching: false,
-        whole: false,
+        kind: "heading",
+        rowId: `others-${branch}`,
+        label: `Other ${childLabel ?? "options"}`,
       });
     }
+    rows.push(...others.map(childRow));
     return rows;
     // `branchChildren` is derived from `branchMeta`, which is derived from `branch`;
-    // `rowMatches` from `tokens` and `index`.
+    // `rowMatches` from `tokens` and `index`. `childLabel` is a prop and is listed.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [branch, branchMeta, tokens, index]);
+  }, [branch, branchMeta, tokens, index, childLabel]);
 
   const options = (rows: readonly Row[]) =>
     rows.filter((row): row is Extract<Row, { kind: "option" }> => row.kind === "option");
@@ -519,6 +628,16 @@ export function SelectField({
    * Focus the filter on open so typing works immediately, which is the whole point
    * of having one, and put the keyboard on the row the current answer sits in.
    *
+   * **Except where focusing an input raises a keyboard over the list it was opened to
+   * show — see `hasVirtualKeyboard`.** On a phone the panel and the software keyboard
+   * arrive together, and the keyboard takes about half the viewport: the visitor pressed
+   * a control to see options and got three of them under a keyboard they did not ask
+   * for. So a coarse pointer gets the panel and nothing else, and the filter takes focus
+   * only when it is pressed — which is the moment a visitor has actually asked to type.
+   * Nothing else about the panel changes: the trigger keeps focus, so it still handles
+   * every arrow, Enter, Escape and Home/End the same way, and `onKeyDown` is on both
+   * elements already.
+   *
    * An effect rather than a call beside `setOpen`, because the input does not exist
    * until React has committed the panel — the same trap the phase machine documents
    * in `tool.tsx`.
@@ -540,7 +659,7 @@ export function SelectField({
    */
   useEffect(() => {
     if (!open) return;
-    if (showFilter) filterInput.current?.focus();
+    if (showFilter && !hasVirtualKeyboard()) filterInput.current?.focus();
     const current = latest.current.value;
     const meta = current ? index.map.get(current) : undefined;
     setBranch(null);
@@ -763,7 +882,7 @@ export function SelectField({
         <span
           className={cn("min-w-0 flex-1", inPane || wide ? "text-pretty" : "truncate")}
         >
-          {row.label}
+          <HighlightedLabel label={row.label} tokens={tokens} />
         </span>
         {row.branching ? (
           // **`aria-hidden`, and the count is the reason.** A `treeitem`'s accessible
@@ -995,12 +1114,34 @@ export function SelectField({
                     // column inside it would be 148px at `md`.
                     className="gcc-select-cols"
                   >
-                    {paneBOptions.length <= 1 && filtering ? (
-                      <p className="gcc-select-empty">
-                        No {childLabel ?? "options"} match “{filter.trim()}”.
-                      </p>
-                    ) : null}
-                    {paneB.map((row) => (row.kind === "option" ? renderRow(row) : null))}
+                    {/* **No empty state here any more, and it is deleted rather than
+                        left unreachable.** It said "No sub-industries match X" and it
+                        could only fire while the filter CUT this pane. The filter ranks
+                        it now, so every child is always present — a "nothing matches"
+                        note beside fifteen visible rows is a false statement, and the
+                        `wholesale` → Wholesale case (neither child matches) is exactly
+                        where it used to fire. Pane A keeps its own empty state, which is
+                        still reachable. */}
+                    {paneB.map((row) =>
+                      row.kind === "heading" ? (
+                        /* The "others" breaker. `presentation` for the same reason
+                           pane A's tier headings are: a tree's only legal grouping is
+                           a `group` under a `treeitem`, and this divides SIBLINGS. It
+                           is a scanning aid — the order it marks is already the order
+                           the rows are read in, and `options()` strips it so the
+                           keyboard steps straight from the last hit to the first
+                           other. */
+                        <p
+                          key={row.rowId}
+                          role="presentation"
+                          className="gcc-select-heading"
+                        >
+                          {row.label}
+                        </p>
+                      ) : (
+                        renderRow(row)
+                      ),
+                    )}
                   </div>
                 </div>
               </div>

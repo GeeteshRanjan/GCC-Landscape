@@ -4,9 +4,11 @@ import { describe, expect, it } from "vitest";
 
 import {
   WHOLE_WORD_MAX_LENGTH,
+  highlightRanges,
   matchesSearch,
   matchesTokens,
   normaliseSearchText,
+  partitionByMatch,
   searchHaystack,
   searchTokens,
   searchableText,
@@ -168,6 +170,235 @@ describe("searchableText", () => {
 
   it("skips null and undefined, so an optional field costs nothing", () => {
     expect(searchableText("Acme", null, undefined, ["", "Pune"])).toBe(" acme pune ");
+  });
+});
+
+/**
+ * The RANK-don't-CUT split behind the cascade's second pane.
+ *
+ * It lives in `search.ts` rather than in `SelectField` for one reason: unit tests here
+ * run in node with no jsdom, so anything inside that component's `useMemo` is
+ * unreachable — and the three states this has (nothing hidden, a real split, nothing
+ * hoisted) are exactly the states a browser test is worst at telling apart.
+ *
+ * The measured cases it is written against, from the shipped taxonomy: `fintech` matches
+ * 2 of BFSI's 15 children and 2 of Software & Internet's 31, `education` matches both of
+ * Education's 2, and `wholesale` matches neither of Wholesale's 2.
+ */
+describe("partitionByMatch", () => {
+  const rows = ["alpha", "beta", "gamma", "delta"] as const;
+
+  it("puts everything in `matched` with no predicate, so nothing reads as hidden", () => {
+    const { matched, others } = partitionByMatch(rows, null);
+    expect(matched).toEqual(rows);
+    expect(others).toEqual([]);
+  });
+
+  it("splits on the predicate and PRESERVES the given order in both groups", () => {
+    // `alpha` and `gamma` are positions 0 and 2, `beta` and `delta` 1 and 3 — so a
+    // group that came back re-sorted, or interleaved, fails rather than passing by luck.
+    const { matched, others } = partitionByMatch(rows, (row) => row.endsWith("a") && row.length === 5);
+    expect(matched).toEqual(["alpha", "gamma", "delta"]);
+    expect(others).toEqual(["beta"]);
+  });
+
+  it("leaves `others` empty when everything matches, so no breaker is drawn", () => {
+    const { matched, others } = partitionByMatch(rows, () => true);
+    expect(matched).toEqual(rows);
+    expect(others).toEqual([]);
+  });
+
+  it("leaves `matched` empty when nothing matches, so no breaker is drawn", () => {
+    const { matched, others } = partitionByMatch(rows, () => false);
+    expect(matched).toEqual([]);
+    expect(others).toEqual(rows);
+  });
+
+  it("keeps order within a real split", () => {
+    const { matched, others } = partitionByMatch(rows, (row) => row === "gamma" || row === "beta");
+    expect(matched).toEqual(["beta", "gamma"]);
+    expect(others).toEqual(["alpha", "delta"]);
+  });
+
+  it("handles an empty list", () => {
+    expect(partitionByMatch([], () => true)).toEqual({ matched: [], others: [] });
+  });
+
+  /**
+   * The real thing, driven by the same haystacks the control builds. Both groups
+   * together must always be the WHOLE child set — that is the property the change
+   * exists to guarantee, and the one a regression would break silently.
+   */
+  it("never loses a row: matched plus others is always the full set", () => {
+    for (const query of ["fintech", "payments", "wholesale", "education", "retail"]) {
+      const tokens = searchTokens(query);
+      for (const industry of industries) {
+        const children = businessTypes.filter((type) => type.industry === industry);
+        const { matched, others } = partitionByMatch(children, (child) =>
+          matchesTokens(tokens, searchHaystack(child.name, SUB_INDUSTRY_TERMS[child.id])),
+        );
+        expect(matched.length + others.length, `${query} / ${industry}`).toBe(
+          children.length,
+        );
+        expect(
+          [...matched, ...others].map((c) => c.id).sort(),
+          `${query} / ${industry}`,
+        ).toEqual(children.map((c) => c.id).sort());
+      }
+    }
+  });
+
+  /** The case the whole change is for: a hit plus its siblings, both present. */
+  it("hoists the fintech rows in BFSI and still carries the other thirteen", () => {
+    const tokens = searchTokens("fintech");
+    const children = businessTypes.filter((type) => type.industry === "BFSI");
+    const { matched, others } = partitionByMatch(children, (child) =>
+      matchesTokens(tokens, searchHaystack(child.name, SUB_INDUSTRY_TERMS[child.id])),
+    );
+    expect(matched.map((c) => c.id)).toContain("fin-fintech-lending");
+    // The sibling a visitor could not previously see at all.
+    expect(others.map((c) => c.id)).toContain("fin-retail-bank");
+    expect(others.length).toBeGreaterThan(0);
+  });
+});
+
+/**
+ * WHICH PART OF A LABEL TO HIGHLIGHT, in raw-label coordinates.
+ *
+ * The whole difficulty is that `normaliseSearchText` is not length-preserving: `&` becomes
+ * five characters, an apostrophe becomes none, `é` becomes one from two, and punctuation
+ * runs collapse. So a match position in normalised space cannot be used to slice the raw
+ * label, and the naive fix — a case-insensitive raw `indexOf` — silently highlights
+ * nothing in exactly the cases the matcher exists for.
+ *
+ * `slice` is asserted rather than the indices, because the indices are meaningless on
+ * their own and the visible text is the actual contract.
+ */
+describe("highlightRanges", () => {
+  const marked = (label: string, query: string) =>
+    highlightRanges(label, searchTokens(query)).map(([start, end]) =>
+      label.slice(start, end),
+    );
+
+  it("returns nothing for an empty query", () => {
+    expect(highlightRanges("Retail", searchTokens("   "))).toEqual([]);
+  });
+
+  it("marks a plain substring, case-insensitively", () => {
+    expect(marked("Specialty Retail", "retail")).toEqual(["Retail"]);
+    expect(marked("Specialty Retail", "SPECIAL")).toEqual(["Special"]);
+  });
+
+  /** The apostrophe case, which is why the fix went in at all. */
+  it("marks through an ELIDED apostrophe", () => {
+    expect(marked("L'Oréal", "loreal")).toEqual(["L'Oréal"]);
+    expect(marked("Lowe's Companies", "lowes")).toEqual(["Lowe's"]);
+  });
+
+  /** `&` normalises to three letters plus two spaces, from one raw character. */
+  it("marks through an EXPANDED ampersand", () => {
+    expect(marked("Property & Casualty Insurance", "property and casualty")).toEqual([
+      "Property & Casualty",
+    ]);
+    // And the glyph form of the same query.
+    expect(marked("Property & Casualty Insurance", "property & casualty")).toEqual([
+      "Property & Casualty",
+    ]);
+  });
+
+  /** Two raw characters fold to one normalised character. */
+  it("marks through a folded diacritic", () => {
+    expect(marked("Dassault Systèmes", "systemes")).toEqual(["Systèmes"]);
+  });
+
+  it("marks each token separately and merges runs that touch", () => {
+    expect(marked("Grocery & Convenience Retail", "grocery retail")).toEqual([
+      "Grocery",
+      "Retail",
+    ]);
+  });
+
+  /** Mirrors the matcher: three characters or fewer must START a word. */
+  it("anchors a short token to a word start, exactly as the matcher does", () => {
+    // `ai` opens no word in "Retail", so nothing is drawn even though the letters are there.
+    expect(marked("Retail", "ai")).toEqual([]);
+    expect(marked("AI & Machine Learning Platform", "ai")).toEqual(["AI"]);
+    // A long token is a plain substring and is NOT anchored.
+    expect(marked("Retail", "etai")).toEqual(["etai"]);
+  });
+
+  /**
+   * THE PROPERTY THAT MATTERS MOST: a row matched by a search TERM highlights nothing,
+   * because the term is not in the label and must never be shown. A `treeitem`'s name is
+   * computed from its contents, so a displayed synonym would rename the row.
+   */
+  it("draws nothing when the match came from a search term rather than the label", () => {
+    const label = "Payments & Financial Infrastructure";
+    // The row really does match, through `search-terms.ts`…
+    expect(
+      matchesSearch("fintech", label, SUB_INDUSTRY_TERMS["sw-payments"]),
+    ).toBe(true);
+    // …and there is still nothing in the printed label to mark.
+    expect(marked(label, "fintech")).toEqual([]);
+  });
+
+  /**
+   * Ranges must be usable to slice the label directly: sorted, non-overlapping, in
+   * bounds. Asserted over every real row against every token of a real query, because
+   * an out-of-order or overlapping pair would render duplicated or dropped text rather
+   * than throwing.
+   */
+  it("returns sorted, non-overlapping, in-bounds ranges for every row", () => {
+    for (const query of ["retail", "payments", "a", "and", "e commerce", "software"]) {
+      const tokens = searchTokens(query);
+      for (const row of rows) {
+        const ranges = highlightRanges(row.label, tokens);
+        let previousEnd = -1;
+        for (const [start, end] of ranges) {
+          expect(start, `${query} / ${row.label}`).toBeGreaterThanOrEqual(0);
+          expect(end, `${query} / ${row.label}`).toBeLessThanOrEqual(row.label.length);
+          expect(start, `${query} / ${row.label}`).toBeLessThan(end);
+          expect(start, `${query} / ${row.label}`).toBeGreaterThanOrEqual(previousEnd);
+          previousEnd = end;
+        }
+      }
+    }
+  });
+
+  /**
+   * Reassembling the segments must reproduce the label EXACTLY — that is what the
+   * component does, so any drift here is visibly corrupted text on screen.
+   */
+  it("segments always reassemble into the original label", () => {
+    for (const query of ["retail bank", "l oreal", "property and casualty", "ai", "3pl"]) {
+      const tokens = searchTokens(query);
+      for (const row of rows) {
+        const ranges = highlightRanges(row.label, tokens);
+        let out = "";
+        let at = 0;
+        for (const [start, end] of ranges) {
+          out += row.label.slice(at, start) + row.label.slice(start, end);
+          at = end;
+        }
+        out += row.label.slice(at);
+        expect(out, `${query} / ${row.label}`).toBe(row.label);
+      }
+    }
+  });
+
+  /**
+   * A highlight may only ever be drawn on a row the matcher agrees is a hit. The
+   * converse is allowed and expected (a term match highlights nothing), so this is
+   * one-directional.
+   */
+  it("never marks a row the matcher did not match", () => {
+    for (const query of ["retail", "payments", "insurance", "ai", "semiconductor"]) {
+      const tokens = searchTokens(query);
+      for (const row of rows) {
+        if (highlightRanges(row.label, tokens).length === 0) continue;
+        expect(matchesTokens(tokens, row.haystack), `${query} / ${row.label}`).toBe(true);
+      }
+    }
   });
 });
 

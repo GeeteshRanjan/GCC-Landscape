@@ -200,3 +200,188 @@ export function matchesSearch(
 ): boolean {
   return matchesTokens(searchTokens(query), searchHaystack(label, terms));
 }
+
+/**
+ * The normalised form of a string, plus where each of its characters came from.
+ *
+ * **This exists because `normaliseSearchText` is not length-preserving, so a match
+ * position in normalised space says nothing about where to draw in the RAW label.**
+ * `&` becomes five characters, an apostrophe becomes none, `é` becomes one from two, and
+ * every run of punctuation collapses to a single space. Highlighting the matched run
+ * therefore needs the inverse map, and guessing it with a raw case-insensitive
+ * `indexOf` is exactly the shortcut that fails on the cases the matcher was built for —
+ * `loreal` against `L'Oréal`, `property and casualty` against `Property & Casualty`.
+ *
+ * Built by folding ONE RAW CHARACTER AT A TIME rather than by normalising the whole
+ * string and trying to realign afterwards. Every operation in `normaliseSearchText` is
+ * character-local for Latin text, so per-character folding produces the identical
+ * output — and it is the only way to know which raw index each output character owns.
+ * The two must stay in step: a change to `normaliseSearchText` is a change here.
+ */
+function normaliseWithSourceMap(value: string): {
+  text: string;
+  source: readonly number[];
+} {
+  const chars: string[] = [];
+  const from: number[] = [];
+
+  for (let i = 0; i < value.length; i += 1) {
+    const raw = value[i]!;
+    let piece: string;
+    if (raw === "'" || raw === "\u2019" || raw === "\u02bc") {
+      // Elided, so it contributes no output character and owns no position.
+      piece = "";
+    } else if (raw === "&") {
+      piece = " and ";
+    } else {
+      const folded = raw
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .toLowerCase();
+      piece = /^[a-z0-9]+$/.test(folded) ? folded : " ";
+    }
+    for (const ch of piece) {
+      chars.push(ch);
+      from.push(i);
+    }
+  }
+
+  // Collapse runs of spaces and trim, dropping the map entries with them so the two
+  // arrays stay index-for-index aligned.
+  const text: string[] = [];
+  const source: number[] = [];
+  for (let i = 0; i < chars.length; i += 1) {
+    const ch = chars[i]!;
+    if (ch === " " && (text.length === 0 || text[text.length - 1] === " ")) continue;
+    text.push(ch);
+    source.push(from[i]!);
+  }
+  while (text.length > 0 && text[text.length - 1] === " ") {
+    text.pop();
+    source.pop();
+  }
+
+  return { text: text.join(""), source };
+}
+
+/**
+ * Sorted and non-overlapping, and two runs separated by nothing but SEPARATORS are
+ * joined into one.
+ *
+ * The joining is a rendering decision with a measured cause: `property and casualty`
+ * against `Property & Casualty Insurance` matches three tokens whose raw spans are
+ * `Property`, `&` and `Casualty`, leaving the two spaces between them unmarked — which
+ * draws three highlighted chunks with hairline gaps instead of one phrase. Anything
+ * between two runs that survives folding as a real character blocks the join, so
+ * `grocery retail` against `Grocery & Convenience Retail` stays two marks: the word
+ * `Convenience` is genuinely not part of the match.
+ */
+function mergeRanges(
+  label: string,
+  ranges: readonly (readonly [number, number])[],
+): readonly [number, number][] {
+  const sorted = [...ranges].sort((a, b) => a[0] - b[0] || a[1] - b[1]);
+  const out: [number, number][] = [];
+  for (const [start, end] of sorted) {
+    const last = out[out.length - 1];
+    const gapIsSeparators =
+      last !== undefined &&
+      start > last[1] &&
+      normaliseSearchText(label.slice(last[1], start)) === "";
+    if (last && (start <= last[1] || gapIsSeparators)) {
+      last[1] = Math.max(last[1], end);
+    } else {
+      out.push([start, end]);
+    }
+  }
+  return out;
+}
+
+/**
+ * Which parts of a LABEL the query matched, as ranges into the raw label.
+ *
+ * Drawn as a highlight on the row, so a visitor can see WHY a row came back — which is
+ * worth more here than in an ordinary filter, because the second pane now shows
+ * non-matching rows too and the highlight is what distinguishes a hit from its
+ * neighbours beyond position alone.
+ *
+ * **It returns nothing when the row matched on a search TERM rather than on its label,
+ * and that is the important property.** `fintech` reaches "Payments & Financial
+ * Infrastructure" through `search-terms.ts`, where the word appears nowhere in the
+ * printed label — so there is nothing to highlight, and the alternative would be
+ * displaying the term. A term must never become visible text: a `treeitem`'s name is
+ * computed from its contents, and a shown synonym renames the row and breaks every
+ * exact-name lookup. Empty is the honest answer, and the row still reads as a hit from
+ * its position above the breaker.
+ *
+ * The token rules MIRROR `matchesTokens` exactly — a plain substring at four characters
+ * and up, anchored to a word start at three and below. They have to: highlighting `ai`
+ * inside `retail` while the row was actually matched by something else would draw a
+ * reason that is not the reason.
+ */
+export function highlightRanges(
+  label: string,
+  tokens: readonly string[],
+): readonly [number, number][] {
+  if (tokens.length === 0) return [];
+  const { text, source } = normaliseWithSourceMap(label);
+  if (text === "") return [];
+
+  // Padded exactly as `searchHaystack` pads, so the word-start rule can match the FIRST
+  // word too and the offsets below are the only difference between the two.
+  const padded = ` ${text} `;
+  const found: [number, number][] = [];
+
+  for (const token of tokens) {
+    const anchored = token.length <= WHOLE_WORD_MAX_LENGTH;
+    const needle = anchored ? ` ${token}` : token;
+    let cursor = 0;
+    for (;;) {
+      const at = padded.indexOf(needle, cursor);
+      if (at === -1) break;
+      // Position of the token's own first character, in unpadded `text` coordinates.
+      const start = at + (anchored ? 1 : 0) - 1;
+      const end = start + token.length - 1;
+      if (start >= 0 && end < text.length) {
+        // First and last raw characters the run covers. A run spanning an elided or
+        // expanded character still yields a contiguous raw span, which is what gets drawn.
+        found.push([source[start]!, source[end]! + 1]);
+      }
+      cursor = at + 1;
+    }
+  }
+
+  return mergeRanges(label, found);
+}
+
+/**
+ * A list split into what the query matched and what it did not, both in the order
+ * they were given.
+ *
+ * **This is what lets a filter RANK a list instead of CUTTING it**, which is the right
+ * behaviour once the visitor has already committed to a container and is choosing
+ * inside it. The cascade's second pane is the case it exists for: filtering it down to
+ * the hits alone showed 2 of BFSI's 15 sub-industries and 2 of Software & Internet's 31,
+ * so a visitor could not see that a better-fitting row was one line away — and the
+ * fallback from "my row is not here" is the broad answer, which drops the primary
+ * ordering signal. See `SelectField`'s `paneB`.
+ *
+ * **A null predicate means "no filter" and puts everything in `matched`.** Encoding the
+ * unfiltered case here rather than at the call site is deliberate: the caller then has
+ * one shape to render in every state, and cannot accidentally draw an "others" heading
+ * over a list nothing was hidden from.
+ *
+ * Order is PRESERVED within both groups rather than re-sorted by relevance. The
+ * catalogue's order is authored and meaningful, and ranking hits against each other
+ * would put a scoring rule inside a component.
+ */
+export function partitionByMatch<T>(
+  items: readonly T[],
+  matches: ((item: T) => boolean) | null,
+): { matched: readonly T[]; others: readonly T[] } {
+  if (!matches) return { matched: items, others: [] };
+  const matched: T[] = [];
+  const others: T[] = [];
+  for (const item of items) (matches(item) ? matched : others).push(item);
+  return { matched, others };
+}
