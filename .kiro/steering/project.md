@@ -122,6 +122,21 @@ keyframe. That is not the banned scroll logic — it reads nothing, reports noth
 embed. Admin keeps native selects. Specs drive both shapes through `choose()` and `chooseSubIndustry()`
 in `tests/browser/helpers.ts`; `choose()` handles the tree by then taking the `All of {value}` row.
 
+**A ROW COMMITS ON `pointerdown` FOR A MOUSE AND ON `pointerup` FOR A FINGER, and the split is the
+decision.** A finger's press is also the start of a scroll, so committing on contact meant a drag down a
+24-industry list chose whatever row it started on — and on the industry control the cascade then slid in
+mid-gesture. So a touch press is held in a ref and acted on at `pointerup`, only within `TAP_SLOP` of
+where it landed, and `pointercancel` abandons it. Four things hold together. **`preventDefault()` on the
+`pointerdown` is what a touch may NOT have** — it suppresses the browser's own panning, which is the
+gesture being protected — and mouse and pen keep it, which is why their path is unchanged. **The
+compatibility `click` must therefore be SWALLOWED** (`swallowNextClick`): it is hit-tested against the
+page as it stands when it fires, after the panel has unmounted, and it landed on the submit button — a
+press choosing a revenue band submitted the form, measured. **All three compat events go, `mousedown`
+included**, because focus follows `mousedown` and cancelling the click alone left the submit button
+focus-ringed. And `activate` is untouched, so `Enter` never goes near a pointer handler.
+`touch-action: pan-y` on `.gcc-select-scroll` states the one gesture the box owns; it cannot fix this
+alone, because a handler on `pointerdown` runs whatever the default action was.
+
 **A ROW IS FOUND BY WORDS THE VISITOR USES, NOT ONLY THE WORDS ON IT.** `search-terms.ts` holds
 extra search terms per industry, per sub-industry and for the handful of countries with another
 common name; `search.ts` is the single matcher. **The terms are CODE, for the same reason
@@ -241,10 +256,20 @@ smaller multiplier.** What a visitor sees of the hero-and-card pair is `pb − p
 the lead and the card, so the shoulder and the pull only mean anything together: reducing both by the same
 amount moves nothing and only changes how much of the card is drawn over the gradient. **`.gcc-hero-map`'s
 `inset-block-end` is the PULL, per breakpoint** — one value for all three is how the phone band came to end
-in 48px of dead gradient below a map that had already faded out. Below `lg` the dot map is a CLOSER CROP of
-the same graphic rather than a dimmed one: a fixed `56rem` frame, so India resolves at the authored
-dot-to-pitch ratio at every width instead of fusing into the lozenge a percentage zoom produced. Reasoning
-and the measurements: the block in globals.css. The impact band is TWO COLUMNS from the base, not from `sm`
+in 48px of dead gradient below a map that had already faded out. **Below `lg` the dot map is the DESKTOP
+COMPOSITION AT A CLOSER CROP, and the crop is the only thing the mobile block may override.** A fixed `56rem`
+frame with a `calc` trailing inset, so India resolves at the authored dot-to-pitch ratio at every width
+instead of fusing into the lozenge a percentage zoom produced — and the MASK is inherited rather than
+restated, at the project owner's instruction, because a phone-specific one (tighter vignette, a top hold, two
+short fades in place of the long eased leading one) read as a different graphic rather than the same one at a
+different width. **One value deviates: the opacity, 0.58 below `lg` against desktop's 0.86, and the CEILING
+above it is measured** — on a phone the copy crosses the field's bright part and the mid-teal dot LIGHTENS the
+ground under white ink, so a darker band is a LOWER opacity, 0.66 is the highest value that clears the 4.5:1
+body floor with a margin antialiasing cannot eat, and 0.78 fails outright. One opacity for phone and tablet
+alike. **The trailing inset puts India at 76% of the band, within a point of desktop's 75%, and the bound it
+moves toward is the CROP** — the trailing mask fade completes off-screen at every phone width, so nothing but
+the crop keeps the graphic from ending in a vertical rule. Both numbers and the full measurement table: the
+block in globals.css. The impact band is TWO COLUMNS from the base, not from `sm`
 — every phone in portrait is under 640px, so five stacked figures cost 95% of a viewport on evidence about
 ANSR rather than about the visitor.
 
@@ -1391,6 +1416,17 @@ reverses a recorded retreat** — it left because the company name is optional a
 only one branch; a template plus `peersTitleFallback` holds both. And **the snapshot's opening label is
 still NOT a field**: its branches differ by which NOUN the sentence uses, not by a value in a slot, so a
 template cannot express it and faking one would hand an admin the choice of population.
+
+**ONE BRANCH OF `shortfallLine` IS PUBLISHED THIS WAY — `peersNarrowNote` — AND DROPPING ITS COUNT IS WHAT
+MADE IT POSSIBLE.** The sub-industry branch read "{industry} is not short of companies in India — but only
+3 are close enough to your sub-industry to be worth naming", which stated a number `peerCountLine` already
+states exactly one line above it, ungrammatically at a set of one, alongside an em dash and the tool
+narrating its own restraint. Without the count it names the SCOPE that shortened the list and nothing else,
+which is this rule's own category; `{industry}` stays required, because without it the sentence claims
+something about India at large. **The other three branches stay derived and are not candidates**: each
+names a quantity or a population, so each has to move when the engine does. A unit test pins the
+publishable branch on the properties rather than the wording — industry named, no digit, no em dash — and
+it is also the branch's first assertion of any kind.
 
 **A NEW COPY KEY IS WRITTEN INTO `data/dataset.json` IN THE SAME COMMIT, BECAUSE THE MERGE MAKES THE DIFF
 BLIND TO IT.** Both sides of a publish diff are schema-parsed, so the merge fills both and a missing key

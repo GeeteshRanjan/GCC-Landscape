@@ -6099,3 +6099,51 @@ not.
 component's 0.749em still serves the entry point, where the ANSR half is a different object. Two sizes for
 one mark is normal optical practice and the alternative — one size that is wrong on one of the two
 surfaces — is worse.
+
+### The phone hero map is the desktop composition, and only the opacity deviates
+
+At the project owner's instruction, reversing the phone pass's own answer. That pass gave the band below
+`lg` a mask of its own — a tighter vignette on India, a hold that pushed the field off the first fifth of
+the band, and two short inline fades in place of the long eased leading one — and dimmed it to 0.5 (0.56 on
+the tablet). Each of those had a local reason and the sum of them was a second graphic: a visitor moving
+between a phone and a desktop saw the same map lit two different ways, which is the drift the "two
+placements, one graphic" rule exists to stop. So the mobile block now overrides the FRAME and the two
+insets and nothing else; the mask is inherited.
+
+**The frame stays fixed at `56rem`.** That is not part of what was reversed. A percentage zoom is a
+different zoom at every width and it is what fused India into a lozenge at phone pitch — the derivation is
+in the block and the number is load-bearing at three other places, including the result band's own ornament.
+"Aligned with the mobile layout" is the frame and the per-breakpoint card pull, and it is exactly those.
+
+**The opacity is the one deviation, and the CEILING over it is measured even though the value under it is a
+preference.** The ground under the headline and the lead was sampled pixel by pixel with the ink hidden at
+320, 375, 390 and 768. The reading is the OPPOSITE of the desktop note's: the pixel setting the worst value
+is a dot, not the band's gradient, because over the dark end of the band the mid-teal world ink lightens the
+local ground and a phone's copy crosses the part of the field that is brightest. **So a DARKER band is a
+LOWER opacity here, which is the one thing to know before answering "make it darker".** Worst against white,
+headline then lead — no map 11.29 / 7.04; 0.50 (the phone pass's own value) 7.79 / 6.16; 0.58 5.47 / 5.12;
+0.66 4.99 / 4.74; 0.70 4.81 / 4.56; 0.78 4.29 / 4.18; desktop's 0.86 3.93 / 3.84.
+
+**The ceiling is 0.66 and the shipped value is 0.58, and the two are separate decisions.** 0.70 was rejected
+on the margin rather than the number: it clears the 4.5:1 body floor by 0.06, which is less than font
+antialiasing and a different display gamma move it. 0.58 is a step under that ceiling, at the project owner's
+request for a darker band. Desktop can afford 0.86 because its copy ends before India and never reaches the
+bright part of the field.
+
+**India sits at 76% of the band, at the project owner's request, where the first pass put it at 72%.**
+Desktop's own figure is 75%, so this is not a phone-specific position any more — it is the desktop framing
+arriving at the phone crop. **The bound is the CROP and not the copy**, which is the non-obvious part: the
+trailing mask fade spans 14% of the BOX, and a 56rem box is wide enough that the fade completes off-screen at
+every phone width, so the only thing keeping the field from ending in a vertical rule is how much of the
+eastern hemisphere the viewport cuts. India's ink measures 240..353 in a 390px band and 187..300 in a 320px
+one — 37px and 20px of clearance, which is what makes 76% the end of the useful travel rather than a
+midpoint.
+
+**Rejected: keeping the tablet a step forward of the phone.** It had its own 0.56 on the argument that a
+768px band has room the phone does not. With the desktop mask inherited that argument is spent — the mask
+is what holds the field off the copy now, at both widths — and a third field strength for one breakpoint is
+how the graphic came to be lit three ways in the first place.
+
+**Accepted cost, at 320 only:** India's dots sit behind the tail of the headline's second line. They clear
+the floor there by measurement, and the alternative is the top hold that was just removed for reading as a
+different composition. It is ornament behind two words, not a contrast failure.

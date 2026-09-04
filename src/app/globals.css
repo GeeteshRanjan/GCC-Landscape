@@ -622,13 +622,18 @@
    **The trailing inset then has to be a calc, because a fixed frame does not track the
    band.** The box is pinned by its trailing edge and India sits at a fixed 0.701 across
    the generated window, so its centre lands at `band − inset − 0.299 × frame`. Solving
-   that for 72% of the band gives `28% − 0.299 × 56rem`, which is the value below. The
+   that for 76% of the band gives `24% − 0.299 × 56rem`, which is the value below. The
    two are one expression: change the frame and the constant in the inset changes with
    it, or India slides.
 
-   72% rather than desktop's 75% for one reason — at this crop the box's leading edge is
-   far outside the viewport and its trailing edge is only just outside, so the vignette
-   needs a little more room on the trailing side than the desktop framing leaves it.
+   **76% now, at the project owner's request, where it was 72% — desktop's own figure is
+   75%, so the phone and the tablet are within a point of it rather than a column short.**
+   The step is worth ~15px at 390 and ~13px at 320, and the bound it moves toward is the
+   CROP rather than the copy: India's ink was measured at 240..353 in a 390px band and
+   187..300 in a 320px one, so its trailing coast clears the viewport by 37px and 20px.
+   Going further is where the graphic starts ending in a vertical rule — the trailing fade
+   is 14% of the BOX and a 56rem box is wide enough that the fade completes off-screen at
+   every phone width, so nothing but the crop is holding that edge.
 
    **The bottom inset is the card's own pull, per breakpoint, and this is where the
    band's dead strip came from.** The base rule sets `--ansr-space-32`, which is the
@@ -637,14 +642,51 @@
    gradient. Each block now names its own: `--ansr-space-12` against the phone card's
    `-mt-12`, `--ansr-space-28` against the tablet's `-mt-28`.
 
+   **THE MASK IS THE DESKTOP MASK, at the project owner's instruction, and this block
+   now overrides only the FRAME and the two insets.** A phone-specific mask was written
+   here for one pass — a tighter vignette, a top hold that pushed the field off the first
+   fifth of the band, and a pair of short inline fades in place of desktop's long eased
+   leading one — and it read as a different graphic rather than as the same one at a
+   different width. Inheriting the base mask is what makes the two placements one
+   composition: the eased leading fade holds the field near nothing across the leading
+   half, the vignette lights India, and the four short fades keep the slice off every
+   edge. **The frame values below are what "aligned with the mobile layout" means** and
+   they are the derivation above, unchanged — a percentage zoom is what fused India into
+   a lozenge and it may not come back.
+
+   **The leading fade is what replaced the phone-only top hold, and it does the same
+   job.** That hold existed because the headline's first line carries the ANSR lockup in
+   `--ansr-action` and India is drawn in the same orange, so an orange field arriving
+   behind an orange wordmark puts the band's one non-white element on a ground of its own
+   colour. The mark LEADS that line, and the inherited fade is near zero alpha across the
+   leading third of the band — measured at the widths below — so the mark still sits on
+   the band's own gradient and the hold buys nothing a second mask is worth.
+
    **Contrast is measured off the render rather than argued, because on a phone the copy
    spans the band and there is no column to hide the graphic in.** The whole ground under
-   the headline and the lead was sampled pixel by pixel with the ink hidden: the worst
-   value against white is 5.9:1 at 375, 390 and 768, and the pixel that produces it is
-   the band's own gradient at its bright end rather than any dot in the field. So the
-   graphic costs nothing against the 4.5:1 body floor, and it is the composition that
-   caps the opacity at 0.5 rather than the ink — past about 0.6 the field starts reading
-   as a second surface behind the copy instead of as ground.
+   the headline and the lead is sampled pixel by pixel with the ink hidden, at 320, 375,
+   390 and 768. **The pixel that sets the worst value is a DOT rather than the band's own
+   gradient, which is the opposite of the desktop reading and is why the opacity could not
+   simply be desktop's.** Over the dark end of the band the mid-teal world ink LIGHTENS
+   the local ground, and on a phone the copy crosses the part of the band the field is
+   brightest in. Measured worst against white, with the map hidden as the baseline:
+
+     no map  11.29:1 headline, 7.04:1 lead
+     0.58     5.47:1          5.12:1     — the value below
+     0.66     4.99:1          4.74:1
+     0.70     4.81:1          4.56:1     — clears the floor by less than AA moves it
+     0.78     4.29:1          4.18:1     — under the floor
+     0.86     3.93:1          3.84:1     — desktop's own value, well under it
+
+   **So the opacity is the ONE value that deviates from desktop, and 0.58 is a step DOWN
+   from the ceiling rather than the ceiling itself.** The bound is 0.66; 0.58 is where the
+   project owner reads the band as dark enough, and the two decisions are worth keeping
+   apart — the ceiling is a contrast fact and the value is a preference underneath it. Note
+   the direction: on this band the mid-teal dot LIGHTENS the ground, so a darker band means
+   a lower opacity, not a higher one. Desktop can afford 0.86 because its copy ends before
+   India and never meets the bright part of the field; a phone's copy crosses it. That is
+   the whole deviation — anything else that differs from the desktop rendering is a bug
+   rather than a decision.
 
    Reduced-contrast users still lose the whole thing to the `prefers-contrast` rule
    below. */
@@ -654,68 +696,20 @@
        this in the block below; see the note above. */
     inset-block-end: var(--ansr-space-16);
     inline-size: 56rem;
-    inset-inline-end: calc(28% - 16.744rem);
-    opacity: 0.5;
-    mask-image:
-      /* **The focus vignette, which the previous pass dropped and which is what makes
-         India the subject.** Same construction as desktop and centred on India's own
-         position in the box — 70% across, just above the vertical centre, because
-         `slice` centres the crop on the generated window's mid-latitude and India sits
-         a little above it. The radii are read off India's own footprint in this frame:
-         ~13% of the box wide and ~49% of it tall, so an ellipse half again as large in
-         each axis covers the subcontinent and its immediate neighbours.
-
-         It bottoms out rather than running to transparent, for the reason the desktop
-         note gives: run to nothing and India is an orange shape on a gradient with no
-         map around it, which is worse than no graphic. */
-      radial-gradient(
-        ellipse 22% 60% at 70% 47%,
-        var(--ansr-black) 0%,
-        var(--ansr-black) 22%,
-        color-mix(in oklab, var(--ansr-black) 66%, transparent) 44%,
-        color-mix(in oklab, var(--ansr-black) 34%, transparent) 70%,
-        color-mix(in oklab, var(--ansr-black) 16%, transparent) 100%
-      ),
-      /* **The block-edge fade, and the top stop is a contrast bound rather than a
-         taste one.** The headline's first line carries the ANSR lockup in
-         `--ansr-action`, and India is drawn in the same orange: an orange field
-         arriving behind an orange wordmark takes the one piece of copy on the band
-         that is not white and puts it on a ground of its own colour. Holding the map
-         off the top fifth keeps the mark on the band's own gradient. The bottom stop
-         runs to the card's edge, which is where the graphic now ends. */
-      linear-gradient(
-        to bottom,
-        transparent 0%,
-        transparent 8%,
-        var(--ansr-black) 26%,
-        var(--ansr-black) 92%,
-        transparent 100%
-      ),
-      /* Short fades at both inline edges, so the slice never ends in a vertical rule.
-         **The leading one is not redundant, which is the thing a phone-only reading
-         misses.** A fixed 56rem frame is wider than the viewport up to about 830px and
-         narrower above it, so the box's own leading edge is off-screen on every phone
-         and INSIDE the band on a large tablet — measured at x=108 on a 1023px viewport.
-         Without this the field would meet the band on a hard 90px-tall cut there, which
-         is the one thing the four desktop edge fades exist to prevent. */
-      linear-gradient(to right, transparent 0%, var(--ansr-black) 10%),
-      linear-gradient(to left, transparent 0%, var(--ansr-black) 12%);
-    mask-composite: intersect;
-    -webkit-mask-composite: source-in;
+    inset-inline-end: calc(24% - 16.744rem);
+    opacity: 0.58;
   }
 }
 
-/* **A tablet takes the same frame and differs in exactly two values.** The crop, the
-   position and the mask are all the block above — writing a second mask here would have
-   been the same five gradients restated, which is how two placements start drifting.
-   What genuinely differs is the card it has to meet and how much band is left over
-   after the copy: the pull is `-mt-28` rather than `-mt-12`, and the copy is capped
-   well inside a 768px band, so the field can sit a step further forward without ever
-   reaching the ink. */
+/* **A tablet takes the same frame, the same mask and the same opacity, and differs in
+   exactly ONE value.** It used to carry an opacity of its own, a step forward of the
+   phone's on the argument that a 768px band has room the phone does not — with the
+   desktop mask inherited that argument is spent, and one field strength below `lg` is
+   what keeps the tablet from being a third rendering of the same graphic. What genuinely
+   differs is the card it has to meet: the pull is `-mt-28` rather than `-mt-16`. */
 @media (min-width: 48rem) and (max-width: 63.999rem) {
   .gcc-hero-map {
     inset-block-end: var(--ansr-space-28);
-    opacity: 0.56;
   }
 }
 
@@ -1833,6 +1827,17 @@
   min-inline-size: 0;
   overflow-y: auto;
   overscroll-behavior: contain;
+  /* **Declares the one gesture this box owns, and it is the pair to the row's touch
+     handling rather than a replacement for it.** The rows commit a finger at `pointerup`
+     now precisely so a drag can scroll; this says what a drag is allowed to do here.
+     `pan-y` keeps the vertical pan and gives up the rest — a horizontal swipe belongs to
+     the page or the host, and double-tap zoom on a list of options is a gesture that can
+     only fire by accident. It also gets the browser to `pointercancel` a press promptly
+     once it has decided the gesture is a scroll, which is the signal a row trusts first.
+
+     It cannot fix the bug on its own: `touch-action` governs the DEFAULT action, and a
+     handler bound to `pointerdown` runs whatever the default was. */
+  touch-action: pan-y;
   padding-block: var(--ansr-space-2);
   scrollbar-width: thin;
   scrollbar-color: color-mix(in oklab, var(--ansr-accent) 35%, transparent) transparent;

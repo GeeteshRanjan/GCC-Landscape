@@ -709,7 +709,10 @@ function JumpToClose() {
 
 export function PeerBlockView({ view }: { view: PeerView }) {
   const peers = view.peers.peers;
-  const shortfall = shortfallLine(view);
+  // One of this sentence's four branches is published copy, so the block needs the
+  // resolved block rather than the shipped default. See `shortfallLine`.
+  const copy = usePublicCopy();
+  const shortfall = shortfallLine(view, copy);
 
   if (peers.length === 0) {
     return <p className="max-w-measure text-base text-text">{shortfall}</p>;

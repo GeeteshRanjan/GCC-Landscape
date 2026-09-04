@@ -100,8 +100,12 @@ import { slugify, uniqueSlug } from "@/data/normalize";
  * gap filled with the shipped sentence, and publishes it as an approved edit. One string
  * is not a smaller version of that problem — it is the same problem — and the bump is now
  * the only instrument for a copy-shape change.
+ *
+ * **v9 is `copy.peersNarrowNote`, one key, on v8's reasoning exactly** — and it carries
+ * v7's second lesson as well as v8's first: the key is a TEMPLATE, so a v8 draft filled
+ * from the merge would be validated against an `{industry}` slot it has never held.
  */
-const STORAGE_KEY = "gcc-admin-draft-v8";
+const STORAGE_KEY = "gcc-admin-draft-v9";
 const AUTOSAVE_DEBOUNCE_MS = 800;
 
 /** Everything the admin can edit. Metadata is server-owned. */

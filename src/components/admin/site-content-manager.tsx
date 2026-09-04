@@ -1258,6 +1258,10 @@ const COPY_GROUPS: readonly CopyGroupConfig[] = [
         key: "peersTitleFallback",
         hint: "Substituted for {company} when the visitor did not give a name. Do not write \u201cyours\u201d \u2014 it presumes they already run a centre in India.",
       },
+      {
+        key: "peersNarrowNote",
+        hint: "Must keep {industry}. Drawn under the peer grid only when the visitor named a sub-industry and that is what shortened the list \u2014 so it explains the SCOPE and must state no count, which the line above it already does exactly.",
+      },
       { key: "industryTitle" },
       {
         key: "industryBasisNote",

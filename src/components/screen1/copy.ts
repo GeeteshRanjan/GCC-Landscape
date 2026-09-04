@@ -469,7 +469,10 @@ export function peerLead(view: PeerView): string {
  * Returns null at a full set, so the component renders nothing rather than a
  * reassuring line nobody needed.
  */
-export function shortfallLine(view: PeerView): string | null {
+export function shortfallLine(
+  view: PeerView,
+  copy: PublicCopy = DEFAULT_PUBLIC_COPY,
+): string | null {
   const { shortfall, peers, limit, floorShortened } = view.peers;
   if (shortfall === 0) return null;
 
@@ -496,9 +499,24 @@ export function shortfallLine(view: PeerView): string | null {
    * screen and the most self-regarding: the reader has not asked whether we pad
    * lists, and answering it plants the question. The behaviour is unchanged and is
    * an invariant; only the narration is gone.
+   *
+   * **This branch is the ONE published one, as a template — `copy.peersNarrowNote`.**
+   * It was "`${industry}` is not short of companies in India — but only `${count}` are
+   * close enough to your sub-industry to be worth naming", which had three faults and
+   * the count was the load-bearing one: `peerCountLine` renders directly above it and
+   * states the same number exactly, so the sentence restated a figure it did not own —
+   * and it restated it ungrammatically at a set of one ("only one are close enough").
+   * Dropping the count is what makes the sentence a statement of SCOPE, which is the
+   * category that may be edited; it also took out an em dash, and "worth naming", which
+   * is the tool narrating its own restraint. The reasoning for the shipped wording is in
+   * `schema.ts` beside the value.
+   *
+   * The other three branches stay derived and are not a candidate for the same move:
+   * each of them names a quantity or a population, so each has to move when the engine
+   * does.
    */
   if (floorShortened && businessType) {
-    return `${industry} is not short of companies in India — but only ${count} are close enough to your sub-industry to be worth naming.`;
+    return fillTemplate(copy.peersNarrowNote, { industry });
   }
 
   return `${industry} is thin in India at any size: ${count} rather than ${limit}. Early ground, not absent ground.`;

@@ -394,8 +394,9 @@ describe("the snapshot's labels are an argument", () => {
     // pills shared by both screens, the function panel's name, four city-map toggle
     // labels, the snapshot's missing-figure text, and six templates plus one fallback.
     // 69 with the containment chart's basis line, which moved out of code one pass
-    // after it was written in it.
-    expect(Object.keys(DEFAULT_PUBLIC_COPY)).toHaveLength(69);
+    // after it was written in it. 70 with the peer grid's sub-industry note, the one
+    // branch of `shortfallLine` that states no count and so may be edited.
+    expect(Object.keys(DEFAULT_PUBLIC_COPY)).toHaveLength(70);
   });
 });
 

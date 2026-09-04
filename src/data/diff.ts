@@ -909,6 +909,7 @@ export const PUBLIC_COPY_LABELS: Record<keyof PublicCopy, string> = {
   snapshotHeading: "Snapshot heading",
   peersTitle: "Peer grid heading",
   peersTitleFallback: "Peer grid heading, no company given",
+  peersNarrowNote: "Peer grid, sub-industry note",
   largestTitle: "Largest GCCs heading",
   mapTitle: "City map heading",
   cityScopeAll: "City map, all-cities scope",

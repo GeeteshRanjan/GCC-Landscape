@@ -150,6 +150,7 @@ export function fillTemplate(
 export const COPY_TEMPLATES = {
   snapshotHeading: { slots: ["industry"], filledMax: 72 },
   peersTitle: { slots: ["company"], filledMax: 80 },
+  peersNarrowNote: { slots: ["industry"], filledMax: 160 },
   largestTitle: { slots: ["industry"], filledMax: 72 },
   mapTitle: { slots: ["industry"], filledMax: 80 },
   indexedNote: { slots: ["baseline"], filledMax: 60 },
@@ -1110,6 +1111,36 @@ export const publicCopySchema = z.object({
   snapshotHeading: copyTemplate("snapshotHeading"),
   peersTitle: copyTemplate("peersTitle"),
   peersTitleFallback: nonEmpty.max(32),
+  /**
+   * The line under the peer grid when the set is short because the visitor named a
+   * SUB-INDUSTRY, not because their industry is thin in India.
+   *
+   * **The one branch of `shortfallLine` that is editable, and it qualifies on the
+   * template rule rather than in spite of the code rule.** A sentence that states a
+   * count has to move when the count moves, which is why the other three branches stay
+   * derived — the thin-industry one names both the count and the limit, and the two
+   * empty-set ones name the population. This branch states no quantity at all. It names
+   * the SCOPE that produced a short list, and the exact count is already on the line
+   * directly above it, which `peerCountLine` states as "Showing 3 of 314". Two
+   * statements of the same number, one of them wrong the moment the engine changes, is
+   * what that rule exists to prevent — so removing the count from here is what makes it
+   * editable, and it reads better for the same reason.
+   *
+   * **It is also where an em dash was still shipping.** The sentence was "{industry} is
+   * not short of companies in India — but only 3 are close enough to your sub-industry
+   * to be worth naming", which broke the ban twice over: the dash, and "worth naming",
+   * which is the tool narrating its own restraint in front of a reader who had not
+   * asked. Keep it a statement about the market and the visitor's own scope.
+   *
+   * `{industry}` is required, because without it the sentence claims something about
+   * India at large rather than about the industry a reader has just been shown.
+   *
+   * **160 filled, measured.** It sets at 14px inside `max-w-measure` in the peer block,
+   * so 160 is two lines at 1440 and three on a phone — past which a note qualifying one
+   * short grid is taller than the count line and the Fortune line above and below it
+   * combined.
+   */
+  peersNarrowNote: copyTemplate("peersNarrowNote"),
   largestTitle: copyTemplate("largestTitle"),
   mapTitle: copyTemplate("mapTitle"),
   /**
@@ -1446,6 +1477,22 @@ export const DEFAULT_PUBLIC_COPY: PublicCopy = {
    * runs an India centre, and `gccStatus` is a constant the form never asks for.
    */
   peersTitleFallback: "your profile",
+  /**
+   * **Two clauses, one fact each, and no number in either.** The first answers the
+   * question a short list actually raises — is India thin in my industry? — and answers
+   * it no. The second says what did the narrowing, which is the visitor's own answer
+   * rather than a limit of the data. The count is on the line above, stated exactly
+   * once.
+   *
+   * "well established" rather than "not short of companies": a sentence that opens on
+   * what the market is NOT makes the reader hold the negative through the whole clause,
+   * and the finding here is positive. "comparisons" rather than "peers", because the
+   * grid's own heading has already used the product's word and this line is describing
+   * what a reader is looking at. "above" is literal — the note sits under the grid.
+   */
+  peersNarrowNote:
+    "{industry} is well established in India. " +
+    "Your sub-industry narrows the list to the closest comparisons above.",
   largestTitle: "The largest {industry} GCCs in India",
   /* Not "Where …": the block's own heading would then open the way the lead used to. */
   mapTitle: "Cities where {industry} companies have set up",

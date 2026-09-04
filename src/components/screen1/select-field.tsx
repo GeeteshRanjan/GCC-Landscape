@@ -199,6 +199,33 @@ function hasVirtualKeyboard(): boolean {
 }
 
 /**
+ * How far a FINGER may travel and still count as a tap on the row it started on.
+ *
+ * Only the touch path consults it. A pointer that moves further than this is panning
+ * the list, so the press is abandoned rather than committed — see the row's handlers,
+ * where the reasoning is.
+ *
+ * 10 CSS pixels, which is the figure the platforms themselves use for the same
+ * decision, and it has to be generous: a finger resting on a 26px row rolls a few
+ * pixels between contact and lift without the visitor intending any movement at all.
+ * Below about 6px a deliberate tap starts registering as a drag and the row stops
+ * responding, which is a worse fault than the one this fixes.
+ */
+const TAP_SLOP = 10;
+
+/**
+ * How long a committed touch press keeps watching for the compatibility `click` it is
+ * about to produce. See `swallowNextClick`, which is where the reasoning is.
+ *
+ * The click follows the `pointerup` within a frame on a viewport that declares its own
+ * width, which this one does — the 300ms tap delay only applies where it does not. So
+ * this is a release valve for a browser that sends no click at all rather than a wait,
+ * and it is deliberately short enough that a visitor's NEXT deliberate press cannot fall
+ * inside it.
+ */
+const CLICK_SWALLOW_MS = 300;
+
+/**
  * A row's label with the matched run marked.
  *
  * **Safe to split into elements ONLY because every row carries an explicit
@@ -588,6 +615,101 @@ export function SelectField({
   const latest = useRef({ value, paneAOptions });
   latest.current = { value, paneAOptions };
 
+  /**
+   * The touch press in flight on a row, so a DRAG SCROLLS the list instead of
+   * choosing whatever the finger happened to land on.
+   *
+   * **The bug this fixes, and why it was structural rather than a stray handler.**
+   * Every row committed on `pointerdown`. On a mouse that is indistinguishable from a
+   * click, because a mouse does not scroll by pressing. On a phone the press IS the
+   * start of the scroll gesture, so a visitor dragging a 24-industry list to reach the
+   * bottom of it committed the row under their finger on contact — the panel closed
+   * under a gesture that had not finished, and the answer in the field was one they had
+   * never chosen. The industry control made it worse than a wrong answer: the pressed
+   * row branches, so the cascade pane slid in mid-drag and the list they were scrolling
+   * was replaced.
+   *
+   * So a touch press is REMEMBERED here and acted on at `pointerup`, and only if the
+   * finger has stayed inside `TAP_SLOP` of where it landed. Three details make that
+   * hold up:
+   *
+   *   - **`pointerdown` no longer calls `preventDefault()` for touch**, which it must
+   *     not: the default action on a touch press is the browser's own panning, and
+   *     suppressing it is what would leave the list unable to scroll at all. Mouse and
+   *     pen keep it, so they keep suppressing the compatibility mouse events and the
+   *     text selection a drag across labels would otherwise start.
+   *   - **The mouse and pen path is UNCHANGED and still commits on `pointerdown`**,
+   *     deliberately. It is the path that has always worked, and the click-through a
+   *     `pointerup` commit can produce — the compatibility `click` arriving after the
+   *     panel has closed, over whichever field the panel was overhanging — is a hazard
+   *     worth not introducing on a form whose submit button sits directly under the
+   *     industry panel. On touch that click retargets to this component's own surviving
+   *     wrapper rather than hit-testing the page, because the whole panel subtree is
+   *     removed rather than hidden.
+   *   - **`pointercancel` clears it too**, and that is the signal the browser itself
+   *     sends the moment it takes the gesture over as a scroll. The slop check is the
+   *     belt to its braces, not a replacement for it.
+   *
+   * The keyboard is untouched: `Enter` goes through `activate` directly and never
+   * through a pointer handler at all.
+   */
+  const press = useRef<{
+    pointerId: number;
+    rowId: string;
+    x: number;
+    y: number;
+  } | null>(null);
+
+  /**
+   * Swallow the compatibility `click` that follows a touch commit.
+   *
+   * **This is not defensive tidying — without it, choosing a revenue band on a phone
+   * SUBMITS THE FORM.** Measured: tap an option, and the click Chrome synthesises after
+   * the `pointerup` is hit-tested against the page as it stands when the click is
+   * dispatched, which is after the row and its whole panel have been unmounted. What is
+   * under the finger by then is whatever the panel was overhanging — for the revenue
+   * control that is the submit button, and the probe recorded `FORM SUBMITTED` on a
+   * press whose only meaning was "this band".
+   *
+   * It does not retarget to a surviving ancestor, which is the behaviour that would have
+   * made this safe on its own; the same probe caught the industry row's click landing on
+   * a row of the cascade pane that had only just appeared.
+   *
+   * **`preventDefault()` on the `pointerdown` is the fix that is NOT available here**,
+   * and that is the whole reason this exists: it does suppress the compatibility events,
+   * and on a touch pointer it also suppresses the browser's own panning, which is the
+   * gesture this control was fixed to allow. So the click is allowed to happen and
+   * cancelled in the capture phase before anything can act on it.
+   *
+   * **All THREE compatibility events go, not just the click, and `mousedown` is the one
+   * that is easy to miss.** Cancelling the click alone stopped the form submitting and
+   * left the submit button FOCUSED — focus follows `mousedown`, not the click, so the
+   * panel closed, `close()` put focus back on the trigger as it should, and the
+   * compatibility `mousedown` then took it away again to whatever the panel had been
+   * covering. A focus ring on the submit button after a press that chose a revenue band
+   * is the same fault one step quieter.
+   *
+   * The window is short and closes on the click, so at most one gesture's worth is
+   * swallowed and only immediately after a press that committed. The timeout is the
+   * release valve for a browser that sends no click at all.
+   */
+  function swallowNextClick() {
+    const types = ["mousedown", "mouseup", "click"] as const;
+    function stop() {
+      for (const type of types) document.removeEventListener(type, swallow, true);
+    }
+    function swallow(event: Event) {
+      event.preventDefault();
+      event.stopPropagation();
+      // The click is the last of the three, so nothing is left to watch for.
+      if (event.type === "click") stop();
+    }
+    for (const type of types) {
+      document.addEventListener(type, swallow, { capture: true });
+    }
+    window.setTimeout(stop, CLICK_SWALLOW_MS);
+  }
+
   function close(returnFocus = true) {
     setOpen(false);
     setFilter("");
@@ -846,13 +968,59 @@ export function SelectField({
         // The branch pane lives in a different box from the row that owns it, so
         // the DOM cannot express the containment and `aria-owns` does instead.
         aria-owns={isOpenBranch ? groupId : undefined}
-        // `pointerdown`, so the row acts before the click-outside handler can see
-        // the press.
+        // Mouse and pen commit on `pointerdown`, so the row acts before the
+        // click-outside handler can see the press. A FINGER is remembered and acted on
+        // at `pointerup`, because its press is also the start of a scroll — see `press`.
         onPointerDown={(event) => {
+          if (event.pointerType === "touch") {
+            press.current = {
+              pointerId: event.pointerId,
+              rowId: row.rowId,
+              x: event.clientX,
+              y: event.clientY,
+            };
+            return;
+          }
           event.preventDefault();
           activate(row);
         }}
-        onPointerEnter={() => setActiveRowId(row.rowId)}
+        onPointerMove={(event) => {
+          if (event.pointerType !== "touch") return;
+          const start = press.current;
+          if (!start || start.pointerId !== event.pointerId) return;
+          if (
+            Math.abs(event.clientX - start.x) > TAP_SLOP ||
+            Math.abs(event.clientY - start.y) > TAP_SLOP
+          ) {
+            press.current = null;
+          }
+        }}
+        // The browser's own "I am scrolling this now" signal.
+        onPointerCancel={() => {
+          press.current = null;
+        }}
+        onPointerUp={(event) => {
+          if (event.pointerType !== "touch") return;
+          const start = press.current;
+          press.current = null;
+          // A touch is implicitly captured by the element that received its
+          // `pointerdown`, so the row matched here is the row the finger LANDED on
+          // rather than the one it happens to be over at lift.
+          if (!start || start.pointerId !== event.pointerId) return;
+          if (start.rowId !== row.rowId) return;
+          // Before the row can be unmounted, so nothing under it can be pressed by the
+          // click this press is about to synthesise.
+          swallowNextClick();
+          activate(row);
+        }}
+        // Non-touch only. A finger generates a `pointerenter` for whatever row it lands
+        // on, which would move the keyboard's own position — and the effect that keeps
+        // the active row in view would then scroll the pane under a gesture already
+        // scrolling it.
+        onPointerEnter={(event) => {
+          if (event.pointerType === "touch") return;
+          setActiveRowId(row.rowId);
+        }}
         className={cn(
           "gcc-select-row",
           isActive && "gcc-select-row--active",

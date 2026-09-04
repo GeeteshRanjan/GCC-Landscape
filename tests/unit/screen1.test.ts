@@ -714,6 +714,50 @@ describe("copy", () => {
   });
 
   /**
+   * The floor-shortened branch, which had no assertion of its own for a year — the
+   * rule being that every branch of a derived sentence needs one.
+   *
+   * **It is the ONE branch that is published copy**, so this pins the two properties
+   * that made it publishable rather than its wording: it names the industry, and it
+   * states no quantity. `peerCountLine` renders directly above it and owns the count;
+   * a number here would be the same figure stated twice, and at a set of one the old
+   * sentence stated it ungrammatically as well ("only one are close enough").
+   *
+   * The case is SEARCHED for rather than named, because which sub-industries the
+   * similarity floor shortens is a property of the data and a legitimate re-tagging
+   * pass moves it. Finding none at all would mean the branch is unreachable, which is
+   * itself worth failing on.
+   */
+  it("explains a floor-shortened set by scope, and states no count in it", () => {
+    const shortened = dataset.businessTypes.flatMap((type) => {
+      const view = buildPeerView(
+        dataset,
+        input({ industry: type.industry, businessTypeId: type.id }),
+      );
+      const { floorShortened, shortfall, peers } = view.peers;
+      return floorShortened && shortfall > 0 && peers.length > 0 ? [view] : [];
+    });
+    expect(shortened.length).toBeGreaterThan(0);
+
+    for (const view of shortened) {
+      const line = shortfallLine(view)!;
+      expect(line, view.industry.industry).not.toBeNull();
+      // The slot resolved, so no `{industry}` survived into the rendered sentence.
+      expect(line).toContain(view.industry.industry);
+      expect(line).not.toContain("{");
+      // Not the thin-industry claim: this industry has plenty of companies in India.
+      expect(line, view.industry.industry).not.toMatch(/thin/i);
+      // No digit and no counting word. The line above states the number, once.
+      expect(line, view.industry.industry).not.toMatch(/\d/);
+      expect(line, view.industry.industry).not.toMatch(/\bonly (one|two|three|four)\b/i);
+      // And it does not narrate our own restraint, which "worth naming" did.
+      expect(line, view.industry.industry).not.toMatch(/worth naming/i);
+      // The ban that this sentence was the last visitor-facing holder of.
+      expect(line, view.industry.industry).not.toContain("\u2014");
+    }
+  });
+
+  /**
    * **The company name is no longer in the headline, and this test moved with it.**
    * It used to assert the h1 contained "Acme". The h1 now states the finding — how
    * many relevant peers were found — and the name is persistent context beside the
