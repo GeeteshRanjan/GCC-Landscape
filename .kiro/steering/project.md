@@ -257,6 +257,13 @@ card's top row.**
 - **The card is SOLID, not glass.** A hairline ring drawn as a `box-shadow` layer, two shadow layers at
   very different spreads, and a radius one step above every panel inside it. The `--ansr-shadow-*`
   tokens cannot supply it — they are fitted for a light surface and this ground IS teal-deep.
+- **NOTHING WHITE MAY SIT BEHIND THE CARD'S BOTTOM CORNERS, and matching the close band's radius to the
+  clip is not enough on its own.** A white layer paints the corner at the clip's antialiased coverage
+  while the band's dark fill paints it at roughly the square of that coverage, and the difference is a
+  light arc. So `ViewPanel` draws NO ground — its `bg-surface` was redundant, every `Zone` painting its
+  own — and `.gcc-result-card` carries the band's fill across its bottom radius as a background layer.
+  Measured at deviceScaleFactor 4 against the straight bottom edge, which is the ring alone: 123 and 131
+  to 46 and 44. A new layer between the card and the close inherits this rule.
 - **The switch is full width, two equal halves, no shape of its own.** As the card's first row its
   corners ARE the card's, under the card's own `overflow: hidden`.
 - **The selected cell is filled with the ground of the content beneath it** — hence `ViewTabs`' `ground`
@@ -407,7 +414,12 @@ stem (0.137 of cap height) rather than chosen.
 count, mean centre size, spread of cities, leading city. It **introduces no figure a card does not
 evidence**, holds four cells whatever the result, and says "Data unavailable" rather than a dash, a zero
 or an estimate. The SECTION HEADING carries the industry (`snapshotHeading`) and **no label does**.
-**Never "GCC's".** **TWO COLUMNS ON A PHONE, four from `lg`, and every size steps at `sm` as well as
+**Never "GCC's".** **THE HEADING IS DRAWN `uppercase` AND THE PLURAL `s` IS EXEMPT FROM IT** —
+`withCasedGccPlural` in `snapshot.tsx` returns the literal token `GCCs` to `normal-case`, because a full-caps
+transform makes the s a fourth initial and the eyebrow reads "GCCS", which is the same corruption as
+"GCC's" arriving from the presentation rather than the copy. Matched as a literal token on
+`withBrandMark`'s argument, the heading being admin-editable, and the accessible name never changed.
+**TWO COLUMNS ON A PHONE, four from `lg`, and every size steps at `sm` as well as
 `md`** — one column drew four full-width rows of a desktop-sized numeral beside an empty half-measure, and
 the four cells are a SET whose point is that they are properties of one industry, which is something a
 reader sees by seeing them together. 2×2 is the only arrangement of four symmetrical at both ends.

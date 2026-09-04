@@ -1,4 +1,41 @@
+import { Fragment, type ReactNode } from "react";
+
 import type { Signal } from "./copy";
+
+/**
+ * The one token the eyebrow's `uppercase` may not transform.
+ *
+ * **`text-transform: uppercase` turns "GCCs" into "GCCS", which is a different word.**
+ * The plural is three initials plus a lowercase s; drawn in full caps the s becomes a
+ * fourth initial and the heading reads as an acronym nobody uses. It is the same class
+ * of error as "GCC's", which ANSR asked never to appear — the shipped copy is right and
+ * the presentation was corrupting it.
+ *
+ * Matched as a LITERAL TOKEN, on `withBrandMark`'s argument in `ask-hero.tsx`: the
+ * heading is admin-editable free text, so there is no position to slice at. A heading
+ * with no "GCCs" in it renders unchanged.
+ */
+const GCC_PLURAL = "GCCs";
+
+/**
+ * Splits an uppercased line around `GCC_PLURAL` and returns the token to its own case.
+ *
+ * `normal-case` is `text-transform: none`, so the child wins over the heading's own
+ * transform and nothing else on the line changes. The transform is presentational, so
+ * the accessible name was always "… GCCs in India" — this only brings the drawn line
+ * into line with it.
+ */
+function withCasedGccPlural(text: string): ReactNode {
+  const parts = text.split(GCC_PLURAL);
+  if (parts.length === 1) return text;
+
+  return parts.map((part, index) => (
+    <Fragment key={index}>
+      {index > 0 ? <span className="normal-case">{GCC_PLURAL}</span> : null}
+      {part}
+    </Fragment>
+  ));
+}
 
 /**
  * SNAPSHOT — the four industry-level figures at the head of the content surface.
@@ -128,7 +165,9 @@ export function Snapshot({
         id="snapshot-heading"
         className="text-xs font-semibold tracking-caps text-accent-warm uppercase"
       >
-        {heading}
+        {/* `uppercase` is the eyebrow's idiom and it may not flatten the plural. See
+            `withCasedGccPlural`. */}
+        {withCasedGccPlural(heading)}
       </h2>
 
       {/* Four across at `lg`, and **TWO from the base rather than from `sm`** — the gaps

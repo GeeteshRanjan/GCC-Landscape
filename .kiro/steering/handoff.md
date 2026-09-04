@@ -8,34 +8,31 @@ visual. Bounded by SHAPE, not length — see the `handoff.md` subsection of "Doc
 
 ## Where we are
 
-- **`main` is at `c7d841c` and pushed; the containment pass is UNCOMMITTED on top of it.** Twelve tracked
-  files: `schema.ts`, `diff.ts`, `dataset.json`, `globals.css`, `charts.tsx`,
-  `screen1/{copy,evidence,peer-view}.tsx`, `admin/{draft-provider,site-content-manager}.tsx`, plus
-  `project.md`, the style lock and four test files.
-- **What that pass did:** the containment chart's inner layers square their top-leading corner while the
-  stack keeps its own, and the block closes on a 12px basis line, `copy.industryBasisNote`. Rules in
-  `project.md`, rejected alternatives in the style lock.
-- **`siteContent.copy` is 69 keys — 63 flat and 6 templates — and `STORAGE_KEY` is at v8.** The basis line
-  is the 69th; it shipped in code for one pass and is editable at the owner's decision.
-- **Verified on this tree: `tsc`, 741 unit tests, `brand_lint`, `data:verify`, and the full 210-spec
-  browser suite.** `dataset.json` self-diffs empty and an older dataset missing the new key still reads.
-- **Workspace state:** servers stopped, ports 3000/3210/3400 free, `.next` holds a fixture-env build. Four
-  untracked artifacts stay uncommitted — `probe-mobile.mjs`, two mobile-review markdown files and
-  `untitled folder/`. The peer-view variant harness is live and unmerged (`peers-variants.tsx`,
-  `/variants`, `variant-harness.tsx`; candidates in `.tastemaker/peers-candidates.md`).
+- **`main` carries the card-corner fix and the snapshot heading's cased plural, pushed.** `globals.css`,
+  `screen-header.tsx`, `snapshot.tsx`, `project.md`. Both rules are in `project.md`.
+- **The snapshot eyebrow is drawn `uppercase`, so its copy's "GCCs" was rendering "GCCS".**
+  `withCasedGccPlural` in `snapshot.tsx` returns that one literal token to `normal-case`; no other
+  uppercase renderer draws a string containing it, and admin draws the raw value in an input.
+- **Verified on this tree: `tsc`, 741 unit tests, `brand_lint`.** The browser suite was NOT run on either
+  fix — a dev server is holding `.next` and `next build` would rewrite it. No spec asserts either surface.
+- **`siteContent.copy` is 69 keys — 63 flat and 6 templates — and `STORAGE_KEY` is at v8.**
+- **Workspace state:** a dev server is running on port 3000 against `.next`. Four untracked artifacts stay
+  uncommitted — `probe-mobile.mjs`, two mobile-review markdown files and `untitled folder/`. The peer-view
+  variant harness is live and unmerged (`peers-variants.tsx`, `/variants`, `variant-harness.tsx`;
+  candidates in `.tastemaker/peers-candidates.md`).
 
 ## Next action
 
-1. **Commit and push the containment pass**, then watch the Vercel build — `gcc-landscape.vercel.app` is
-   the only publicly reachable deployment, and this touched the schema, `dataset.json` and the admin.
-2. **Owner is deciding between peer treatments B and G. Do not merge either until told.** On the word:
+1. **Watch the Vercel build.** `gcc-landscape.vercel.app` is the only publicly reachable deployment.
+2. **Run the browser suite when the dev server is next free**, to clear both uncovered fixes.
+3. **Owner is deciding between peer treatments B and G. Do not merge either until told.** On the word:
    fold the winner into `peer-view.tsx` / `evidence.tsx` and delete the harness and every supporting edit
    it does not use. Both candidates predate all three phone rounds and need the ranking row's grid,
    `.gcc-peer-facts` and the phone paddings carried in.
-3. **G needs two answers before it can ship** — a Fortune recolour grant or the badge off the dark region,
+4. **G needs two answers before it can ship** — a Fortune recolour grant or the badge off the dark region,
    and a decision on dark-ink company logos, which vanish on teal-deep. `plate` (I) is the built answer to
    both if they block G.
-4. **Re-check whether the peer marks render.** Two probes of the same local build disagreed; `curl` still
+5. **Re-check whether the peer marks render.** Two probes of the same local build disagreed; `curl` still
    302s to the hotlinking guidelines under three referrers. Settle which is true before acting on blocked
    item 2.
 
@@ -44,7 +41,7 @@ visual. Bounded by SHAPE, not length — see the `handoff.md` subsection of "Doc
 1. **B or G, and G's two grants.** Reasoning and both cards' source: `.tastemaker/peers-candidates.md`.
 2. **Whether the provider mark tier works at all.** `COMPANY_MARKS` is empty by decision, so the peer
    sections draw from the provider or from nothing; the condition a committed mark must meet is in
-   `project.md`. Read next action 4 before assuming it is broken.
+   `project.md`. Read next action 5 before assuming it is broken.
 3. **Whether the basis line's wording rule should be enforced by the SCHEMA.** Today it is a unit test on
    the shipped value plus an admin hint, so an edit reading "figures are approximate" would publish. A
    `.refine` is the hard version; it is a one-line change and a product call.
@@ -86,8 +83,13 @@ anything that renders. Five that would cost the most time:
 - **A NEW COPY KEY IS FIVE EDITS, NOT ONE.** Schema and default, `PUBLIC_COPY_LABELS`, the admin group, a
   line in `data/dataset.json`, and `STORAGE_KEY` plus `DRAFT_STORAGE_KEY` — the merge makes both the diff
   and the draft shape check blind, so a missed bump publishes shipped values as approved edits.
-- **A JSX comment cannot sit in an ATTRIBUTE position.** `{/* … */}` between attributes on an opening tag
-  is a syntax error, so a note about one `className` goes above the element.
+- **A CORNER OR EDGE ARTIFACT IS MEASURED, NEVER EYEBALLED.** Screenshot the curve and a stretch of the
+  straight edge at the same `deviceScaleFactor` and compare the brightest pixel; the straight edge is the
+  intended ring alone and is the target. Hide `nextjs-portal` first — the dev indicator sits over the
+  card's bottom-leading corner at phone width and reads as pure white.
+- **A CAPS TRANSFORM CAN CORRUPT A WORD, AND `uppercase` IS ON EVERY EYEBROW ON BOTH SCREENS.** Read the
+  drawn line, not the string: "GCCs" is the case that bites, and a new copy key routed to a small-caps
+  label needs the same check.
 - **`getByLabel` MATCHES ON SUBSTRING, AND AN OPEN POPUP ADDS A SECOND MATCH** — the industry tree's own
   label is `askIndustryPlaceholder`, shipping as "Choose your industry", so `getByLabel("Industry")` is
   strict-mode ambiguous once open. Locate the trigger by role.
@@ -95,6 +97,3 @@ anything that renders. Five that would cost the most time:
   every request then 500s. Playwright leaves port 3210 held after a killed run: `lsof -ti:3210 | xargs kill
   -9`, and `npx playwright test` does NOT rebuild the fixture. Overriding `distDir` makes `next dev` AND
   `next build` rewrite `tsconfig.json`'s `include` — revert it.
-- **`data/dataset.json` ON DISK IS NOT WHAT `serializeDataset` PRODUCES** — the committed file escapes
-  non-ASCII as `\uXXXX` and `JSON.stringify` does not, so any parse-and-rewrite of it reports a whole-file
-  diff. Edit it by line, never by round trip, until a publish normalises it.

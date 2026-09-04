@@ -2995,6 +2995,39 @@ select.gcc-field {
   border-radius: var(--ansr-radius-xl);
   overflow: hidden;
   background-color: var(--ansr-surface);
+  /* **The card's own FOOT is the close band's colour, so the bottom corners have nothing
+     white behind them to blend with.**
+
+     Rounding the last zone to match the clip (below) made the band's fill follow the
+     curve, and that was necessary but not sufficient: two rounded boxes at the same
+     radius do not cover the same subpixels. The white underneath paints the corner at the
+     clip's own antialiased coverage and the dark band paints it at roughly the SQUARE of
+     that coverage, so the difference shows through the curve as a light arc. Measured at
+     deviceScaleFactor 4, sampling the brightest pixel in a 40px box at each corner and at
+     the middle of the straight bottom edge: the straight edge peaks at luminance 46, which
+     is the 9%-white ring alone and is the target, while the two curves peaked at 123 and
+     131 in a near-neutral grey.
+
+     There were two whites, and both had to go. The larger was the tab panel's own
+     `bg-surface` — a square white box between this clip and the band's rounded foot — and
+     it is gone from `ViewPanel`, where the reasoning sits. This is the other: the card's
+     own `background-color`, which still leaks under any child at the curve. So the bottom
+     `--ansr-radius-xl` of the card carries the band's fill as a background layer. The
+     close band is many times taller than that strip and opaque, so the strip is invisible
+     everywhere except the few corner pixels where the band's coverage falls below one, and
+     there it blends dark into dark. Together the two changes take the curves to 46 and 44.
+
+     The `lg` step on a phone needs no second value: a 12px strip under an 8px curve is
+     still entirely covered. It is scoped to the card's foot rather than its whole
+     background because the close is always the last band inside the card on both result
+     screens — the same thing the last-zone rule below relies on. */
+  background-image: linear-gradient(
+    var(--ansr-surface-inverse-soft),
+    var(--ansr-surface-inverse-soft)
+  );
+  background-repeat: no-repeat;
+  background-position: bottom center;
+  background-size: 100% var(--ansr-radius-xl);
   box-shadow:
     0 0 0 1px color-mix(in oklab, var(--ansr-white) 9%, transparent),
     0 32px 64px color-mix(in oklab, var(--ansr-black) 38%, transparent),
@@ -3002,13 +3035,17 @@ select.gcc-field {
 }
 
 /* **The close band is the card's foot, so it takes the card's own bottom radius.**
-   The card clips to `--ansr-radius-xl`, but the dark close band inside it has square
-   corners — so at each bottom corner the band's fill stopped short of the rounded clip
-   and the card's own white background showed through as a hairline over the dark band,
-   which is the white bleed at the card's foot. Rounding the last zone's bottom corners
-   to the same radius makes its dark fill follow the clip exactly, and `overflow: hidden`
-   carries its full-bleed backdrop with it. Scoped to the LAST zone in the card — the
-   close on both result screens — so no interior band's corners are touched. */
+   The card clips to `--ansr-radius-xl`, but the dark close band inside it had square
+   corners — so at each bottom corner the band's fill stopped short of the rounded clip and
+   the white behind it showed through as a hairline over the dark band. Rounding the last
+   zone's bottom corners to the same radius makes its dark fill follow the clip, and
+   `overflow: hidden` carries its full-bleed backdrop with it. Scoped to the LAST zone in
+   the card — the close on both result screens — so no interior band's corners are touched.
+
+   **This alone did not finish the job, and the note above the card records why**: matching
+   the radius makes the band's fill follow the curve but does not stop a white layer
+   beneath it painting the same corner at a different antialiased coverage. What removes
+   the arc is having nothing white under it — the panel's fill, and the card's own foot. */
 .gcc-result-card .gcc-zone:last-child {
   border-end-start-radius: var(--ansr-radius-xl);
   border-end-end-radius: var(--ansr-radius-xl);

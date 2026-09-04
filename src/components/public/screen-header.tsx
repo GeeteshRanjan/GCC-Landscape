@@ -990,7 +990,19 @@ export function ViewPanel({
       // No focus ring on the panel itself: it is a 3,000px region, and outlining
       // the whole page on a phase change is noise rather than a location. The tab
       // above it is the visible marker, and it is already marked.
-      className="bg-surface outline-none"
+      //
+      // **IT DRAWS NO GROUND OF ITS OWN, AND THAT IS THE FIX FOR THE CARD'S BOTTOM
+      // CORNERS RATHER THAN A SIMPLIFICATION.** It carried `bg-surface`, which was
+      // redundant — every `Zone` inside it paints its own ground and they are
+      // contiguous, and `.gcc-result-card` is white underneath in any case — but it was
+      // not harmless: a square white box between the card's rounded clip and the close
+      // band's rounded foot puts white in the corner that the band's own antialiased
+      // curve then only partly covers, which is the light arc that showed at both bottom
+      // corners. Measured at deviceScaleFactor 4: the curves peaked at luminance 123 and
+      // 131 against 46 on the straight bottom edge, which is the 9%-white ring alone.
+      // Removing this fill and giving the card a dark foot (globals.css) takes both
+      // curves to 46 and 44 — the ring, and nothing else.
+      className="outline-none"
     >
       {children}
     </div>
