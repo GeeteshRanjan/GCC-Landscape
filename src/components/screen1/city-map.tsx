@@ -343,11 +343,192 @@ function pointerRadiusFor(fontSize: number): number {
   return fontSize * 0.26;
 }
 
+/**
+ * The PHONE layer's type size, as a share of the frame's width, from how many names it
+ * has to place.
+ *
+ * **The phone names the whole ranked set, so the size is what gives.** A name's ink is
+ * proportional to this share and the room it has is the frame's own seas, which do not
+ * grow — so the room per name is what a count buys or spends. Three steps rather than a
+ * continuous curve, because the reason for each is a different one:
+ *
+ * - **Up to four names: 0.05.** About 14px on a ~300px box, which is the same physical
+ *   size the desktop label has at 1440. This is the measured case — four is what the
+ *   seas hold at that size with every leader still reading as a diagonal.
+ * - **Up to eight, the collapsed list: 0.036.** Eight names at 0.05 need about twice
+ *   the sea there is, and the de-collision answers an impossible fit by stacking them
+ *   into a column, which is the gutter layout this map exists to replace. 0.036 is
+ *   about 11px on the same box: below the desktop-parity size and still a name.
+ * - **Past eight, the expanded list: 0.026.** Twenty-two names is dense at any size and
+ *   the binding constraint stops being the sea and becomes the frame's own height —
+ *   one side's stack is `1.7 x fontSize` per label, so past about fifteen the column
+ *   runs off the bottom and the overflow correction drags the whole set below its own
+ *   dots. This is a hair under the desktop share, and it is the honest price of "show
+ *   every city" on a 300px map.
+ *
+ * The steps are the collapsed and expanded set sizes the list itself uses (`RANKED`),
+ * so a change to how many rows the list shows before its disclosure has to be made here
+ * too — which is the coupling, and it is the one that keeps the two readings naming the
+ * same places.
+ */
+function phoneLabelShare(count: number): number {
+  if (count <= 4) return 0.05;
+  if (count <= RANKED) return 0.04;
+  return 0.033;
+}
+
+/**
+ * The leader lines for one label layer.
+ *
+ * Extracted so the phone layer and the desktop layer are one piece of markup with two
+ * sets of inputs. They cannot be one LAYER — the leaders go under the city marks and the
+ * names go over them, so the two halves sit either side of the marks in the tree.
+ */
+function MapLeaders({
+  labels,
+  width,
+  pointerRadius,
+  className,
+}: {
+  labels: readonly Label[];
+  width: number;
+  pointerRadius: number;
+  className: string;
+}) {
+  return (
+    <g className={className} aria-hidden="true">
+      {labels.map((label) => {
+        const outward = label.side === "left" ? -1 : 1;
+        const toX = label.circleX - outward * pointerRadius;
+        /**
+         * **Both legs always exist, and the bend is a place rather than a ratio.** The
+         * elbow sits on the coastline at the label's own latitude, so the first leg is
+         * the diagonal across land and the second is the short run out into open water.
+         * Clamped so the bend cannot end up beyond the pointer itself, which would fold
+         * the leader back on itself for a city whose coast is further out than its own
+         * label — the northeastern latitudes, where the frame's water is narrow.
+         *
+         * The previous version derived the bend from the vertical offset and a 55% cap
+         * on the horizontal run; see `Label.elbowX` for why that put a flat rule across
+         * the peninsula.
+         */
+        const elbowX =
+          outward === -1 ? Math.max(label.elbowX, toX) : Math.min(label.elbowX, toX);
+        return (
+          <polyline
+            key={`leader-${label.city}`}
+            points={`${label.dotX},${label.dotY} ${elbowX},${label.y} ${toX},${label.y}`}
+            fill="none"
+            strokeLinejoin="round"
+            strokeLinecap="round"
+            className="stroke-grey-500"
+            strokeWidth={width * 0.002}
+          />
+        );
+      })}
+    </g>
+  );
+}
+
+/**
+ * The pointers and the names for one label layer — everything that draws OVER the city
+ * marks. The pair with `MapLeaders`.
+ */
+function MapNames({
+  labels,
+  width,
+  fontSize,
+  pointerRadius,
+  className,
+  scope,
+  showFigure,
+}: {
+  labels: readonly Label[];
+  width: number;
+  fontSize: number;
+  pointerRadius: number;
+  className: string;
+  /**
+   * Whether each name carries its count. Passed rather than derived from `scope`, so
+   * the two decisions — which layer this is, and what a label says — stay separable;
+   * it is also what `layOutLabels` was given, and the pair must agree or a label is
+   * placed for ink it does not draw.
+   */
+  showFigure: boolean;
+  /**
+   * Which of the two layers this is, as a stable spec hook rather than a style.
+   *
+   * There are two `text` layers in this SVG now and only one of them is drawn at any
+   * width, so `svg text` no longer means "the labels on screen" — it means both sets.
+   * A spec counting labels against the ranked list has to say which layer it is
+   * counting, and it must not do that by matching a Tailwind class.
+   */
+  scope: "phone" | "wide";
+}) {
+  return (
+    <g className={className} aria-hidden="true" data-map-labels={scope}>
+      {labels.map((label) => (
+        <g key={`name-${label.city}`}>
+          {/* **The dotted pointer sits at the LABEL end, at ANSR's request** — where the
+              name is, rather than at the city. It replaced a solid pin at the city end,
+              which had a problem of its own: that end already has the halo's hard core,
+              so a second circle there was either invisible behind it or a competing mark
+              on top of it. At the name end there is nothing to compete with, and the
+              stroke says plainly that it is annotation rather than another city. */}
+          <circle
+            cx={label.circleX}
+            cy={label.y}
+            r={pointerRadius}
+            // The card's own fill, so the leader stops at the rim rather than showing
+            // through a hollow ring.
+            className="fill-surface stroke-grey-500"
+            strokeWidth={width * 0.002}
+          />
+          {/* **The name, outside the country and never over it** — the whole point of
+              placing in the seas. No knockout stroke is needed, because there is nothing
+              underneath to knock out; the knockout is what used to eat a bite out of the
+              Pune dot.
+
+              Typography is the display face at Medium with the figure alongside in
+              tabular numerals and a muted ink, so a column of names reads as one list
+              and the counts line up down it. `paint-order` and semibold both went: at
+              this size semibold in a gutter reads as shouting, and the project's own
+              display scale puts Medium here. */}
+          <text
+            x={label.textX}
+            y={label.y}
+            textAnchor={label.side === "left" ? "end" : "start"}
+            dominantBaseline="middle"
+            className="fill-text font-display font-medium tracking-body"
+            style={{ fontSize: `${fontSize}px` }}
+          >
+            {label.city}
+            {showFigure ? (
+              <tspan className="fill-text-muted tabular-nums"> {label.figure}</tspan>
+            ) : null}
+          </text>
+        </g>
+      ))}
+    </g>
+  );
+}
+
 function layOutLabels(
   cities: readonly { city: string; companies: number; point: { x: number; y: number } }[],
   width: number,
   height: number,
   fontSize: number,
+  /**
+   * Whether the label carries its count as well as its name.
+   *
+   * **It is a layout input, not a rendering one, which is why it is here rather than
+   * only in `MapNames`.** The room a label needs is what decides which side of the
+   * country it goes to and how far off the coast it sits, and "Bengaluru 1004" needs
+   * about 55% more of it than "Bengaluru" does. A layer that dropped the figure at
+   * paint time would still be placed as though it were carrying one, which is the
+   * whole gutter's width spent on ink that is not there.
+   */
+  showFigure: boolean,
 ): Label[] {
   if (cities.length === 0) return [];
 
@@ -400,7 +581,9 @@ function layOutLabels(
   const rows = cities.map((row) => {
     const figure = formatCount(row.companies);
     const textWidth =
-      `${row.city} ${figure}`.length * GLYPH_ADVANCE * fontSize;
+      (showFigure ? `${row.city} ${figure}` : row.city).length *
+      GLYPH_ADVANCE *
+      fontSize;
     const coast = coastAt(row.point.y, height);
     const roomLeft = coast.min;
     const roomRight = width - coast.max;
@@ -632,16 +815,70 @@ export function CityMap({ map }: { map: MapBlock }) {
    * Filtered to the plotted ones, because a city admin added with no coordinate has
    * no dot to point at. It stays in the list and the unplotted note names it.
    */
+  const plottedRanked = ranked
+    .filter((city) => city.point !== null)
+    .map((city) => ({ ...city, point: city.point! }));
   const labelFontSize = map.width * (showAll ? 0.023 : 0.027);
   const labels = layOutLabels(
-    ranked
-      .filter((city) => city.point !== null)
-      .map((city) => ({ ...city, point: city.point! })),
+    plottedRanked,
     map.width,
     map.height,
     labelFontSize,
+    true,
   );
   const pointerRadius = pointerRadiusFor(labelFontSize);
+
+  /**
+   * **A phone names the SAME SET the desktop layer does — the ranked list's, expanding
+   * with the disclosure — at the project owner's instruction, and the scoped exception
+   * that let it name four is gone.**
+   *
+   * The map used to drop the whole label layer below `sm`, and then named the leading
+   * four at nearly twice the desktop type share. The four was the wrong half of the
+   * trade: a reader on a phone met eight ranked rows beside a map that pointed at half
+   * of them, so the two readings disagreed about how much of the industry was on
+   * screen — which is exactly what "the labelled set is the ranked list's set" exists
+   * to prevent.
+   *
+   * **What remains different is the SIZE, and it is now derived from the count rather
+   * than fixed.** The font size is a share of the frame, so the desktop share renders
+   * at about 8px on a ~300px box, which is not a name; 0.05 renders at about 14px,
+   * which is. But the ink a name costs scales with that share and the room it has is
+   * the frame's own seas, so the two cannot both be held: at 0.05 a name like
+   * "Bengaluru 1004" needs about 47% of the map's width on one side, where the widest
+   * sea offers about 25%. Four names at 0.05 fit. Eight do not, and every one of the
+   * expanded set is a third case again.
+   *
+   * So `phoneLabelShare` spends the room on whichever set is actually being named. The
+   * cost is real and worth stating plainly: an expanded phone map sets its names at
+   * roughly the size the desktop map does, which is small. It is the same cost the
+   * desktop layer pays when it expands — 0.023 against 0.027 — arriving one step
+   * earlier because the frame is smaller, and the alternative is a graphic that points
+   * at four of twenty-two rows sitting directly beneath it.
+   *
+   * **The phone label draws the NAME ONLY, and dropping the count is what bought the
+   * size back.** "Bengaluru 43" needs about 55% more room than "Bengaluru", and room is
+   * exactly what is short here — so the figure was costing a third of every label's
+   * width to restate, one line away, a number the ranked list under the map already
+   * carries in a 30px row. That is the same argument the label layer itself stands on:
+   * the list is the reading, and the map is where the reading is placed. The figure
+   * stays on the desktop layer, where the gutter can afford it and the list is beside
+   * the map rather than below it.
+   *
+   * The layout function is the same one, called with a different font size and told not
+   * to reserve room for a figure — no second algorithm, so a change to the placement
+   * rules cannot apply to one width and not the other. Both layers are `aria-hidden` at
+   * every width, so having two in the DOM puts nothing in the accessibility tree twice.
+   */
+  const phoneLabelFontSize = map.width * phoneLabelShare(plottedRanked.length);
+  const phoneLabels = layOutLabels(
+    plottedRanked,
+    map.width,
+    map.height,
+    phoneLabelFontSize,
+    false,
+  );
+  const phonePointerRadius = pointerRadiusFor(phoneLabelFontSize);
 
   return (
     /**
@@ -663,9 +900,23 @@ export function CityMap({ map }: { map: MapBlock }) {
 
             Percentage padding, because it has to be a share of the map's own width
             for the reserved room to mean the same thing in user units at every size.
-            **Below `sm` there is no padding and no label layer at all** — a phone gets
-            the country at full width, and the ranked list under it carries the names. */}
-        <div className="mx-auto w-full max-w-[32rem] sm:px-[10%]">
+
+            **A phone reserves 9%, and it is a MEASURED ceiling rather than a chosen
+            step.** It had no padding while it had no label layer, then 6% while it named
+            four. Naming the whole ranked set puts more labels on the crowded western side,
+            and the reserve is what the widest of them needs to clear the panel's own
+            `overflow: hidden` — the clip is the panel's border box, so the room a label
+            actually has is this padding plus the panel's 16px and nothing more. Measured
+            at 320, 375, 390 and 430: at 9% the leftmost label lands inside the clip at
+            every one of them, and it is the widest phone that binds rather than the
+            narrowest, because the panel's own padding is a fixed 16px and therefore a
+            larger share of a small card.
+
+            **It is paid for out of the map, and that is the trade this reserve IS.**
+            Every point of padding shrinks India, and the type size is a share of the
+            frame, so widening the gutter to fit a label also shrinks the label. 9% is
+            where the two meet; past it the names stop growing. See `phoneLabelShare`. */}
+        <div className="mx-auto w-full max-w-[32rem] px-[9%] sm:px-[10%]">
           <svg
             viewBox={`0 0 ${map.width} ${map.height}`}
             role="img"
@@ -835,40 +1086,18 @@ export function CityMap({ map }: { map: MapBlock }) {
                 leader crossing a city it does not belong to disappears behind it and
                 comes out the other side — which reads as passing rather than as
                 stopping at it. */}
-            <g className="hidden sm:block" aria-hidden="true">
-              {labels.map((label) => {
-                const outward = label.side === "left" ? -1 : 1;
-                const toX = label.circleX - outward * pointerRadius;
-                /**
-                 * **Both legs always exist, and the bend is now a place rather than a
-                 * ratio.** The elbow sits on the coastline at the label's own latitude,
-                 * so the first leg is the diagonal across land and the second is the
-                 * short run out into open water. Clamped so the bend cannot end up
-                 * beyond the pointer itself, which would fold the leader back on itself
-                 * for a city whose coast is further out than its own label — the
-                 * northeastern latitudes, where the frame's water is narrow.
-                 *
-                 * The previous version derived the bend from the vertical offset and a
-                 * 55% cap on the horizontal run; see `Label.elbowX` for why that put a
-                 * flat rule across the peninsula.
-                 */
-                const elbowX =
-                  outward === -1
-                    ? Math.max(label.elbowX, toX)
-                    : Math.min(label.elbowX, toX);
-                return (
-                  <polyline
-                    key={`leader-${label.city}`}
-                    points={`${label.dotX},${label.dotY} ${elbowX},${label.y} ${toX},${label.y}`}
-                    fill="none"
-                    strokeLinejoin="round"
-                    strokeLinecap="round"
-                    className="stroke-grey-500"
-                    strokeWidth={map.width * 0.002}
-                  />
-                );
-              })}
-            </g>
+            <MapLeaders
+              labels={phoneLabels}
+              width={map.width}
+              pointerRadius={phonePointerRadius}
+              className="sm:hidden"
+            />
+            <MapLeaders
+              labels={labels}
+              width={map.width}
+              pointerRadius={pointerRadius}
+              className="hidden sm:block"
+            />
 
             {/* **ONE mark form on the field, at ANSR's request.** It was a solid
                 disc with a white stroke against a white disc with a teal stroke —
@@ -915,65 +1144,35 @@ export function CityMap({ map }: { map: MapBlock }) {
               );
             })}
 
-            {/* **The dotted pointer sits at the LABEL end, at ANSR's request** —
-                where the name is, rather than at the city. It replaced a solid pin at
-                the city end, which had a problem of its own: that end already has the
-                halo's hard core, so a second circle there was either invisible behind
-                it or a competing mark on top of it. At the name end there is nothing
-                to compete with, and the dotted stroke says plainly that it is
-                annotation rather than another city.
+            {/* **The pointers and the names, over the marks and over the leaders**, so a
+                leader stops cleanly at its pointer's rim and a name is never behind a
+                city. `MapNames` carries both and the reasoning for each.
 
-                Drawn above the leaders so the line stops cleanly at its rim. */}
-            <g className="hidden sm:block" aria-hidden="true">
-              {labels.map((label) => (
-                <circle
-                  key={`pointer-${label.city}`}
-                  cx={label.circleX}
-                  cy={label.y}
-                  r={pointerRadius}
-                  // The card's own fill, so the leader stops at the rim rather than
-                  // showing through a hollow ring.
-                  className="fill-surface stroke-grey-500"
-                  strokeWidth={map.width * 0.002}
-                />
-              ))}
-            </g>
-
-            {/* **The names, outside the country and never over it** — the whole point
-                of the gutters. No knockout stroke is needed any more, because there is
-                nothing underneath to knock out; the knockout is what used to eat a bite
-                out of the Pune dot.
-
-                Typography is the display face at Medium with the figure alongside in
-                tabular numerals and a muted ink, so a column of names reads as one
-                list and the counts line up down it. `paint-order` and semibold both
-                went: at this size semibold in a gutter reads as shouting, and the
-                project's own display scale puts Medium here.
-
-                **Hidden below `sm`, along with the gutters that hold them.** At 390 the
-                map box is ~318px, which puts a label under 8px in a gutter ~100px wide.
-                The ranked list under the map carries every name and figure, which is
-                what makes dropping them honest rather than a gap — the same pairing the
-                accessible summary is built on. */}
-            <g className="hidden sm:block" aria-hidden="true">
-              {labels.map((label) => (
-                <text
-                  key={`label-${label.city}`}
-                  x={label.textX}
-                  y={label.y}
-                  textAnchor={label.side === "left" ? "end" : "start"}
-                  dominantBaseline="middle"
-                  className="fill-text font-display font-medium tracking-body"
-                  style={{ fontSize: `${labelFontSize}px` }}
-                >
-                  {label.city}
-                  <tspan className="fill-text-muted tabular-nums">
-                    {" "}
-                    {label.figure}
-                  </tspan>
-                </text>
-              ))}
-            </g>
+                **Two layers naming the same cities, and the phone one is not the desktop
+                one drawn smaller.** It names the same ranked set — the leading eight, and
+                every plotted city once the visitor expands — at a type size derived from
+                how many that is, and it draws each name WITHOUT its count. Both
+                differences are the same 236px-wide map being budgeted for. See
+                `phoneLabels` and `phoneLabelShare`. The phone layer used to be nothing at
+                all, and then four names. */}
+            <MapNames
+              labels={phoneLabels}
+              width={map.width}
+              fontSize={phoneLabelFontSize}
+              pointerRadius={phonePointerRadius}
+              className="sm:hidden"
+              scope="phone"
+              showFigure={false}
+            />
+            <MapNames
+              labels={labels}
+              width={map.width}
+              fontSize={labelFontSize}
+              pointerRadius={pointerRadius}
+              className="hidden sm:block"
+              scope="wide"
+              showFigure
+            />
           </svg>
         </div>
 

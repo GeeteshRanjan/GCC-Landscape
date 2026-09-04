@@ -79,6 +79,7 @@ function withProductMark(rest: string): React.ReactNode {
   // space stay outside the span and wrap as normal, so the headline is still the
   // width's decision.
   const tight = /^\S*/.exec(after)?.[0] ?? "";
+  const rein = after.slice(tight.length);
   return (
     <>
       {rest.slice(0, at)}
@@ -86,7 +87,28 @@ function withProductMark(rest: string): React.ReactNode {
         <AtlasWordmark />
         {tight}
       </span>
-      {after.slice(tight.length)}
+      {/* **The product name owns its own line below `lg`, and this is the one manual
+          break in the composition — at the project owner's instruction.**
+
+          Everything else about this headline is the width's decision, and at desktop
+          widths that decision is already the right one: at 72px the title sets to three
+          lines with "ANSR ATLAS" alone on the first. It stops being right on a phone.
+          At 375 the balancer happened to break after the mark; from about 400 up it did
+          not, so "ANSR ATLAS Benchmark" ran as one line and the product's name read as
+          the first two words of a sentence rather than as the thing the page is called.
+          That is a naming failure, not a ragging one, so it cannot be left to a cap or
+          to `text-balance` — both of those move with the font size and the string.
+
+          `lg:hidden` rather than a class on a wrapper: a `<br>` with `display: none` is
+          not a break at all, so desktop composes exactly as it did and there is nothing
+          to keep in step. It is emitted only when something FOLLOWS the mark, so a title
+          that ends on the product name does not get a trailing empty line.
+
+          The space that separated the two runs is left in the markup. Below `lg` it is a
+          space at the start of a line, which CSS text processing removes; from `lg` the
+          break is gone and the space is the only thing joining the two halves. */}
+      {rein.trim() ? <br className="lg:hidden" /> : null}
+      {rein}
     </>
   );
 }
@@ -165,19 +187,28 @@ export function AskHero({
   copy: HeroCopy;
 }) {
   return (
-    <div className="gcc-ground-hero relative overflow-hidden pt-10 pb-28 md:pt-14 md:pb-40 lg:pt-16 lg:pb-48">
+    // **The phone step is budgeted against the phone, where it used to be the desktop
+    // composition taken down by a smaller multiplier.** `pt-10 pb-28` / `-mt-20` was the
+    // same headline-shoulder-card strategy as `lg:pt-16 lg:pb-48` / `lg:-mt-32`, and the
+    // strategy is right — what was wrong is that a desktop band has room to spare and a
+    // phone band does not, so a proportional reduction still spent a disproportionate
+    // share of the one screen a visitor arrives on. The top shoulder comes down to 32px,
+    // which is enough to seat a 30px headline and no more, and the bottom pairs with a
+    // shallower card pull in `peer-view.tsx` — the two are one measurement and neither
+    // number means anything alone.
+    <div className="gcc-ground-hero relative overflow-hidden pt-8 pb-24 md:pt-14 md:pb-40 lg:pt-16 lg:pb-48">
       {/* Decorative and redundant: everything it could convey is in the text
           beside it. Out of the tab order and out of the accessibility tree.
 
-          **It renders at every width now, but as two different graphics.** From `lg`
-          it is the subject: India picked out at ~75% across the band, clear of a
-          headline capped well inside the band's leading half. Below `lg` the headline
-          runs nearly the full band and India's dots merge into a blob at that pitch,
-          so the two cannot sit side by side — instead the map becomes ambient
-          TEXTURE: dimmed hard and held to the lower band, below the copy, by a
-          vertical fade. The switch is in `.gcc-hero-map`'s mobile block, not here.
-          Contrast is unaffected — at the mobile opacity white copy clears the floor
-          over the field even where they meet.
+          **It renders at every width, and India is the subject at every one of them —
+          what changes is how far in the frame is cropped.** From `lg` India sits at
+          ~75% across the band, clear of a headline capped well inside the leading half.
+          Below `lg` the copy spans the band, so there is no column to hold the graphic
+          clear of; the frame zooms IN instead, which is what makes India resolve as its
+          own outline rather than as the lozenge it used to be. The reasoning is a
+          dot-to-pitch ratio and it is written out in `.gcc-hero-map`'s two mobile
+          blocks, not here. Contrast is carried by the ink at those widths: white copy
+          clears the body floor over the field everywhere the two meet.
 
           **The block-end inset lives in `.gcc-hero-map` and is the FORM CARD's
           overlap**, which is the one measurement this composition duplicates. It
@@ -240,7 +271,10 @@ export function AskHero({
               headline, `max-w-lead` on the lead — so the fade does not move when the
               font size does. `max-w-card` here, the fade there, and those caps are one
               composition in two files. */}
-          <div className="flex flex-col items-start gap-6 text-left lg:-ms-6 xl:-ms-36">
+          {/* `gap-5` on a phone, `gap-6` from `md`. The headline and the lead are two
+              halves of one statement and the smaller step reads as such at 30px; at 48px
+              and up the larger one is what keeps them from touching. */}
+          <div className="flex flex-col items-start gap-5 text-left md:gap-6 lg:-ms-6 xl:-ms-36">
           {/* **Medium 500 at 80px, and the weight is MEASURED off the wordmark
               rather than chosen.** This heading is the one place in the tool where
               drawn letters and set letters sit on the same baseline, so "GCC
@@ -271,16 +305,23 @@ export function AskHero({
               scale's 80px top at the project owner's request — large enough to lead
               the band, not so large it crowds the wordmark beside it.
 
-              `text-balance` still earns its place, though less than it did centred:
-              on a left-aligned block a stranded last word is at the leading edge
-              rather than dead centre, which is a far quieter failure. */}
+              **`text-pretty` below `lg` and `text-balance` from it, and the split is
+              the forced break's doing.** Balancing earns its place on a desktop
+              headline that has no break in it: three lines of a capped 72px title
+              want equal measures. It stops working once the product name owns its own
+              line — measured at 390, the balancer left "Benchmark against your /
+              peers", so the one thing it exists to prevent was exactly what it
+              produced. `pretty` is the narrower promise and the right one here: it
+              refuses a single-word last line and otherwise leaves the rag alone, which
+              gives "Benchmark against / your peers" at every phone width from 320 to
+              430. From `lg` the break is `display: none` and balancing is back. */}
           <h1
             ref={headingRef}
             tabIndex={-1}
             id="ask-title"
             className={
               "gcc-enter max-w-hero text-3xl leading-display font-medium tracking-body " +
-              "text-balance text-text-inverse md:text-5xl lg:text-7xl"
+              "text-pretty lg:text-balance text-text-inverse md:text-5xl lg:text-7xl"
             }
             style={{ "--gcc-enter-index": 0 } as React.CSSProperties}
           >

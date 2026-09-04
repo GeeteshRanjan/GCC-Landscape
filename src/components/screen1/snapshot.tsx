@@ -58,6 +58,18 @@ import type { Signal } from "./copy";
  * reason than alignment of edges: a place name is 30px where a figure is 48px, so
  * without it the fourth label would sit 18px above its three neighbours. One height,
  * bottom-aligned, and the four labels share a line whatever each cell holds.
+ *
+ * ## The phone is its own budget, not the desktop strip scaled
+ *
+ * **Every size here steps at `sm` as well as `md`, and the box height steps with them.**
+ * The strip had two sizes, 36/48px on the figures with a 36px box under both, so a phone
+ * drew a desktop figure in a one-column layout: the numeral was the largest thing on the
+ * screen and the label beside it had a whole line's worth of empty measure. 30px on a
+ * phone against 36 at `sm` and 48 from `md`; the box is 32px where it was 36, which is
+ * what stops a shorter numeral leaving the same air behind. All three branches step
+ * together and the box is one value at each width — the fixed-height rule above is what
+ * makes that a single edit rather than three, and breaking it at one branch is how the
+ * fourth label leaves the line the other three share.
  */
 
 export function Snapshot({
@@ -111,12 +123,28 @@ export function Snapshot({
         {heading}
       </h2>
 
-      {/* Four across at `lg`, two at `sm`, one below — and the gaps are wider than
-          the tiled version's, because with no border between two cells the space is
-          the only thing separating them. `divide-*` is deliberately not used: a
+      {/* Four across at `lg`, and **TWO from the base rather than from `sm`** — the gaps
+          are wider than the tiled version's, because with no border between two cells the
+          space is the only thing separating them. `divide-*` is deliberately not used: a
           vertical rule between cells would put the strip back to reading as a table,
-          which is the artefact the bordered container failed on. */}
-      <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4 lg:gap-8">
+          which is the artefact the bordered container failed on.
+
+          **One column on a phone was the wrong reading of four cells that are a SET.**
+          Every phone in portrait is under 640px, so `sm:grid-cols-2` meant no phone ever
+          saw more than one figure at a time: four full-width rows, each holding a 36px
+          numeral and a two-line label with the rest of the line empty, running the strip
+          to roughly 430px before any card begins. Read one at a time they are four
+          unrelated statistics; the whole point of the strip is that they are four
+          properties of one industry, which is a thing you see by seeing them together.
+          Two columns make it a 2×2 block — the only arrangement of four that is
+          symmetrical at both ends — and it halves the height at the same time.
+
+          `gap-x-4` rather than the row gap at that width: at 375 a column is about 155px,
+          so the horizontal space is the scarcest thing in the cell and a wrapping label
+          needs it more than the boundary does. The vertical gap stays wider than the
+          horizontal one, which is what keeps two columns reading as two columns rather
+          than as a four-cell grid with equal air on every side. */}
+      <div className="grid grid-cols-2 gap-x-4 gap-y-5 sm:gap-6 lg:grid-cols-4 lg:gap-8">
         {signals.map((signal) => (
           // `gap-2`, down from `gap-3`: the rule that used to sit between these two is
           // gone, so the only thing left to set is how close a label sits to the figure
@@ -129,7 +157,7 @@ export function Snapshot({
                  rather than the figure's, so a missing number does not shout — and
                  held at the figure's own box height so its label stays on the same
                  line as its three neighbours'. */
-              <p className="flex h-9 items-end text-sm font-semibold text-text-muted md:h-12">
+              <p className="flex h-8 items-end text-sm font-semibold text-text-muted sm:h-9 md:h-12">
                 Data unavailable
               </p>
             ) : signal.kind === "place" ? (
@@ -189,7 +217,7 @@ export function Snapshot({
               // Still not `tabular-nums` and still not `tracking-display`: both are fitted
               // to digits, and this cell holds a name. That, plus the one remaining step of
               // size, is what keeps a place from reading as a quantity.
-              <p className="flex h-9 min-w-0 items-end overflow-hidden text-3xl leading-tight font-semibold text-action md:h-12 md:text-4xl">
+              <p className="flex h-8 min-w-0 items-end overflow-hidden text-2xl leading-tight font-semibold text-action sm:h-9 sm:text-3xl md:h-12 md:text-4xl">
                 <span className="min-w-0 truncate">{signal.value}</span>
               </p>
             ) : (
@@ -215,7 +243,7 @@ export function Snapshot({
                * keeping four containers purely to supply a legal ground, which is the
                * container reflex justifying itself with a contrast argument.
                */
-              <p className="flex h-9 min-w-0 items-end text-4xl leading-none font-bold tracking-display text-action tabular-nums md:h-12 md:text-5xl">
+              <p className="flex h-8 min-w-0 items-end text-3xl leading-none font-bold tracking-display text-action tabular-nums sm:h-9 sm:text-4xl md:h-12 md:text-5xl">
                 {/* **The unit is set a step down and baseline-aligned, not run at the
                     figure's own size.** A `%` at 48px is about a third of the cell's
                     optical weight carrying none of its information, and it turns the
@@ -237,7 +265,7 @@ export function Snapshot({
                 <span className="flex min-w-0 items-baseline truncate">
                   {signal.value}
                   {signal.suffix ? (
-                    <span className="ms-0.5 shrink-0 text-xl font-semibold tracking-normal md:text-2xl">
+                    <span className="ms-0.5 shrink-0 text-lg font-semibold tracking-normal sm:text-xl md:text-2xl">
                       {signal.suffix}
                     </span>
                   ) : null}
@@ -279,7 +307,7 @@ export function Snapshot({
                 rule above it, semibold black was holding its own against a drawn edge;
                 sitting under the figure it only has to be legible beside it, and
                 `--ansr-text-muted` is 5.65:1 on the pale ground. */}
-            <p className="min-w-0 text-sm font-medium text-pretty text-text-muted">
+            <p className="min-w-0 text-xs font-medium text-pretty text-text-muted sm:text-sm">
               {signal.label}
             </p>
           </div>

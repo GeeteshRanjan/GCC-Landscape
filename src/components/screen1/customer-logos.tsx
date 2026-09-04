@@ -113,7 +113,23 @@ import type { CustomerLogo } from "@/data/schema";
  * brings with it and takes a fraction of a pixel from a corner that is whitespace in all
  * ten; two steps would be visible on a letterform.
  */
-const LOGO_SIZE = "h-10 w-auto max-w-32 rounded-sm object-contain";
+/**
+ * **32px on a phone and 40px from `sm`, and the caps step together because they are one
+ * box.** The strip is a marquee, so what it has to deliver at any width is a ROW — three
+ * or four marks in view at once, reading as a moving line of customers. At 40px tall and
+ * up to 128px wide, two marks and their gaps filled a 375px viewport, so the strip read
+ * as one logo sliding past at a time and the row it exists to show was never on screen.
+ * Both caps come down one step of the same scale (`h-8`, `max-w-24`) so a wide mark is
+ * still fitted by ratio rather than clipped differently at the two sizes.
+ *
+ * 32px is a floor rather than a nice number: it is where `ebm-papst`'s and `smartShift`'s
+ * lowercase wordmarks stop resolving as words, measured on the files themselves. The band
+ * padding and the row gap both come down with it — see `CustomerLogos` and `LogoRow` — so
+ * a shorter mark does not leave the band the same height with more air in it, which is
+ * the failure mode of shrinking content alone.
+ */
+const LOGO_SIZE =
+  "h-8 w-auto max-w-24 rounded-sm object-contain sm:h-10 sm:max-w-32";
 
 function LogoRow({
   logos,
@@ -130,7 +146,19 @@ function LogoRow({
        without it flex would compress the row back to the parent's width and the
        -50% translate would no longer be one full copy. */
     <ul
-      className="flex shrink-0 items-center gap-14 px-7 md:gap-20 md:px-10"
+      // **`gap-7` on a phone, `gap-14` from `sm`, `gap-20` from `md`, and the phone step
+      // is deliberately the tightest ratio of the three.** The gap is what decides how
+      // much of the strip is on screen at once: at 375 a 56px gap beside a 40px mark put
+      // roughly two marks and two gaps in view, so the eye read the spaces rather than
+      // the row, and a marquee that reads as spaces reads as broken. At 28px against the
+      // phone's 32px mark — just under one mark, the same ratio desktop is set at twice
+      // — three or four marks are in view and the row moves as a row. Desktop keeps twice
+      // a mark because it has twenty of them on screen and the rhythm is already legible.
+      //
+      // The inline padding comes down with it: it is the gap to the band's own edge, so
+      // leaving it at 28px would put the first mark further from the edge than from its
+      // neighbour, which reads as the strip having started late.
+      className="flex shrink-0 items-center gap-7 px-4 sm:gap-14 sm:px-7 md:gap-20 md:px-10"
       // The second copy exists only so the loop has somewhere to go. Announcing
       // ten company names twice is the accessibility bug this one attribute
       // prevents.
@@ -182,7 +210,12 @@ export function CustomerLogos({ logos }: { logos: readonly CustomerLogo[] }) {
       // the two are adjacent and add up, and at 40 + 56 = 96px the gap between the
       // form card and this strip read as a hole rather than as separation. Both came
       // down; neither number means anything on its own.
-      className="bg-surface-pale py-7 md:py-8"
+      // **`py-5` on a phone tracks the 32px mark, so the band does not stay the height it
+      // was with more air in it.** Padding here is read as a proportion of the row it
+      // surrounds: 24px around a 40px mark and 20px around a 32px one are the same band,
+      // and the alternative — a shorter mark inside the old padding — is the exact "empty
+      // space" the shrink was meant to remove.
+      className="bg-surface-pale py-5 sm:py-6 md:py-8"
     >
       <div className="gcc-marquee">
         <div className="gcc-marquee-track">

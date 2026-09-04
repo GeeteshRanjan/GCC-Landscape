@@ -341,8 +341,19 @@ export function CompanyMark({
   if (!src || failedSrc === src) {
     /* Reserved on the card, nothing on a ranking row — see the note above. `aria-hidden`
        and empty: there is no fill, no border and no text, so a screen reader meets the
-       company name exactly as it does on a marked card. */
-    return size === "sm" ? null : <span aria-hidden className={cn("block", box)} />;
+       company name exactly as it does on a marked card.
+
+       **AND NOTHING BELOW `sm`, because there is no row to align across down there.** The
+       reservation exists for one reason: cards sharing a row are read across, so an
+       unmarked card puts its name, figure and every row beneath it a mark's height above
+       its neighbour's. On a phone the grid is ONE column, so no two cards share a
+       horizontal band and there is nothing for the empty band to keep in step — it is
+       28px of blank at the top of every unmarked card, which is the first thing on the
+       card and says nothing. The instruction it implements is about the row; where the
+       row does not exist, neither does the reason. */
+    return size === "sm" ? null : (
+      <span aria-hidden className={cn("hidden sm:block", box)} />
+    );
   }
   return (
     /* eslint-disable-next-line @next/next/no-img-element -- a third-party origin the
@@ -374,8 +385,26 @@ export function CompanyMark({
          It is 1.2 where the badge is 1.6, because a ratio on a 112px logo is a far bigger
          movement than the same ratio on a 16px badge — the measurement, both collision
          checks and the centre-origin decision are in the CSS rule's own comment. */
+      /* **`shrink-0` is HERE rather than on a wrapper at the call site, and that is a bug
+         fix.** The ranking row wrapped this in `<span className="shrink-0">` and guarded
+         the wrapper on `markUrl` — which cannot know about the case that actually happens,
+         a URL that resolves and then fails to load. The component collapsed to null and
+         the wrapper stayed: a zero-width flex item plus the row's own 10px `gap-x`, so
+         every company with a domain had its name indented 10px and every company without
+         one did not. With the provider tier returning nothing today that is most of the
+         block, and it is half of the "the badge sits here and there" reading — the names it
+         is measured from were not on one edge either. Owning the flex behaviour here is
+         also what the no-caller-guards rule already asks for. */
       className={cn(
-        "gcc-mark-pop w-auto self-start rounded-md object-contain object-left",
+        "gcc-mark-pop w-auto shrink-0 rounded-md object-contain object-left",
+        /* **`self-start` is the CARD's alignment and must not reach a ranking row.** On
+           the card the mark is an item in a flex COLUMN, so `align-self: start` resolves
+           on the inline axis and is what lets the width come from the ratio — see the note
+           above. A ranking row is a flex ROW, where the same declaration resolves on the
+           BLOCK axis and top-aligns the mark against a line the row deliberately centres;
+           that only became reachable when the row's wrapper span went, since a wrapper is
+           what used to be the flex item. */
+        size === "sm" ? "" : "self-start",
         box,
       )}
       /* A brand the provider does not hold returns a real 404 by request, so nothing
@@ -437,7 +466,23 @@ function PeerCardBody({
     // `h-full` so the body fills the card and `mt-auto` on the year has something to
     // push against — without it the flex column is only as tall as its content and the
     // auto margin has no free space to absorb.
-    <div className="flex h-full flex-col gap-3.5">
+    /**
+     * **ON A PHONE THE FIGURE AND THE YEAR SIT SIDE BY SIDE, and that is the answer to the
+     * empty space on this block rather than a smaller type size.**
+     *
+     * A card is one fifth of a row from `lg`, two columns at `sm`, and the WHOLE MEASURE on
+     * a phone — so the column that reads correctly at 205px was drawing a thirteen-character
+     * figure and a two-chip city list down the leading half of a 270px box and leaving the
+     * trailing half blank, four rows deep, five cards deep. That is a card whose interior was
+     * measured for a width it is not being drawn at, and the symptom is the space rather than
+     * the type.
+     *
+     * `.gcc-peer-facts` carries the arrangement, the width it needs and the reason the city
+     * list is the fact that keeps the full measure. It is in globals.css because it has a
+     * measured LOWER BOUND — two columns need about 118px each and a 320px viewport gives 94
+     * — and a bound between two breakpoints is a media query rather than a utility.
+     */
+    <div className="gcc-peer-facts flex h-full flex-col gap-3.5">
       {/* **The figure the card exists for, and its label now says GCC.** "India
           employees" was ambiguous in the one way that matters on this screen: it could
           be read as the company's whole Indian workforce rather than the headcount of
@@ -454,7 +499,13 @@ function PeerCardBody({
             Teal, not orange: the orange role on this surface belongs to the snapshot's
             figures and the terminating strip's, and five orange figures here would be a
             third band claiming the role. */}
-        <p className="text-xl leading-none font-bold tracking-display text-accent-teal tabular-nums md:text-2xl">
+        {/* **18px below `sm`**, which is the step the ranking's copy of this figure
+            takes for the same reason and at the same width: the two are the same
+            quantity in the same treatment, so a phone step applied to one and not the
+            other would be the drift the shared label key exists to prevent. In a
+            half-width phone cell 20px put "59,900–60,000" at 130px of ink against about
+            132px of cell. */}
+        <p className="text-lg leading-none font-bold tracking-display text-accent-teal tabular-nums sm:text-xl md:text-2xl">
           {peer.headcount}
         </p>
       </CardFact>
@@ -465,7 +516,9 @@ function PeerCardBody({
           {company}", derived — see `peersTitle`). The subject is
           named by the heading and again by the figure's own label directly above this
           one, so a third statement of it is a prefix rather than information. */}
-      <CardFact label={copy.peerCitiesLabel}>
+      {/* The city list keeps the full measure — see `.gcc-peer-facts`. Placement rather
+          than DOM order, so the reading order stays figure, cities, year at every width. */}
+      <CardFact label={copy.peerCitiesLabel} className="gcc-peer-facts__cities">
         {/* Two cities then "+N": a card is ~205px wide at five columns, so two hub
             names plus the overflow pill is the most that holds on one line, and one
             line is what keeps the five cards' city rows aligned. */}
@@ -496,7 +549,7 @@ function PeerCardBody({
           a template.** There is no placeholder for an admin to move the year to the front
           of, and an edit cannot detach the two: whatever the field says, the year follows
           it in the same sentence, in the same weight. */}
-      <span className="text-sm text-text-muted">
+      <span className="gcc-peer-facts__since text-sm text-text-muted">
         {copy.peerSinceLabel}{" "}
         <span className="font-semibold text-text">{peer.establishedYear}</span>
       </span>
@@ -508,12 +561,19 @@ function PeerCardBody({
 function CardFact({
   label,
   children,
+  className,
 }: {
   label: string;
   children: React.ReactNode;
+  /**
+   * Grid placement only, and only from the one caller that needs it. The card's body is
+   * a two-column grid on a phone and a flex column above it, so a fact that has to move
+   * cell has to say so from outside — see `PeerCardBody`.
+   */
+  className?: string;
 }) {
   return (
-    <div className="flex min-w-0 flex-col gap-1.5">
+    <div className={cn("flex min-w-0 flex-col gap-1.5", className)}>
       <span className="text-[0.6875rem] font-semibold tracking-caps text-text-muted uppercase">
         {label}
       </span>
@@ -566,6 +626,11 @@ function CardFact({
  * 32 clears the 24px floor for target size with room to spare, and the arrow is redundant
  * anyway — the close is at the end of the same document, reachable by scrolling and by Tab.
  *
+ * **It sits in INLINE flow, and it used to be a flex item.** The distinction only shows on
+ * a phone, where the sentence wraps: a flex row put the whole sentence in one item and the
+ * arrow in another, so the arrow left the sentence entirely and started the next line
+ * alone. See the paragraph in `PeerBlockView`.
+ *
  * **It scrolls, and in the EMBED it will not.** `scrollIntoView` acts on the scroll
  * container the element is in, and the tool negotiates its height with the parent — so
  * inside an iframe sized to its own content there is no scroll of ours to move, and the
@@ -600,7 +665,27 @@ function JumpToClose() {
          mechanism is the part that does not survive the embed. */
       aria-label="Jump to the full report"
       className={cn(
-        "inline-flex size-8 shrink-0 items-center justify-center rounded-full align-middle",
+        // **32px of ink inside a 20px line box, and the negative block margin is what
+        // keeps the line rhythm.** As an inline-block the button's own height would set
+        // the line box for the line it lands on, so the last line of the paragraph would
+        // stand 12px taller than the one above it — visible as a widening gap under a
+        // sentence, which is what the flex row was avoiding before it started stranding
+        // the arrow on its own line. `-my-1.5` takes the box's contribution back to 20px
+        // and lets the target overhang the line instead: the same trade `.gcc-hit-44`
+        // makes, for the same reason, on a control whose ink is deliberately small.
+        //
+        // **The inline margin is NEGATIVE, and that is the same trade on the other
+        // axis.** The gap a reader sees is not this margin — it is this margin plus the
+        // 8px of empty box between the 32px target and the 16px icon centred in it, plus
+        // the ~6px of blank the chevron's own glyph carries inside that icon box. At
+        // `ms-1` that summed to about 18px, which is four word spaces after a full stop:
+        // the arrow read as a mark beside the sentence rather than as the end of it,
+        // which is the whole reason it was moved into inline flow. `-ms-2` cancels the
+        // box's own leading padding and leaves the glyph's ~6px as the gap — one word
+        // space, optically. The target does not shrink; it overhangs the sentence's last
+        // character, which costs nothing because a press on a full stop had no other
+        // meaning.
+        "-ms-2 -my-1.5 inline-flex size-8 items-center justify-center rounded-full align-middle",
         "text-action",
         // Transform and colour only, both named — never `all`, which would pick up a
         // property this was not measured for. The nudge is the affordance: an arrow that
@@ -768,7 +853,17 @@ export function PeerBlockView({ view }: { view: PeerView }) {
             paragraph rather than beside it so it reads as the end of that sentence —
             "showing 5 of 18, and here is what to do about it" — which is the only
             relationship that justifies putting a control on a line of evidence. */}
-        <p className="flex flex-wrap items-center gap-1 text-sm font-medium text-text">
+        {/* **A normal text paragraph, NOT a flex row, and that is what fixes the arrow's
+            placement on a phone.** As a wrapping flex container the sentence was one item
+            and the arrow was another, so the moment the sentence needed two lines — which
+            it does at every phone width — the text took the full row and the arrow dropped
+            to a line of its own at the leading edge, a lone orange chevron under a
+            paragraph, pointing at nothing next to it. Inline flow puts it after the final
+            character wherever that character lands, which is the "end of the sentence"
+            reading the arrow was placed for. The gap is the chevron's own inner blank,
+            the button's inline margin having been made negative to cancel the rest — see
+            `JumpToClose`. */}
+        <p className="text-sm font-medium text-text">
           {peerCountLine(view)}
           <JumpToClose />
         </p>
@@ -998,7 +1093,12 @@ export function LargestBlockView({ view }: { view: PeerView }) {
           // block: the pills are a qualifier ON the name, and at 4px they were touching
           // it. The h3 takes `leading-tight` so the declared gap is most of the rendered
           // one — see below.
-          <li key={entry.company.id} className="flex flex-col gap-2">
+          // **The row is a GRID with named areas, and the areas are re-laid at `sm`.**
+          // See `.gcc-rank-row` in globals.css for both arrangements and why the phone
+          // needs its own: with one arrangement the figure was wrapping onto a line of
+          // its own, below two lines of pills, which put it three lines under the column
+          // header that names it and two lines above the bar it is the value of.
+          <li key={entry.company.id} className="gcc-rank-row">
             {/* The name and its two markers, and nothing at the trailing edge any more:
                 the figure moved down to sit against its own bar, so the split row that
                 held the two apart has no second column left to justify. */}
@@ -1020,7 +1120,7 @@ export function LargestBlockView({ view }: { view: PeerView }) {
                 visible. Nesting the name and the marker in their own baseline group was
                 the alternative and it buys that 0.63px back at the price of a wrapper
                 that wraps as one unit. */}
-            <div className="flex min-w-0 flex-wrap items-center gap-x-2.5 gap-y-1">
+            <div className="gcc-rank-row__name flex min-w-0 flex-wrap items-center gap-x-2.5 gap-y-1">
               {/* **No position numeral, at ANSR's request, and the shape can carry
                   its loss.** It was a zero-padded display numeral inline before the
                   name — the one ordinal on the surface that kept its place beside the
@@ -1051,16 +1151,17 @@ export function LargestBlockView({ view }: { view: PeerView }) {
                   is a no-op. See the note on the row. `shrink-0` stays, so a long name
                   cannot compress it to a sliver.
 
-                  **The `markUrl` guard is deliberate and pairs with `CompanyMark` returning
-                  null at `sm`.** A ranking row reserves nothing, so a row without a mark
-                  renders no slot at all and its name sits at the leading edge, flush with
-                  its own bar. Reserving here instead — which would need this guard gone —
-                  indents every name past its bar to buy one column, and was reverted. */}
-              {entry.company.markUrl ? (
-                <span className="shrink-0">
-                  <CompanyMark src={entry.company.markUrl} size="sm" />
-                </span>
-              ) : null}
+                  **THE `markUrl` GUARD AND THE `shrink-0` WRAPPER ARE BOTH GONE, and their
+                  removal is a bug fix rather than a tidy-up.** A ranking row reserves
+                  nothing, so a row without a mark renders no slot at all and its name sits
+                  at the leading edge, flush with its own bar — and the wrapper broke
+                  exactly that. `CompanyMark` collapses to null when a resolved URL FAILS TO
+                  LOAD, which the provider tier makes the common case, but the wrapper is
+                  decided on the server: it stayed as a zero-width flex item and the row's
+                  10px `gap-x` came with it, so a company with a domain had its name
+                  indented 10px and a company without one did not. Every rule about the
+                  mark, `shrink-0` included, is `CompanyMark`'s. */}
+              <CompanyMark src={entry.company.markUrl} size="sm" />
               <h3 className="min-w-0 text-base leading-tight font-semibold text-text md:text-lg">
                 {entry.company.name}
               </h3>
@@ -1086,10 +1187,33 @@ export function LargestBlockView({ view }: { view: PeerView }) {
 
                   Rendered at all only when one of the two is present, so no empty flex
                   item ever contributes the row's `gap-x`. */}
+              {/* **BELOW `sm` THE GROUP TAKES A LINE OF ITS OWN, so the badge has ONE
+                  position on every row.** Flowing inline after the name, its x is
+                  wherever that company's name happens to end — and where the name wraps
+                  it broke onto a third line anyway, so five rows drew the badge at five
+                  different offsets and two different depths. "Sitting here and there" is
+                  exactly right and it is a property of inline flow, not of the badge.
+
+                  `basis-full` on a wrapping flex row puts it at the leading edge of its
+                  own line, under the name it accredits, at the same x on every row. It
+                  also gives the name the row's full measure back, which is what a
+                  31-character name was competing with the figure for.
+
+                  **It costs no extra line for the FIGURE, which is the part that makes
+                  this cheap.** The figure is the grid's own trailing column at
+                  `align-items: end`, so it drops to the bottom of the name block and
+                  lands beside this line — still directly above its own bar and still
+                  under the column header that names it, which are the two relationships
+                  the phone arrangement exists to protect. A row with neither marker is
+                  one line and the figure sits on the name, exactly as before. */}
               {entry.alsoPeer || entry.company.fortuneGlobal500 ? (
-                <span className="flex items-center gap-x-2.5">
+                <span className="flex items-center gap-x-2.5 max-sm:basis-full">
+                  {/* `whitespace-nowrap` so the marker cannot break into two lines inside
+                      an `items-center` group. It is 90px at 320 beside a 16px badge, so
+                      there is room, and a wrapped marker was what still moved the badge
+                      between phone widths after the group took its own line. */}
                   {entry.alsoPeer ? (
-                    <span className="text-xs font-medium text-text-muted">
+                    <span className="text-xs font-medium whitespace-nowrap text-text-muted">
                       in your peer set
                     </span>
                   ) : null}
@@ -1100,8 +1224,16 @@ export function LargestBlockView({ view }: { view: PeerView }) {
 
                       **Unconditional on the index membership now** — see the note above
                       `return` for why `allFortune` no longer gates it. */}
+                  {/* **THE BADGE LEADS THE GROUP BELOW `sm`, so its x is the row's leading
+                      edge on every row that carries it.** With the marker first it sat at
+                      61px on a row that is not in the peer set and at 156 on one that is —
+                      one of two positions rather than one, which is the same complaint at
+                      lower amplitude. `order` is paint order only: the DOM stays marker
+                      then badge, so a screen reader reads "in your peer set, Fortune Global
+                      500" at every width. From `sm` the group flows after the name and the
+                      marker leads it, unchanged. */}
                   {entry.company.fortuneGlobal500 ? (
-                    <span className="shrink-0">
+                    <span className="shrink-0 max-sm:-order-1">
                       <FortuneBadge />
                     </span>
                   ) : null}
@@ -1137,60 +1269,70 @@ export function LargestBlockView({ view }: { view: PeerView }) {
                 card's whole leading half: the figure occupies only the trailing edge, so
                 its line is empty everywhere the tags had just been.
 
-                On one line there is no void and no orphaned figure. `items-end` so the
-                pills land on the figure's own baseline rather than floating at the top of
-                a 24px line; `justify-between` because the figure belongs over the edge
-                the bar's trailing end is measured to, and the tags over the edge it
-                starts from. 4px to the bar, tighter than anything else in the row, which
-                is what says these two are a pair. */}
-            <div className="flex flex-col gap-1">
-              <div className="flex flex-wrap items-end justify-between gap-x-4 gap-y-1.5">
-                <div className="flex min-w-0 flex-wrap items-center gap-1.5">
-                  {/* **`quiet` as well as `sm`, at ANSR's request.** These pills are a
-                      qualifier on a row whose subject is the name above them and whose
-                      evidence is the bar below them; at the neutral weight, four filled
-                      grey pills a row over five rows were the heaviest thing in the block
-                      after the figures. See `Chip`'s `quiet` tone for the measurement —
-                      the ink gets lighter and the contrast goes UP. */}
-                  {/* Three cities then "+N" on the wider ranking row, where the pills
-                      share a line with the year chip — the same overflow the comparison
-                      cards use, so a company in six cities does not push the row's
-                      figure onto its own line. */}
-                  <CityCells
-                    cities={entry.company.cities}
-                    size="sm"
-                    tone="quiet"
-                    max={3}
-                  />
-                  <Chip size="sm" tone="quiet">
-                    {copy.peerSinceLabel} {entry.company.establishedYear}
-                  </Chip>
-                </div>
-                {/* **The same treatment as the comparison card's figure, and it is one
-                    decision rather than two.** Both figures are the SAME QUANTITY — a GCC
-                    headcount band, under a small-caps "GCC headcount" label — so a reader
-                    crossing from the cards to the ranking is reading one kind of fact, and
-                    it was set two ways: 18/20px near-black here against 20/24px accent
-                    teal there. Near-black at Bold is the heaviest ink on the surface,
-                    which is why five of them read as shouting rather than as evidence; the
-                    teal is the same weight and reads as a figure. Matching also fixes the
-                    step, so the ranking's figure is not a size the surface uses nowhere
-                    else. */}
-                {/* `ms-auto` as well as `justify-between`, because the two do different
-                    jobs and only one of them survives a wrap. Where the pills fill the
-                    line — HSBC carries six cities — the figure wraps onto a line of its
-                    own, and `justify-between` on a single-item line puts it at the
-                    LEADING edge: the figure column breaks on exactly the row with the
-                    most to say. The auto margin pins it to the trailing edge either
-                    way. */}
-                <p className="ms-auto text-xl leading-none font-bold tracking-display text-accent-teal tabular-nums md:text-2xl">
-                  {entry.company.headcount}
-                </p>
+                On one line there is no void and no orphaned figure. The figure sits over
+                the edge the bar's trailing end is measured to and the tags over the edge
+                it starts from, 4px above the bar, which is tighter than anything else in
+                the row and is what says the figure and the bar are a pair.
+
+                **A FOURTH arrangement exists for the phone, and the three areas below are
+                how both are expressed.** At 375 the pills take two lines on their own, so
+                the shared line was never shared: the figure wrapped under them, three
+                lines below the column header that names it and two above its own bar. The
+                row is a grid with named areas now — `.gcc-rank-row` in globals.css carries
+                the desktop map, the phone map and the reasoning — and nothing about the
+                desktop composition moved. */}
+              <div className="gcc-rank-row__tags flex min-w-0 flex-wrap items-center gap-1.5">
+                {/* **`quiet` as well as `sm`, at ANSR's request.** These pills are a
+                    qualifier on a row whose subject is the name above them and whose
+                    evidence is the bar below them; at the neutral weight, four filled
+                    grey pills a row over five rows were the heaviest thing in the block
+                    after the figures. See `Chip`'s `quiet` tone for the measurement —
+                    the ink gets lighter and the contrast goes UP. */}
+                {/* Three cities then "+N" on the wider ranking row, where the pills
+                    share a line with the year chip — the same overflow the comparison
+                    cards use, so a company in six cities does not push the row's
+                    figure onto its own line. */}
+                <CityCells
+                  cities={entry.company.cities}
+                  size="sm"
+                  tone="quiet"
+                  max={3}
+                />
+                <Chip size="sm" tone="quiet">
+                  {copy.peerSinceLabel} {entry.company.establishedYear}
+                </Chip>
               </div>
+              {/* **The same treatment as the comparison card's figure, and it is one
+                  decision rather than two.** Both figures are the SAME QUANTITY — a GCC
+                  headcount band, under a small-caps "GCC headcount" label — so a reader
+                  crossing from the cards to the ranking is reading one kind of fact, and
+                  it was set two ways: 18/20px near-black here against 20/24px accent
+                  teal there. Near-black at Bold is the heaviest ink on the surface,
+                  which is why five of them read as shouting rather than as evidence; the
+                  teal is the same weight and reads as a figure. Matching also fixes the
+                  step, so the ranking's figure is not a size the surface uses nowhere
+                  else. */}
+              {/* **No `ms-auto` and no `justify-between` any more: the trailing edge is
+                  the grid's own second column, which is `auto`-sized, so the figure
+                  cannot be moved by whatever the tags beside it do.** Both were here to
+                  survive a wrap — on a single-item wrapped line `justify-between` puts
+                  the item at the LEADING edge, so the figure column broke on exactly the
+                  row with the most cities to list. A column cannot wrap. */}
+              {/* **18px below `sm`, at the project owner's instruction, where every wider
+                  width is unchanged.** A headcount band is thirteen characters, so at
+                  20px it took 130px of a 295px row — half the measure for a figure that
+                  shares its line with the company name. The step down keeps it the
+                  largest thing on the row, which is the only ordering that matters here,
+                  and it is the same step the comparison card's own copy of this figure
+                  takes so the two still read as one quantity. */}
+              <p className="gcc-rank-row__figure text-lg leading-none font-bold tracking-display text-accent-teal tabular-nums sm:text-xl md:text-2xl">
+                {entry.company.headcount}
+              </p>
               {/* Full width, and no emphasis on any row. One shared axis is what makes
                   the five comparable, and the axis is the row above it. */}
-              <BarTrack share={entry.company.sizeShare} />
-            </div>
+              <div className="gcc-rank-row__bar">
+                <BarTrack share={entry.company.sizeShare} />
+              </div>
           </li>
         ))}
       </ol>
@@ -1314,7 +1456,7 @@ export function CommonFunctionsView({ view }: { view: PeerView }) {
      * pill on the tint is already a shape, and a hairline on top of it would be the
      * second edge the ruled version was drawing.
      */
-    <ul className="flex flex-wrap gap-2 md:gap-2.5">
+    <ul className="flex flex-wrap gap-1.5 sm:gap-2 md:gap-2.5">
       {view.functions.map((fn) => (
         <li key={fn} className="min-w-0">
           {/* `whitespace-nowrap` is what guarantees the shape: a tag that wraps
@@ -1326,7 +1468,16 @@ export function CommonFunctionsView({ view }: { view: PeerView }) {
               rank badge back, and the block claims no order — which is why the list is
               still a `<ul>`. A bullet or an icon would be decoration on the one block
               that deliberately carries no quantity. */}
-          <span className="inline-flex items-center rounded-full bg-surface px-3.5 py-2 text-sm font-medium whitespace-nowrap text-text shadow-xs">
+          {/* **12px and a tighter box below `sm`, at the project owner's instruction.**
+              At 14px with 14px of inline padding the shortest item in the set is about
+              150px of pill, so at 295px almost every tag took a line to itself and eight
+              memberships — the one block on this surface that claims nothing at all —
+              were 340px of the phone's document, more than the five peer cards' figures
+              put together. A tag is a membership marker at caption weight, so the caption
+              size is the right size for it; two per line is also what makes the set read
+              as a SET rather than as eight stacked buttons. Every wider width is
+              unchanged. */}
+          <span className="inline-flex items-center rounded-full bg-surface px-3 py-1.5 text-xs font-medium whitespace-nowrap text-text shadow-xs sm:px-3.5 sm:py-2 sm:text-sm">
             {fn}
           </span>
         </li>

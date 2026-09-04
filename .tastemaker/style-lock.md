@@ -5674,3 +5674,389 @@ Finance came out better than it went in: three titles at 27, 32 and 32 character
 width, where "…, year on year" was the wording that had made an earlier third-width row ragged. The
 technology row is five cells of equal height at every width — all five labels on two lines at 1024, three on
 one and two on two at 1440.
+
+## The phone pass — the second half, and where it deviated from the ask
+
+The first half of this pass (the hero shoulder and pull, the dot map's fixed frame, the impact band's two
+columns, the form's field gap, the capability grid's reflow, the answer editor's target) is recorded above
+and in the blocks in `globals.css`. This is the rest of the same instruction list, plus the two places the
+answer is not what was literally asked for.
+
+### The rule that generalised out of it
+
+Every item here came back to the same thing: a composition budgeted for a screen with room to spare, taken
+down by a multiplier instead of re-budgeted. So the pass has one habit rather than nine fixes — **when a
+size was chosen as a RATIO (a heading under a figure, a unit under a numeral, a gap against a mark), the
+whole ratio steps at `sm`, not just the part that was too big.** A figure that comes down while its unit
+does not is a unit that has come up.
+
+### The result band's ornament — one graphic at every width, and two layers retired
+
+The band drew the dotted map from `lg` and each screen's brand motif below it, swapped at that breakpoint
+because a percentage-framed map does not resolve at phone width. The hero's own fix — a fixed `56rem` frame
+— removes the reason for the swap, so the map now draws everywhere and the motif has nowhere left to be.
+`HeaderMotif`, `PEER_MOTIF`, `FUNCTION_MOTIF`, `.gcc-hero-diagonal` and `.gcc-rings` are deleted rather
+than parked; `.gcc-horizon` went with them, having had no caller for some time.
+
+The leading-edge dot lattice went at the project owner's instruction. Two readings of the same complaint:
+it is a dotted texture at one density beside a dotted map at another, and on a phone — where the map was
+absent — it was the only graphic on the band, which made a decorative grid the band's subject.
+
+**Considered and rejected: keeping the motif on the tablet band only.** It preserves "one ornament per
+width" with no deletions and it is what a minimal reading of the instruction allows. It was rejected
+because the seam is arbitrary — phone and desktop draw the map, the 256px band between them draws something
+else — and a reviewer meeting that on a tablet reads it as a bug rather than as a decision.
+
+### The answer pills — read but not drawn
+
+Four pills wrapped to three lines at 390 to restate what the visitor had typed thirty seconds earlier. The
+instruction was to hide them and keep the button.
+
+They are hidden with the sr-only treatment rather than `display: none`, so the group keeps all four members
+and a reader working the band by role hears exactly what it hears at every other width. That is not
+over-engineering the instruction: what a phone was spending was the DRAWING of a restatement, and the
+accessibility tree costs no pixels.
+
+**Considered and rejected: `sr-only md:not-sr-only` on the element.** `not-sr-only` sets `padding: 0` and
+lands in the same layer as the `px-3.5 py-1.5` the pill needs back at `md`, so which one wins is decided by
+generated order — invisible in the markup and a trap for whoever reads it next. One media query on the
+class the pill already carries has no such ambiguity, and absolute positioning also takes the pills out of
+the flex flow, so the row's `gap-x` has nothing left to space and the button sits at the band's own leading
+edge.
+
+### The ranking row — a grid, because a wrap could not be told where to break
+
+The row's three groups were two nested flex containers, and the phone artefact was structural: the tags
+alone take two lines at 375, so the figure wrapped under them — three lines below the small-caps column
+header that names the quantity and two above the bar it is the value of. Both relationships the row is
+built out of, broken at once. That is the "the headcount is in one place and the numbers are in another"
+reading.
+
+It is a grid of named areas now, with the phone map putting the figure on the NAME's line and the tags
+under the bar. What that buys beyond the fix: the trailing column is `auto`-sized, so `ms-auto` and
+`justify-between` — both there purely to survive a wrap — are gone. A column cannot wrap.
+
+The row gap is 4px and the two 8px gaps are margins on whichever item opens a group, because a grid has one
+row gap and this row needs two values. Measured after: at 1440 the geometry is identical to what it
+replaced (name 20px, 8px, line two 24px, 4px, bar 8px; row 65px). At 390 the row is 83px with the tags on
+two lines.
+
+### The density map — four names on a phone, which is a scoped exception
+
+"The labelled set is exactly the ranked list's set" is ANSR's ask and it holds at every width the labels
+were drawn at. The labels were not drawn below `sm` at all, for a sound reason: the font size is a share of
+the frame, so the desktop share renders at about 8px on a 300px box.
+
+The instruction was to show the names. Eight of them at a legible size is more label than map and the
+de-collision stacks them into a column, which is the gutter layout this design replaced — so the phone
+layer names four at 0.05 of the frame (about 14px, which is what a desktop label measures at 1440). The
+exception is defensible because on a phone the ranked list sits directly under the map with every row
+visible: what the graphic states is a subset of a list the reader can see, which is not a disagreement.
+
+The wrapper reserves 6% either side rather than nothing — the phone names are set at nearly twice the
+desktop share, so the widest of them runs further past the coast than any desktop label does — and
+deliberately less than `sm`'s 10%, because the country is the subject on the smallest screen.
+
+Two layers in the DOM, one layout function. Both are `aria-hidden` at every width, so the duplication costs
+nothing in the accessibility tree; `svg text` stopped meaning "the labels on screen", so each layer carries
+`data-map-labels` and the spec that pins the label-to-list coupling names the wide one.
+
+### Time to reach scale — the rail rotates
+
+The phone fallback was four rows with a hairline: every figure stated, no line drawn. Honest, and not the
+chart — nothing in it said the four waypoints are positions on ONE progression, and the two tracks became
+two lists to compare row by row.
+
+It is the same rail turned vertical: `--gcc-at` read as a `top` down a fixed 10rem axis, one ring per
+waypoint, name and figure beside it. Every property the chart is built on survives — proportional spacing,
+one axis length shared by both tracks, both tracks drawn identically — and it costs about 30px a track over
+the list.
+
+**The bug worth recording, because it is a property of grid rather than of this chart.** The item's three
+children are in the DOM as label, dot, figure, which is what the horizontal reading needs. Placing only
+their COLUMNS left auto-placement to pick the rows, and it picks badly by construction: the label takes
+column 2 of row 1, which moves the cursor past column 1, so the dot cannot go in row 1 and drops to row 2
+with the figure after it. Rendered, that was a two-row item — the milestone name floating above its own
+ring — and since the items are absolutely positioned 26px apart, every name landed on the ring belonging to
+the waypoint before it, so every figure was against the wrong name. It looked like a data bug. `grid-row: 1`
+on all three is the fix, and the `sm` block has to release both axes.
+
+### The four function tabs
+
+At the full size the four labels need about 430px against a 327px card body, so the row wrapped by content
+— "Technology Operations" then "HR Finance", two ragged lines of two, with the shortest label in the set
+starting the second. A tab strip is four peers and that shape says they are two groups.
+
+`grid-cols-4` at 12px is the only arrangement of four that reads as one switch. The type size is the price:
+at 320 a cell is 68px and "Operations" is about 66px of ink at 12px Semibold. One step up overflows the
+cell rather than wrapping, because every label is a single word, and an overflowing cell is a horizontal
+scrollbar on a document this tool does not own the scroll of.
+
+### The two figure rows, and the snapshot
+
+Both were one column below `sm` on the same measurement — a 36px figure and its unit are most of a 171px
+half-cell. The measurement was right and the conclusion was wrong: the answer is not one figure per
+screen-width row (four of them ran 430px with most of every line empty), it is to set the figure at the
+size a half-cell holds. 30px, and the unit and the box step with it.
+
+An odd last cell widens to the full row below `sm`, which is the rule the impact band and `packWidths`
+already follow: a lone cell in a row of evidence reads as a figure that failed to load.
+
+### The dropdown and the software keyboard
+
+Pressing a dropdown raised the keyboard, because the filter takes focus on open. Gated on
+`(pointer: coarse)` — not a width, not a user agent, not `ontouchstart`. A 700px window on a laptop has a
+hardware keyboard and wants the filter focused; a touchscreen laptop has touch and its primary pointer is
+still fine. `pointer: coarse` is the one query that asks what the primary input IS, which is exactly what
+decides whether a focused input costs half the screen.
+
+### Measured after, at 375 / 390 / 768 / 1440
+
+No horizontal overflow at 320, 375, 390, 640, 768, 1024 or 1440, on the entry point, the peer view and all
+four function tabs. The peer document is 5,174px at 390 where the sections themselves account for the bulk
+of it; the entry point is 1,532px against 1,854 before the pass began. Desktop measures identical to the
+baseline in every box checked, which is the constraint the whole pass was held to.
+
+## The phone pass — the third round, from the owner's own reading of the two result screens
+
+Seven items off a list, plus the general instruction to sweep for type that had been sized for a wider
+screen. Everything below is scoped below `sm` except where it says otherwise; desktop geometry was
+re-measured after each change and did not move.
+
+### The rule that generalised, again — and it is narrower than last round's
+
+Last round's habit was "step the whole ratio, not the part that was too big". This round it split in two,
+because half the items turned out not to be type at all:
+
+**A figure inside a CARD steps at `sm`; a BAND's own display figure does not.** The comparison card's
+headcount band and the ranking's step to 18px together — they are one quantity under one label key, so a step
+applied to one and not the other is exactly the drift that key exists to prevent. The snapshot's four, the
+summary row's, a card's primary value: none of those step, because each is the thing its neighbours were
+sized against in the first place, and stepping the reference moves everything measured off it.
+
+**And half of "the font is too big" was space, not size.** Three of the seven items were a composition
+measured for a width it was not being drawn at, and in each the type was a symptom. Reading a complaint about
+size as a complaint about size would have shrunk correct type and left the layout wrong.
+
+### The peer cards — the empty half was the interior, not the type
+
+A comparison card is a fifth of a row at `lg`, half at `sm`, and the WHOLE measure on a phone. Its interior
+never changed: three facts down one flex column, so a 270px card drew a 112px figure and a two-chip city list
+down its leading half and left the trailing half blank, four rows deep, five cards in a row. About 250px of
+card each, 1,361px for the block.
+
+**So the figure and the year share a line and the city list keeps the full measure.** Which fact pairs with
+the figure is measured rather than chosen, and the obvious pairing is the wrong one: two city chips and an
+overflow pill are about 176px of ink, which fits across the card and needs three lines in half of it — paired
+with the figure it made the two-column card TALLER than the column it replaced. The year is a short prefix and
+four digits. Placement rather than DOM order, so the reading order is unchanged.
+
+**It is a media query with a lower bound, and the bound is why it is not a utility.** A cell has to hold the
+widest band at 18px (112px) and "In India since 2002" at 14px (116px), so two columns need about 248px of card
+content; a 320px viewport gives 200 and the figure wraps mid-number, which is worse than the space. `23rem` is
+where the content box reaches 248. Below it the flex column renders unchanged — verified at 320, where the
+cards are the original stack and nothing wraps.
+
+The block came down from 1,361px to 1,001px at 390 with nothing removed from it.
+
+**The mark's reserved band also went, and only below `sm`.** The reservation is there because cards sharing a
+row are read across, so an unmarked card lifts its whole interior by a mark's height. On a phone the grid is
+one column: no two cards share a band, so there is nothing to keep in step and the reservation is 28px of
+blank opening every unmarked card — which, with the provider tier returning nothing, is all of them. The
+instruction is about the row; where the row does not exist, neither is the reason.
+
+### The Fortune badge on the ranking — two causes, and the second one was a bug
+
+The complaint was that the badge sits "here and there". It had two independent causes and fixing either alone
+would have left it looking half-fixed.
+
+**Inline flow was the first.** The badge follows the company name inside a wrapping flex row, so its x is
+wherever that name ends — and on a name that wraps it broke to a third line at the leading edge. Five rows,
+five offsets, two depths. `basis-full` on the marker-and-badge item below `sm` gives it a line of its own at
+the leading edge, directly under the name it accredits, at one x on every row.
+
+That took two passes, because a line of its own is not the same as one position. With the marker first the
+badge measured 61px on a row outside the peer set and 156 on a row inside it — and 115 at 320, where the
+marker's own text wrapped to two lines. So the badge takes `order` ahead of the marker below `sm` and the
+marker takes `whitespace-nowrap`. Measured after: one nameX, one badgeX and one figure trailing edge at 320,
+360, 375, 390 and 430; at 640 and above the badge's five distinct x values are the inline flow, untouched.
+
+It costs no line for the figure, which is the part that made it cheap: the figure is the grid's own trailing
+column at `align-items: end`, so it drops to the bottom of the name block and lands beside the badge's line —
+still directly above its own bar and still under the column header that names it, which are the two
+relationships the phone arrangement exists to protect. A row with neither marker is one line and nothing
+moves.
+
+**Rejected: giving the marks their own grid area.** `.gcc-rank-row` is already a named-area grid and a
+`"marks figure"` row is the tidier expression of the same result. It needs the marks span to be a child of the
+row rather than of the name block, and at `sm` and above the badge has to flow INLINE after the name — which a
+grid area cannot express. `display: contents` on the name block below `sm` would release its children as grid
+items and was the third option; it turns one item into three that each need placing, including a mark whose
+column collapses to zero when it is absent while the column gap does not.
+
+**The second cause was a phantom flex item, and it is a defect at every width.** The row wrapped the mark in
+`<span className="shrink-0">` and guarded the wrapper on `markUrl`. That guard is decided on the server and
+cannot see the case that actually happens: a URL that resolves and then FAILS to load leaves `CompanyMark`
+returning null with the wrapper still standing — a zero-width flex item plus the row's own 10px `gap-x`. So
+every company with a domain had its name indented 10px and every company without one did not, measured at 71
+against 61. With the provider tier rejected today that is most of the block, and it means the names the badge
+was being read against were not on one edge either.
+
+The wrapper is gone and `shrink-0` moved into the component, which is what the no-caller-guards rule was
+already asking for. **`self-start` had to be scoped with it**: on the card the mark is an item in a flex
+COLUMN, where it resolves on the inline axis and is what lets the box hug the artwork, and on a ranking row it
+resolves on the block axis and would top-align the mark against a line that is deliberately centred. It only
+became reachable when the wrapper went, since a wrapper is what used to be the flex item.
+
+### The milestone rail — horizontal at every width, and the cap is why it could not be before
+
+The rail was horizontal from `sm` and something else below it: first a list of four rows with no line at all,
+then a vertical rail with the ring leading each row and the duration at the trailing edge. The vertical
+version kept every property the chart is built on and still read as a different chart from the one it is drawn
+beside — a reader asked to compare two curves was comparing two rails drawn down the page — and it cost 160px a
+track against the 92px the horizontal one does.
+
+**What made the horizontal reading unavailable at phone width was the item CAP, and the cap was a rem.** The
+tightest pair of waypoints on the scale curve is 16.7% of the rail apart at every width, because the positions
+are proportional to the stored figures. 3.5rem is less than 16.7% of a 1024px card's rail and more than 16.7%
+of a 208px one, so one number cannot serve both. As a percentage the clearance becomes a property of the DATA
+rather than of the viewport: 14% leaves 2.7% of the rail between neighbours at 320, at 390 and at 1440 alike.
+Measured minimum gap: 5px at 320, 6px at 360 and 390, 7px at 430, unchanged at 6px at 1024 where the desktop
+cap still applies.
+
+**The wrapper's inset had to become a percentage too**, because what it absorbs is half an item and half an
+item is now a percentage. `px-[7%]` covers 6% with a point to spare at every phone width, where a fixed 28px
+would take a fifth of a 248px measure and a fixed 16px would let the last waypoint out of the card. The
+captions take the inset, which is what they already did from `sm`.
+
+The whole two-layout apparatus went with it — the vertical rail, `--gcc-milestone-rail`, and every `auto` /
+`none` reset the `sm` block needed to cancel a phone value. Three variables step at `sm` now and no placement
+does, which is also what let the explicit `grid-row` / `grid-column` on all three children go: those existed
+to place a second layout by column, and placing only one axis is what once rendered every figure against the
+wrong milestone name.
+
+### The tab strip — the equal grid was the wrong fix for the right problem
+
+`grid-cols-4` was there because the flex row wrapped by content into "Technology Operations" over "HR
+Finance", two ragged lines of two, which reads as two groups rather than one switch. It fixed that and bought
+a new problem: "HR" is 16px of ink, so it sat in a 68px cell under a 68px selected rule, and the indicator
+named the cell rather than the word.
+
+**The row wrapped because of the PADDING, not the labels.** The four together are 180px of ink at 12px against
+a 224px strip at 320 — they fit with 44px to spare — and `px-5` a side was adding 160px on top. So the cells go
+back to their own content width with `justify-between` distributing the slack, and the row cannot wrap because
+the ink alone never fills it. `min-w-8` is the only thing the padding was still buying: it holds "HR" to a 32px
+target, above the 24px floor, without widening the three labels already past it.
+
+### The range card — the origin numeral was costing the low figure its position
+
+"Through EOR model" and "Through own entity" were reported as misplaced and read as a type-size problem. They
+are not: they bracket the rail correctly at 12px. What was misplaced was the low endpoint FIGURE. The low end
+of the first-hire card is at 10% of the rail, 29px at 390, so "7 days" and the origin `0` overlap and
+`--gcc-range-floor` pushes the figure to 48px — 19px to the trailing side of the mark it belongs to, on a chart
+whose entire construction is that the number sits under its own mark.
+
+So the origin's NUMERAL is not drawn below `sm` and the floor goes to zero there. The TICK on the rail stays at
+every width, so the rail still visibly starts at an origin and the zero-tick rule a cost index depends on is
+untouched. What the numeral buys — the run-up reading as elapsed time — is worth less than the low figure's
+position, and only on a phone is the choice forced.
+
+### The range card, second report — the end labels belonged to the note, not to the rail
+
+Reported again on a phone: "Through EOR model / Through own entity" still feels too far from where it is
+supposed to be and is creating confusion. Measured at 390, where the card's body is 268px: the endpoint
+figures end at y=176, the label pair sits at y=204, and the card's own note sits at y=248. **28px above, 28px
+below, and the pair set at `text-xs` in `--ansr-text-muted` — which is the note's exact treatment.** So the
+labels were equidistant between the two blocks they could belong to and typographically identical to the
+wrong one. Nothing was misaligned; the pair had simply been adopted by the paragraph under it.
+
+The horizontal reading was checked before anything moved, because it was the obvious suspect. It is fine: the
+low figure is centred on a mark at 10% of the rail, which puts its leading edge 6px in, and the label sits at
+0 — a 6px difference nobody sees. What is true horizontally is that at 390 the two labels are 128px each and
+meet in the middle with a 12px gap, so a pair already floating between two blocks can also be scanned as one
+sentence.
+
+So the rail block and the label pair are one flex column at `gap-1`, and the labels take `font-medium`. Each
+label is now 8px of visible air under the figure it names against 28px to the note, and Medium against the
+note's Light 300 separates a caption from prose without spending an ink step. It is grouped at every width:
+the desktop card carries the same two gaps, and `gap-6` there put the labels 28px from the figures too.
+
+**Four alternatives were considered and three rejected.**
+
+- **A keyed two-row list below the rail** — ring, "7 days", "Through EOR model" on one line, disc, "70 days",
+  "Through own entity" on the next. It removes the ambiguity completely and it is the one shape ANSR has
+  already taken off a neighbouring card: `IndexSpread`'s disc-and-ring key was deleted at their request in
+  favour of names sitting on the marks they belong to. Reintroducing it here would contradict that.
+- **Moving each label into its endpoint's positioned column**, `IndexSpread`-style, so the name, the mark and
+  the figure are one absolutely positioned stack. This is the right shape for a chart whose points can be
+  anywhere on the rail — and it buys nothing here, because the low figure's leading edge is already within
+  6px of the label's. It costs a column cap: at 268px of rail two 128px labels cannot both sit at their own
+  marks without a `max-inline-size` that wraps them, and the cap has to be derived from `offset` so the two
+  columns cannot collide on a range whose low end sits near the middle.
+- **A 24px column gap, to stop the two labels meeting.** Both then wrap to two lines at 375 and 390 as well
+  as 320, and a ragged wrap is a worse reading than a 12px gap between two blocks that are now unmistakably
+  captions.
+- **Kept: 320 already wraps both labels**, one under each figure, and reads as two blocks. That is the width
+  the arrangement is worst at and it is correct there.
+
+### The two smallest items
+
+**The function tags.** Eight memberships at 14px with 14px of inline padding put almost every item on a line of
+its own: 340px of the phone's peer view for the one block that deliberately claims no numeral, no bar and no
+order — more than the five peer cards' figures put together. At 12px in a tighter box they pack where they can
+and the block is about 245px. **Rejected: a two-column grid.** Eight items divide evenly, so there would be no
+part-empty cell — but a half-width phone cell is 145px and the longest item is 192px of nowrap pill, so it
+would overflow, and a column count is the thing this block gave up twice already.
+
+**The close's line.** 18px Light on a 98-character sentence is four centred lines on a phone, which is the
+second-hero reading the promotion to display scale was reverted for, arriving by measure instead of by size.
+16px takes it to three. The contrast bound is on the colour and does not move with the size: the veil is one
+flat value, so white stays the only legal ink.
+
+## `ANSR ATLAS` — the product name is a step SMALLER than the brand half, and only on the result screens
+
+**Reported as "ATLAS looks bigger and sits a bit far from ANSR" on the result screens, with the entry
+point's headline read as correct.** Both halves of that are real and both were measured; the entry point
+needed nothing.
+
+**Measurement method, because path coordinates are the wrong source.** A traced outline puts control
+points outside its ink, and both marks' S overshoots the cap line and the baseline by different amounts —
+so an ink bbox measures the S and not the caps. Each mark was rasterised at 1600px and scanned for alpha,
+windowed in x to the flat-topped letters only (`ATL A` without the S; the wordmark's `A N` without the S,
+the R and the registered symbol). Cap band as a fraction of the box: ATLAS 0.95125, the ANSR wordmark
+(158×41) 0.92375, the on-dark lockup (253×91) 0.41625. Same approach `logo:crop` uses.
+
+What that gives, rendered:
+
+| | ANSR caps | ATLAS caps | ratio | ink gap |
+| --- | --- | --- | --- | --- |
+| Entry point, 72px | 0.739em | 0.712em | **0.9641** | **0.266em** |
+| Result screens, was | 0.708em | 0.712em | 1.0068 | 0.410em |
+| Result screens, now | 0.708em | 0.682em | 0.9634 | 0.260em |
+
+**The size complaint is NOT a cap-height error, and that is the whole finding.** At parity the two agreed
+to 0.7%, which is 0.14px at 30px — nobody sees that. What is visible is that ATLAS is the wider and
+heavier run (stem 0.1417 of its cap height against the wordmark's 0.137) and that on this band the brand
+half is the FULL lockup, so the letters sit beside a circular mark two and a half times their cap height
+and read reduced by it. The entry point has none of that: the wordmark stands alone in a line of type.
+
+**So the correction is optical and the entry point supplies the amount.** It already draws ATLAS at 0.9641
+of the ANSR caps beside it — incidentally, because `AnsrWordmark` is set at 0.8em of artboard rather than
+the 0.772em cap parity would ask for — and that is the relationship the project owner reads as one lockup.
+`0.717em` of box reproduces it on the result screens. **Rejected: growing the lockup to 1.775em instead**,
+which would have made the two ANSR marks agree at one cap height and kept ATLAS at a single size. It
+grows the circular mark 4.4% and with it the `h1`'s whole height, and 1.7em is the measured number that
+puts the mark about half an em above the caps and half below the baseline — the geometry of a lockup, paid
+for to fix a 0.14px discrepancy that was never the complaint.
+
+**The gap is a WORD SPACE, stated in `em`.** It was `ms-3`: 12px, which is 0.4em at 24px and 0.4em at 30px
+only by coincidence of being the same 12px — against the 0.266em the headline sets between the same two
+halves. The display face's space advance is 0.26em; the lockup's artboard carries 0.0095em of trailing
+clearance past the registered symbol, so `ms-[0.25em]` lands the visible gap on the headline's. A spacing
+step cannot do this: the gap has to hold its proportion across the 24/30px step and a fixed pixel does
+not.
+
+**Both numbers are the CALL SITE's, not `AtlasWordmark`'s defaults, and that is deliberate.** The
+component's 0.749em still serves the entry point, where the ANSR half is a different object. Two sizes for
+one mark is normal optical practice and the alternative — one size that is wrong on one of the two
+surfaces — is worse.

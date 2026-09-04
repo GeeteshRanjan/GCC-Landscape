@@ -100,16 +100,24 @@ export interface SummaryFigure {
  * has to vary, because a fixed five leaves finance's three figures with two empty
  * columns after them.
  *
- * **One column below `sm`, which is the snapshot's own breakpoint rather than the
- * row's previous two.** At 36px a figure and its unit are most of a 171px half-cell
- * on a 390 phone, and "99.95%" does not fit one; a phone reads this row as a list.
+ * **TWO columns on a phone, and the figure came down a step to pay for it.** This was
+ * one column below `sm`, on the measurement that a 36px figure and its unit are most of
+ * a 171px half-cell and that "99.95%" does not fit one. That measurement was right and
+ * the conclusion was wrong: the answer is not to give a phone one figure per screen-width
+ * row — four of them ran the row to about 440px with most of every line empty — it is to
+ * set the figure at the size a half-cell holds. At 30px "99.95%" is about 108px of a
+ * 155px cell, and the row reads as a set of national facts rather than as a list of four
+ * unrelated ones. The snapshot on the peer view took the same correction in the same
+ * pass, so the two surfaces still open on the same object.
+ *
+ * An odd last cell widens to the full row below `sm` — see the span in the cell below.
  */
 const COLUMNS = {
   1: "grid-cols-1",
-  2: "grid-cols-1 sm:grid-cols-2",
-  3: "grid-cols-1 sm:grid-cols-3",
-  4: "grid-cols-1 sm:grid-cols-2 lg:grid-cols-4",
-  5: "grid-cols-1 sm:grid-cols-3 lg:grid-cols-5",
+  2: "grid-cols-2",
+  3: "grid-cols-2 sm:grid-cols-3",
+  4: "grid-cols-2 lg:grid-cols-4",
+  5: "grid-cols-2 sm:grid-cols-3 lg:grid-cols-5",
 } as const;
 
 type ColumnKey = keyof typeof COLUMNS;
@@ -148,17 +156,43 @@ export function SummaryFigures({
           rests on: `#function-metrics ul > li` means "a figure-row cell" on every tab.
           Wider gaps than a bordered grid needs, because with no edge between two cells
           the space is the only thing separating them. */}
-      <ul className={cn("grid gap-6 lg:gap-8", COLUMNS[columnKey(cells.length)])}>
-        {cells.map((cell) => {
+      {/* `gap-x-4` on a phone: at 375 a column is about 150px, so the horizontal space is
+          the scarcest thing in a cell and a wrapping title needs it more than the boundary
+          between two cells does. The vertical gap stays the wider of the two, which is
+          what keeps two columns reading as two columns. */}
+      <ul
+        className={cn(
+          "grid gap-x-4 gap-y-5 sm:gap-6 lg:gap-8",
+          COLUMNS[columnKey(cells.length)],
+        )}
+      >
+        {cells.map((cell, index) => {
           const value = figureParts(cell.figure);
           const high = cell.high ? figureParts(cell.high) : undefined;
           return (
-            <li key={cell.id} className="flex min-w-0 flex-col gap-2">
+            <li
+              key={cell.id}
+              className={cn(
+                "flex min-w-0 flex-col gap-2",
+                // **The odd last cell widens rather than sitting alone in a two-column
+                // row.** A lone cell in a row of evidence reads as a figure that failed
+                // to load — the same rule `packWidths` enforces on the card grid and the
+                // impact band on its own figures. It applies on a phone only: from `sm`
+                // the column count is the cell count or a divisor of it.
+                cells.length > 1 &&
+                  cells.length % 2 === 1 &&
+                  index === cells.length - 1 &&
+                  "col-span-2 sm:col-span-1",
+              )}
+            >
               {/* The fixed box, bottom-aligned. `items-end` on the outer element and
                   `items-baseline` on the inner one: the outer alignment is what lands
                   every label on one line, and the baseline is the relationship the
                   unit needs to its own numeral. */}
-              <p className="flex h-9 min-w-0 items-end text-4xl leading-none font-bold tracking-display text-action tabular-nums md:h-12 md:text-5xl">
+              {/* **30px on a phone, 36 from `sm`, 48 from `md`, and the box steps with
+                  them.** The two-column phone row is what buys this: a figure that is
+                  most of its own cell is not a figure, it is a headline. See `COLUMNS`. */}
+              <p className="flex h-8 min-w-0 items-end text-3xl leading-none font-bold tracking-display text-action tabular-nums sm:h-9 sm:text-4xl md:h-12 md:text-5xl">
                 <span className="flex min-w-0 items-baseline truncate">
                   {/* **Wrapped rather than left as a bare text node, and it is
                       layout-neutral**: inside a flex container a text run becomes an
@@ -205,7 +239,7 @@ export function SummaryFigures({
                   structure. */}
               <h3
                 id={`metric-${cell.id}-heading`}
-                className="min-w-0 text-sm font-medium tracking-body text-pretty text-text"
+                className="min-w-0 text-xs font-medium tracking-body text-pretty text-text sm:text-sm"
               >
                 {cell.title}
               </h3>
@@ -220,9 +254,12 @@ export function SummaryFigures({
 /**
  * The unit, two scale steps under the figure.
  *
- * 20 against 36 and 24 against 48 — both real steps on the scale, and both near half
- * the figure, which is where a unit belongs. `tracking-normal` because
- * `tracking-display` is fitted to digits and closes the gap a glyph this size needs.
+ * 18 against 30, 20 against 36 and 24 against 48 — every pair a real step on the scale,
+ * and every one near half the figure, which is where a unit belongs. It steps at `sm` for
+ * the same reason the figure does: the ratio is the relationship, so a figure that comes
+ * down a step and a unit that does not is a unit that has come UP. `tracking-normal`
+ * because `tracking-display` is fitted to digits and closes the gap a glyph this size
+ * needs.
  */
 function Unit({
   children,
@@ -251,7 +288,7 @@ function Unit({
     <span
       data-figure-unit=""
       className={cn(
-        "shrink-0 whitespace-nowrap text-xl font-semibold tracking-normal md:text-2xl",
+        "shrink-0 whitespace-nowrap text-lg font-semibold tracking-normal sm:text-xl md:text-2xl",
         word ? "ms-1" : "ms-0.5",
       )}
     >

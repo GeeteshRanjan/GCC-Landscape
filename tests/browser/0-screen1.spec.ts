@@ -1534,8 +1534,19 @@ test.describe("the answer", () => {
    * viewBox on purpose, into the wrapper's padding, and content that overflows
    * visibly does not affect layout but DOES enlarge an ancestor's scrollable region —
    * so a label reaching too far is a horizontal scrollbar on a document this tool
-   * does not own the scroll of. The 320px reflow test does not catch it, because
-   * below `sm` the labels are not drawn at all.
+   * does not own the scroll of.
+   *
+   * **There are TWO label layers in the SVG and only one is drawn at a time, so this
+   * counts by `data-map-labels` rather than by `svg text`.** A bare `text` count would
+   * be both layers added together and the coupling this test exists to pin would read
+   * as broken.
+   *
+   * **Both layers are held to the ranked list now, and the phone layer's old
+   * four-city subset is gone** — see `phoneLabels` in `city-map.tsx`. So the assertion
+   * is made twice over one set of counts, which is the cheapest way to state that the
+   * two layers cannot drift: they differ in type size and in whether a label carries
+   * its figure, never in which cities they name. Both are in the DOM at every width,
+   * so the phone layer is countable here without a second viewport.
    */
   test("labels every ranked city on the map, and never widens the document", async ({
     page,
@@ -1552,11 +1563,13 @@ test.describe("the answer", () => {
     // zero, and the failure reads as a broken selector rather than as a race.
     await expect(map).toBeVisible();
 
-    const labels = map.locator("svg text");
+    const labels = map.locator('svg [data-map-labels="wide"] text');
+    const phoneLabels = map.locator('svg [data-map-labels="phone"] text');
     const rows = map.locator("dl dt");
     const leading = await rows.count();
     expect(leading).toBeGreaterThan(1);
     await expect(labels).toHaveCount(leading);
+    await expect(phoneLabels).toHaveCount(leading);
 
     const noScroll = async () => {
       const { scrollWidth, clientWidth } = await page.evaluate(() => ({
@@ -1572,6 +1585,7 @@ test.describe("the answer", () => {
     const all = await rows.count();
     expect(all).toBeGreaterThan(leading);
     await expect(labels).toHaveCount(all);
+    await expect(phoneLabels).toHaveCount(all);
     await noScroll();
   });
 

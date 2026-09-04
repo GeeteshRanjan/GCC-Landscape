@@ -136,11 +136,20 @@ export function AnswerEditor({
 
             Icon plus text rather than icon alone: an X on its own is the most
             overloaded glyph there is, and on a panel that has just been opened it reads
-            as "clear the form" as readily as "close it". The word settles it. */}
+            as "clear the form" as readily as "close it". The word settles it.
+
+            **`.gcc-hit-44` for the target, which is the trick `.gcc-context-edit` already
+            uses on the control that opens this panel.** The pill is 32px tall, which
+            clears the 24px AA floor and is under the 44px this project holds itself to —
+            and the identical problem was already solved two elements up the tree, so
+            solving it a second way here would be the inconsistency rather than the
+            32px. The visible pill does not grow: making this control 44px of ink would
+            make the way OUT of the panel the loudest thing at its top edge, which is the
+            same defect the note on `.gcc-context-edit::after` records. */}
         <button
           type="button"
           onClick={onCancel}
-          className="inline-flex shrink-0 items-center gap-1.5 rounded-full px-3 py-1.5 text-sm font-semibold text-text-muted transition-colors duration-fast ease-standard hover:bg-surface-pale hover:text-text focus-visible:ring-2 focus-visible:ring-accent-teal focus-visible:outline-none"
+          className="gcc-hit-44 relative inline-flex shrink-0 items-center gap-1.5 rounded-full px-3 py-1.5 text-sm font-semibold text-text-muted transition-colors duration-fast ease-standard hover:bg-surface-pale hover:text-text focus-visible:ring-2 focus-visible:ring-accent-teal focus-visible:outline-none"
         >
           <X aria-hidden="true" className="size-4" />
           Close

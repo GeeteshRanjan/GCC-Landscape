@@ -23,7 +23,6 @@ import {
   ViewPanel,
   ViewTabs,
   type ContextFact,
-  type HeaderMotif,
 } from "@/components/public/screen-header";
 import { cn } from "@/lib/utils";
 import { figuresHeadings, heldHeading, TABS_LABEL } from "./copy";
@@ -61,31 +60,6 @@ import { OpsPanel } from "./ops-view";
  * tabindex, arrow-key movement, the tab/panel ARIA wiring) still comes from Radix.
  * This is the same call `input-panel.tsx` made about admin's field primitives.
  */
-
-/**
- * `arc-quarter` recoloured from its source grey to `--ansr-teal-500` and trimmed
- * with `scripts/brand_asset.py`, then written to `public/brand/`. Reproduce it by
- * running `recolor --map <source grey>=<the teal token's value>` followed by
- * `trim`; the two values are in `assets/brand/manifest.json` and `tokens.css`
- * respectively, and are deliberately not repeated here — brand_lint.py is right to
- * refuse a literal hex in source even inside a comment.
- *
- * Chosen for meaning, not shape. It is the same arc family as Screen 1's horizon,
- * so the two screens read as one system, but a quarter rather than a dome — a
- * measured segment rather than an open horizon, which is what this screen is. Its
- * concentric origin sits at the leading top of the asset and the rings sweep down
- * and across, so anchoring the box to the trailing edge puts the void where the
- * leading-aligned headline is and the ring density where there is nothing. The
- * manifest's warning about chart-like motifs ruled out `pin-cascade`,
- * `pin-staircase` and `pin-rows-interlock`: this screen is full of real bars, and
- * a motif made of bars beside them reads as data.
- */
-const FUNCTION_MOTIF: HeaderMotif = {
-  src: "/brand/function-rings.svg",
-  width: 848,
-  height: 565,
-  placement: "gcc-rings",
-};
 
 /**
  * **`FUNCTION_ICONS` was here and the four tab glyphs are removed at ANSR's request.**
@@ -179,7 +153,6 @@ export function FunctionViewScreen({
 
   return (
     <ResultSurface
-      motif={FUNCTION_MOTIF}
       tabs={
         /* The same component Screen 1 renders, with `current` flipped — which is
            what makes the treatment reverse rather than being two hand-built strips
@@ -252,9 +225,51 @@ export function FunctionViewScreen({
                   own navigation, and putting it on the first zone's ground would make
                   the ground change land above the switch rather than under it. */}
               <div className="mx-auto w-full max-w-content px-6 md:px-8">
+                {/* **Four equal cells on a phone, wrapping content-width cells from
+                    `sm`, and the phone case is a GRID rather than a tighter flex row.**
+
+                    At 16px with 20px of padding a side the four labels need about 430px
+                    and a phone card body is 327 at 375, so the row wrapped — and it
+                    wrapped the way a flex row does, which is by content: "Technology
+                    Operations" on the first line and "HR Finance" on the second, two
+                    ragged lines of two, with the shortest label in the set starting the
+                    second one. A tab strip is a set of four peers and that shape says
+                    they are two groups.
+
+                    `grid-cols-4` makes every cell the same width whatever its label says,
+                    which is the only arrangement of four that reads as one switch. It
+                    costs the type size — `text-xs`, and the padding drops to 4px — and
+                    that is the trade: at 320 a cell is 68px, and 12px Semibold puts
+                    "Operations", the longest of the four, at about 66px of ink. One step
+                    up would overflow the cell rather than wrap, because these are single
+                    words, and an overflowing grid cell is a horizontal scrollbar on a
+                    document this tool does not own the scroll of.
+
+                    From `sm` nothing changes from what it was: content-width cells in a
+                    wrapping flex row at the full type size. */}
+                {/* **The equal-width grid is GONE from the phone at the project owner's
+                    instruction, and what replaces it is not the flex row that failed
+                    before it.** `grid-cols-4` gave every cell the same width whatever its
+                    label said, which fixed the ragged two-line wrap — and put "HR", 16px
+                    of ink, in a 68px cell with a 68px selected rule under it, so one tab
+                    in four read as a short word floating in a wide slot and the indicator
+                    named the cell rather than the word.
+
+                    The reason the original flex row wrapped was the PADDING, not the
+                    labels: the four together are 180px of ink at 12px, which fits a 224px
+                    strip at 320 with room to spare, and it was `px-5` a side — 160px of
+                    padding — that pushed the row over. So the cells go to their own
+                    content width, `justify-between` distributes the slack evenly, and the
+                    row cannot wrap because the ink alone never fills it. Every cell is now
+                    as wide as its label and the selected rule is the width of the word.
+
+                    `min-w-8` is the one thing padding was still buying: it holds "HR" to a
+                    32px target, above the 24px floor, without widening the three labels
+                    that are already past it. From `sm` this is the flex row it was, at the
+                    full type size and the full padding. */}
                 <TabsPrimitive.List
                   aria-label={TABS_LABEL}
-                  className="flex flex-wrap border-b border-border-tint"
+                  className="flex justify-between border-b border-border-tint sm:flex-wrap sm:justify-start"
                 >
                   {view.areas.map((area) => (
                     <TabsPrimitive.Trigger
@@ -263,8 +278,8 @@ export function FunctionViewScreen({
                       className={cn(
                         // 44px, the public screens' control height, against the
                         // registry wrapper's 36. A first-time visitor on a phone.
-                        "-mb-px inline-flex min-h-12 items-center border-b-2 border-transparent px-5",
-                        "text-base font-semibold text-text-muted",
+                        "-mb-px inline-flex min-h-12 min-w-8 items-center justify-center border-b-2 border-transparent px-0 sm:min-w-0 sm:px-5",
+                        "text-xs font-semibold text-text-muted sm:text-base",
                         // Colour and border only, never `transition-all` — that was one
                         // of the three reasons the registry's tab wrapper was removed.
                         "transition-colors duration-fast ease-standard",

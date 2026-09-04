@@ -23,7 +23,6 @@ import {
   ViewPanel,
   ViewTabs,
   type ContextFact,
-  type HeaderMotif,
 } from "@/components/public/screen-header";
 import type { CloseCopy, CustomerLogo, HeroCopy, ImpactStat } from "@/data/schema";
 import { companyName, type PeerView, type PeerViewInput } from "@/data/screen1";
@@ -66,29 +65,6 @@ import { InputPanel } from "./input-panel";
  * Nothing here is fixed, sticky, or sized against the viewport. Height is reported
  * to the parent instead; see `use-frame-height.ts`.
  */
-
-/**
- * The ANSWER state's motif. The ask has its own hero and its own fan now — see
- * `ask-hero.tsx` — so this is no longer shared between the two states of this
- * screen.
- *
- * `pin-diagonal` recoloured onto three light ramp steps and trimmed with
- * `scripts/brand_asset.py` — see `.gcc-hero-diagonal` in globals.css for the
- * commands and the placement. Never placed unmodified.
- *
- * It replaces the `arc-dome` horizon, which was the right instinct on a white
- * header and the wrong asset once the header became the brand's teal gradient: an
- * arc dome at 0.18 on white was a smudge nobody could see, and the part of a dome
- * that fits inside a header's height is its flattest slice, which reads as
- * diagonal wallpaper rather than arcs. If the flattest slice of a dome is what
- * reads, the honest asset is the one that is actually diagonal.
- */
-const PEER_MOTIF: HeaderMotif = {
-  src: "/brand/hero-diagonal.svg",
-  width: 1080,
-  height: 437,
-  placement: "gcc-hero-diagonal",
-};
 
 /**
  * The ask: five bands that read as one composition.
@@ -241,7 +217,23 @@ export function PeerViewAsk({
               // this without raising that walks the card up into the supporting
               // line. Less pull on a phone, where the hero's copy ends closer to
               // the band's bottom edge and a deep overlap would crowd it.
-              "relative -mt-20 md:-mt-28 lg:-mt-32",
+              // **The phone pull is 64 against a 96px shoulder, where it was 80 against
+              // 112 — and what matters is the DIFFERENCE, which is the only part of this
+              // pair a visitor can see.**
+              //
+              // The card's top edge sits at `pt + copy + pb − pull`, so reducing the
+              // shoulder and the pull by the same amount moves nothing: it only changes
+              // how much of the card is drawn over the gradient. The visible quantity is
+              // `pb − pull`, the strip of band between the lead and the card, and that is
+              // 32px here as it was before. What the pair buys instead is 16px off the
+              // page, because the shoulder came down further than the pull did.
+              //
+              // **`.gcc-hero-map`'s phone block takes its bottom inset from THIS number,
+              // not from the shoulder.** The map is centred in the band a visitor can
+              // see, and the bottom of the band a visitor can see is the card's top edge.
+              // Three files, one measurement: the shoulder in `ask-hero.tsx`, the pull
+              // here, `inset-block-end` in globals.css.
+              "relative -mt-16 md:-mt-28 lg:-mt-32",
               // Centred and capped at `--ansr-container-card`. Wider than the
               // hero's text block, which the brief allows and the form needs, and
               // well inside the container — see the token for both bounds.
@@ -257,7 +249,10 @@ export function PeerViewAsk({
               // panel's 80px: that emptiness made a hard-edged panel read as
               // composed, and a rounded card lifted onto a gradient does not need
               // it.
-              "px-5 py-8 sm:px-8 md:px-10 md:py-12 lg:px-12",
+              // `py-6` on a phone rather than `py-8`: the shoulder above the heading is
+              // read against the card's own edge, and at 24px it still reads as a card
+              // with air in it while giving 16px back to the one thing below the fold.
+              "px-5 py-6 sm:px-8 sm:py-8 md:px-10 md:py-12 lg:px-12",
               // **The ask animates in, which it did not before, and the omission was
               // visible once the rest of the page was polished.** Every band on the
               // ANSWER state and all of Screen 2 arrive on `.gcc-enter`; the entry
@@ -275,7 +270,7 @@ export function PeerViewAsk({
             )}
             style={{ "--gcc-enter-index": 2 } as React.CSSProperties}
           >
-            <div className="flex flex-col gap-7 md:gap-9">
+            <div className="flex flex-col gap-6 sm:gap-7 md:gap-9">
               {/* Heading and lead as one block, tighter than the gap to the form
                   below them: they are two halves of one statement, and the form is
                   the next thing. */}
@@ -353,8 +348,9 @@ export function PeerViewAsk({
  * What it is now, in order:
  *
  *   1. The teal band — the product lockup, the finding, and the visitor's four
- *      answers as quiet pills with one way back. Its ornament is the entry point's
- *      own dotted map from `lg`. See `ResultSurface`.
+ *      answers as quiet pills with one way back — the pills read but not drawn on a
+ *      phone. Its ornament is the entry point's own dotted map, at every width now.
+ *      See `ResultSurface`.
  *   2. The card's top row: the two views as equal halves, the selected one filled
  *      with the mint zone that follows it, so the joint is invisible.
  *   3. SNAPSHOT — four industry-level figures, the index to everything under it.
@@ -483,7 +479,6 @@ export function PeerViewAnswer({
      */
     <div>
       <ResultSurface
-        motif={PEER_MOTIF}
         tabs={
           <ViewTabs
             current="peers"

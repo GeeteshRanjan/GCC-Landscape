@@ -382,7 +382,15 @@ export function ClosingCta({
        * Light 300 it still reads as quietly as the muted token would; what it does not do is
        * fail the contrast floor. `ask-hero.tsx` is white-only for the same class of reason.
        */}
-      <p className="max-w-measure text-lg leading-relaxed font-light text-balance text-text-inverse md:text-xl">
+      {/* **16px below `sm`, at the project owner's instruction, and it is the same
+          argument at a smaller width.** The reason this is not the display scale is that a
+          close should ask quietly at the end of a long page of evidence; at 18px a
+          98-character sentence is four centred lines on a phone, which is the second hero
+          the promotion was reverted for, arriving by measure rather than by size. 16px
+          Light takes it to three. Still white and still on the reading measure — the
+          contrast bound in the note below is a floor on the COLOUR and does not move with
+          the size, since the veil is one flat value. */}
+      <p className="max-w-measure text-base leading-relaxed font-light text-balance text-text-inverse sm:text-lg md:text-xl">
         {copy.body}
       </p>
       <PrimaryCta href={href}>{copy.ctaLabel}</PrimaryCta>

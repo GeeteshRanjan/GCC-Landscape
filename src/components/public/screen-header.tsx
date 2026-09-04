@@ -41,20 +41,6 @@ import { cn } from "@/lib/utils";
  *     to tune between them; if a gap appears, something has added padding.
  */
 
-export interface HeaderMotif {
-  /** A file under `public/brand/`, already adapted. */
-  src: string;
-  /** Intrinsic size, so the box reserves the right ratio before the SVG lands. */
-  width: number;
-  height: number;
-  /**
-   * The placement class: where the motif is anchored and how it is masked. One
-   * per screen, in globals.css, because the anchor depends on where that screen's
-   * text actually is.
-   */
-  placement: string;
-}
-
 /**
  * The whole result surface: the teal header band, then ONE floating card carrying
  * every zone to the end of the page, with the view switch as the card's own top row.
@@ -83,22 +69,32 @@ export interface HeaderMotif {
  * drops it onto the flat ground, where the overlap that makes it read as lifted is
  * gone. Same relationship as the entry point's form card over its hero.
  *
- * **The band's ornament is swapped at `lg`, not layered.** The dotted world map is
- * the entry point's own graphic and is what this band carries on a desktop; below
- * `lg` the finding runs most of the band's width and the frame is too narrow for the
- * dots to resolve, so the screen's motif takes over there. One ornament at every
- * width, never two — the pair used to render together and the band read as a
- * coloured strip with two unrelated graphics parked on it.
+ * **The band's ornament is the dotted world map at EVERY width, and it is the only
+ * thing drawn on the band, at the project owner's instruction.** Two layers were
+ * retired to get there and both retirements have the same cause.
+ *
+ * The band used to swap graphics at `lg`: the map above it, each screen's own brand
+ * motif below. The reason for the swap was that a percentage-framed map is a different
+ * zoom at every width, so below `lg` the dots stopped resolving and the graphic read as
+ * a lozenge. `.gcc-header-map`'s phone block fixes that with a fixed frame — the same
+ * correction the entry point's hero took — which removes the swap's whole reason for
+ * existing. With the map able to draw at any width, a motif on the tablet band would be
+ * a second graphic on a surface that is allowed one, so `HeaderMotif`, both screens'
+ * motif constants and the two placement classes are deleted rather than kept for a
+ * breakpoint that no longer needs them. Git holds them.
+ *
+ * The leading-edge dot lattice went with it, at the project owner's instruction: a fine
+ * dotted grid down the left of a band whose ornament is now a dotted map is the same
+ * texture drawn twice at two densities, and on a phone it was the only graphic on the
+ * band, which made it read as the band's subject.
  */
 export function ResultSurface({
-  motif,
   tabs,
   card,
   editor,
   footer,
   children,
 }: {
-  motif: HeaderMotif;
   tabs: React.ReactNode;
   card: React.ReactNode;
   /**
@@ -106,7 +102,7 @@ export function ResultSurface({
    *
    * **A slot here rather than a node inside `children`, and `.gcc-result-band`'s
    * `overflow: hidden` is the whole reason.** The band clips: it has to, because the
-   * dotted map, the lattice and the motif all overhang it. Every control in the editor
+   * dotted map overhangs it on both inline edges. Every control in the editor
    * opens a popup taller than the room below it, so an editor rendered among the band's
    * children would have all four dropdowns cut off at the band's bottom edge — silently,
    * and looking like a broken control rather than a clipping ancestor.
@@ -141,29 +137,15 @@ export function ResultSurface({
           `--ansr-teal-700`, and every ink allowed on an inverse ground clears AA
           across the whole band. `.gcc-result-band` adds the fade that keeps its
           bottom edge from seaming against the page ground. */}
-      <div className="gcc-result-band pt-10 pb-28 md:pt-14 md:pb-32">
-        {/* The screen's own motif, and it is the TABLET-and-below ornament now: the
-            dotted map below takes the band from `lg`, and the two used to draw over
-            each other on the same trailing edge. Decorative and redundant either
-            way — everything it could convey is in the text beside it, so it is out
-            of the tab order and out of the accessibility tree. */}
-        <div
-          className={cn(
-            "ansr-motif gcc-motif-inverse hidden md:block lg:hidden",
-            motif.placement,
-          )}
-          aria-hidden="true"
-        >
-          {/* eslint-disable-next-line @next/next/no-img-element -- decorative,
-              fixed intrinsic ratio, and not worth an optimiser round trip. */}
-          <img
-            src={motif.src}
-            alt=""
-            width={motif.width}
-            height={motif.height}
-            className="block h-auto w-full"
-          />
-        </div>
+      {/* **The phone step is its own pair, matching the entry point's.** `pt-10 pb-28`
+          against a `-mt-20` pull was the `md` composition taken down a notch, and the
+          notch was too small: 112px of bottom padding with 80px of it under the card left
+          a 32px strip of band doing nothing, on the one band a phone visitor meets before
+          any evidence. 32/80 against a `-mt-14` pull keeps the same 24px strip visible
+          and gives 16px back. The card's own pull below and the editor's above it are the
+          other half of this measurement — all three move together or the surface's
+          silhouette changes. */}
+      <div className="gcc-result-band pt-8 pb-20 md:pt-14 md:pb-32">
         {/* **The entry point's own hero graphic, on the result band.** Same
             component and the same two child classes, so this is one graphic used
             twice rather than a second copy of one — what differs is only the
@@ -173,15 +155,13 @@ export function ResultSurface({
             subject. It is NOT blurred — that was tried and read as a
             low-resolution copy of the entry point's map rather than as depth. Every
             value and the reasoning is in `.gcc-header-map`. */}
-        <div className="gcc-header-map hidden lg:flex" aria-hidden="true">
+        {/* **It renders at every width now**, where it was `lg` and up with a brand
+            motif below it. The class carries its own phone framing — a fixed frame
+            rather than a percentage, which is what makes the dots resolve down there
+            and is what removed the swap's reason for existing. */}
+        <div className="gcc-header-map flex" aria-hidden="true">
           <DottedWorldMap />
         </div>
-        {/* **A second, much fainter ornament layer, generated rather than placed.**
-            The brand's pin field as a fine dot lattice along the leading edge —
-            behind the copy, at a strength measured so it cannot lift the local ground
-            under white text, which is what lets it coexist with the map on the
-            opposite edge. See `.gcc-header-lattice`. */}
-        <div aria-hidden="true" className="gcc-header-lattice" />
         <div className="relative mx-auto max-w-content px-6 md:px-12">
           <div className="flex flex-col gap-6 md:gap-7">{children}</div>
         </div>
@@ -196,12 +176,16 @@ export function ResultSurface({
           this page is `z-auto`, so a single positive step is enough and no other layer
           had to be given a number to make room for it. */}
       {editor ? (
-        <div className="relative z-20 mx-auto -mt-20 max-w-content px-6 md:-mt-24 md:px-12">
+        <div className="relative z-20 mx-auto -mt-14 max-w-content px-6 md:-mt-24 md:px-12">
           {/* Radius `xl` and a shadow, matching `.gcc-result-card` rather than the entry
               point's `lg` form card: this panel is the same width as the card beneath it
               and stacked directly above it, so a smaller radius on the upper of two
               concentric white boxes reads as a mistake. */}
-          <div className="rounded-xl bg-surface px-5 py-6 shadow-lg sm:px-8 md:px-10 md:py-8">
+          {/* `rounded-lg` on a phone and `rounded-xl` from `sm`, tracking
+              `.gcc-result-card`'s own phone step — the two are the same width and
+              stacked, so a different curve on the upper of two concentric boxes reads as
+              a mistake. The block in globals.css beside the card carries the reasoning. */}
+          <div className="rounded-lg bg-surface px-5 py-6 shadow-lg sm:rounded-xl sm:px-8 md:px-10 md:py-8">
             {editor}
           </div>
         </div>
@@ -218,7 +202,7 @@ export function ResultSurface({
       <div
         className={cn(
           "relative mx-auto max-w-content px-6 pb-10 md:px-12 md:pb-16",
-          editor ? "mt-6 md:mt-8" : "-mt-20 md:-mt-24",
+          editor ? "mt-6 md:mt-8" : "-mt-14 md:-mt-24",
         )}
       >
         <div className="gcc-result-card">
@@ -392,10 +376,15 @@ export function HeaderFinding({ children }: { children: React.ReactNode }) {
  * which put a font beside artwork inside one lockup and made the two halves answer to
  * different things: the drawn half is fixed and the typed half moves with whatever face
  * is loaded, so the day Moderat replaces the stand-in the lockup changes shape. The
- * substitution keeps the composition — the drawn name's caps are set to the display
- * face's own cap height, so it occupies the cap band the typed word occupied — and the
- * heading's accessible name is unchanged, the mark being out of the accessibility tree
- * with the word carried beside it.
+ * substitution keeps the composition — the drawn name occupies the cap band the typed
+ * word occupied — and the heading's accessible name is unchanged, the mark being out of
+ * the accessibility tree with the word carried beside it.
+ *
+ * **The product name takes an optical step DOWN here, and the gap is a word space. Both
+ * are this site's numbers rather than `AtlasWordmark`'s defaults** — see the note beside
+ * the mark. The short version: on this band the brand half is the full lockup, so ATLAS
+ * sits beside a circular mark rather than beside type, and at mathematical cap parity it
+ * reads as the larger of the two.
  *
  * **It is a CONTROL now — see `onHome`.**
  *
@@ -485,15 +474,40 @@ export function ProductIdentity({
       {/* **The product name is DRAWN here too, so the `h1` is two marks and no type.**
           It was the typed word, which meant half the lockup was a font and half was
           artwork — and the half that was a font changes with the face, so the two
-          would have drifted the moment Moderat replaced the stand-in. `AtlasWordmark`
-          carries the measurement that keeps them one object: its caps are set to the
-          display face's own cap height, which is within 1.6% of what the ANSR lockup's
-          wordmark sets beside it, so the substitution changed what the letters are
-          drawn from and nothing about the composition. `ms-3` is the gap the typed
-          word's `ps-3` was, moved from padding to margin because the flex item is the
-          mark itself now rather than a span around it — see `AtlasWordmark`, where
-          the wrapper is what put it 1.1px off the lockup. */}
-      <AtlasWordmark className="ms-3" />
+          would have drifted the moment Moderat replaced the stand-in. The mark is out
+          of the accessibility tree and carries the word beside it, so the heading's
+          name is unchanged. It is a flex item itself rather than a span around one —
+          see `AtlasWordmark`, where the wrapper is what put it 1.1px off the lockup.
+
+          **BOTH NUMBERS BELOW ARE THIS SITE'S, NOT THE COMPONENT'S DEFAULTS, and the
+          reason is that the ANSR half is a different object here than on the entry
+          point.** There the brand half is the wordmark alone in a 72px headline; here
+          it is the FULL lockup, so the same letters sit beside a circular mark two and
+          a half times their cap height. `AtlasWordmark`'s own size sets its caps to
+          the lockup's, measured, and at that size the two agree to 0.7% — which is
+          0.14px at 30px and therefore not what anyone is seeing. What they are seeing
+          is that ATLAS is the wider and heavier run of the two (its stem is 0.1417 of
+          its cap height against the wordmark's 0.137) and that the wordmark reads
+          reduced beside a mark that dwarfs it. So the product name takes an optical
+          step DOWN, and the step is not invented: the entry point's headline, which
+          the project owner reads as correct, draws ATLAS at 0.9641 of the ANSR caps
+          beside it. `0.717em` of box is that same ratio here — 0.682em of caps against
+          the lockup wordmark's 0.708em. Re-measure both marks' ink, never their path
+          coordinates, before changing either: `.impeccable` holds no probe, so the
+          method is the one `logo:crop` uses — rasterise and scan alpha, windowed in x
+          to the flat-topped letters, because the S overshoots the cap line and the
+          baseline by different amounts in both marks.
+
+          **The gap is a WORD SPACE, which is what separates the two halves on the
+          entry point.** It was `ms-3`: 12px, which is 0.4em at this heading's size
+          against the 0.266em of ink-to-ink space the headline sets, so the name sat
+          half again as far from the mark here as there. The display face's space
+          advance is 0.26em and the lockup's artboard carries 0.0095em of its own
+          trailing clearance past the registered symbol, so 0.25em of margin lands the
+          visible gap on the headline's. In `em` rather than a spacing step for the
+          reason every other number in this lockup is: the gap has to hold its
+          proportion across the 24/30px step, and a fixed 12px does not. */}
+      <AtlasWordmark className="ms-[0.25em] h-[0.717em]" />
     </>
   );
 
@@ -587,6 +601,11 @@ export function ProductIdentity({
  * white lands near 11:1 and the muted label near 4.8:1. `.gcc-context-pill` in
  * globals.css carries it, and it degrades across the whole radial gradient without
  * a per-placement measurement because it is a relative darken.
+ *
+ * **Below `md` the pill is read and not drawn, at the project owner's instruction.** It
+ * stays in the group and in the reading order — the media query on `.gcc-context-pill`
+ * is the sr-only treatment, not `display: none` — so what a phone loses is the drawing
+ * of a restatement, not the summary itself. The reasoning is beside the class.
  */
 function ContextPill({ label, value }: { label: string; value: string }) {
   return (
@@ -623,9 +642,11 @@ export interface ContextFact {
  * The row wraps rather than dividing into a grid of equal cells. Equal columns
  * forced a two-word revenue band to occupy the same width as a four-word industry
  * name, which is what made the group read as a form; pills sized to their own
- * content read as a summary. The control sits at the trailing end on desktop and
- * falls under the pills on a phone, where a trailing control would be off the edge
- * of a wrapped row.
+ * content read as a summary.
+ *
+ * **Below `md` the pills are read but not drawn, so the row draws one button** — see
+ * `ContextPill`. The markup is identical at every width and the group keeps all four
+ * members; only the pills' own class changes what is painted.
  *
  * A company pill is only rendered when the visitor typed a name, since that field
  * is optional on the form.

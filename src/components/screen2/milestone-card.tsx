@@ -156,7 +156,9 @@ export function ScaleMilestones({
             alt="ANSR"
             width={253}
             height={91}
-            className="h-7 w-auto shrink-0"
+            /* One step down on a phone, where the caption sits inside the rail's own 7%
+               inset and the whole card is a third of the width it was measured at. */
+            className="h-6 w-auto shrink-0 sm:h-7"
           />
         </span>
       ),

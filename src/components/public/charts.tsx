@@ -1738,23 +1738,49 @@ export function OrdinalGrid({
       <div
         className="min-w-0 overflow-x-auto"
         // Focusable and named: an unfocusable scroller is unreachable without a
-        // pointer, and this grid is wider than a phone.
+        // pointer, and this grid is wider than a tablet. Below `md` it reflows and
+        // there is nothing left to scroll — see `.gcc-rating-grid`.
         tabIndex={0}
         role="group"
         aria-labelledby={labelledBy}
       >
-        {/* `min-w-2xl` rather than `min-w-md`: a cell's marker group is 76px now, so
-            four columns plus their padding and the row header need about 610px before
-            anything wraps. Below that the scroller does its job. */}
-        <table className="w-full min-w-2xl border-collapse text-sm">
-          <thead>
-            <tr>
-              <th scope="col" className="pb-2 text-start">
+        {/* **The minimum and the cell padding both step down below `lg`, so a tablet
+            stops scrolling a column off too.** `min-w-2xl` plus `px-4` needs 672px and a
+            768px viewport gives this scroller 558 — measured, with the last column and
+            five of its cells past the edge and `scrollLeft` at 0. That is the same defect
+            as the phone one below, one breakpoint up, and it has a cheaper fix: a cell's
+            marker group is a fixed 76px, so the only elastic parts are the cell padding
+            and the row header. At `px-2` four cells take 368px and the row header keeps
+            190 of the 558 — enough for "Enterprise technology" on one line — so nothing
+            wraps and nothing scrolls anywhere in the `md`-to-`lg` range, where this
+            scroller is between 558 and 814px wide.
+
+            `min-w-lg` rather than `min-w-0` for the floor: below 512px the marker groups
+            themselves would start colliding, and that is the width the scroller is a real
+            answer for. It is never reached in practice — the reflow takes over at `md`.
+
+            From `lg` both values are what they were, so desktop is untouched.
+
+            **Below `md` the table reflows instead, and the explicit ARIA roles are what
+            make that safe.** `.gcc-rating-grid` sets `display: block` on the table's own
+            parts, which drops a browser's implicit table semantics — so the roles are
+            declared rather than inherited. On every width from `md` up they are exactly
+            what the elements already mean, so nothing is asserted here that is not true;
+            below `md` they are the only thing keeping a comparison grid a grid. The
+            reasoning for the reflow itself is in globals.css beside the class. */}
+        <table
+          role="table"
+          className="gcc-rating-grid w-full min-w-lg border-collapse text-sm lg:min-w-2xl"
+        >
+          <thead role="rowgroup">
+            <tr role="row">
+              <th role="columnheader" scope="col" className="pb-2 text-start">
                 <span className="sr-only">Capability</span>
               </th>
               {columns.map((column) => (
                 <th
                   key={column}
+                  role="columnheader"
                   scope="col"
                   className={cn(
                     // **Centred over its own marker group, not leading-aligned.** A
@@ -1763,7 +1789,7 @@ export function OrdinalGrid({
                     // segment rather than over the group and read as a label for it.
                     // One treatment for every column, including the visitor's own. See
                     // the note on `keyLabel` for why the emphasis came off.
-                    "px-4 pb-2 text-center text-xs font-semibold tracking-caps text-text-muted uppercase",
+                    "px-2 pb-2 text-center text-xs font-semibold tracking-caps text-text-muted uppercase lg:px-4",
                   )}
                 >
                   {column}
@@ -1771,12 +1797,13 @@ export function OrdinalGrid({
               ))}
             </tr>
           </thead>
-          <tbody>
+          <tbody role="rowgroup">
             {rows.map((row) => (
-              <tr key={row.label} className="border-t border-border-subtle">
+              <tr key={row.label} role="row" className="border-t border-border-subtle">
                 <th
+                  role="rowheader"
                   scope="row"
-                  className="py-3 pe-4 text-start align-middle text-sm font-medium text-text"
+                  className="py-3 pe-2 text-start align-middle text-sm font-medium text-text lg:pe-4"
                 >
                   <span className="flex items-center gap-2.5">
                     {row.icon ? (
@@ -1794,15 +1821,29 @@ export function OrdinalGrid({
                   return (
                     <td
                       key={columns[index]}
+                      role="cell"
                       // No fill on any column. The `surface-pale` band that ran the
                       // height of the subject column came off at ANSR's request.
-                      className="px-4 py-3 align-middle"
+                      className="px-2 py-3 align-middle lg:px-4"
                     >
                       {/* The accessible reading, and the only one that is not
                           positional. Hidden from the eye rather than from the
                           accessibility tree: the cell still reads "Data and AI,
                           Poland, Strong". */}
                       <span className="sr-only">{cell.rating}</span>
+                      {/* **The column's name, drawn inside the cell and only below `md`.**
+                          Once the table reflows there is no column above a cell to read
+                          its heading off, so the heading has to travel with it. Real
+                          markup rather than `content: attr()` for two reasons: the string
+                          is admin-editable and this is not the renderer deciding
+                          anything about it, and a pseudo-element's text lands in the
+                          accessibility tree in some browsers, where it would say
+                          "Poland" a second time after the `columnheader` already has.
+                          `aria-hidden` settles that — the heading row is still present,
+                          still associated, and merely visually hidden at this width. */}
+                      <span aria-hidden="true" className="gcc-rating-grid__column">
+                        {columns[index]}
+                      </span>
                       {/* The visible reading, decoded against the key above, and
                           centred under its own column heading. */}
                       <span
@@ -1918,7 +1959,30 @@ function RatingKey({
   keyLabel: string;
 }) {
   return (
-    <p className="flex flex-wrap items-center justify-end gap-x-4 gap-y-1.5 text-xs text-text-muted">
+    /**
+     * **An inline GRID of equal columns, not a wrapping flex row, and that is what
+     * makes it read as a scale.**
+     *
+     * It was `flex flex-wrap … justify-end` with a 16px inline gap, and the four steps
+     * are four labels of very different widths — "Moderate" against "Very strong" —
+     * each behind its own four-mark cluster. Even pitch was therefore impossible: the
+     * groups sat at four unrelated offsets, so the mark clusters did not line up with
+     * each other and nothing in the key lined up with anything above it. Wrapping made
+     * it worse rather than differently — a trailing-aligned last line under filled
+     * earlier ones is a ragged block by construction, which is the "here and there" of
+     * it.
+     *
+     * `1fr` columns in an INTRINSICALLY sized grid resolve to the widest column's
+     * max-content, so all four take the width "Very strong" needs and every cluster
+     * starts at the same offset inside its own column. The grid is only as wide as it
+     * needs to be, so `ms-auto` keeps it at the trailing end where ANSR put it.
+     *
+     * **Two columns below `sm`, four from it.** Four equal columns at the widest
+     * label's width do not fit a 320px card, and letting them wrap is what was being
+     * fixed; 2x2 is the only arrangement of four that is regular at both ends, which
+     * is the argument the snapshot's own cells are laid out on.
+     */
+    <p className="ms-auto grid w-fit grid-cols-2 items-center gap-x-4 gap-y-1.5 text-xs text-text-muted sm:grid-cols-4">
       <span className="sr-only">{keyLabel}: </span>
       {steps.map((step, stepIndex) => (
         <span key={step} className="inline-flex items-center gap-1.5">
@@ -2293,8 +2357,26 @@ export function RangeBenchmark({
         ) : null}
       </p>
 
-      {/* Everything below is a second reading of the sentence above, so the whole
-          block is hidden: a screen reader has already been given "7 – 70 days".
+      {/* **THE RAIL AND THE TWO END LABELS ARE ONE GROUP, 4px apart, and that is what
+          the labels were missing.** They used to be a third sibling of this flex
+          column, so `gap-6` put them 28px under the endpoint figures — and the caller
+          sets its own note 16px below them. Two 12px muted lines, the nearer of them
+          the note, is the note's own first line by every proximity reading available:
+          the pair floated in the middle of the card naming nothing, which is what
+          "too far from where it is supposed to be" was on a phone, where the card is
+          narrow enough that the two labels also meet in the middle and read as one
+          sentence.
+
+          So each label is now its own figure's second line — 4px, the same step
+          `.gcc-index-rail__figure` puts between a mark's name and its number — and the
+          16px to the note is the larger gap rather than the smaller one. Grouped at
+          EVERY width, not below `sm` alone: the ambiguity is a ratio between two gaps
+          and the desktop card carries the same two gaps. */}
+      <div className="flex flex-col gap-1">
+        {/* Everything in here is a second reading of the sentence above, so it is
+            hidden: a screen reader has already been given "7 – 70 days". The end
+            labels below are NOT, and that is why they sit outside this element rather
+            than inside the group's first child.
 
           **The 28px inset is GONE, at ANSR's request, and the endpoint figures moved to
           pay for it.** The rail used to sit inside `px-7` because both endpoint figures
@@ -2310,84 +2392,132 @@ export function RangeBenchmark({
           origin `0` already made at the leading end, and for the same reason. The two
           figures now bracket the rail exactly as the `0` and the heading do, and nothing
           can overhang. */}
-      <div aria-hidden="true">
-        <div className="relative">
-          {/* The rail. Grey for the run-up, teal for the span between the two
-              choosable positions. */}
-          <div className="relative h-4">
-            <div className="absolute inset-x-0 top-1/2 h-0.5 -translate-y-1/2 bg-border-strong" />
-            <div
-              className="absolute top-1/2 end-0 h-0.5 -translate-y-1/2 bg-accent-teal"
-              style={{ insetInlineStart: `${offset * 100}%` }}
-            />
-            {/* The origin, as a tick on the rail rather than a dot: it is where the
-                measurement starts, not a position anybody hires at. */}
-            <div className="absolute inset-y-1 start-0 w-0.5 bg-border-strong" />
-            {/* Low: hollow, because it is the cheaper route and the ring reads as
-                "start here". Filled would make the two ends look ordered by value. */}
-            <span
-              className="absolute top-1/2 size-3.5 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-accent-teal bg-surface"
-              style={{ insetInlineStart: `${offset * 100}%` }}
-            />
-            {/* High: solid, and flush inside the rail's end rather than centred on
-                it, so it cannot overhang a card that has no horizontal slack. */}
-            <span className="absolute top-1/2 end-0 size-3.5 -translate-y-1/2 rounded-full bg-accent-teal" />
-          </div>
+        <div aria-hidden="true">
+          <div className="relative">
+            {/* The rail. Grey for the run-up, teal for the span between the two
+                choosable positions. */}
+            <div className="relative h-4">
+              <div className="absolute inset-x-0 top-1/2 h-0.5 -translate-y-1/2 bg-border-strong" />
+              <div
+                className="absolute top-1/2 end-0 h-0.5 -translate-y-1/2 bg-accent-teal"
+                style={{ insetInlineStart: `${offset * 100}%` }}
+              />
+              {/* The origin, as a tick on the rail rather than a dot: it is where the
+                  measurement starts, not a position anybody hires at. */}
+              <div className="absolute inset-y-1 start-0 w-0.5 bg-border-strong" />
+              {/* Low: hollow, because it is the cheaper route and the ring reads as
+                  "start here". Filled would make the two ends look ordered by value. */}
+              <span
+                className="absolute top-1/2 size-3.5 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-accent-teal bg-surface"
+                style={{ insetInlineStart: `${offset * 100}%` }}
+              />
+              {/* High: solid, and flush inside the rail's end rather than centred on
+                  it, so it cannot overhang a card that has no horizontal slack. */}
+              <span className="absolute top-1/2 end-0 size-3.5 -translate-y-1/2 rounded-full bg-accent-teal" />
+            </div>
 
-          {/* The figures, each under its own mark. `whitespace-nowrap` because a
-              wrapped endpoint figure would put its unit under its own number and
-              read as two lines of a caption. */}
-          <div className="relative mt-2 h-6">
-            {originLabel ? (
-              // Flush to the rail's start rather than centred on it. Centred, it
-              // straddles the origin and eats into the low figure's clearance below —
-              // and there is nothing to the left of zero for it to be centred over.
-              <span className="absolute start-0 text-xs text-text-muted tabular-nums">
-                {originLabel}
+            {/* The figures, each under its own mark. `whitespace-nowrap` because a
+                wrapped endpoint figure would put its unit under its own number and
+                read as two lines of a caption. */}
+            {/* **`--gcc-range-floor` is the clearance the low figure keeps from the origin
+                label, and it is ZERO below `sm` because the origin label is not drawn
+                there.** See both notes below. Declared here rather than in globals.css
+                because it is read by exactly one inline style, two elements down. */}
+            <div className="relative mt-2 h-6 [--gcc-range-floor:0rem] sm:[--gcc-range-floor:3rem]">
+              {originLabel ? (
+                // Flush to the rail's start rather than centred on it. Centred, it
+                // straddles the origin and eats into the low figure's clearance below —
+                // and there is nothing to the left of zero for it to be centred over.
+                /**
+                 * **NOT DRAWN BELOW `sm`, and the low figure's alignment is what it was
+                 * costing.** The low endpoint of the first-hire card sits at 10% of the
+                 * rail, which is 29px at 390 — so the `0` and "7 days" overlap, and the
+                 * floor below pushes the figure to 48px to clear it. The figure then sits
+                 * 19px to the trailing side of the mark it belongs to, which on a chart
+                 * whose whole construction is "the number is under its own mark" is the one
+                 * misplacement that matters. That is the "not placed right" reading, and it
+                 * is a collision rather than a type size.
+                 *
+                 * What the `0` buys is that the run-up before the low endpoint is legible as
+                 * elapsed time. What it costs on a phone is the low figure's position. The
+                 * TICK on the rail is still drawn at both widths, so the rail still visibly
+                 * starts at an origin; only the numeral goes. Scoped to the phone because
+                 * from `sm` the rail is long enough for both to be right — and the zero-tick
+                 * rule a cost index depends on is about the tick, which is untouched.
+                 */
+                <span className="absolute start-0 hidden text-xs text-text-muted tabular-nums sm:block">
+                  {originLabel}
+                </span>
+              ) : null}
+              <span
+                /**
+                 * **Centred on its own mark, except where that would collide with the
+                 * origin.** A low endpoint at 10% of a 222px rail — the first-hire card at
+                 * 390 — puts this label's leading edge behind the `0`, and two numerals
+                 * overlapping is the one failure that makes a chart unreadable rather than
+                 * merely tight. `max()` floors the centre at 3rem, so the label shifts a
+                 * few pixels off its dot in exactly the case where it had to move and sits
+                 * on it everywhere else. A small misalignment against an illegible
+                 * overlap.
+                 *
+                 * **The floor is ZERO below `sm`, where there is no `0` to collide with**, so
+                 * the figure sits exactly on its own mark — which is the phone width the
+                 * clash was measured at and the width the compromise was worst on. See the
+                 * origin label above.
+                 */
+                className="absolute -translate-x-1/2 text-sm font-bold whitespace-nowrap text-text tabular-nums"
+                style={{
+                  insetInlineStart: `max(${offset * 100}%, var(--gcc-range-floor))`,
+                }}
+              >
+                {low}
+                {unit ? (
+                  <span className="ps-1 font-regular text-text-muted">{unit}</span>
+                ) : null}
               </span>
-            ) : null}
-            <span
-              /**
-               * **Centred on its own mark, except where that would collide with the
-               * origin.** A low endpoint at 10% of a 222px rail — the first-hire card at
-               * 390 — puts this label's leading edge behind the `0`, and two numerals
-               * overlapping is the one failure that makes a chart unreadable rather than
-               * merely tight. `max()` floors the centre at 3rem, so the label shifts a
-               * few pixels off its dot in exactly the case where it had to move and sits
-               * on it everywhere else. A small misalignment against an illegible
-               * overlap.
-               */
-              className="absolute -translate-x-1/2 text-sm font-bold whitespace-nowrap text-text tabular-nums"
-              style={{ insetInlineStart: `max(${offset * 100}%, 3rem)` }}
-            >
-              {low}
-              {unit ? (
-                <span className="ps-1 font-regular text-text-muted">{unit}</span>
-              ) : null}
-            </span>
-            {/* Flush to the rail's end rather than centred on it, which is what let the
-                enclosing 28px inset go. The high mark is itself flush INSIDE the rail's
-                end, so the figure's trailing edge and the mark's trailing edge line up —
-                the alignment reads the same as centring did, and it costs no overhang. */}
-            <span className="absolute end-0 text-sm font-bold whitespace-nowrap text-text tabular-nums">
-              {high}
-              {unit ? (
-                <span className="ps-1 font-regular text-text-muted">{unit}</span>
-              ) : null}
-            </span>
+              {/* Flush to the rail's end rather than centred on it, which is what let the
+                  enclosing 28px inset go. The high mark is itself flush INSIDE the rail's
+                  end, so the figure's trailing edge and the mark's trailing edge line up —
+                  the alignment reads the same as centring did, and it costs no overhang. */}
+              <span className="absolute end-0 text-sm font-bold whitespace-nowrap text-text tabular-nums">
+                {high}
+                {unit ? (
+                  <span className="ps-1 font-regular text-text-muted">{unit}</span>
+                ) : null}
+              </span>
+            </div>
           </div>
         </div>
-      </div>
 
-      {lowLabel !== null || highLabel !== null ? (
-        /* A pair, deliberately not a `<ul>`: a card is already a landmark, and list
-           semantics inside it would make "count the items on this tab" mean
-           something else. Same reasoning as `RangeBar`'s own label pair. */
-        <div className="grid grid-cols-1 gap-3 text-xs text-text-muted sm:grid-cols-2">
-          {lowLabel !== null ? <p>{lowLabel}</p> : <span />}
-          {highLabel !== null ? <p className="sm:text-end">{highLabel}</p> : null}
-        </div>
-      ) : null}
+        {lowLabel !== null || highLabel !== null ? (
+          /* A pair, deliberately not a `<ul>`: a card is already a landmark, and list
+             semantics inside it would make "count the items on this tab" mean
+             something else. Same reasoning as `RangeBar`'s own label pair. */
+          /* **TWO columns at every width, with the trailing label end-aligned at every
+             width, and the phone case is the reason this changed.** It was one column below
+             `sm`, which stacked "Through EOR model" and "Through own entity" at the leading
+             edge, one under the other, in the order they appear in the DOM — so on a phone
+             the two operating models sat together on one side of a card whose whole subject
+             is that they are at OPPOSITE ends of the rail above them. The labels name the
+             two endpoints; they have to bracket the rail the way the endpoint figures do,
+             or they are a two-item list of unrelated notes.
+
+             At 375 a column is about 120px and the longer of the two labels is roughly 100px
+             of ink at 12px, so it fits on one line and wraps to two at 320 — which costs
+             nothing, because each label wraps inside its own end of the rail.
+
+             **MEDIUM weight, which is the other half of the grouping fix above.** At
+             `text-xs` in `--ansr-text-muted` these were the note's own treatment exactly,
+             so on a phone the pair read as the note's first line whatever the gaps did.
+             Medium is what `.gcc-index-rail__label` sets on the same thing — a name for a
+             mark, at caption size — and it separates a label from prose without spending an
+             ink step the note would then have to answer. */
+          <div className="grid grid-cols-2 gap-3 text-xs font-medium text-text-muted">
+            {lowLabel !== null ? <p>{lowLabel}</p> : <span />}
+            {highLabel !== null ? <p className="text-end">{highLabel}</p> : null}
+          </div>
+        ) : null}
+      </div>
     </div>
   );
 }
@@ -2414,13 +2544,16 @@ export function RangeBenchmark({
    an admin-editable string, which is banned outright on this screen — a renamed entry
    would silently redraw the chart. The unit belongs once, as the card's subtitle.
 
-   **The layout is a CSS class, not two DOM trees.** Below `sm` a 246px rail puts the first two
-   circles 41px apart, which no label fits between; the honest fallback is a vertical
-   list. Rendering both and hiding one would put every milestone in the accessibility
-   tree twice, so instead the items carry a `--gcc-at` custom property and
-   `.gcc-milestones` positions them absolutely only where there is room. One tree, one
-   reading, and the rail is `aria-hidden` decoration that simply does not exist below
-   the breakpoint.
+   **The layout is a CSS class, not two DOM trees, and below `sm` the rail turns
+   VERTICAL.** A 246px rail puts the first two circles 41px apart, which no label fits
+   between, so the chart cannot be drawn across the card at that width. It is drawn down
+   it instead: the same line, the same rings on it, and the same `--gcc-at` shares read as
+   vertical offsets, so the spacing stays proportional to the stored figures and the two
+   tracks stay comparable against one axis length. What was there before was a plain list
+   of rows with no line at all — every figure stated, and nothing saying the four were
+   positions on one progression. Rendering both and hiding one would put every milestone
+   in the accessibility tree twice, so the items carry `--gcc-at` and `.gcc-milestones`
+   places them; the rail and the rings are `aria-hidden` at both widths.
 
    **It draws MORE THAN ONE rail now, and the second one is a comparison against the
    first.** The component takes a list of tracks rather than a list of points, and every
@@ -2475,7 +2608,15 @@ export function MilestoneTrack({ tracks }: { tracks: readonly MilestoneTrackSpec
     // gaps were near enough equal that the second caption read as a note on the first
     // chart. Four times the inset is the separation ANSR asked for, and it is the same
     // grouping rule every stacked block on these screens follows.
-    <div className="flex flex-col gap-8 px-7">
+    // **On a phone the inset is a PERCENTAGE, because what it has to absorb is one.** The
+    // rail is horizontal at every width now, so the overhang exists at every width — and
+    // below `sm` the item cap is 14% of the rail rather than 3.5rem, so half an item is
+    // 6% of the wrapper and no fixed inset can be right at both 320 and 430. 7% covers it
+    // with a point to spare at every phone width, and it shrinks with the card instead of
+    // eating a fifth of a 248px measure the way 28px would. From `sm` the cap is a length
+    // again and so is this. The captions take the inset too, exactly as they already do
+    // from `sm`.
+    <div className="flex flex-col gap-8 px-[7%] sm:px-7">
       {tracks.map((track, index) => (
         <div key={index} className="gcc-milestone-track flex flex-col">
           {/* Above its own rail, at the caption step, in the same ink on every track —
@@ -2509,7 +2650,12 @@ export function MilestoneTrack({ tracks }: { tracks: readonly MilestoneTrackSpec
                   {point.label}
                 </dt>
                 <span aria-hidden="true" className="gcc-milestones__dot" />
-                <dd className="gcc-milestones__figure text-lg font-bold tracking-display text-text tabular-nums">
+                {/* 16px below `sm`, against the 12px waypoint name above the ring: the
+                    duration is still the larger of the pair, which is the ordering that
+                    matters, and at 18px in a column capped at 14% of a 208px rail it was
+                    the widest thing in an item whose name has to wrap inside the same
+                    cap. `--gcc-milestone-figure-gap` steps with it. */}
+                <dd className="gcc-milestones__figure text-base font-bold tracking-display text-text tabular-nums sm:text-lg">
                   {point.figure}
                 </dd>
               </div>

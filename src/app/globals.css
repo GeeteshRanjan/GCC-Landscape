@@ -420,11 +420,18 @@
   inset-block-start: 0;
   /* **The card's overlap, not the hero's padding.** The visible band is the hero
      minus the strip the form card is drawn over, and that strip is the card's own
-     negative top margin in `peer-view.tsx` — `-mt-32` at the only width this map
-     renders at. So the map's bottom edge lands exactly on the card's top edge and
+     negative top margin in `peer-view.tsx` — `-mt-32` at `lg`, which is what this
+     value is. So the map's bottom edge lands exactly on the card's top edge and
      the graphic is centred in what a visitor can actually see. Sizing it off the
      padding instead stopped the map ~50px short of the card and left the brightest
-     third of the band empty, which read as a graphic crammed into a corner. */
+     third of the band empty, which read as a graphic crammed into a corner.
+
+     **The card's pull is a different number at each of the three breakpoints, so this
+     one is `lg`'s and the two blocks below carry their own.** It was here alone for a
+     while, which is exactly how the phone band came to end in 48px of empty gradient:
+     the value was right at the width it was read at and silently wrong at the other
+     two. `--ansr-space-16` against the phone's `-mt-16`, `--ansr-space-28` against the
+     tablet's `-mt-28`, and this against `lg`'s `-mt-32`. */
   inset-block-end: var(--ansr-space-32);
   /* **Both numbers moved together, and neither does only one thing.**
      `inline-size` is the zoom: at 82% of the hero the frame reads ~5.4px per degree
@@ -581,51 +588,134 @@
   -webkit-mask-composite: source-in;
 }
 
-/* **Below `lg` the map is ambient TEXTURE, not a subject, and this block is the
-   whole difference.** At these widths the headline runs nearly the full band and the
-   dot pitch is tight enough that India merges into a blob, so the two cannot sit
-   beside each other the way they do on desktop. Instead the field is dimmed hard and
-   held to the LOWER band, below the copy, so it reads as a faint texture the eye
-   registers without the copy ever competing with it.
+/* **Below `lg` the map is a CLOSER CROP of the same graphic, not a shrunken copy of
+   the desktop framing — and the crop is the whole fix.** The pass this replaces held
+   the map at `116%` and dimmed it to 0.42 on the reasoning that India merges into a
+   blob at phone width, so the graphic had to become anonymous texture. The blob was
+   real and the diagnosis was wrong: it is a DOT-TO-PITCH failure, not a size one.
 
-   Three things do that, and each has a reason:
+   The geometry is 1° per user unit on the world layer and 0.75° on India, and the dot
+   radius is set in DEVICE pixels by `non-scaling-stroke` — so pitch scales with the
+   frame and the dot does not. What the two files hold between them is a RATIO, ~0.37
+   on the world layer and ~0.49 on India. At `116%` on a 412px band the frame resolved
+   to ~2.2 device pixels per degree, which put India's pitch at 1.64px under a 1.5px
+   dot: a ratio of 0.91, which is not a dot grid at all, it is a filled shape with a
+   ragged edge. Dimming a filled shape produces a smudge, which is what was shipping.
 
-     - **Opacity 0.42**, half the desktop 0.86. This is the contrast lever:
-       against `--ansr-teal-900` an orange India dot composites to a dark value even
-       at full India strength, so white copy clears the 4.5:1 body floor over the
-       field even where the two meet. The desktop mask cannot be trusted to keep them
-       apart here, so the opacity carries it instead.
-     - **A VERTICAL fade replaces the desktop leading fade.** The desktop mask hides
-       the map on the LEFT, which is where a left-aligned column of copy sits; here
-       the copy spans the band, so the map is hidden across the TOP instead and
-       arrives in the lower third. India's horizontal placement stops being
-       load-bearing — the graphic is a field, not a map to be read — so the vignette
-       is dropped and the two edge fades are kept.
-     - **A tighter crop** (`116%` / `-8%`) so the blob is a little larger and sits
-       toward the trailing-lower corner rather than dead centre.
+   So the frame zooms IN rather than out. At `240%` the same band resolves to ~4.5
+   device pixels per degree, which puts India's pitch at 3.4px and the world's at
+   4.5px — ratios of 0.44 and 0.33, inside the range the graphic was authored for. The
+   dots separate, India resolves as its own outline rather than as a lozenge, and it
+   arrives ~130px across instead of ~60px. It is legible because it is drawn correctly,
+   not because it is loud.
 
-   The dot geometry, inks and entrance are unchanged; only the framing, opacity and
-   mask differ. Reduced-contrast users still lose the whole thing to the
-   `prefers-contrast` rule below. */
+   **The frame is a fixed LENGTH here where desktop uses a percentage, and that is what
+   makes one rule cover 320px to 1023px.** A percentage zoom is a different zoom at
+   every width, so it can only be right at the width it was read at: `240%` puts India
+   at 125px on a 412px band and at 195px on a 600px one, and the second is taller than
+   the band it sits in — measured, with India's top edge cut off by the hero. Two
+   percentage blocks only move the seam. At `56rem` the frame resolves to ~4.1 device
+   pixels per degree at EVERY width below `lg`, so India arrives ~119px across on a
+   320px phone and on a 1023px tablet alike, and only the crop window around it
+   changes.
+
+   **The trailing inset then has to be a calc, because a fixed frame does not track the
+   band.** The box is pinned by its trailing edge and India sits at a fixed 0.701 across
+   the generated window, so its centre lands at `band − inset − 0.299 × frame`. Solving
+   that for 72% of the band gives `28% − 0.299 × 56rem`, which is the value below. The
+   two are one expression: change the frame and the constant in the inset changes with
+   it, or India slides.
+
+   72% rather than desktop's 75% for one reason — at this crop the box's leading edge is
+   far outside the viewport and its trailing edge is only just outside, so the vignette
+   needs a little more room on the trailing side than the desktop framing leaves it.
+
+   **The bottom inset is the card's own pull, per breakpoint, and this is where the
+   band's dead strip came from.** The base rule sets `--ansr-space-32`, which is the
+   `lg` card's `-mt-32` — correct at one breakpoint and wrong at the other two, so on a
+   phone the map stopped 48px above the card and the band's last strip was empty
+   gradient. Each block now names its own: `--ansr-space-12` against the phone card's
+   `-mt-12`, `--ansr-space-28` against the tablet's `-mt-28`.
+
+   **Contrast is measured off the render rather than argued, because on a phone the copy
+   spans the band and there is no column to hide the graphic in.** The whole ground under
+   the headline and the lead was sampled pixel by pixel with the ink hidden: the worst
+   value against white is 5.9:1 at 375, 390 and 768, and the pixel that produces it is
+   the band's own gradient at its bright end rather than any dot in the field. So the
+   graphic costs nothing against the 4.5:1 body floor, and it is the composition that
+   caps the opacity at 0.5 rather than the ink — past about 0.6 the field starts reading
+   as a second surface behind the copy instead of as ground.
+
+   Reduced-contrast users still lose the whole thing to the `prefers-contrast` rule
+   below. */
 @media (max-width: 63.999rem) {
   .gcc-hero-map {
-    inline-size: 116%;
-    inset-inline-end: -8%;
-    opacity: 0.42;
+    /* The phone card's `-mt-16` in `peer-view.tsx`. The tablet's own pull overrides
+       this in the block below; see the note above. */
+    inset-block-end: var(--ansr-space-16);
+    inline-size: 56rem;
+    inset-inline-end: calc(28% - 16.744rem);
+    opacity: 0.5;
     mask-image:
-      /* Hidden across the copy at the top, arriving in the lower band. */
+      /* **The focus vignette, which the previous pass dropped and which is what makes
+         India the subject.** Same construction as desktop and centred on India's own
+         position in the box — 70% across, just above the vertical centre, because
+         `slice` centres the crop on the generated window's mid-latitude and India sits
+         a little above it. The radii are read off India's own footprint in this frame:
+         ~13% of the box wide and ~49% of it tall, so an ellipse half again as large in
+         each axis covers the subcontinent and its immediate neighbours.
+
+         It bottoms out rather than running to transparent, for the reason the desktop
+         note gives: run to nothing and India is an orange shape on a gradient with no
+         map around it, which is worse than no graphic. */
+      radial-gradient(
+        ellipse 22% 60% at 70% 47%,
+        var(--ansr-black) 0%,
+        var(--ansr-black) 22%,
+        color-mix(in oklab, var(--ansr-black) 66%, transparent) 44%,
+        color-mix(in oklab, var(--ansr-black) 34%, transparent) 70%,
+        color-mix(in oklab, var(--ansr-black) 16%, transparent) 100%
+      ),
+      /* **The block-edge fade, and the top stop is a contrast bound rather than a
+         taste one.** The headline's first line carries the ANSR lockup in
+         `--ansr-action`, and India is drawn in the same orange: an orange field
+         arriving behind an orange wordmark takes the one piece of copy on the band
+         that is not white and puts it on a ground of its own colour. Holding the map
+         off the top fifth keeps the mark on the band's own gradient. The bottom stop
+         runs to the card's edge, which is where the graphic now ends. */
       linear-gradient(
         to bottom,
         transparent 0%,
-        transparent 42%,
-        var(--ansr-black) 70%,
-        var(--ansr-black) 86%,
+        transparent 8%,
+        var(--ansr-black) 26%,
+        var(--ansr-black) 92%,
         transparent 100%
       ),
-      /* The short trailing-edge fade, so the slice does not end in a vertical rule. */
-      linear-gradient(to left, transparent 0%, var(--ansr-black) 14%);
+      /* Short fades at both inline edges, so the slice never ends in a vertical rule.
+         **The leading one is not redundant, which is the thing a phone-only reading
+         misses.** A fixed 56rem frame is wider than the viewport up to about 830px and
+         narrower above it, so the box's own leading edge is off-screen on every phone
+         and INSIDE the band on a large tablet — measured at x=108 on a 1023px viewport.
+         Without this the field would meet the band on a hard 90px-tall cut there, which
+         is the one thing the four desktop edge fades exist to prevent. */
+      linear-gradient(to right, transparent 0%, var(--ansr-black) 10%),
+      linear-gradient(to left, transparent 0%, var(--ansr-black) 12%);
     mask-composite: intersect;
     -webkit-mask-composite: source-in;
+  }
+}
+
+/* **A tablet takes the same frame and differs in exactly two values.** The crop, the
+   position and the mask are all the block above — writing a second mask here would have
+   been the same five gradients restated, which is how two placements start drifting.
+   What genuinely differs is the card it has to meet and how much band is left over
+   after the copy: the pull is `-mt-28` rather than `-mt-12`, and the copy is capped
+   well inside a 768px band, so the field can sit a step further forward without ever
+   reaching the ink. */
+@media (min-width: 48rem) and (max-width: 63.999rem) {
+  .gcc-hero-map {
+    inset-block-end: var(--ansr-space-28);
+    opacity: 0.56;
   }
 }
 
@@ -1485,6 +1575,33 @@
   color: var(--ansr-accent);
 }
 
+/* The run of a row's label that the filter actually matched.
+   **A fill plus a weight step, and it needs both because of what it has to survive.** A
+   row can be plain, active (a 45% mint wash), branch-open (75%) or selected (Medium in
+   the accent) — so weight alone is nearly invisible on the selected row, which is already
+   Medium, and a light fill alone disappears into the two washes. `teal-200` is two steps
+   deeper than the darker of those washes, so the mark reads on all four states.
+   **Deliberately not warm.** Orange has three roles here and a SURFACE is not one of
+   them, so the obvious highlight colour is unavailable and the mark stays in the teal
+   family — which is also what keeps it from competing with the figures elsewhere.
+   `inherit` on the colour, so a selected row's accent ink carries into the mark rather
+   than resetting to black: black on `teal-200` is ~13:1 and the accent on it ~7:1, so
+   either way it clears AA at 14px. The default UA yellow is overridden outright.
+   Padding is inline-only and there is no radius: a marked run sits INSIDE a 26px row, and
+   block padding would push the row's own height around as a visitor types. */
+.gcc-select-mark {
+  background-color: var(--ansr-teal-200);
+  color: inherit;
+  font-weight: var(--ansr-weight-medium);
+  padding-inline: var(--ansr-space-1);
+  /* 2px, the smallest step — a mark inside a 4px-radius row wants a curve one step
+     under its container's, not the same one. */
+  border-radius: var(--ansr-radius-sm);
+  /* The 4px inline padding must not push a label wider than its column and force a
+     wrap that the unmarked row would not have. */
+  margin-inline: calc(var(--ansr-space-1) * -1);
+}
+
 /* The row whose branch is open in the second pane. A 2px accent rule on its leading
    edge, which is the only thing on screen connecting the pane beside it back to the
    row that opened it — the two boxes are otherwise unrelated rectangles. Drawn as a
@@ -1968,104 +2085,6 @@ select.gcc-field {
 }
 
 /* --------------------------------------------------------------------------
-   Hero diagonal
-
-   `assets/brand/motif/pin-diagonal.svg` recoloured onto three light ramp steps and
-   trimmed. Reproduce with `brand_asset.py recolor ... --map "<a>=<b>,..."` followed
-   by `trim`, mapping the asset's three source darks onto teal-200, teal-300 and
-   teal-100 respectively; run `brand_asset.py stat` on the source for the three
-   values, and read the targets out of tokens.css. They are deliberately not
-   repeated here — brand_lint.py is right to refuse a literal hex in source even
-   inside a comment.
-
-   Three steps rather than one flat tint so the streaks keep their internal depth
-   instead of flattening into a single silhouette. `pin-diagonal` reads as motion
-   and direction, which is what a hero wants; the arc family it replaces here reads
-   as horizon, which is quieter than an entry point needs. The manifest's warning
-   about chart-like motifs does not apply on a header — there are no bars on it.
-   -------------------------------------------------------------------------- */
-.gcc-hero-diagonal {
-  /* Oversized and anchored past the trailing edge, so the streaks read as a slice
-     of something larger crossing the band rather than a graphic parked in it.
-     `overflow-hidden` on the header does the cropping — better than a crop file,
-     per the brand skill's own table. */
-  inset-block-start: -12%;
-  inset-inline-end: -8%;
-  inline-size: 66%;
-
-  /* Fades away from its anchor so it has visibly stopped before the headline
-     begins. A mask reads only the alpha channel, so the colour is machinery — but
-     it still comes from a token, because brand_lint.py is right to refuse a
-     literal hex even inside a mask. */
-  mask-image: linear-gradient(to left, var(--ansr-black), transparent 78%);
-}
-
-/* --------------------------------------------------------------------------
-   Header horizon wash
-
-   `assets/brand/motif/arc-dome.svg` recoloured to --ansr-teal-600 and trimmed
-   via scripts/brand_asset.py, then held back with the .ansr-motif posture and
-   faded toward the top so it reads as a horizon under the headline rather than
-   a graphic competing with it. Never placed unmodified — see
-   .kiro/skills/ansr-brand-assets/SKILL.md.
-   -------------------------------------------------------------------------- */
-.gcc-horizon {
-  /* Anchored to the trailing bottom corner rather than stretched across the
-     header. Two reasons, both learned by looking at it: stretched wide enough to
-     bleed, the only part of the dome inside a header's height is its flattest
-     slice, which reads as diagonal wallpaper rather than as arcs; and the
-     headline is leading-aligned and capped at the reading measure, so the
-     trailing side is the empty ground the ornament should occupy. */
-  inset-block-end: 0;
-  inset-inline-end: 0;
-  inline-size: 62%;
-  /* Fades away from its anchor, so density sits where there is no text and the
-     motif has visibly stopped before the headline begins.
-
-     A mask only reads the alpha channel, so the colour here is machinery rather
-     than a design choice — but it still comes from a token, because
-     brand_lint.py correctly refuses to distinguish a mask's hex from a real one. */
-  mask-image: linear-gradient(
-    to top left,
-    var(--ansr-black),
-    transparent 72%
-  );
-}
-
-/* --------------------------------------------------------------------------
-   Screen 2 — ring quarter
-
-   `assets/brand/motif/arc-quarter.svg` recoloured to the brand teal and trimmed
-   via scripts/brand_asset.py, then held back with the .ansr-motif posture. Same
-   arc family as Screen 1's horizon, so the two screens read as one system, but a
-   quarter rather than a dome — a measured segment rather than an open horizon.
-   Never placed unmodified — see .kiro/skills/ansr-brand-assets/SKILL.md.
-   -------------------------------------------------------------------------- */
-.gcc-rings {
-  /* The asset's concentric origin sits at its own leading top and the rings sweep
-     down and across, so anchoring the box to the trailing edge puts the empty
-     centre where the leading-aligned headline is and the ring density in the
-     ground beside it. Taller than the header on purpose: the rings then read as a
-     slice of something larger rather than as a complete graphic parked in a
-     corner. */
-  inset-block-start: 0;
-  inset-inline-end: 0;
-  inline-size: 48%;
-
-  /* Fades away from the trailing edge, so the motif has visibly stopped before
-     the headline begins.
-
-     A mask only reads the alpha channel, so the colour here is machinery rather
-     than a design choice — but it still comes from a token, because
-     brand_lint.py correctly refuses to distinguish a mask's hex from a real one. */
-  mask-image: linear-gradient(
-    to bottom left,
-    var(--ansr-black),
-    transparent 68%
-  );
-}
-
-/* --------------------------------------------------------------------------
    The close — a blurred field with the ask floating on it
 
    The paywall shape: a band of structured-looking content pushed out of focus,
@@ -2256,7 +2275,7 @@ select.gcc-field {
 
 /* A blurred layer is a transparency effect and a texture under text, so it goes
    when the visitor has asked for less of the first or more of the second — the same
-   call `.ansr-motif`, `.gcc-hero-map` and `.gcc-header-lattice` all make. The band
+   call `.ansr-motif`, `.gcc-hero-map` and `.gcc-header-map` all make. The band
    keeps its ground, its heading, its line and its button; what is lost is only the
    suggestion of depth behind them. */
 @media (prefers-reduced-transparency: reduce), (prefers-contrast: more) {
@@ -2329,6 +2348,45 @@ select.gcc-field {
   /* No hover state and no transition. They are not controls. */
 }
 
+/* **On a phone the pills are read but not drawn, at the project owner's instruction —
+   and being READ is the part that keeps this honest.**
+
+   Four answers wrapped to three or four lines at 390px, which put roughly 90px of the
+   one band a phone visitor meets before any evidence into a restatement of what they
+   had just typed. The four values are the least surprising content on the screen: the
+   visitor supplied them thirty seconds earlier, and the editor one press away holds
+   them verbatim in the controls they were entered with. So the eye gets the finding and
+   one button, and the summary is what the button is for.
+
+   **The sr-only treatment rather than `display: none`**, which is the difference between
+   hiding a restatement and deleting a group. `role="group"` with `aria-label="Your
+   profile, as you entered it"` still has its four members, so a reader working through
+   the band by role hears the answers exactly as it does at every other width. Nothing is
+   lost; only the drawing is.
+
+   **It is done here rather than with `sr-only md:not-sr-only` on the element**, and that
+   is not a preference. `not-sr-only` sets `padding: 0`, and it lands in the same layer as
+   the `px-3.5 py-1.5` the pill needs back at `md` — so which of the two wins is decided
+   by generated order rather than by anything a reader of the markup can see. One media
+   query on the class the pill already carries has no such ambiguity.
+
+   Absolute positioning also takes each pill out of the flex flow, so the row's `gap-x-2`
+   has nothing left to space and the button sits at the band's leading edge rather than
+   after four gaps' worth of nothing. */
+@media (max-width: 47.999rem) {
+  .gcc-context-pill {
+    position: absolute;
+    inline-size: 1px;
+    block-size: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+    border-width: 0;
+  }
+}
+
 /* --------------------------------------------------------------------------
    The one way back to the form
 
@@ -2377,47 +2435,26 @@ select.gcc-field {
   inset-inline: 0;
 }
 
-/* --------------------------------------------------------------------------
-   The result band's dot lattice
+/* **The same expansion, generalised, for any control whose ink is deliberately smaller
+   than its target.** `.gcc-context-edit` above is where this was worked out and the
+   reasoning is there; this is the reusable half, for the answer editor's own Close pill
+   — 32px of ink at the panel's top edge, where growing the ink would make the way out
+   the loudest thing in the panel.
 
-   A second ornament layer on the teal band, behind the copy, generated here
-   rather than placed from `assets/brand/`. What it borrows from the pin field is
-   the posture — an even lattice of small marks — at a strength a header can carry.
+   **Block only, never inline, and that is the rule rather than a default.** A control
+   sitting in a row of non-focusable siblings cannot overhang horizontally: a press
+   landing on a neighbour does nothing while feeling like a miss, which is worse than a
+   small target because the visitor believes they hit it. Vertically there is nothing
+   above or below to collide with in either of the two places this is used.
 
-   **It cannot lift the ground under white text, and that is arithmetic rather than
-   a judgement.** The dots are 1px on a 24px grid, so areal coverage is about 0.5%;
-   at 26% white under a further 0.5 opacity the average lift is well below one RGB
-   step, and the mask has taken it to nothing before the finding's leading edge. It
-   is a texture the eye reads and a contrast measurement cannot.
-
-   Anchored to the LEADING edge, opposite the diagonal motif, so the band carries
-   ornament at both ends and the middle — where the finding sits — has neither.
-   -------------------------------------------------------------------------- */
-.gcc-header-lattice {
+   The caller supplies `position: relative` and the height the overhang is measured
+   against, so this cannot be dropped onto an arbitrary element and be assumed correct:
+   7px either side takes a 30–32px control to 44 and no further. */
+.gcc-hit-44::after {
+  content: "";
   position: absolute;
-  inset-block: 0;
-  inset-inline-start: 0;
-  inline-size: 44%;
-  pointer-events: none;
-  background-image: radial-gradient(
-    color-mix(in oklab, var(--ansr-white) 26%, transparent) 1px,
-    transparent 1.4px
-  );
-  background-size: var(--ansr-space-6) var(--ansr-space-6);
-  /* Fades away from its anchor, so the lattice has visibly stopped before the
-     copy begins. A mask reads only alpha, so the colour is machinery — but it still
-     comes from a token, because brand_lint.py is right to refuse a literal hex even
-     inside a mask. */
-  mask-image: linear-gradient(to right, var(--ansr-black), transparent 74%);
-  opacity: 0.5;
-}
-
-/* A texture under text cuts effective contrast, so it goes when the visitor has
-   asked for more of it — the same call `.ansr-motif` and `.gcc-hero-map` make. */
-@media (prefers-contrast: more) {
-  .gcc-header-lattice {
-    display: none;
-  }
+  inset-block: -7px;
+  inset-inline: 0;
 }
 
 /* --------------------------------------------------------------------------
@@ -2947,6 +2984,46 @@ select.gcc-field {
     0 6px 16px color-mix(in oklab, var(--ansr-black) 26%, transparent);
 }
 
+/* **The close band is the card's foot, so it takes the card's own bottom radius.**
+   The card clips to `--ansr-radius-xl`, but the dark close band inside it has square
+   corners — so at each bottom corner the band's fill stopped short of the rounded clip
+   and the card's own white background showed through as a hairline over the dark band,
+   which is the white bleed at the card's foot. Rounding the last zone's bottom corners
+   to the same radius makes its dark fill follow the clip exactly, and `overflow: hidden`
+   carries its full-bleed backdrop with it. Scoped to the LAST zone in the card — the
+   close on both result screens — so no interior band's corners are touched. */
+.gcc-result-card .gcc-zone:last-child {
+  border-end-start-radius: var(--ansr-radius-xl);
+  border-end-end-radius: var(--ansr-radius-xl);
+  overflow: hidden;
+}
+
+/* **One step down on a phone, and the reason is what the radius is FOR here rather
+   than a preference about how round things should be.** `xl` is the top of the scale
+   and it is spent on this one object so the card is unambiguously the container and
+   every panel inside it is unambiguously contents — a difference the eye reads by
+   comparing the two curves. That comparison needs the card to look like a container,
+   and at `px-6` on a 375px viewport the card is 327 of 375 across: it is not a plate on
+   a ground, it is very nearly the page. A 12px curve on an object that reads full-bleed
+   is a corner treatment rather than a container, and it is the largest curve on a
+   surface whose own brand is hard-edged.
+
+   `lg` keeps the step over the panels inside — they are `none` on this screen, so one
+   step is all the hierarchy needs — and the close band's own bottom corners follow it,
+   because they exist to track this clip exactly. The answer editor above the card takes
+   the same pair in `screen-header.tsx`: it is the same width, stacked directly above,
+   and a different curve on the upper of two concentric boxes reads as a mistake. */
+@media (max-width: 47.999rem) {
+  .gcc-result-card,
+  .gcc-result-card .gcc-zone:last-child {
+    border-radius: var(--ansr-radius-lg);
+  }
+  .gcc-result-card .gcc-zone:last-child {
+    border-start-start-radius: 0;
+    border-start-end-radius: 0;
+  }
+}
+
 /* --------------------------------------------------------------------------
    The view switch, as the card's own top row
 
@@ -3087,7 +3164,7 @@ select.gcc-field {
    selected cell. Hover restores full strength (below), so the cell comes forward as the
    pointer lands on it. */
 .gcc-result-tab--off {
-  opacity: 0.7;
+  opacity: 0.55;
 }
 
 /* Hover on an unselected cell: a barely-there darken and the ink coming forward.
@@ -3134,10 +3211,11 @@ select.gcc-field {
      - **Smaller and further out**, so the graphic clears the finding at every width
        above `lg` rather than by the measurement the hero's copy width supplies.
 
-   Desktop only, like the hero's: below `lg` the finding runs most of the band and
-   the frame is too narrow for the dots to resolve. The band's own motif takes over
-   there — see `ResultSurface`, where the two are swapped at exactly that
-   breakpoint so every width has one ornament and no width has two.
+   **It draws at every width, and the block below is the phone and tablet framing.** It
+   was `lg` and up, with each screen's brand motif taking the band below that, because a
+   percentage-framed map does not resolve at phone width. A fixed frame does, so the
+   motif has been retired from this band — see `ResultSurface`, which now draws exactly
+   one graphic at every width instead of two swapped at a breakpoint.
    -------------------------------------------------------------------------- */
 .gcc-header-map {
   position: absolute;
@@ -3195,6 +3273,42 @@ select.gcc-field {
   -webkit-mask-composite: source-in;
 }
 
+/* **Below `lg` the frame is a fixed LENGTH, exactly as the hero's is, and that is what
+   let this band stop swapping graphics at `lg`.** The band used to hand over to each
+   screen's brand motif below that width for one reason: a percentage frame is a
+   different zoom at every width, so at `74%` of a 390px band the map resolved to about
+   2 device pixels per degree against a dot whose radius is set in DEVICE pixels by
+   `non-scaling-stroke` — a ratio near 1, which is not a dot grid, it is a filled lozenge
+   with a ragged edge. The full derivation is in `.gcc-hero-map`'s mobile block and is
+   not repeated here; what matters is that it is a dot-to-pitch failure and not a size
+   one, so the answer is to zoom IN.
+
+   `56rem` is the hero's own frame, deliberately the same number: the two placements draw
+   the same graphic from the same generated geometry, and giving them different frames
+   would make India a different size on two bands a visitor sees one after the other.
+
+   **The trailing inset is a calc for the same reason it is there, and the constant in it
+   is not free.** India sits at a fixed 0.701 across the generated window, so its centre
+   lands at `band − inset − 0.299 × frame`; solving for 76% of the band gives
+   `24% − 0.299 × 56rem`. Change the frame and this constant changes with it, or India
+   slides out of the vignette. 76% rather than the hero's 72% because this band carries
+   three things — the lockup, the finding and the answer pills — where the hero carries
+   two, so the graphic is pushed a step further off the copy.
+
+   Opacity 0.44 against desktop's 0.5. The crop is tighter here, so a dot covers more of
+   the screen than it does at `74%`, and matching the desktop value read as the map having
+   come forward on the smallest screen — which is the opposite of this placement's job.
+   The band's own long bottom fade and the leading ramp are inherited from the rule above
+   unchanged: both are expressed as fractions of the element, and the element is still the
+   whole band. */
+@media (max-width: 63.999rem) {
+  .gcc-header-map {
+    inline-size: 56rem;
+    inset-inline-end: calc(24% - 16.744rem);
+    opacity: 0.44;
+  }
+}
+
 /* A graphic under text cuts effective contrast, so it goes when the visitor has
    asked for more of it — the same call `.gcc-hero-map` and `.ansr-motif` make. */
 @media (prefers-contrast: more) {
@@ -3204,159 +3318,399 @@ select.gcc-field {
 }
 
 /* --------------------------------------------------------------------------
+   Screen 2 — the rated capability grid, reflowed for a phone
+
+   `OrdinalGrid` in `components/public/charts.tsx` draws a real table: five
+   capabilities down, four GCC hubs across, four segments per cell. From `md` it is
+   that table and this class does nothing.
+
+   **Below `md` it reflows, and the defect it fixes is that the visitor's own hub was
+   off-screen by default.** The table needs about 610px before anything wraps, so it
+   carries `min-w-2xl` and a scroller — which is the right answer at 700px and the wrong
+   one at 375, where the scroll container measures 237px. Measured: `scrollLeft` on load
+   is 0, the row header takes the leading half of what is visible, and India — the column
+   every other column is being read against — sat past the edge along with Poland, with
+   no fade, arrow or shadow to say so. A comparison grid whose whole claim is "here is
+   your hub against the alternatives" cannot open with the visitor's hub hidden. Adding a
+   scroll cue would have made the hiding visible rather than fixed it.
+
+   So each capability becomes its own block: the row header on a line of its own, then
+   one line per hub — the hub's name at the leading edge, its four segments at the
+   trailing edge. Nothing is hidden, nothing scrolls, and the down-a-column comparison
+   the grid exists for becomes a down-the-page one within each capability.
+
+   **One DOM tree, two layouts, on `.gcc-milestones`' precedent and for its reason.**
+   Rendering a table and a stacked list and hiding one would put every rating in the
+   accessibility tree twice. What that costs here is that `display: block` on a table's
+   own parts drops the browser's implicit table semantics, so the component declares the
+   roles explicitly — see the note there. `min-inline-size: 0` is what actually removes
+   the scroll: these blocks are unlayered, so this outranks the `min-w-2xl` utility on
+   the element.
+
+   The `thead` stays in the document, visually hidden rather than `display: none`, because
+   it is what associates each cell with its column for anyone reading the table by role.
+   The column name a sighted reader needs travels into the cell instead, as its own
+   `aria-hidden` span, set in the same small caps the column heading uses from `md` up so
+   it is recognisably the same label rather than a second style for one string.
+   -------------------------------------------------------------------------- */
+.gcc-rating-grid__column {
+  display: none;
+}
+
+@media (max-width: 47.999rem) {
+  .gcc-rating-grid {
+    display: block;
+    /* The whole point: this beats `min-w-2xl`, so the scroller has nothing to scroll. */
+    min-inline-size: 0;
+  }
+
+  /* Present for the accessibility tree, absent to the eye. Not `display: none` — that
+     would take the column headers out of the tree and leave every cell nameless. */
+  .gcc-rating-grid > thead {
+    position: absolute;
+    inline-size: 1px;
+    block-size: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+
+  .gcc-rating-grid > tbody,
+  .gcc-rating-grid > tbody > tr {
+    display: block;
+  }
+
+  /* The hairline between capabilities is already on the row; it only needs the block
+     padding a table cell used to supply. */
+  .gcc-rating-grid > tbody > tr {
+    padding-block: var(--ansr-space-3);
+  }
+
+  .gcc-rating-grid > tbody > tr > th {
+    display: block;
+    padding: 0 0 var(--ansr-space-2);
+  }
+
+  /* One hub per line: name at the leading edge, segments at the trailing one. The gap
+     is a floor rather than the separation — `space-between` does the separating, and the
+     gap only matters on the narrowest phone, where a long hub name meets the marks. */
+  .gcc-rating-grid > tbody > tr > td {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--ansr-space-3);
+    padding-block: var(--ansr-space-1);
+    padding-inline: 0;
+  }
+
+  .gcc-rating-grid__column {
+    display: block;
+    font-size: var(--ansr-text-xs);
+    font-weight: var(--ansr-weight-semibold);
+    letter-spacing: var(--ansr-tracking-caps);
+    text-transform: uppercase;
+    color: var(--ansr-text-muted);
+  }
+}
+
+/* --------------------------------------------------------------------------
+   Screen 1 — a comparison card's interior on a phone
+
+   `PeerCardBody` in `components/screen1/evidence.tsx` emits three facts down one flex
+   column: the headcount figure, the city list, the year the centre was established. That
+   column is correct at the width the card is actually drawn at from `sm` — one fifth of a
+   row at `lg`, half a row at `sm` — and it is wrong on a phone, where the card takes the
+   WHOLE measure and the three facts left the trailing half of a 270px box blank, four
+   rows deep, on five cards in a row.
+
+   **So on a phone the figure and the year share a line and the city list keeps the full
+   measure.** Which fact pairs with which is measured rather than chosen: two city chips
+   and an overflow pill are about 176px of ink, so the list fits one line across the card
+   and needs three lines in half of it — pairing it with the figure made the two-column
+   card taller than the single column it replaced. The year is a short prefix and four
+   digits. Nothing is removed and nothing is re-ordered: the DOM stays figure, cities,
+   year, and this places the second and third.
+
+   **THE LOWER BOUND IS WHY THIS IS A MEDIA QUERY RATHER THAN A UTILITY.** A cell has to
+   hold the widest headcount band at 18px, 112px, and "In India since 2002" at 14px,
+   116px — so two columns need about 118px each and the card needs 248px of content. At
+   320 it has 200 and the figure wraps mid-number, which is worse than the empty space
+   this fixes. 23rem is the viewport where the content box reaches 248px; below it the
+   flex column the component declares is what renders, unchanged.
+   -------------------------------------------------------------------------- */
+@media (min-width: 23rem) and (max-width: 39.9375rem) {
+  .gcc-peer-facts {
+    /* Beats the component's `flex flex-col gap-3.5`: these blocks are unlayered and
+       Tailwind's utilities are not, so no `!important` and no extra class is needed. */
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--ansr-space-3);
+  }
+
+  .gcc-peer-facts__cities {
+    grid-column: 1 / -1;
+    grid-row: 2;
+  }
+
+  .gcc-peer-facts__since {
+    grid-column: 2;
+    grid-row: 1;
+    /* The figure's cell is a small-caps label over an 18px numeral and this is one line,
+       so the year sits on the figure's own baseline rather than at the top of the cell. */
+    align-self: end;
+  }
+}
+
+/* --------------------------------------------------------------------------
+   Screen 1 — a row of the largest-centres ranking
+
+   `LargestBlockView` in `components/screen1/evidence.tsx` emits four things per row:
+   the name (with its mark and its two markers), the city-and-year tags, the headcount
+   figure, and the bar. This decides where the four sit, and it exists because they sit
+   differently on a phone.
+
+   **From `sm` the map is the composition that block already had.** The name owns the
+   first line; the tags and the figure share the second, tags leading, figure over the
+   trailing edge the bar's own end is measured to; the bar is the third, 4px under the
+   figure, which is the tightest gap in the row and is what says those two are a pair.
+
+   **On a phone the figure moves up to the NAME's line, and the tags go under the bar.**
+   The shared line was never shared down there: at 375 the card's body is about 295px
+   and the tags alone are three city pills and a year, so they take two lines and the
+   figure wrapped under them. That put the number three lines below the small-caps
+   column header that names the quantity and two lines above the bar it is the value of
+   — the two relationships the row is built out of, both broken at once, which is the
+   "the headcount is in one place and the numbers are in another" reading. On the name's
+   line the figure is under the column header on every row, so the header labels a real
+   column again, and the bar is the very next line.
+
+   **Named areas rather than `order`, and one DOM tree rather than two.** The reading
+   order stays name → tags → figure → bar at every width, which is the order a reader
+   working through the row by voice wants; only the painting is re-laid. Rendering two
+   arrangements and hiding one would put every company's figure in the accessibility
+   tree twice — the same call `.gcc-milestones` and `.gcc-rating-grid` make.
+
+   **The row gap is 4px and the two 8px gaps are margins, which is not a preference.**
+   A grid has one row gap, and this row needs two values: 8px between the name block and
+   what follows it, 4px between the figure and its bar. So the gap is the tighter number
+   and the item that opens a new group takes the difference — the figure at `sm`, where
+   it opens the second line, and the tags on a phone, where they follow the bar.
+   -------------------------------------------------------------------------- */
+.gcc-rank-row {
+  display: grid;
+  /* The figure's column hugs its own content, so nothing the tags or the name do can
+     move it off the trailing edge. `minmax(0, 1fr)` rather than `1fr`, so a long
+     company name shrinks its own column instead of widening the row. */
+  grid-template-columns: minmax(0, 1fr) auto;
+  column-gap: var(--ansr-space-4);
+  row-gap: var(--ansr-space-1);
+  /* Bottom-aligned rather than centred: on a phone the figure shares a line with the
+     name, and at 20px against the name's 16px their bottoms are within a pixel of a
+     shared baseline. Centring would sit the figure's optical middle on the name's,
+     which reads as the number floating above the row. */
+  align-items: end;
+  grid-template-areas:
+    "name figure"
+    "bar bar"
+    "tags tags";
+}
+
+.gcc-rank-row__name {
+  grid-area: name;
+}
+
+.gcc-rank-row__tags {
+  grid-area: tags;
+  margin-block-start: var(--ansr-space-1);
+}
+
+.gcc-rank-row__figure {
+  grid-area: figure;
+}
+
+.gcc-rank-row__bar {
+  grid-area: bar;
+}
+
+@media (min-width: 40rem) {
+  .gcc-rank-row {
+    grid-template-areas:
+      "name name"
+      "tags figure"
+      "bar bar";
+  }
+
+  /* Both items on the second line take it, so the line as a whole sits 8px under the
+     name rather than one of its two members doing. */
+  .gcc-rank-row__tags,
+  .gcc-rank-row__figure {
+    margin-block-start: var(--ansr-space-1);
+  }
+}
+
+/* --------------------------------------------------------------------------
    Screen 2 — a cumulative progression on one line
 
-   The HR tab's scale curve. `MilestoneTrack` in `components/public/charts.tsx`
-   emits one `dl` and this decides whether it is read horizontally along a rail or
-   vertically as a list.
+   The scale curve on both composed tabs. `MilestoneTrack` in
+   `components/public/charts.tsx` emits one `dl` and this places the three children of
+   each waypoint — label, ring, duration — as one column standing on a shared rail.
 
-   **Two layouts, one DOM tree, and that is the whole reason this is a class.** Below
-   `sm` the rail is about 246px, which puts the first two milestones 41px apart — no
-   label fits in that, so the honest fallback is a vertical list. Rendering a
-   horizontal version and a vertical version and hiding one would put every milestone
-   in the accessibility tree twice; the items carry `--gcc-at` instead and are only
-   positioned absolutely where there is room for them — a layout that depends on which
-   cell begins a wrapped row is something only CSS can express.
+   **ONE LAYOUT AT EVERY WIDTH, at the project owner's instruction, and the two it
+   replaces are both gone.** The rail was horizontal from `sm` and something else below
+   it: first a plain list of four rows with no line at all, then a VERTICAL rail with the
+   ring leading each row and the duration at the trailing edge. The vertical rail kept
+   every property the chart is built on — a real line, rings on it, positions
+   proportional to the stored figures — and it still read as a different chart from the
+   one it is drawn beside, because the reader is asked to compare two rails and on a
+   phone they were comparing two rails drawn down the page against a card that describes
+   them as curves. It also cost 160px a track against the 92px this does.
 
-   **The label's height is RESERVED, and the rail's position depends on it.** Each
-   item is a three-row column — label, dot, figure — and the rail is one element drawn
-   behind all of them at a fixed offset from the top. A milestone whose name wraps to
-   two lines would otherwise push its own dot lower than its neighbours' and the rail
-   would pass through none of them. So the label row is two lines tall whether it
-   needs them or not, exactly as the figure row reserves its own label-and-unit pair.
+   What made the horizontal rail unavailable at this width was the item CAP, and the cap
+   was a rem: 3.5rem items on a 208px rail collide, because the tightest pair of
+   waypoints is 16.7% of the rail apart and 56px is more than 16.7% of anything a phone
+   is. As a PERCENTAGE the cap scales with the rail, so the clearance between two
+   waypoints is a property of the data rather than of the viewport — 14% against a 16.7%
+   gap clears at 320, at 390 and at 1440 by the same 2.7% of the rail. The wrapper's
+   inset is a percentage for the same reason: it has to absorb half an item, and half an
+   item is now a percentage too. See `MilestoneTrack`.
+
+   **The label's height is RESERVED, and the rail's position depends on it.** Each item
+   is a three-row column and the rail is one element drawn behind all of them at a fixed
+   offset from the top. A milestone whose name wraps to two lines would otherwise push
+   its own ring lower than its neighbours' and the rail would pass through none of them.
+   So the label row is two lines tall whether it needs them or not — which is also what
+   makes the percentage cap safe, since a capped label wraps rather than overflowing.
    -------------------------------------------------------------------------- */
 .gcc-milestones {
   /* Two lines at `text-xs` with tight leading. Named rather than inlined because the
      rail's offset is derived from it, and two copies of that number is how a rail
      stops meeting its dots. */
   --gcc-milestone-label: 2.5rem;
-  --gcc-milestone-dot: 1rem;
+  /* 12px on a phone against 16px from `sm`. The ring is a mark on a rail rather than a
+     control, so it steps with the type around it; at 16px on a 208px rail it is 7.7% of
+     the axis, which reads as a bead rather than a position. */
+  --gcc-milestone-dot: 0.75rem;
+  /**
+   * **How wide a waypoint's column may get, as a share of the RAIL — and it is a
+   * percentage rather than a length on purpose.**
+   *
+   * The positions are proportional to the stored figures, so the tightest pair on the
+   * scale curve is 16.7% of the rail apart at every width. A cap expressed in rem
+   * therefore clears at one width and collides at another, which is exactly how the
+   * horizontal reading came to be unavailable on a phone. 14% leaves 2.7% of the rail
+   * between two neighbouring columns whatever the rail is.
+   *
+   * From `sm` it is 3.5rem, unchanged: at 1024 the tightest pair is about 56px apart,
+   * which is where that number was measured, and the desktop composition is not being
+   * re-derived here.
+   */
+  --gcc-milestone-item: 14%;
+  /* The figure's own top gap. One step tighter on a phone, where the figure is 16px. */
+  --gcc-milestone-figure-gap: var(--ansr-space-1);
 
-  display: flex;
-  flex-direction: column;
-  gap: var(--ansr-space-3);
-}
-
-/* Below the breakpoint the rail and the dots do not exist at all, rather than being
-   `visibility: hidden`. There is no line to be a position on in a vertical list, so a
-   dot on each row would be a bullet pretending to be a mark. */
-.gcc-milestones__rail,
-.gcc-milestones__dot {
-  display: none;
-}
-
-/* The vertical reading: milestone, then its duration, on one row with a hairline
-   above it — the same shape the stacked figure cells use. */
-.gcc-milestones__item {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: var(--ansr-space-4);
-  border-block-start: 1px solid var(--ansr-border);
+  position: relative;
+  display: block;
+  /**
+   * Label, dot, figure. The figure's own line plus its top gap is the last term, and
+   * the block padding is what stops the rail sitting hard against the card's own
+   * header rule.
+   *
+   * **`space-8` rather than `space-10` for the figure term, and the block padding is
+   * top-only, which is what closes the gap ANSR reported under this chart.** The items
+   * are absolutely positioned, so this `min-height` is the ONLY thing holding the
+   * card's body open — and it was reserving a figure row of 40px plus 16px of padding
+   * at each end for a line that measures 24px. That surplus rendered as ~40px of empty
+   * card under the last figure, which beside a shorter neighbour read as a card that
+   * had failed to fill. The figure is `text-lg` with its own `space-2` top padding, so
+   * 32px covers the line and its gap with nothing to spare; the trailing padding goes
+   * because the card's own body padding is already below it.
+   */
+  min-height: calc(
+    var(--gcc-milestone-label) + var(--gcc-milestone-dot) + var(--ansr-space-8)
+  );
+  /* **`space-2`, down from `space-4`, at ANSR's request.** The card draws two of these
+     stacked now, each under its own caption, and at 16px the caption sat almost as far
+     from its own rail as the two rails sat from each other — so the lower caption read
+     as a note on the upper chart rather than as the title of the one beneath it. The
+     chart moves UP toward the line that names it and the separation between tracks is
+     carried by the wrapper's own gap; see `MilestoneTrack`. The label row is
+     bottom-aligned, so nothing collides. */
   padding-block-start: var(--ansr-space-2);
 }
 
+/* The line, drawn behind every item on its track — one element per track, so a track
+   cannot end up with two rails or none. */
+.gcc-milestones__rail {
+  position: absolute;
+  inset-inline: 0;
+  /* The dot's own centre, measured from the first item's top — which is the block
+     padding, not zero. */
+  top: calc(
+    var(--ansr-space-2) + var(--gcc-milestone-label) + (var(--gcc-milestone-dot) / 2)
+  );
+  height: 2px;
+  transform: translateY(-1px);
+  background-color: var(--ansr-accent);
+}
+
+.gcc-milestones__item {
+  position: absolute;
+  /* The same inset the block reserves above itself — two copies of one number is how a
+     rail stops meeting its dots, and this is the pair the `--gcc-milestone-*` variables
+     could not absorb because `top` is on a different element from the padding. */
+  top: var(--ansr-space-2);
+  inset-inline-start: var(--gcc-at);
+  /* Physical rather than logical, which is a known limit: there is no logical
+     translate, and the public screens are English-only. The extremes are pinned
+     with `end-0` / `start-0` instead wherever a component can avoid this. */
+  transform: translateX(-50%);
+  width: max-content;
+  max-inline-size: var(--gcc-milestone-item);
+  display: grid;
+  grid-template-rows: var(--gcc-milestone-label) var(--gcc-milestone-dot) auto;
+  justify-items: center;
+  gap: 0;
+}
+
+/* The three children take the item's own rows in document order — label, ring, figure —
+   so nothing here places them explicitly. An earlier version placed them by COLUMN for a
+   second layout and left auto-placement to pick the rows, which it picked badly enough to
+   render every figure against the wrong milestone name; see docs/traps.md. With one
+   layout there is only one axis to get right. */
+
+/* Bottom-aligned inside its reserved rows, so a one-line and a two-line milestone
+   both sit against the rail rather than against the top of the block. */
+.gcc-milestones__label {
+  align-self: end;
+  text-align: center;
+}
+
+.gcc-milestones__dot {
+  align-self: center;
+  inline-size: var(--gcc-milestone-dot);
+  block-size: var(--gcc-milestone-dot);
+  border-radius: var(--ansr-radius-pill);
+  background-color: var(--ansr-surface);
+  /* A ring rather than a disc, so the rail is visibly continuous THROUGH each
+     milestone: a filled dot on a 2px line reads as a join between two segments. */
+  border: 2px solid var(--ansr-accent);
+}
+
+.gcc-milestones__figure {
+  align-self: start;
+  text-align: center;
+  padding-block-start: var(--gcc-milestone-figure-gap);
+}
+
+/* Three values step at `sm` and the LAYOUT does not. Each one is a size rather than a
+   placement, which is what the single layout above bought. */
 @media (min-width: 40rem) {
   .gcc-milestones {
-    display: block;
-    position: relative;
-    /**
-     * Label, dot, figure. The figure's own line plus its top gap is the last term, and
-     * the block padding is what stops the rail sitting hard against the card's own
-     * header rule.
-     *
-     * **`space-8` rather than `space-10` for the figure term, and the block padding is
-     * top-only, which is what closes the gap ANSR reported under this chart.** The items
-     * are absolutely positioned, so this `min-height` is the ONLY thing holding the
-     * card's body open — and it was reserving a figure row of 40px plus 16px of padding
-     * at each end for a line that measures 24px. That surplus rendered as ~40px of empty
-     * card under the last figure, which beside a shorter neighbour read as a card that
-     * had failed to fill. The figure is `text-lg` with its own `space-2` top padding, so
-     * 32px covers the line and its gap with nothing to spare; the trailing padding goes
-     * because the card's own body padding is already below it.
-     */
-    min-height: calc(
-      var(--gcc-milestone-label) + var(--gcc-milestone-dot) + var(--ansr-space-8)
-    );
-    /* **`space-2`, down from `space-4`, at ANSR's request.** The card draws two of these
-       stacked now, each under its own caption, and at 16px the caption sat almost as far
-       from its own rail as the two rails sat from each other — so the lower caption read
-       as a note on the upper chart rather than as the title of the one beneath it. The
-       chart moves UP toward the line that names it and the separation between tracks is
-       carried by the wrapper's own gap; see `MilestoneTrack`. The label row is
-       bottom-aligned, so nothing collides. */
-    padding-block-start: var(--ansr-space-2);
-  }
-
-  .gcc-milestones__rail {
-    display: block;
-    position: absolute;
-    inset-inline: 0;
-    /* The dot's own centre, measured from the first item's top — which is the block
-       padding, not zero. */
-    top: calc(
-      var(--ansr-space-2) + var(--gcc-milestone-label) +
-        (var(--gcc-milestone-dot) / 2)
-    );
-    height: 2px;
-    transform: translateY(-1px);
-    background-color: var(--ansr-accent);
-  }
-
-  .gcc-milestones__item {
-    position: absolute;
-    /* The same inset the block reserves above itself — two copies of one number is how a
-       rail stops meeting its dots, and this is the pair the `--gcc-milestone-*` variables
-       could not absorb because `top` is on a different element from the padding. */
-    top: var(--ansr-space-2);
-    inset-inline-start: var(--gcc-at);
-    /* Physical rather than logical, which is a known limit: there is no logical
-       translate, and the public screens are English-only. The extremes are pinned
-       with `end-0` / `start-0` instead wherever a component can avoid this. */
-    transform: translateX(-50%);
-    width: max-content;
-    /**
-     * **Capped, so a milestone WRAPS rather than colliding with its neighbour.** The
-     * positions are proportional to the stored figures, which puts the first two
-     * waypoints of the scale curve about 56px apart at 1024 — the tightest pair the
-     * chart is drawn at. `max-content` alone made every item as wide as its own label
-     * and the first two ran together. At 3.5rem "50 FTEs" breaks after the numeral,
-     * which is the two-line reading the reserved label height already accounts for.
-     */
-    max-inline-size: 3.5rem;
-    display: grid;
-    grid-template-rows: var(--gcc-milestone-label) var(--gcc-milestone-dot) auto;
-    justify-items: center;
-    /* The vertical reading's hairline is a divider between rows. There are no rows
-       here. */
-    border-block-start: 0;
-    padding-block-start: 0;
-    gap: 0;
-  }
-
-  /* Bottom-aligned inside its reserved rows, so a one-line and a two-line milestone
-     both sit against the rail rather than against the top of the block. */
-  .gcc-milestones__label {
-    align-self: end;
-    text-align: center;
-  }
-
-  .gcc-milestones__dot {
-    display: block;
-    align-self: center;
-    inline-size: var(--ansr-space-4);
-    block-size: var(--ansr-space-4);
-    border-radius: var(--ansr-radius-pill);
-    background-color: var(--ansr-surface);
-    /* A ring rather than a disc, so the rail is visibly continuous THROUGH each
-       milestone: a filled dot on a 2px line reads as a join between two segments. */
-    border: 2px solid var(--ansr-accent);
-  }
-
-  .gcc-milestones__figure {
-    align-self: start;
-    text-align: center;
-    padding-block-start: var(--ansr-space-2);
+    --gcc-milestone-dot: var(--ansr-space-4);
+    --gcc-milestone-item: 3.5rem;
+    --gcc-milestone-figure-gap: var(--ansr-space-2);
   }
 }
 

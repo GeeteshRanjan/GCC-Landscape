@@ -112,7 +112,11 @@ visitor what they said about something it never asked.
 **The three dropdowns are a custom listbox, not `<select>`, and not Radix Select** — Radix portals with
 `position: fixed`, which anchors to the wrong viewport inside a frame sized to its own content. The
 panel is absolutely positioned inside the field, always opens downward, and carries a filter above 12
-options. It never flips, so it asks to be revealed: `scrollIntoView({ block: "nearest" })` on open,
+options. **THE FILTER TAKES FOCUS ON OPEN ONLY WHERE THAT DOES NOT RAISE A KEYBOARD** — gated on
+`(pointer: coarse)` in `hasVirtualKeyboard`, never on a width, a user agent or `ontouchstart`, since the
+question is what the visitor's primary input IS. On a phone the panel and the software keyboard used to
+arrive together and the keyboard took half the viewport, so a press meant to reveal options revealed
+three. The trigger keeps focus, so every key still works; the filter takes it when it is pressed. It never flips, so it asks to be revealed: `scrollIntoView({ block: "nearest" })` on open,
 targeting the cascade PANE when one is open, with `scroll-margin-block-end` absorbing the entrance
 keyframe. That is not the banned scroll logic — it reads nothing, reports nothing, and is inert in the
 embed. Admin keeps native selects. Specs drive both shapes through `choose()` and `chooseSubIndustry()`
@@ -141,6 +145,32 @@ more rows as prefixes than as whole words — but the AND across tokens still la
 the top, and a filter that answers every keystroke is worth more than one tight on three-token
 initialisms. This is still the one place the matcher is narrower than a label substring (`ai` inside
 `retail` is gone), so the widening guarantee in the test stays scoped to four characters and up.
+
+**THE CASCADE'S SECOND PANE RANKS, THE FIRST PANE CUTS, and the asymmetry is the decision.**
+Filtering pane B to the hits alone showed 2 of BFSI's 15 sub-industries for `fintech` and 2 of Software
+& Internet's 31, so a visitor could not see the sibling that fitted them better — and the fallback from
+"my row is not here" is the broad answer, which is the findability failure below. So pane B draws the
+hits, then a breaker, then every remaining child; `partitionByMatch` in `search.ts` is the one
+implementation and is pure so it is unit-testable with no jsdom. Pane A stays a hard filter, because
+narrowing 24 industries to a handful is its whole job. **The breaker is drawn only when BOTH groups
+exist** — gated on `matched.length` rather than on `filtering`, so all-match (`education` → Education)
+and no-match (`wholesale` → Wholesale) both correctly draw none. It does not name the industry: the
+pane header sits outside the scroll container, so the industry is permanently on screen above it. Pane
+B's old "No sub-industries match" empty state is DELETED, not left unreachable — a nothing-matches note
+beside fifteen visible rows is a false statement. Pane A keeps its own, which is still reachable.
+
+**THE MATCHED RUN OF A LABEL IS HIGHLIGHTED, AND IT IS ONLY SAFE BECAUSE EVERY ROW CARRIES AN EXPLICIT
+`aria-label`** — that overrides name-from-content, so splitting the visible label into `<mark>` elements
+cannot rename the row or break an exact-name lookup. **`highlightRanges` in `search.ts` returns ranges
+into the RAW label and must mirror `matchesTokens`' own token rules**, because `normaliseSearchText` is
+not length-preserving: `&` becomes five characters, an apostrophe becomes none, `é` one from two. A raw
+case-insensitive `indexOf` is the shortcut that silently highlights nothing in exactly the cases the
+matcher was built for, so the normaliser is re-run one character at a time to keep an offset map, and a
+change to `normaliseSearchText` is a change there too. **A row matched by a search TERM highlights
+NOTHING** — the term is not in the label and may never be displayed, which is the same rule that keeps a
+`treeitem`'s name computable. Two runs separated by nothing but separators are joined, so
+`property and casualty` draws one phrase rather than three chunks. The mark is a `teal-200` fill plus a
+weight step, never warm: orange has three roles here and a surface is not one of them.
 
 **Findability is the peer set's real failure mode, not scoring.** Coherence with a sub-industry is
 0.9-plus; without one it is 0.13 in Manufacturing and 0.23 in Software & Internet, and no engine
@@ -190,7 +220,10 @@ Five bands read as one page: the teal gradient hero (centred, two text elements,
 form card overlapping the hero's bottom edge, the pale-teal band its lower half sits on, a scrolling
 strip of ANSR customer logos, and a dark band of ANSR's own impact figures. The last two are evidence
 about ANSR rather than about the dataset, which is what keeps them clear of the no-invented-figures
-rule; **the logo strip must never imply those companies used this tool.**
+rule; **the logo strip must never imply those companies used this tool.** The strip has to read as a ROW
+at every width: **32px marks and a 28px gap on a phone, 40 and 56 from `sm`**, because at the desktop pair
+two marks filled a 375px viewport and the strip read as one logo sliding past. The band's own padding steps
+with the mark — a shorter mark inside the old padding is the empty space the shrink was for.
 
 **`--ansr-container-card` is a COMPOSITION token.** The hero copy and the card derive their leading edge
 from the same box (`max-w-content px-6 md:px-12`, then `mx-auto max-w-card`), duplicated verbatim in
@@ -199,7 +232,21 @@ fade with it. From `xl` the hero outdents by the card's whole margin and its lea
 `--ansr-container-lead`; the two are gated on `xl` together, because widening the lead without shifting
 left by the same step puts text on the map's visible field.
 
-The form grid is **two equal columns**, two rows of two with the submit spanning both.
+The form grid is **two equal columns**, two rows of two with the submit spanning both — one column below
+`md`, where the gap tightens to 16px because there it is only vertical rhythm and not also the interior
+boundary between the columns.
+
+**THE PHONE STEP IS BUDGETED AGAINST A PHONE ON BOTH SURFACES, never derived from the desktop one by a
+smaller multiplier.** What a visitor sees of the hero-and-card pair is `pb − pull`, the strip of band between
+the lead and the card, so the shoulder and the pull only mean anything together: reducing both by the same
+amount moves nothing and only changes how much of the card is drawn over the gradient. **`.gcc-hero-map`'s
+`inset-block-end` is the PULL, per breakpoint** — one value for all three is how the phone band came to end
+in 48px of dead gradient below a map that had already faded out. Below `lg` the dot map is a CLOSER CROP of
+the same graphic rather than a dimmed one: a fixed `56rem` frame, so India resolves at the authored
+dot-to-pitch ratio at every width instead of fusing into the lozenge a percentage zoom produced. Reasoning
+and the measurements: the block in globals.css. The impact band is TWO COLUMNS from the base, not from `sm`
+— every phone in portrait is under 640px, so five stacked figures cost 95% of a viewport on evidence about
+ANSR rather than about the visitor.
 
 ## Both result screens — one floating card on a dark ground
 
@@ -223,15 +270,31 @@ card's top row.**
   than either screen's `copy.ts`.
 - Real ARIA tabs, roving tabindex, **manual activation** — arrow moves focus, Enter or Space activates,
   because activating swaps the entire screen. `aria-controls` on the selected tab alone. **Not sticky.**
-- **The band carries the entry point's dotted world map from `lg` and the screen's motif below it —
-  swapped at that breakpoint, never layered.** Held back by opacity and faded out over half the band's
-  height. **No blur on THIS band, at ANSR's request**: quieten it with opacity and the masks, never with a
-  filter. That is scoped to the header band's map, which read as a low-resolution copy of the entry
-  point's when blurred; the close's backdrop is a different graphic doing a different job and is blurred
-  deliberately.
-  Plus `.gcc-header-lattice` on the leading edge.
+- **The band's ONE ornament is the entry point's dotted world map, at EVERY width, and it is the only
+  thing drawn on the band.** Held back by opacity and faded out over half the band's height; below `lg`
+  the frame is the hero's own fixed `56rem` rather than a percentage, which is what makes the dots
+  resolve there. Two layers were retired to get there, both at the project owner's instruction, and
+  neither may come back without the map giving up a width: each screen's brand MOTIF, which existed only
+  for the widths the percentage frame could not serve — with it went `HeaderMotif`, both motif constants
+  and `.gcc-hero-diagonal` / `.gcc-rings` — and the leading-edge dot LATTICE, which was a second dotted
+  texture at a second density and, on a phone, the band's only graphic. **No blur on THIS band, at ANSR's
+  request**: quieten it with opacity and the masks, never with a filter. That is scoped to the header
+  band's map, which read as a low-resolution copy of the entry point's when blurred; the close's backdrop
+  is a different graphic doing a different job and is blurred deliberately.
 - **The card's top edge is where the selected tab meets the content**, same fill by construction. A line
   across that joint means something added a border.
+- **A PHONE TAKES A STEP OFF EVERY CONTAINER, and it is the ACCUMULATION that pays for it rather than any
+  one band looking tight.** `Zone` is `px-5 py-6` below `sm` against `px-6 py-8`, a `Panel` `px-4` against
+  `px-5`, and a card or block heading is one step down (18/20/24px, 20/24/30 on `lead`). Six zones on the
+  peer view turn 32px of block padding into 384px, and padding is read as a proportion of what it
+  surrounds; the inline step goes the other way, buying back the 8px of MEASURE every narrow thing on these
+  screens is competing for — a ranking row's tags, a figure cell, the map's own labels. A heading steps
+  because the figures do: its size was chosen as a RATIO under them.
+- **A FIGURE INSIDE A CARD STEPS AT `sm`, AND TWO FIGURES THAT ARE ONE QUANTITY STEP TOGETHER.** The
+  comparison card's headcount band and the ranking's are 18/20/24px in one decision, on the argument that
+  already gives them one label key; a milestone duration is 16/18. What does NOT step is a BAND's own display
+  figure — the snapshot's four, the summary row's, a card's primary value — each of which is the thing its
+  neighbours were sized against in the first place.
 
 **The band carries three things:** `ANSR ATLAS` as the `h1`, the finding as a non-heading
 display line, and the visitor's four answers as pills with one "Edit answers" button.
@@ -246,10 +309,16 @@ caption on the mark. No typed period.
 
 **AND IT IS DRAWN, NOT TYPED — `AtlasWordmark` is the one piece of that markup, with two consumers.**
 A supplied outline, the plate and the REGISTERED MARK removed and `fill="currentColor"` applied, and
-nothing traced or refitted. Four things hold it together. **It is sized off the ANSR LOCKUP'S cap height
-(0.712em) rather than the type's (0.697em)**, the lockup being what it sits beside, so the caps are the
-box's 0.9508 fraction taken to `0.749em`; the numbers are measured off flattened curves, because a traced
-outline's control points sit outside its ink. **The `viewBox` is a crop and the contours keep the supplied
+nothing traced or refitted. Four things hold it together. **It is sized off the ANSR MARK BESIDE IT rather
+than off the type, and the two sites therefore draw it at two sizes** — the numbers are measured by
+rasterising and scanning ink, never read off path coordinates, because a traced outline's control points
+sit outside its ink and both marks' S overshoots the cap line. Its caps are the box's 0.95125 fraction, so
+the component's own `0.749em` puts them at 0.712em, matching the entry point's wordmark; **the result
+screens step it to `0.717em` and the gap to a word space (`ms-[0.25em]`), at the call site**, because there
+the brand half is the FULL lockup — ATLAS is the wider and heavier run and reads as the larger of the two
+beside a circular mark that dwarfs the letters, so cap parity is the wrong target and the entry point's own
+0.9641 ratio is the right one. Both numbers are `em` so they hold across the 24/30px step. Rejected
+alternatives, including growing the lockup instead: style lock. **The `viewBox` is a crop and the contours keep the supplied
 coordinates**, so what ships stays comparable to what was supplied. **The box is vertically SYMMETRIC
 about the cap band**, which is what makes `items-center` land it on the lockup, and it is a FRAGMENT rather
 than a wrapping span, because a span's own strut re-positions the mark inside the centred item. And the
@@ -270,7 +339,17 @@ exists to remove.
 the SAME wrapping row, immediately after the last pill.** The button is the SIZE of a pill; the 44px
 target is expanded off-screen by `.gcc-context-edit::after`, 7px top and bottom, with
 `inset-inline: 0` — never a negative one, because the row's `gap-x` is 8px and a press landing on a pill
-does nothing while feeling like a miss. Company name (when given), industry, headquarters, revenue band.
+does nothing while feeling like a miss. **`.gcc-hit-44` is that expansion generalised, BLOCK-ONLY for the
+same reason, and the answer editor's own Close pill is its other consumer** — the caller supplies
+`position: relative` and a 30–32px control, so it cannot be dropped on anything and be assumed correct.
+Company name (when given), industry, headquarters, revenue band.
+**BELOW `md` THE PILLS ARE READ BUT NOT DRAWN, at the project owner's instruction, so the row draws the
+button alone.** Four pills wrapped to three lines at 390 to restate what the visitor typed thirty seconds
+earlier, on the one band they meet before any evidence. The markup is identical at every width and the
+group keeps all four members: the media query on `.gcc-context-pill` is the sr-only treatment, never
+`display: none`, so nothing leaves the reading order — and it is done on the class rather than with
+`sr-only md:not-sr-only`, which would leave `not-sr-only`'s `padding: 0` and the pill's own padding
+fighting on generated order.
 **"India today" is not among them and must not be.** `companyName` in `src/data/screen1.ts` is the single
 definition of "did they type one".
 
@@ -279,8 +358,8 @@ the pills' one control goes to the form.** It opens `AnswerEditor` — the entry
 one label swapped via `submitLabel` — and the correction is applied to the screen the visitor is standing
 on. The pills themselves are UNCHANGED: still read-only, still no hover, still one control in the row. Six
 things hold it together. **The panel is a SIBLING of the band, in `ResultSurface`'s `editor` slot, never
-among the band's children** — `.gcc-result-band` is `overflow: hidden` because it clips the map, the
-lattice and the motif, so an editor inside it has all four dropdowns cut off at the band's foot. It takes
+among the band's children** — `.gcc-result-band` is `overflow: hidden` because it clips the map, so an
+editor inside it has all four dropdowns cut off at the band's foot. It takes
 the CARD's own negative pull and the card drops to a plain top margin, so the surface's silhouette is
 unchanged and only what sits in the notch differs; `z-20` is what lets its popups overhang the card. It is
 on WHITE, because every control in `input-panel.tsx` was measured on the form card's fill and none of those
@@ -328,7 +407,10 @@ stem (0.137 of cap height) rather than chosen.
 count, mean centre size, spread of cities, leading city. It **introduces no figure a card does not
 evidence**, holds four cells whatever the result, and says "Data unavailable" rather than a dash, a zero
 or an estimate. The SECTION HEADING carries the industry (`snapshotHeading`) and **no label does**.
-**Never "GCC's".**
+**Never "GCC's".** **TWO COLUMNS ON A PHONE, four from `lg`, and every size steps at `sm` as well as
+`md`** — one column drew four full-width rows of a desktop-sized numeral beside an empty half-measure, and
+the four cells are a SET whose point is that they are properties of one industry, which is something a
+reader sees by seeing them together. 2×2 is the only arrangement of four symmetrical at both ends.
 
 **ALL FOUR LABELS ARE SENTENCE PREDICATES COMPLETING THE FIGURE ABOVE THEM, at ANSR's request** — the
 shape the terminating scale strip has always used, where they were noun phrases naming the measure. So
@@ -350,10 +432,18 @@ is a field (`Signal.suffix`), set two scale steps under the figure — never a f
 
 **1. Up to five comparable companies.** ONE ROW, one column per peer, column count = peer count capped
 at five. Two columns between `sm` and `lg`, one below, odd last card widens. No packing — nothing wraps.
-Each card carries its employee band at 20/24px. **THERE IS NO ORDINAL ON A CARD** — left-to-right reading
-position states the order, so restoring a multi-row grid means restoring an ordinal with it. Labels are
-"GCC headcount", "Cities" and "In India since {year}"; only the figure names the GCC. No bars, no axis
+Each card carries its employee band at 18/20/24px. **THERE IS NO ORDINAL ON A CARD** — left-to-right
+reading position states the order, so restoring a multi-row grid means restoring an ordinal with it. Labels
+are "GCC headcount", "Cities" and "In India since {year}"; only the figure names the GCC. No bars, no axis
 note. **Headquarters is not shown and the field is dropped with the column.**
+
+**THE CARD'S INTERIOR IS A COLUMN AT THE WIDTH IT IS DRAWN AT AND TWO CELLS ON A PHONE, where the card
+takes the WHOLE measure.** `.gcc-peer-facts`: the figure and the year share a line, the city list keeps the
+full measure, nothing is removed and the DOM order stays figure, cities, year. **Which fact pairs with the
+figure is MEASURED** — two city chips and an overflow pill are ~176px, so pairing the list wrapped it to
+three lines and made the two-column card taller than the column it replaced. It is a media query with a
+LOWER BOUND rather than a utility: a cell has to hold a 112px band and a 116px year line, so two columns
+need 248px of card and a 320px viewport gives 200 — below `23rem` the flex column renders unchanged.
 
 **THE HEADING NAMES THE VISITOR'S OWN COMPANY, so it is DERIVED and no longer published copy.**
 `peersTitle(view)` in `screen1/copy.ts` reads "GCC details of peers closest to {company}", falling back
@@ -393,12 +483,21 @@ placeholder of any kind. **`CompanyMark` IN `evidence.tsx` IS THE ONE PIECE OF M
 largest-centres row, where it LEADS the row before the name and must stay smaller than it, the row's
 subject still being the company. Every rule the mark obeys lives in that component — `alt=""` because the
 name is always the adjacent heading, and both a height AND a width cap with `object-contain` on the customer
-strip's measurement. **A COMPARISON CARD RESERVES THE MARK'S HEIGHT WHETHER OR NOT ONE RENDERS, at the
+strip's measurement, and `shrink-0` — never on a wrapper at a call site. **`self-start` is scoped to the
+CARD sizes**: on a flex column it resolves on the inline axis and is what lets the width come from the
+ratio, and on a ranking row it would resolve on the block axis and top-align the mark against a line that
+is deliberately centred. **A COMPARISON CARD RESERVES THE MARK'S HEIGHT WHETHER OR NOT ONE RENDERS, at the
 project owner's instruction, and this REVERSES the earlier "nothing reserved" rule** — five cards on one
 row are read across, so an unmarked card put its name, figure and every row beneath it a mark's height
-above its neighbour's. **What is reserved is SPACE and nothing else**: no fill, no border, no hatch, so it
-reads as air rather than as a slot that failed to load, which is what keeps the banned placeholder banned.
-**THE RESERVATION IS `CompanyMark`'S JOB, SO NO CALLER MAY GUARD ON `markUrl` BEFORE CALLING IT.** The
+above its neighbour's. **The reservation is scoped to `sm` AND UP, because that is where a row exists**: on
+a phone the grid is one column, so no two cards share a horizontal band and the reserved band is 28px of
+blank opening every unmarked card. **What is reserved is SPACE and nothing else**: no fill, no border, no
+hatch, so it reads as air rather than as a slot that failed to load, which is what keeps the banned
+placeholder banned.
+**THE RESERVATION IS `CompanyMark`'S JOB, SO NO CALLER MAY GUARD ON `markUrl` BEFORE CALLING IT** — the
+ranking row did, and the guard cannot see the case that actually happens: a URL that resolves and then
+FAILS to load leaves the component returning null and the caller's wrapper standing, so a zero-width flex
+item plus the row's own `gap-x` indented the name of every company with a domain. The
 **A LAYOUT CHECK FOR THE MARK IS WORTHLESS ON A DEV SERVER WITH A CLIENT ID SET, and `.env.local` sets
 one.** With the tier on, every company with a domain gets a URL and a failing request lands on the same
 branch as no mark at all, so any bug in the no-mark branch is invisible — that is how a missing slot
@@ -528,7 +627,9 @@ the old blanket "no named image" count.
 
 **THE COUNT LINE UNDER THE GRID ENDS IN AN ARROW THAT JUMPS TO THE CLOSE**, at ANSR's request.
 `JumpToClose` in `evidence.tsx`, inside the paragraph rather than beside it, so it reads as the end of
-that sentence. Four things: it is `--ansr-action` at 3.4:1 on the zone's WHITE ground and may not be
+that sentence — in INLINE flow and never as a flex item, because a wrapping flex row makes the sentence
+one item and the arrow another, which strands the arrow alone on the next line at every phone width; the
+32px of ink takes a negative block margin so it overhangs the line rather than growing it. Four things: it is `--ansr-action` at 3.4:1 on the zone's WHITE ground and may not be
 lifted onto the mint, where the same orange is 2.63:1; it is the CTA role, which is the only orange this
 zone spends; 32px of target rather than 44, because a 44px box inside a 20px line box pushes the
 paragraph's two lines apart, and 32 clears the 24px floor; and `behavior` is `smooth` only when the
@@ -554,12 +655,27 @@ ranked by revenue: take the highest band with members in that industry and fill 
 size. Three industries have nobody in the top band, so the panel must degrade rather than assume one
 exists. **A COMPACT RANKED CHART, not a list of company cards.** A row is the `sm` company mark, name, figure,
 full-width bar, plus city and year as `sm` pills. There is no position numeral — the bars are sorted by
-the quantity they encode, so row one is full width and position reads off the bars. **A ROW IS TWO LINES, and the tags share the second one
-with the figure** — the figure carries `ms-auto` as well as `justify-between`, because a wrapped
-single-item line puts a justified item at the LEADING edge. **24px between rows, 8px from the name to the
-group under it, 4px from figure to bar**; the name takes `leading-tight`. The figure is the comparison
-card's treatment at 18/20px near-black. **One small-caps COLUMN HEADER names the quantity** ("GCC
-headcount"). **THE NAME LINE IS `items-center`, NOT `items-baseline`, and no item on it carries
+the quantity they encode, so row one is full width and position reads off the bars. **A ROW IS A GRID OF
+NAMED AREAS — `.gcc-rank-row` — WITH TWO ARRANGEMENTS, and neither is a wrap.** From `sm`: name, then the
+tags sharing a line with the figure, then the bar. On a PHONE: the figure moves up to the NAME's line and
+the tags go under the bar, because at 375 the tags alone take two lines, so the figure wrapped under them
+— three lines below the column header that names it and two above the bar it is the value of. Areas rather
+than `order`, so the reading order is name → tags → figure → bar at both widths; one DOM tree, so no
+figure is in the accessibility tree twice. The trailing column is `auto`-sized, which is why the figure
+needs neither `ms-auto` nor `justify-between` any more: a column cannot wrap. **24px between rows, 8px
+from the name to the line under it, 4px from figure to bar** — a grid has ONE row gap, so 4px is the gap
+and the item opening the second group carries the other 4 as a margin; the name takes `leading-tight`. The
+figure is the comparison card's treatment, 18/20/24px in the heading teal, and the two step together at
+`sm` because they are one quantity. **BELOW `sm` THE OVERLAP MARKER AND THE BADGE TAKE A LINE OF THEIR OWN**
+(`basis-full` on their shared flex item), so the badge has ONE x on every row: flowing inline after the name
+its position was wherever that name ended, and where the name wrapped it broke to a third line anyway — five
+rows, five offsets, two depths. It costs no line for the FIGURE, which drops to the bottom of the name block
+under `align-items: end` and lands beside that line, still directly above its own bar. **The BADGE leads that
+line and the marker is `whitespace-nowrap`**, both because one x means one: marker-first put the badge at the
+leading edge on a row outside the peer set and 156px in on a row inside it, and a marker wrapping to two lines
+moved it again between phone widths. `order` is paint order only, so the DOM stays marker then badge and the
+reading is unchanged; from `sm` the group flows after the name, marker first. **One small-caps
+COLUMN HEADER names the quantity** ("GCC headcount"). **THE NAME LINE IS `items-center`, NOT `items-baseline`, and no item on it carries
 `self-center`** — the mark is the tallest thing on that line, so it sets the line's cross size and
 centring it there was a no-op while the name, as the max-ascent baseline item, sat flush to the cross
 start with its cap midline above its box midline. Measured: 2.27px of drift between the mark's midline and
@@ -583,7 +699,10 @@ its meaning.
 **The function list is a WRAPPING SET OF TAGS** with no column count at all. **The tags claim nothing:**
 no numeral, no bar, no leading mark, no hover state, no order, and it stays a `<ul>` — there is no
 per-company function record in this dataset. `whitespace-nowrap` guarantees nothing wraps internally.
-Fill is `--ansr-surface` on the mint zone, no border. **The shipped set is written to a 16-to-28
+Fill is `--ansr-surface` on the mint zone, no border. **A tag is 12px in a tighter box below `sm`, at the
+project owner's instruction** — a membership marker at caption weight, and at 14px almost every item took a
+line to itself, which made the one block claiming nothing the tallest thing on the phone's peer view after
+the map. **The shipped set is written to a 16-to-28
 character range so no item decides the layout**, and the schema caps an item at 32 and the list at 12 —
 the set wraps as one row with no column count, so an item much longer than the rest is the one that
 decides the layout. The section heading carries the basis: "Common functions run
@@ -597,7 +716,14 @@ The two Screen 1 blocks that compute it are scaled separately. The visible figur
 
 ## Screen 2 — Function View
 
-Tech, Operations, HR, Finance. Metrics are filed internally by four lenses — supply, speed, place, cost —
+Tech, Operations, HR, Finance — **content-width cells at EVERY width: `justify-between` and 12px labels on a
+phone, a wrapping flex row at the full size from `sm`.** The equal-width `grid-cols-4` that sat between them
+is gone at the project owner's instruction: it fixed the ragged two-line wrap and put "HR", 16px of ink, in a
+68px cell under a 68px selected rule, so one tab in four read as a short word floating in a slot and the
+indicator named the cell rather than the word. **What wrapped the original row was the PADDING, not the
+labels** — the four are 180px of ink at 12px against a 224px strip at 320, and `px-5` a side added 160. So
+the cells take their own width and the slack is distributed; `min-w-8` is the only thing the padding was
+still buying, holding "HR" to a 32px target above the 24px floor without widening the other three. Metrics are filed internally by four lenses — supply, speed, place, cost —
 and **the lens names are an internal filing system, never public UI labels.** Admin shows them, labelled
 internal. `METRIC_LENSES` in `schema.ts` is the contract.
 
@@ -691,7 +817,10 @@ action, no panel. **The band has NO `h2`** — its accessible name is an `aria-l
 is the wrong fix and `docs/traps.md` says why. Centred, on `--ansr-surface-inverse-soft` via `Zone`'s exempt
 ground, and the last thing inside the card — `SOURCE_LINE` still follows it outside, on the page ground.
 
-**It asks QUIETLY: 18/20px Light for the line, 48px for the pill.** The line was promoted to the heading's
+**It asks QUIETLY: 16/18/20px Light for the line, 48px for the pill.** The phone step is the same argument
+arriving by measure rather than by size — at 18px a 98-character sentence is four centred lines, which is
+the second hero the promotion below was reverted for. The contrast bound is on the COLOUR and does not move
+with it: the veil is one flat value. The line was promoted to the heading's
 old display scale once and reverted — at 24/30/38 a one-sentence band reads as a second hero, and the close
 is the last thing on a long page of evidence.
 
@@ -730,9 +859,12 @@ draws no mark, so nothing a card's edges were measuring can be misrepresented. `
   Anything else comes back whole, which protects a grouped count, a bare index and a signed delta.
 - **Figure above its label visually, heading before its figure in the DOM.** Label is ink; unit and note
   are muted.
-- **A FIXED height on the figure box and nothing reserved below it.**
-- **Column count from a STATIC map**, because a Tailwind class cannot be interpolated. One column below
-  `sm`.
+- **A FIXED height on the figure box and nothing reserved below it**, stepping with the figure at `sm`
+  and `md`.
+- **Column count from a STATIC map**, because a Tailwind class cannot be interpolated. **TWO columns on a
+  phone and the figure a step down (30px) to fit them**, on the snapshot's own reasoning; an odd last cell
+  widens to the full row below `sm`, since a lone cell in a row of evidence reads as one that failed to
+  load.
 - **The floor note is once for the ROW** where more than one figure declares a floor, per-cell otherwise,
   and still per-card where a CARD carries one.
 - **A composed row carries no QUALIFIER.**
@@ -837,6 +969,17 @@ with no invented figures and lets a gated metric render a placeholder with no va
 figure renders with a trailing `+`, applied in one place in `screen2.ts`. Refused on a rating, dropped by
 the gate.
 
+**A PROGRESSION'S RAIL IS HORIZONTAL AT EVERY WIDTH — ONE LAYOUT, at the project owner's instruction — and
+the vertical phone rail and the line-less list before it are both deleted.** `.gcc-milestones` places each
+waypoint as label, ring, figure down one column standing on the rail at `--gcc-at`; the only things that step
+at `sm` are three SIZES, never a placement. **The item cap is a PERCENTAGE of the rail below `sm` and a length
+above it, and the cap is what made the horizontal reading unavailable before.** The tightest pair of waypoints
+is 16.7% of the rail apart at every width, so a 3.5rem cap clears at 1024 and collides at 320; 14% clears by
+the same 2.7% of the rail everywhere. **The wrapper's inset is a percentage for the same reason** — it absorbs
+half an item and half an item is now a percentage — so `px-[7%] sm:px-7`, and the captions take it as they
+already did from `sm`. The label row stays two lines RESERVED, which is what keeps a capped label wrapping
+rather than overflowing and what the rail's own offset is derived from.
+
 **`progression` marks a breakdown whose parts are waypoints on ONE path**, authored because nothing in the
 data can tell a growth curve from four destinations measured once each. Refused on anything but a
 breakdown of three or more parts, refused alongside `atLeast`, dropped by the gate. The derived
@@ -863,7 +1006,23 @@ colour or sit under the floor on the strength of either.**
 **A CELL'S MARK IS A LANDSCAPE RECTANGLE (16×10), NOT A SQUARE** — four squares read as four objects to
 count, four rectangles read as one part-filled segmented bar, which is the comparison a rated matrix
 exists for. **The key is DRAWN rather than listed, sits BELOW the grid at the trailing end, and its marks
-are about half the cell's area.** The grid scrolls inside its own container below ~610px.
+are about half the cell's area.** **It is an intrinsically sized GRID of EQUAL columns, never a wrapping
+flex row** — four ordinal words of four different widths at one inline gap sat at four unrelated offsets,
+so no cluster lined up with any other and the trailing-aligned wrap left a ragged last line, which is what
+ANSR read as asymmetry. `1fr` columns under `w-fit` all resolve to the widest label's max-content, so every
+cluster starts at the same offset in its own column and `ms-auto` keeps the block trailing. Two columns
+below `sm`, four from it: four at the widest label's width do not fit a 320px card, and 2x2 is the only
+arrangement of four regular at both ends.
+
+**THE GRID REFLOWS BELOW `md` — one block per capability, one line per hub — because the scroller hid the
+visitor's own column by default.** At 375 that container is 237px against a 672px table, `scrollLeft` is 0 on
+load, and India, the column every other column is read against, sat past the edge with no fade, arrow or
+shadow. A scroll cue would have made the hiding visible rather than fixed it. Between `md` and `lg` the table
+still draws, and fits by stepping its own cell padding and minimum down; from `lg` both are what they were.
+`display: block` on a table's parts drops the implicit table semantics, so **`OrdinalGrid` declares
+`table`/`rowgroup`/`row`/`columnheader`/`rowheader`/`cell` explicitly** and each cell carries its column's
+name as its own `aria-hidden` span — the `thead` stays in the document, visually hidden, because it is what
+associates a cell with its column for anyone reading by role.
 
 **Colour inside a chart is ordinal only, on the teal ramp — darker means more.** The ramp is monotonic in
 Oklab lightness end to end and supplies no categorical hue, so any distinction that must survive greyscale
@@ -916,9 +1075,20 @@ parse a label** — entry and axis names are admin-editable.
 - **Nesting is AUTHORED (`subset`); a shared `unit` is only the precondition.** Two same-unit parts
   without it draw as two ADJACENT proportional blocks. Refused on anything but two parts, on parts with no
   shared unit, and alongside `progression`.
+- **A RANGE'S TWO END LABELS BRACKET THE RAIL AT EVERY WIDTH** — two columns, trailing one end-aligned.
+  Stacked at the leading edge on a phone they read as a two-item list of notes, where they name the two
+  ends of the drawing above them. **AND THEY ARE IN THE RAIL'S OWN GROUP, 4px under the endpoint figures,
+  at 12px MEDIUM** — the card's note sits 16px below them, so as a third sibling of the chart's column at
+  `gap-6` they were 28px from the figures they name, nearer the note than the drawing and set in the note's
+  exact treatment. Two gaps decide which block a caption joins, so the fix is the ratio between them and
+  the weight step, and it is not scoped to a width: the desktop card carries the same two gaps.
 - **A bar is dropped where it would mislead, and the axis is never truncated to rescue it.** 99.95%
   against 99.5% is caught by `clusteredHigh` and drawn as figures alone. A cost index draws a visible zero
-  tick.
+  tick. **THE ORIGIN'S NUMERAL IS NOT DRAWN BELOW `sm` and the TICK still is**, because the numeral was
+  costing the low endpoint figure its position: a low end at 10% of the rail is 29px at 390, so the `0` and
+  the figure collide and `--gcc-range-floor` pushed the figure 19px off the mark it belongs to — a
+  misplacement, on a chart whose whole construction is that the number sits under its own mark, and it is
+  what "not placed right" was. The floor is zero where there is nothing to clear.
 - **A PERCENTAGE SCALES TO 100 ONLY WHERE THE PARTS ARE THE WHOLE.** A stacked bar has no choice. A RATE
   is not a share of anything and scales to its own largest part. `breakdownScale` takes the display.
 - **A part-to-whole claim gets one divided bar, never a row of bars.**
@@ -933,8 +1103,29 @@ parse a label** — entry and axis names are admin-editable.
   digits.
 
 **India heatmap** — built from the city lists in the company data, filtered to the visitor's industry, dot
-area and fill depth both tracking the count. **The one ambient animation is a halo BEHIND the leading
+area and fill depth both tracking the count. **The labelled set is the ranked list's set AT EVERY WIDTH,
+expanding with the disclosure, and the phone's four-city exception is gone** at the project owner's
+instruction — a graphic pointing at four of the eight rows directly beneath it is the disagreement that
+rule exists to prevent. What a phone still does differently is spend a 236px map's room: the type size is
+derived from the label COUNT (`phoneLabelShare`, three measured steps at the list's own collapsed and
+expanded sizes) and **a phone label draws the NAME ALONE**, the count being a third of every label's width
+to restate a figure the list carries one line below. `showFigure` is therefore a LAYOUT input rather than a
+rendering one — the room a label needs is what picks its side of the country. The 9% wrapper reserve is a
+measured ceiling: the panel's `overflow: hidden` is the clip, so the room a label has is that padding plus
+the panel's own 16px and nothing more, and widening the gutter shrinks the frame the type is a share of.
+Two layers, one layout function, both `aria-hidden`; the layer is named by `data-map-labels`, because
+`svg text` means both. **The one ambient animation is a halo BEHIND the leading
 hubs, never the dot** — a dot's radius is the figure, so animating it animates the claim.
+
+**A CITY THE SOURCE ABBREVIATES IS EXPANDED WHERE THE SPREADSHEET IS READ, on `canonicalIndustry`'s own
+argument.** `CITY_ALIASES` / `canonicalCity` in `normalize.ts`, applied inside `parseCities` and BEFORE its
+de-duplication so both spellings collapse to one entry. The one entry is `NCR` → **`Delhi NCR`**, at ANSR's
+request, and the rename is what the rule is for: a city string is the key `CITY_COORDINATES` in `geo.ts` and
+`TIER1_CITIES` in `derive.ts` both look up, and the importer is the recovery path — so renaming the published
+dataset alone would leave the next import with a city that is counted, ranked and listed, carrying no dot and
+no tier-1 standing. Admin needs no change of its own: the taxonomy editor renders `taxonomy.cities`, so the
+datum IS the admin label. Expansions only, exactly as with industries; merging two cities or fixing a typo
+belongs in the taxonomy editor, where the rename cascades and the diff records it.
 
 **Five renderers have no live caller and each is kept as a fallback rather than dead code:** `Journey`,
 `NestedBar`, `RangeBar`, `Dumbbells`, `IndexLollipop`. All five are what `metric-card.tsx` would route a
@@ -954,7 +1145,9 @@ retired palette and the reasoning behind every rule below: `docs/design-referenc
   own fill. `--ansr-accent-warm` is unusable on a dark ground. Neither may fill a control.
 - **`--ansr-teal-bright` is for dark grounds only** and is unavailable inside a chart on a light ground.
 - **Radius `none` on every card and panel on the public screens.** Two exceptions, both containers: the
-  entry point's form card and controls at `lg`, the floating result card at `xl`. `pill` for chips,
+  entry point's form card and controls at `lg`, the floating result card at `xl` — stepping to `lg` below
+  `md`, where at `px-6` on a phone the card is 342 of 390 across and reads as the page rather than as a
+  plate on a ground; the close band's own bottom corners and the answer editor above it follow it. `pill` for chips,
   counters and actions. `md` is admin's default. **A LOGO is the one CONTENT allowed a radius** —
   `md` on a peer card's `CompanyMark`, whose box is letterboxed padding, `sm` on the customer strip,
   whose files are cropped to their ink; the Fortune badge takes none. Steps: style lock.
@@ -1185,7 +1378,15 @@ display size and is what the 60-character cap is measured against. **No punctuat
 project owner's request** — the colon that was there while the name was typed became a typed character
 against the trailing edge of an outlined mark, and the lockup separates the name from the promise on its
 own. So the nowrap span usually holds nothing, which is the mechanism doing its job rather than a case to
-delete: the wrapping rule is a property of an atomic inline, not of one title's punctuation. **The impact band's heading is the other
+delete: the wrapping rule is a property of an atomic inline, not of one title's punctuation. **BELOW `lg`
+THE PRODUCT NAME OWNS ITS OWN LINE, and that `<br>` is the composition's one manual break** — after the
+mark's nowrap span, `lg:hidden`, and emitted only where the title continues past the name. Desktop already
+breaks there at 72px so `display: none` leaves it untouched; from about 400px `text-balance` did not, and
+"ANSR ATLAS Benchmark" on one line reads the product's name as the first two words of a sentence. That is a
+naming failure rather than a ragging one, so it may not be left to a cap or to the balancer — both move
+with the font size and the string. **The `h1` takes `text-pretty` below `lg` and `text-balance` from it,
+and the pair goes with the break**: the balancer does not reach across a forced break, so it left a
+single-word last line, which is the one thing it is there to prevent. **The impact band's heading is the other
 place the mark is typed nowhere**: it reads "[ANSR] By The Numbers", so the mark LEADS the line and
 `impactTitleLead` holds only "By The Numbers". A `{" "}` after the image is load-bearing for the ACCESSIBLE
 NAME rather than the layout — JSX strips whitespace containing a newline, and without it the name computes

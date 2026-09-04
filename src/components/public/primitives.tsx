@@ -468,7 +468,10 @@ export function Panel({
           taller than its neighbour's. */}
       <div
         className={cn(
-          "relative flex flex-col gap-1.5 px-5 py-4 md:px-6 md:py-4.5",
+          // `px-4` on a phone. A panel sits inside a zone that is already inset, so its own
+          // padding is the last 40px of a 287px measure — and the narrowest things on
+          // this surface (a ranking row's tags, the map's labels) live inside it.
+          "relative flex flex-col gap-1.5 px-4 py-4 sm:px-5 md:px-6 md:py-4.5",
           inverse ? "border-b border-border-inverse" : "border-b border-border",
         )}
       >
@@ -497,7 +500,11 @@ export function Panel({
           <Heading
             id={headingId}
             className={cn(
-              "min-w-0 text-xl leading-snug font-bold tracking-display text-pretty md:text-2xl",
+              // 18px on a phone against 20 from `sm` and 24 from `md`. The ordering the size
+              // was chosen for is a RATIO — the heading a clear step under the figures the
+              // card carries — and the figures step down on a phone too, so a heading that
+              // did not would be closing that gap rather than holding it.
+              "min-w-0 text-lg leading-snug font-bold tracking-display text-pretty sm:text-xl md:text-2xl",
               inverse ? "text-text-inverse" : "text-text",
             )}
           >
@@ -519,7 +526,12 @@ export function Panel({
           </p>
         ) : null}
       </div>
-      <div className={cn("relative px-5 py-5 md:px-6 md:py-6", bodyClassName)}>
+      <div
+        className={cn(
+          "relative px-4 py-4 sm:px-5 sm:py-5 md:px-6 md:py-6",
+          bodyClassName,
+        )}
+      >
         {children}
       </div>
     </section>
@@ -593,8 +605,10 @@ export function Block({
                 // hierarchy the four tones were trying to supply: the primary evidence
                 // is larger, and nothing else has to be a different colour to say it
                 // is a different kind of claim.
-                "text-2xl leading-tight md:text-3xl"
-              : "text-xl leading-snug md:text-2xl",
+                // 20 / 24 / 30. The phone step is the same ratio fix the `Panel`
+                // heading takes; see the note there.
+                "text-xl leading-tight sm:text-2xl md:text-3xl"
+              : "text-lg leading-snug sm:text-xl md:text-2xl",
           )}
         >
           {title}
@@ -611,7 +625,7 @@ export function Block({
           </p>
         ) : null}
       </header>
-      <div className="mt-5 md:mt-6">{children}</div>
+      <div className="mt-4 sm:mt-5 md:mt-6">{children}</div>
     </section>
   );
 }
@@ -746,7 +760,20 @@ export function Zone({
           // overflowed its cell by 3px and truncated to "Bengalu…". The figure cells
           // are the narrowest thing on the surface and the first to fail, so this
           // padding is set by them.
-          "mx-auto max-w-content px-6 py-8 md:px-8 md:py-10",
+          // **A phone takes a step off both axes, and it is the ACCUMULATION that pays
+          // for it rather than any one zone looking tight.** The peer view is six zones
+          // and each composed tab is two to four, so 32px of block padding is 384px of
+          // padding on one screen — and padding is read as a proportion of what it
+          // surrounds, so the same 32px that frames a 400px desktop section is a fifth of
+          // a phone one. 24px still reads as a band with air in it and gives ~100px back
+          // across the surface.
+          //
+          // The inline step is 4px and it goes the other way: it is content WIDTH, and at
+          // 375 a zone's container is 279px with `px-6` against 287 with `px-5`. Every
+          // narrow thing on these screens — a ranking row's tags, the figure cells, the
+          // map's own labels — is competing for exactly that measure. It cannot break the
+          // truncation note above, which was about there being too LITTLE room.
+          "mx-auto max-w-content px-5 py-6 sm:px-6 sm:py-8 md:px-8 md:py-10",
           className,
         )}
         style={style}

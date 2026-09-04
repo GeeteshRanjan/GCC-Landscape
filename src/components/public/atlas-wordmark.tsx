@@ -49,6 +49,17 @@ import { cn } from "@/lib/utils";
  * than assumed: the two marks' cap bands agree to within a device pixel and their
  * baselines to within a fifth of one.
  *
+ * **THAT SIZE IS THE DEFAULT AND THE RESULT SCREENS OVERRIDE IT, which is a real
+ * difference between the two sites rather than drift.** Here — the entry point's
+ * headline — the ANSR half is the WORDMARK alone in a line of 72px type. On the
+ * result screens it is the FULL lockup, letters beside a circular mark two and a half
+ * times their cap height, and cap parity there reads as ATLAS being the larger of the
+ * two: it is the wider run and its stem is 0.1417 of its cap height against the
+ * wordmark's 0.137, and the wordmark reads reduced beside a mark that dwarfs it. So
+ * `ProductIdentity` steps this down to `0.717em`, which is the ratio this headline
+ * already draws — the entry point is the calibration and its own numbers are
+ * unchanged. The measurement and the method are recorded there.
+ *
  * **The box is vertically SYMMETRIC about the cap band, which is what makes it
  * centre correctly.** The S overshoots the cap line above and the baseline below by
  * different amounts, so the crop pads the shorter side back out and the cap band's

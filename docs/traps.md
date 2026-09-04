@@ -176,6 +176,13 @@ session. Read on demand, and add to it whenever something costs more than one at
 - **`fullPage` screenshots time out on `Group 149.svg`** — 7.4MB, 5,531px tall. Inline it with
   `setContent` at a 1440×1383 viewport, then scroll a viewport at a time and take four shots. Reading
   the board is the only way to settle a card-chrome question; a description of it is not the board.
+- **A `fullPage` phone capture at `deviceScaleFactor: 2` is REJECTED by the chat image path, and the
+  failure names nothing you can act on.** The message is "At least one of the image dimensions exceed
+  max allowed size: 8000 pixels" with a request id and no filename. The arithmetic is the whole story: a
+  result screen is ~4,000 CSS pixels tall at 390 wide, and a scale factor of 2 makes that an 8,000+ pixel
+  PNG. So a phone probe takes `deviceScaleFactor: 1` for anything `fullPage`, and reserves 2 for a
+  viewport-sized or `clip`ped shot. Attaching one of the rejected files fails the whole prompt, not just
+  the image, so the file is worthless as well as large.
 - **A Tailwind class cannot be interpolated.** `lg:grid-cols-${n}` generates no CSS at all, which
   renders as a single column and looks deliberate. Use a static map keyed by the count.
 - **The revenue bands use an EN DASH**, not a hyphen: `$1 Bn – $5 Bn`. A spec or harness typing a
@@ -205,9 +212,12 @@ session. Read on demand, and add to it whenever something costs more than one at
   match hits "70" as well. Read the card's normalised `textContent` and match a pattern.
 - **A `MilestoneTrack` item's text has no separator in it** — `"50 FTEs6"`, not `"50 FTEs 6"` — because
   the milestone and its duration are a `dt` and a `dd` of one pair with no whitespace between them.
-- **The milestone positions are read off `--gcc-at`, not off geometry.** `.gcc-milestones__item` is
-  absolutely positioned only from `sm`; below it there is no rail and no dot at all, so a spec
-  measuring bounding boxes at 390 measures a vertical list.
+- **The milestone positions are read off `--gcc-at`, not off geometry, and the AXIS ROTATES at
+  `sm`.** `.gcc-milestones__item` is absolutely positioned at every width now, but below `sm` the
+  rail runs down the card and `--gcc-at` is a `top` rather than an `inset-inline-start` — so a spec
+  measuring x-positions at 390 measures a column of identical x's and one at 1280 measures the
+  progression. The custom property is the same at both widths, which is why reading it is the only
+  portable assertion.
 - **`npx playwright test` does NOT rebuild the fixture.** Only `npm run test:browser` runs
   `prepare.ts`, which copies `data/dataset.json` into `tests/browser/.tmp`. After a catalogue change,
   running Playwright directly tests the OLD data and the failures point at the wrong thing — a stale
@@ -265,3 +275,15 @@ session. Read on demand, and add to it whenever something costs more than one at
   exists; `journeyLegs` is still unit-tested in `screen2.test.ts`.
 - **The function tab strip has no `svg` in it.** The four glyphs were removed at ANSR's request, so a
   spec locating a tab by its icon, or counting icons in `tablist`, finds none.
+- **`new URL("./out/", import.meta.url).pathname` is PERCENT-ENCODED, and this workspace path has a
+  space in it.** A throwaway probe script resolved its output directory to
+  `/Users/.../GCC%20Landscape/...` and `mkdirSync` obligingly created a whole sibling tree under a
+  directory literally named `GCC%20Landscape` — no error, and the screenshots it wrote were nowhere
+  near where the next command looked for them. Use `fileURLToPath`.
+- **The capability grid REFLOWS below `md` and the reflow is CSS on one DOM tree**, so a spec that
+  locates a cell by column position, or asserts the `thead` is visible, is asserting a desktop-only
+  shape. `.gcc-rating-grid` sets `display: block` on the table's parts, the `thead` is visually hidden
+  but still in the accessibility tree, and each cell carries its column's name a second time as an
+  `aria-hidden` span — so `textContent` on a cell gains the hub's name at phone widths while its
+  accessible name does not. The browser projects run at Desktop Chrome 1280, where none of this is
+  active; a spec that sets a phone viewport has to know.

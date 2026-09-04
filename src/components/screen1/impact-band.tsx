@@ -78,7 +78,15 @@ export function ImpactBand({ stats }: { stats: readonly ImpactStat[] }) {
       // something larger, and it is what stops them adding horizontal page
       // scroll. `isolate` gives the two absolutely-positioned motifs a stacking
       // context of their own so they cannot escape above the content.
-      className="relative isolate overflow-hidden bg-surface-deep py-14 md:py-20"
+      // **`py-10` on a phone, where this was `py-14`, and it is the stack below that
+      // licenses it.** 112px of padding is right around a row of five figures that is
+      // itself only ~120px tall; it was wrong around a 560px column, because padding is
+      // read as a proportion of what it surrounds and at that height it stopped
+      // separating the band from anything and just added to it. With the figures two
+      // across the stack is roughly half as tall and 80px is the proportion the desktop
+      // band actually has. Read together with the strip above it — see `CustomerLogos`,
+      // whose own padding is the other half of the gap between the two bands.
+      className="relative isolate overflow-hidden bg-surface-deep py-10 md:py-20"
     >
       {/* The pair. One file, two corners — see `.gcc-impact-ring`.
           Decorative and carrying no information the figures do not, so the whole
@@ -235,8 +243,20 @@ export function ImpactBand({ stats }: { stats: readonly ImpactStat[] }) {
             first — which is a presentational reordering of a real pair rather
             than markup chosen for looks: the LABEL is the term. */}
         <dl
+          // **Two columns from the base, where this started at one and only reached two
+          // at `sm`.** Every phone in portrait is under 640px, so `sm:grid-cols-2` meant
+          // no phone ever saw two columns and five corporate figures stacked into a
+          // 560px column — measured at 771px for the whole band, which is 95% of an
+          // iPhone viewport spent on evidence about ANSR rather than about the visitor's
+          // own industry. These are short numeric figures, so the constraint was never
+          // width: at 375 a column is ~150px and the widest value, `$2.5B+`, sets to
+          // ~120px of it. The labels wrap to two or three lines and read fine doing it,
+          // because a label under a figure is a caption rather than a measure.
+          //
+          // `gap-x-6` rather than `gap-x-8` at that width, for the same reason: the 8px
+          // goes back to the cells, which is where a wrapping label needs it.
           className={cn(
-            "mt-8 grid grid-cols-1 gap-x-8 gap-y-8 md:mt-12 md:gap-y-10 sm:grid-cols-2",
+            "mt-8 grid grid-cols-2 gap-x-6 gap-y-8 sm:gap-x-8 md:mt-12 md:gap-y-10",
             DESKTOP_COLUMNS[Math.min(stats.length, 6)],
           )}
         >
@@ -245,10 +265,15 @@ export function ImpactBand({ stats }: { stats: readonly ImpactStat[] }) {
               key={stat.id}
               className={cn(
                 "flex flex-col gap-3 text-center",
-                // The two-column orphan, widened. See `DESKTOP_COLUMNS`.
+                // The two-column orphan, widened — and it applies from the base now
+                // rather than from `sm`, because the two-column grid does. With five
+                // figures the last one is alone on a third row, and a lone cell in a
+                // two-column row of evidence reads as a figure that failed to load,
+                // which is the same rule `packWidths` and `peerSpans` enforce on the
+                // other grids on this screen.
                 stats.length % 2 === 1 &&
                   index === stats.length - 1 &&
-                  "sm:col-span-2 lg:col-span-1",
+                  "col-span-2 lg:col-span-1",
               )}
             >
               {/* The figure. `tabular-nums` so the digits in a row of five sit on

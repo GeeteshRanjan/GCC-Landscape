@@ -450,7 +450,16 @@ export function InputPanel({
           `items-start` so a field carrying a status line below it does not stretch its
           neighbour; `gap-x-6 gap-y-6` so the vertical rhythm between rows matches the
           gap between columns and the grid reads as a grid. */}
-      <div className="grid items-start gap-6 md:grid-cols-2">
+      {/* **`gap-4` while the grid is one column, `gap-6` once it has two.** Below `md`
+          there are no columns, so the gap is pure vertical rhythm between five 48px
+          controls — and at 24px each the five read as five separate things with the
+          action a long way past the last of them. At 16px they read as one unit and the
+          form gives back 32px above the submit, which is the whole of what that gap was
+          buying on a screen with nothing beside it. From `md` the grid gains its second
+          column and the gap is doing a different job: it is the interior boundary
+          between the columns as well, so the two axes have to match or the grid stops
+          reading as a grid. */}
+      <div className="grid items-start gap-4 md:grid-cols-2 md:gap-6">
         {/* Not marked optional, though the server accepts it empty. See
             `FieldProps.optional` — this is the input that personalises every
             sentence in the result, and the marker was talking a visitor out of the
