@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generatedAt": "2026-09-04T19:13:50.655Z",
+  "generatedAt": "2026-09-05T06:51:38.004Z",
   "source": "Consolidated_GCC_India_Database_2026_New.xlsx",
   "taxonomy": {
     "industries": [
@@ -42241,8 +42241,8 @@
       "value": {
         "kind": "breakdown",
         "values": [
-          99.95,
-          99.5
+          100,
+          100
         ]
       },
       "gated": false
@@ -42286,7 +42286,7 @@
       "id": "ops-disruption-days",
       "functionArea": "operations",
       "lens": "place",
-      "title": "Working days lost a year, by city",
+      "title": "Working days lost a year",
       "question": "How many working days a year does the city actually lose?",
       "unit": "days a year",
       "format": "duration",
@@ -42294,8 +42294,6 @@
       "structure": {
         "kind": "breakdown",
         "entries": [
-          "Bengaluru",
-          "Hyderabad",
           "Pune",
           "Chennai"
         ]
@@ -42303,10 +42301,8 @@
       "value": {
         "kind": "breakdown",
         "values": [
-          4,
-          2,
-          3,
-          6
+          0,
+          0
         ]
       },
       "gated": false
