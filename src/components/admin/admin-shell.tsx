@@ -60,10 +60,26 @@ export function AdminShell({
       {/* Two rows, because the group labels need the width. The identity and the
           save status are the persistent state; the nav is the choice. */}
       <header className="sticky top-0 z-30 border-b border-border-subtle bg-surface">
-        <div className="mx-auto flex max-w-wide flex-wrap items-center gap-x-6 gap-y-3 px-6 pt-3 pb-1">
-          <p className="text-sm font-semibold tracking-heading text-text">
-            GCC data
-          </p>
+        <div className="mx-auto flex max-w-wide flex-wrap items-center gap-x-6 gap-y-3 px-6 pt-3 pb-2">
+          {/* The identity, plus where a publish would LAND. The target was only ever
+              readable at the bottom of the publish page, which is the one place an admin
+              is not standing when they need to know whether this window is pointed at
+              production — so it rides the identity, quietly, on every page. It says
+              nothing at all when publishing is unavailable, because the banner below
+              already says that at full volume. */}
+          <div className="flex items-baseline gap-2">
+            <p className="text-sm font-semibold tracking-heading text-text">
+              GCC data
+            </p>
+            {publishTarget.ok ? (
+              <span
+                className="text-xs text-text-muted"
+                title={publishTarget.description}
+              >
+                {publishTarget.target === "github" ? "live repo" : "local file"}
+              </span>
+            ) : null}
+          </div>
 
           {/* The palette's trigger leads the trailing group, before the save status.
               It is the one control on this row that is an ACTION rather than a
@@ -86,20 +102,41 @@ export function AdminShell({
         */}
         <nav
           aria-label="Sections"
-          className="mx-auto flex max-w-wide flex-wrap items-center gap-x-6 gap-y-1 px-6 pb-3"
+          className="mx-auto flex max-w-wide flex-wrap items-center gap-x-5 gap-y-2 px-6 pb-3"
         >
-          {NAV_GROUPS.map((group) => {
+          {NAV_GROUPS.map((group, index) => {
             const labelId = `admin-nav-${group.label.toLowerCase().replace(/\W+/g, "-")}`;
             return (
               <div
                 key={group.label}
                 role="group"
                 aria-labelledby={labelId}
-                className="flex flex-wrap items-center gap-x-2"
+                className="flex flex-wrap items-center gap-x-1.5"
               >
+                {/*
+                  **A rule between groups rather than more space, and the group label
+                  demoted under the links.** The label used to be the same 12px caps in
+                  the same muted ink as the inactive tabs, sitting inline with them — so
+                  a row of nine items read as nine peers and the grouping was invisible
+                  at exactly the size it was drawn. What separates the groups now is a
+                  hairline, which is the cheapest mark that survives the row wrapping —
+                  and the links themselves gained a shape, so the label is the only
+                  unshaped thing on the row and reads as introducing rather than
+                  belonging.
+
+                  A `<span>` inside the group, not a `::before` on it: the divider is
+                  decoration and must not land in the accessible name the group takes
+                  from that label.
+                */}
+                {index > 0 ? (
+                  <span
+                    aria-hidden="true"
+                    className="me-3.5 hidden h-4 w-px bg-border-subtle sm:block"
+                  />
+                ) : null}
                 <span
                   id={labelId}
-                  className="text-xs font-medium uppercase tracking-caps text-text-muted"
+                  className="me-1 text-xs font-medium uppercase tracking-caps text-text-muted"
                 >
                   {group.label}
                 </span>
@@ -114,10 +151,16 @@ export function AdminShell({
                       href={tab.href}
                       aria-current={active ? "page" : undefined}
                       className={[
-                        "px-3 py-1.5 text-sm transition-colors duration-fast",
+                        // `rounded-md` on both states, so the hover fill is the same
+                        // shape as the current one — a square hover under a square
+                        // active fill read as the page having moved.
+                        "rounded-md px-2.5 py-1.5 text-sm transition-colors duration-fast",
                         active
-                          ? "bg-surface-sunken font-medium text-text"
-                          : "text-text-muted hover:text-text",
+                          ? // Three signals, none of them colour: the fill, a hairline
+                            // ring so it reads as a raised chip rather than a highlight,
+                            // and the weight. Same argument as the public view switch.
+                            "bg-surface-sunken font-medium text-text ring-1 ring-border-subtle"
+                          : "text-text-muted hover:bg-surface-subtle hover:text-text",
                       ].join(" ")}
                     >
                       {tab.label}
@@ -132,10 +175,19 @@ export function AdminShell({
 
       {/* Two banners, in severity order. The conflict one is a blocker in
           practice, so it sits above the routine warning. */}
+      {/*
+        **Three banners of one weight became three of three weights, and the ranking is
+        carried by FORM rather than by colour** — which is the design rule here, the four
+        `--ansr-status-*` tokens being retired and lint-blocked. All three used to be a
+        full-bleed strip with a hairline and a fill, so a blocker and a routine reminder
+        were the same object and an admin learned to read past both. What differs now is
+        the LEADING EDGE: the two that need acting on carry a 4px inline-start rule, the
+        routine one carries the attention dot it already had, and nothing gained a hue.
+      */}
       {conflict ? (
         <div
           role="alert"
-          className="border-b border-border-strong bg-surface-sunken"
+          className="border-b border-border-strong bg-surface-sunken border-s-4 border-s-border-strong"
         >
           <div className="mx-auto flex max-w-wide flex-col gap-3 px-6 py-4 sm:flex-row sm:items-center">
             <p className="text-sm text-text">
@@ -181,7 +233,10 @@ export function AdminShell({
       ) : null}
 
       {!publishTarget.ok ? (
-        <div role="alert" className="border-b border-border-strong bg-surface-sunken">
+        <div
+          role="alert"
+          className="border-b border-border-strong bg-surface-sunken border-s-4 border-s-border-strong"
+        >
           <p className="mx-auto max-w-wide px-6 py-4 text-sm text-text">
             <span className="font-semibold">Publishing is unavailable.</span>{" "}
             {publishTarget.error}

@@ -336,19 +336,34 @@ export function SelectField({
   hint?: string;
   childLabel?: string;
   /**
-   * Widen the panel to the whole form grid and lay the options out in columns.
+   * Widen the panel to the whole form grid and lay the options out in columns — and
+   * SAY WHERE THE FIELD SITS, because that is what decides how the width is reached.
    *
-   * **Set per control rather than derived from the option count, because widening is
-   * a statement about where the field sits in the grid.** The panel widens on its
-   * LEADING side, which is only correct for a control in the grid's trailing column —
-   * industry and headquarters are, revenue band is not. A count-based rule would
-   * eventually widen the wrong field off the leading edge of the card.
+   * **It was a boolean, and that is exactly how two panels went off-screen.** The
+   * widening is a negative inline-start margin, which is only correct for a field
+   * occupying the grid's TRAILING column. A boolean could not express that, so the
+   * constraint was carried in this comment as "industry and headquarters are, revenue
+   * band is not" — and when the company-name field was removed every control shifted one
+   * cell along, both of those landed in the LEADING column, and the same margin pushed
+   * each panel a full column plus a gap past the leading edge of the card. Nothing in the
+   * types could catch it, so the position is a value now.
    *
-   * Revenue band declines it for a second reason as well: seven options fit a
+   *   - `"grid"` — the field already spans the whole form grid, so the panel inherits
+   *     that width and takes no offset at all. Industry, which owns the first row.
+   *   - `"column"` — the field occupies ONE column, the trailing one, so the panel
+   *     reaches back across its sibling: `calc(-100% - space-6)`, expressed in the
+   *     field's own width and never the viewport's. Headquarters.
+   *
+   * **There is deliberately no value for a field in the LEADING column.** Widening there
+   * means reaching FORWARD across a sibling, which is a third geometry nothing needs — so
+   * a control that wants a wide panel either takes the whole row or moves to the trailing
+   * column, and the choice is made in the form rather than absorbed here.
+   *
+   * Revenue band declines widening for a second reason as well: seven options fit a
    * single column, and a panel three times the width of its own field for seven rows
    * reads as a rendering fault rather than as room.
    */
-  wide?: boolean;
+  wide?: "grid" | "column";
   /**
    * How many columns the first pane takes at the widened width. Two by default.
    *
@@ -1156,9 +1171,14 @@ export function SelectField({
           // and always was; what it lacked was any evidence of being in front.
           className={cn(
             "gcc-select-panel absolute inset-x-0 top-full z-20 mt-2",
-            // Widens leading-side to the whole form grid from `md`. See the `wide`
-            // prop and `.gcc-select-panel--wide`, where the one measurement is.
+            // **Two classes, because the width and the OFFSET are two decisions.**
+            // `--wide` is the treatment every wide panel shares: the fixed body height
+            // and the column count. `--reach` is the negative inline-start margin, which
+            // only a field in the grid's trailing column may take — a field spanning the
+            // grid is already the right width and must not be moved. See the `wide` prop
+            // for what went wrong while these were one class.
             wide && "gcc-select-panel--wide",
+            wide === "column" && "gcc-select-panel--reach",
           )}
         >
           {showFilter ? (

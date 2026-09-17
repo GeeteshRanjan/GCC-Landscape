@@ -77,6 +77,14 @@ visitor who selects no line of business gets the band ladder's peers unchanged �
 invariant, not assumed. The design, the vetting and the coverage figures are in
 `docs/business-types.md`.
 
+**The 138 are now the AUTHORED vocabulary rather than the whole of it: an admin may add a tag.** Three
+profile figures in `data:verify` track what that does — `tags added in admin` and `tags on a single
+business type`, both at 0 today, plus `pinned peer sets` at 0. The measurement that made it safe is worth
+keeping here because it is a property of this dataset rather than of the code: **eleven authored
+tag-and-industry pairs already sit at company frequency 1**, so the obvious guard — clamping every tag's
+IDF weight at the two-carrier value — would have re-scored eleven industries. `capCustomTagWeights` is
+scoped by provenance instead, which makes it provably inert while every tag in the file is authored.
+
 ### The measurement that says whether the collapse worked
 
 Sub-industry coverage was the wrong question. The right one is **peer-set coherence**: mean pairwise

@@ -30,6 +30,7 @@ import { writeFileSync } from "node:fs";
 import path from "node:path";
 import process from "node:process";
 
+import { isBusinessTag } from "../src/data/business-tags";
 import { fteMidpoint, hasTier2Presence } from "../src/data/derive";
 import { metricProgress, publicMetricsFor } from "../src/data/metrics";
 import { SEED_REVENUE_BAND_ORDER } from "../src/data/normalize";
@@ -330,10 +331,17 @@ async function main(): Promise<void> {
 
   const typeById = new Map(dataset.businessTypes.map((t) => [t.id, t]));
 
-  // A tag on a single business type is functionally dead: it can only ever be
-  // shared in a type-against-itself comparison, which already scores maximum. This
-  // is what stops the vocabulary drifting back towards 620 values of one member
-  // each — the exact failure that made the source sub-industry column unusable.
+  // A tag on a single business type is close to dead weight: it can only be shared in
+  // a type-against-itself comparison, which already scores maximum. Holding the line
+  // is what stops the vocabulary drifting back towards 620 values of one member each —
+  // the exact failure that made the source sub-industry column unusable.
+  //
+  // **Scoped to the AUTHORED vocabulary, because tags are admin-editable now.** A tag
+  // an admin adds necessarily starts on one business type, so an unscoped invariant
+  // would fail on the first legitimate use of a feature that exists — and `--accept`
+  // deliberately cannot silence an invariant. The authored 138 are code and reviewed,
+  // so a lonely one there is still a bug. An admin's is a profile figure below, and its
+  // weight is capped by `capCustomTagWeights` rather than by a check here.
   const tagCarriers = new Map<string, string[]>();
   for (const type of dataset.businessTypes) {
     for (const tag of type.tags) {
@@ -341,8 +349,10 @@ async function main(): Promise<void> {
     }
   }
   invariant(
-    "every tag is carried by at least two business types",
-    [...tagCarriers.entries()].filter(([, ids]) => ids.length < 2).map(([tag]) => tag),
+    "every tag from the authored vocabulary is carried by at least two business types",
+    [...tagCarriers.entries()]
+      .filter(([tag, ids]) => isBusinessTag(tag) && ids.length < 2)
+      .map(([tag]) => tag),
     [],
   );
 
@@ -537,6 +547,24 @@ async function main(): Promise<void> {
   const tagged = dataset.companies.filter((c) => c.businessTypes.length > 0);
   profile("business types defined", dataset.businessTypes.length, baseline);
   profile("distinct tags in use", tagCarriers.size, baseline);
+  /**
+   * Tags an admin added, and how many sit on a single business type.
+   *
+   * Profile figures rather than invariants, because both are supposed to move: adding a
+   * tag is a feature now. They are here so the drift is VISIBLE — a vocabulary quietly
+   * growing a tail of one-carrier tags is the failure the authored 138 were consolidated
+   * out of, and `--accept` printing the delta is what puts that in front of somebody.
+   */
+  profile(
+    "tags added in admin",
+    [...tagCarriers.keys()].filter((tag) => !isBusinessTag(tag)).length,
+    baseline,
+  );
+  profile(
+    "tags on a single business type",
+    [...tagCarriers.values()].filter((ids) => ids.length < 2).length,
+    baseline,
+  );
   profile("companies with a business type", tagged.length, baseline);
   profile(
     "companies with two business types",
@@ -552,6 +580,17 @@ async function main(): Promise<void> {
     baseline,
   );
   profile("peer sets the floor shortens", flooredSets, baseline);
+  /**
+   * Pinned peer sets, and zero is the healthy reading.
+   *
+   * A profile figure rather than an invariant: pinning is a feature, so the number is
+   * supposed to be able to move. It is here because an override is INVISIBLE from the
+   * public screen by design — the peers just look chosen — so this report is the only
+   * place a stray one shows up outside the publish diff that introduced it. A number
+   * climbing over time is the signal that the scoring wants fixing rather than
+   * overruling.
+   */
+  profile("pinned peer sets", dataset.peerOverrides.length, baseline);
   profile(
     "business types with no company",
     dataset.businessTypes.filter(

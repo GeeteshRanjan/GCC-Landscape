@@ -164,7 +164,6 @@ test.describe("getting there and back", () => {
     page,
   }) => {
     await page.goto("/");
-    await page.getByLabel(/^Company name/).fill("Northwind Financial");
     await choose(page, "Industry", "BFSI");
     await choose(page, "Annual revenue", "Above $20 Bn");
     await choose(page, "Headquarters", "Germany");
@@ -182,32 +181,33 @@ test.describe("getting there and back", () => {
      * the ANSWERS cross the phase boundary — the visitor is not asked twice.
      *
      * The heading that used to interpolate the company name is gone with the rest of
-     * the copy strip, so the answers themselves are the only place a visitor sees what
-     * they typed. That makes the pills load-bearing rather than decorative.
+     * the copy strip, and so is the field itself, so the answers are the only place a
+     * visitor sees what they chose. That makes the pills load-bearing rather than
+     * decorative.
      */
     await expect(page.getByText("Germany")).toBeVisible();
     /**
-     * The company name crosses too, which it did not before: this summary carried
-     * "India today" — the label of the question ANSR had removed — while the peer view
-     * had correctly dropped it, so a visitor was shown a constant read back as their
-     * own answer on the very next screen. Four facts, all of them theirs.
-     */
-    /**
-     * The same four panels Screen 1 shows, from the same answers, in the same order — one
+     * The same three panels Screen 1 shows, from the same answers, in the same order — one
      * component in one place on both screens, so they cannot come to mean two different
      * things. What is new here is the route to changing them: this screen once had none at
      * all, then one that reached the form, and now one that opens the editor in place.
      */
     const profile = page.getByRole("group", { name: /Your profile/ });
     /**
-     * **One control beside four quiet pills, on this screen too.** The four chevroned
-     * panels all went to the same place, so they were four affordances for one
-     * destination — see Screen 1's profile test. It is the same component in the same
-     * position on both screens, deliberately, so the two cannot mean different things.
+     * **One control beside three quiet pills, on this screen too.** The chevroned panels
+     * all went to the same place, so they were four affordances for one destination — see
+     * Screen 1's profile test. It is the same component in the same position on both
+     * screens, deliberately, so the two cannot mean different things.
      */
     await expect(profile.getByRole("button")).toHaveCount(1);
-    await expect(profile.getByText("Company")).toBeVisible();
-    await expect(profile.getByText("Northwind Financial")).toBeVisible();
+    /**
+     * **No company pill on either screen, and this is the parity half of that
+     * assertion.** The pill was conditional on a field that no longer exists, and the two
+     * rows must read identically — a "Company" here with none on the peer view is exactly
+     * the drift `pillCompany` was a shared key to prevent before it was deleted.
+     */
+    await expect(profile.getByText("Company", { exact: true })).toHaveCount(0);
+    await expect(page.getByText("Northwind Financial")).toHaveCount(0);
     await expect(page.getByText("India today")).toHaveCount(0);
     /**
      * **The editor opens HERE, and applying an answer leaves the visitor on this tab.**

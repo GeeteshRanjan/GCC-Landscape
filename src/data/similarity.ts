@@ -1,3 +1,4 @@
+import { isBusinessTag } from "./business-tags";
 import type { BusinessType, Company, Dataset } from "./schema";
 
 /**
@@ -167,6 +168,9 @@ export function buildSimilarityModel(
   }
 
   // Weights are computed against the TAGGED population, not the whole industry.
+  //
+  // Read `rawWeight` below with the cap that follows it: the two together are one
+  // decision, and the cap is what made an admin-editable vocabulary shippable.
   // Untagged companies carry no tags and so cannot make a tag look rare; dividing
   // by the full count would inflate every weight in a thinly-tagged industry and
   // make the floor behave differently there for no reason connected to business.
@@ -188,6 +192,8 @@ export function buildSimilarityModel(
     weights.set(tag, Math.log(taggedCount / frequency));
   }
 
+  capCustomTagWeights(weights);
+
   return {
     industry,
     weights,
@@ -195,6 +201,52 @@ export function buildSimilarityModel(
     taggedCount,
     companyCount: companies.length,
   };
+}
+
+/**
+ * Holds a tag added in admin to the most discriminating AUTHORED weight in its own
+ * industry, in place.
+ *
+ * **This is the guard that made the tag vocabulary admin-editable, and its ceiling is
+ * READ FROM THE POOL rather than chosen.** The problem it solves is measured: IDF is
+ * unbounded, so a tag one business type carries arrives at `log(N/1)` — 6.44 in
+ * Software & Internet against 0.05 for `b2b` — and since `businessSimilarity`
+ * normalises by the VISITOR's own total weight, one such tag on the visitor's type
+ * becomes almost the whole denominator. Every company that does not also carry it
+ * falls below the floor. One invented tag cut the eligible population 20% on average
+ * and 95% at worst, and took the named five to two in five sub-industries.
+ *
+ * **A flat clamp at the two-carrier weight was the first attempt and it is wrong,
+ * because eleven AUTHORED tag-and-industry pairs already sit at company frequency 1** —
+ * `agrochemicals` in Agribusiness, `defense` in Architecture, Engineering &
+ * Construction, `services-firm` in Restaurant & Food Service and eight more. Those
+ * weights were swept, measured and baselined; clamping them would silently re-score
+ * eleven industries as the side effect of an unrelated feature. So the cap is scoped by
+ * PROVENANCE, not by frequency: a reviewed tag keeps whatever weight the data gives it,
+ * and an admin's addition may be as discriminating as the sharpest reviewed tag in the
+ * same pool and no more.
+ *
+ * Two consequences worth stating. It is provably a NO-OP on the shipped dataset, since
+ * every tag in it is authored — asserted in `similarity.test.ts`, which is what keeps
+ * this from being a claim. And an industry whose tags are ALL custom has a ceiling of
+ * zero, so they carry no weight and `businessSimilarity` falls through to its unweighted
+ * overlap branch: the safe direction, and the same answer that branch already gives when
+ * rarity cannot discriminate.
+ */
+function capCustomTagWeights(weights: Map<string, number>): void {
+  let ceiling = 0;
+  let hasCustom = false;
+  for (const [tag, weight] of weights) {
+    if (isBusinessTag(tag)) {
+      if (weight > ceiling) ceiling = weight;
+    } else {
+      hasCustom = true;
+    }
+  }
+  if (!hasCustom) return;
+  for (const [tag, weight] of weights) {
+    if (!isBusinessTag(tag) && weight > ceiling) weights.set(tag, ceiling);
+  }
 }
 
 /**

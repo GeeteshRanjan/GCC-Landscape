@@ -732,6 +732,23 @@ export function PeerBlockView({ view }: { view: PeerView }) {
 
   return (
     <div className="flex flex-col gap-5">
+      {/* **THE SHORT-SET LINE LEADS THE BLOCK, at ANSR's request, and it used to close
+          it.** Under the grid it was an explanation a reader only reached after counting
+          three cards and wondering — so the fact that few GCCs clear the visitor's own
+          sub-industry was the last thing said about a set it is the first thing to know
+          about. Above the cards it is a call-out: the heading names the subject, this
+          names what shortened it, then the evidence.
+
+          **The published branch's wording moved with it** — it closed on "the closest
+          comparisons above" and now points forward. See `peersNarrowNote` in `schema.ts`.
+
+          It keeps `max-w-measure` and its 14px setting, so nothing about the line itself
+          changed; what changed is which side of the grid it sits on. The count line stays
+          under the grid, which is the only place it can be — it states what the grid
+          shows. */}
+      {shortfall ? (
+        <p className="max-w-measure text-sm text-text">{shortfall}</p>
+      ) : null}
       {/* One row at `lg`, one column per peer. Two columns between `sm` and `lg`, one
           below — a 205px card is the floor for a five-digit range, so the row can only
           exist where there is room for five of them. */}
@@ -870,11 +887,6 @@ export function PeerBlockView({ view }: { view: PeerView }) {
           {peerCountLine(view)}
           <JumpToClose />
         </p>
-        {shortfall ? (
-          // The one line the invariant requires. Plain, not apologetic, and
-          // immediately before the block that carries the weight.
-          <p className="max-w-measure text-sm text-text">{shortfall}</p>
-        ) : null}
         {showFortune ? null : (
           <p className="text-sm text-text">
             Every company here is in the Fortune Global 500.

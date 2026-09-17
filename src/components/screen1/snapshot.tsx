@@ -3,7 +3,7 @@ import { Fragment, type ReactNode } from "react";
 import type { Signal } from "./copy";
 
 /**
- * The one token the eyebrow's `uppercase` may not transform.
+ * The one token the eyebrow's `uppercase` may not transform, in its canonical spelling.
  *
  * **`text-transform: uppercase` turns "GCCs" into "GCCS", which is a different word.**
  * The plural is three initials plus a lowercase s; drawn in full caps the s becomes a
@@ -13,20 +13,38 @@ import type { Signal } from "./copy";
  *
  * Matched as a LITERAL TOKEN, on `withBrandMark`'s argument in `ask-hero.tsx`: the
  * heading is admin-editable free text, so there is no position to slice at. A heading
- * with no "GCCs" in it renders unchanged.
+ * with no plural in it renders unchanged.
  */
 const GCC_PLURAL = "GCCs";
 
 /**
- * Splits an uppercased line around `GCC_PLURAL` and returns the token to its own case.
+ * **The match is CASE-INSENSITIVE and the output is always canonical, which is the whole
+ * fix.** The token was matched literally, against a heading an admin types — and the
+ * published `snapshotHeading` said "GCCS", so the split found nothing, the exemption never
+ * applied and the eyebrow drew "GCCS" exactly as it would have with no mechanism at all.
+ * A silent no-op is the worst shape for a rule like this: the code reads as if it is
+ * working and the defect is one capital letter in a data file.
+ *
+ * So any casing an admin can reasonably type — `GCCs`, `GCCS`, `gccs` — is recognised and
+ * drawn as `GCCs`. That is a presentational normalisation of ONE word with a house
+ * spelling, not the renderer editing copy: nothing else on the line is touched, and the
+ * datum stays exactly as typed for admin to see and edit. `docs/traps.md` records the
+ * no-op; the datum itself is corrected in `dataset.json` in the same commit, because a
+ * renderer that tolerates the wrong spelling is not a reason to keep storing it.
+ */
+const GCC_PLURAL_PATTERN = /GCCs/gi;
+
+/**
+ * Splits an uppercased line around the plural and returns the token to its own case.
  *
  * `normal-case` is `text-transform: none`, so the child wins over the heading's own
- * transform and nothing else on the line changes. The transform is presentational, so
- * the accessible name was always "… GCCs in India" — this only brings the drawn line
- * into line with it.
+ * transform and nothing else on the line changes. The transform is presentational, so the
+ * accessible name is computed from these parts — which is why the canonical token is what
+ * is emitted rather than whatever was typed: the drawn line and the read line agree, and
+ * they agree on the spelling ANSR asked for.
  */
 function withCasedGccPlural(text: string): ReactNode {
-  const parts = text.split(GCC_PLURAL);
+  const parts = text.split(GCC_PLURAL_PATTERN);
   if (parts.length === 1) return text;
 
   return parts.map((part, index) => (

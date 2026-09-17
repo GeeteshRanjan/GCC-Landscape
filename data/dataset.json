@@ -41850,6 +41850,7 @@
       ]
     }
   ],
+  "peerOverrides": [],
   "metrics": [
     {
       "id": "tech-bench-strength",
@@ -43036,7 +43037,6 @@
       "askTitle": "Find your peers",
       "askLead": "Share your company details to identify relevant companies with GCCs in India and explore talent, capability and location metrics.",
       "askSubmit": "Build my GCC Landscape",
-      "askCompanyLabel": "Company name",
       "askIndustryLabel": "Industry",
       "askRevenueLabel": "Annual revenue",
       "askHqLabel": "Headquarters",
@@ -43055,7 +43055,6 @@
       "headerFunctions": "The India market beyond your industry",
       "viewPeers": "Peer Landscape",
       "viewFunctions": "Function Metrics",
-      "pillCompany": "Company",
       "pillIndustry": "Industry",
       "pillHeadquarters": "Headquarters",
       "pillRevenueBand": "Revenue band (USD)",
@@ -43071,10 +43070,9 @@
       "gridRowHeader": "Capability",
       "industryTitle": "Inside India's GCC base",
       "industryBasisNote": "Indicative counts, drawn from the GCCs ANSR tracks rather than every centre in India.",
-      "snapshotHeading": "Snapshot of {industry} GCCS in India",
-      "peersTitle": "GCC details of peers closest to {company}",
-      "peersTitleFallback": "your profile",
-      "peersNarrowNote": "{industry} is well established in India. Your sub-industry narrows the list to the closest comparisons above.",
+      "snapshotHeading": "Snapshot of {industry} GCCs in India",
+      "peersTitle": "GCC details of your closest peers",
+      "peersNarrowNote": "{industry} is well established in India, but few of its GCCs closely match your sub-industry. These are the closest.",
       "largestTitle": "The largest {industry} GCCs in India",
       "mapTitle": "Cities where {industry} companies have set up",
       "cityScopeAll": "All cities",

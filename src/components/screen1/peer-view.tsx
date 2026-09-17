@@ -25,7 +25,7 @@ import {
   type ContextFact,
 } from "@/components/public/screen-header";
 import type { CloseCopy, CustomerLogo, HeroCopy, ImpactStat } from "@/data/schema";
-import { companyName, type PeerView, type PeerViewInput } from "@/data/screen1";
+import type { PeerView, PeerViewInput } from "@/data/screen1";
 import { cn } from "@/lib/utils";
 import { CityMap } from "./city-map";
 import type { BusinessTypeOption, TieredOptions } from "./input-panel";
@@ -420,7 +420,6 @@ export function PeerViewAnswer({
 }) {
   const copy = usePublicCopy();
   const peerCount = view.peers.peers.length;
-  const name = companyName(view.input);
 
   /**
    * Whether the answer editor is open.
@@ -433,11 +432,12 @@ export function PeerViewAnswer({
   const [editorOpen, setEditorOpen] = useState(false);
 
   /**
-   * The four answers, in the order the form asks them.
+   * The three answers, in the order the form asks them.
    *
-   * The company panel is omitted rather than stubbed when the field was left blank,
-   * since it is optional on the form — and `ContextPanels` divides three cells evenly
-   * as well as four.
+   * **The company pill is gone because the question is.** It was conditional — omitted
+   * rather than stubbed when the field was left blank, which is what most visitors did —
+   * and the field it echoed asked for something nothing in the result consumed. `ContextPanels` divides
+   * three cells as evenly as four, so nothing else on the row moved.
    *
    * **The industry is not repeated as a descriptor under the company name.** The
    * reference composition shows it in both places; it is the same string twice inside
@@ -456,7 +456,6 @@ export function PeerViewAnswer({
    * the value it labelled.
    */
   const facts: ContextFact[] = [
-    ...(name ? [{ label: copy.pillCompany, value: name }] : []),
     { label: copy.pillIndustry, value: view.industry.industry },
     { label: copy.pillHeadquarters, value: view.input.hqCountry },
     /**

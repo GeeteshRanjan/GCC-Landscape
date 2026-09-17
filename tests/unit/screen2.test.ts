@@ -73,6 +73,7 @@ function datasetWith(metrics: Metric[]): Dataset {
       },
     ],
     businessTypes: [],
+    peerOverrides: [],
     metrics,
     siteContent: DEFAULT_SITE_CONTENT,
   };
@@ -1227,7 +1228,6 @@ describe("the tab structure", () => {
 
 describe("the close, and the sentences kept for ANSR", () => {
   const input = (gccStatus: GccStatus): PeerViewInput => ({
-    companyName: "Acme Global",
     industry: "BFSI",
     revenueBand: "Above $20 Bn",
     hqCountry: "USA",

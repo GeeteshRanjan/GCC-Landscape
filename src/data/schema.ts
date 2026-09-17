@@ -1,6 +1,12 @@
 import { z } from "zod";
 
-import { BUSINESS_TAGS } from "./business-tags";
+import { BUSINESS_TAG_MAX_LENGTH, BUSINESS_TAG_PATTERN } from "./business-tags";
+/**
+ * The world list, for the one override field that is a sort preference rather than a
+ * match key. `countries.ts` imports nothing, so this cannot cycle — the same
+ * guarantee the `normalize.ts` import above relies on.
+ */
+import { HQ_COUNTRIES } from "./countries";
 /**
  * `normalize.ts` imports nothing, so this cannot cycle. The pattern lives there
  * beside `canonicalDomain` because a cleaner and its validator drifting apart is the
@@ -41,8 +47,6 @@ const nonEmpty = z.string().trim().min(1);
 export const COPY_PLACEHOLDERS = {
   /** The visitor's industry, as `view.industry.industry`. */
   industry: "{industry}",
-  /** The visitor's own company name. Only legal where a fallback key exists beside it. */
-  company: "{company}",
   /** The visitor's own typed text, echoed back by the dropdown filter. */
   query: "{query}",
   /** A metric's own `indexBaseline`, which is itself admin-editable. */
@@ -75,13 +79,12 @@ function copyTemplate(key: CopyTemplateKey): z.ZodType<string> {
   /**
    * The widest thing each slot can become, so the cap holds for the worst real case
    * rather than for the template as typed. `industry` is the taxonomy's longest name;
-   * `company`, `query` and `baseline` are visitor or admin values with no bound this
-   * schema can see, so they are budgeted at the slot's own width and the caller's cap
-   * carries the rest.
+   * `query` and `baseline` are visitor or admin values with no bound this schema can
+   * see, so they are budgeted at the slot's own width and the caller's cap carries the
+   * rest.
    */
   const widest: Record<CopyPlaceholder, number> = {
     industry: 41,
-    company: 0,
     query: 0,
     baseline: 0,
   };
@@ -149,7 +152,6 @@ export function fillTemplate(
  */
 export const COPY_TEMPLATES = {
   snapshotHeading: { slots: ["industry"], filledMax: 72 },
-  peersTitle: { slots: ["company"], filledMax: 80 },
   peersNarrowNote: { slots: ["industry"], filledMax: 160 },
   largestTitle: { slots: ["industry"], filledMax: 72 },
   mapTitle: { slots: ["industry"], filledMax: 80 },
@@ -244,12 +246,40 @@ export const companySchema = z.object({
 });
 
 /**
+ * A tag, validated by SHAPE rather than by membership of the authored vocabulary.
+ *
+ * **It was `z.enum(BUSINESS_TAGS)`, and opening it up is a deliberate product
+ * decision with one measured guard behind it.** The objection to admin-editable tags
+ * was never that a lonely tag matches nothing — it is that IDF is unbounded, so a
+ * fresh tag arrives at roughly a hundred times a common one and dominates the
+ * visitor's own denominator; one invented tag was measured cutting the eligible
+ * population 20% on average and 95% at worst. That is now handled where it belongs,
+ * in `buildSimilarityModel`, which caps a tag outside the authored vocabulary at the
+ * most discriminating AUTHORED weight in its own industry. So the expressiveness is
+ * available and the peer engine cannot be blown up by it.
+ *
+ * The enum is not merely relaxed to `z.string()`: a tag is a matching key compared by
+ * equality, so `Quick Commerce`, `quick commerce` and `quick-commerce` would be three
+ * tags sharing nothing. The slug is what makes one idea one key.
+ */
+export const businessTagSchema = z
+  .string()
+  .trim()
+  .min(2)
+  .max(BUSINESS_TAG_MAX_LENGTH)
+  .regex(
+    BUSINESS_TAG_PATTERN,
+    "a tag is a lowercase hyphenated slug — it is compared by equality, so two spellings would be two tags",
+  );
+
+/**
  * A business type: what a visitor picks, and the tag set a company inherits.
  *
- * Admin-editable, unlike the tag vocabulary it draws from — ANSR must be able to
- * add "Quick commerce" without a developer, but must not be able to invent a tag,
- * because a tag nobody else carries matches nothing and deleting one silently
- * re-scores every peer set in the product. See `business-tags.ts`.
+ * Admin-editable, and since the tag vocabulary opened up so are its tags — ANSR can
+ * add "Quick commerce" and file it under a tag nobody thought of, without a developer.
+ * What has not changed is the consequence: deleting a tag silently re-scores every peer
+ * set in the industry, which is why the publish diff reports a tag change as a real
+ * change. See `business-tags.ts` and the weight cap in `similarity.ts`.
  */
 export const businessTypeSchema = z.object({
   id: slug,
@@ -261,7 +291,85 @@ export const businessTypeSchema = z.object({
    * At least two, because similarity needs something to share. A one-tag type
    * would either match everything in its industry or nothing.
    */
-  tags: z.array(z.enum(BUSINESS_TAGS)).min(2).max(16),
+  tags: z.array(businessTagSchema).min(2).max(16),
+});
+
+/**
+ * The most peers any override may pin.
+ *
+ * Five, because the comparison grid is one row of up to five columns and the count of
+ * columns IS the count of peers. It is the same ceiling `DEFAULT_PEER_LIMIT` sets, held
+ * here rather than imported so the schema does not depend on the engine — but the two
+ * are the same number and a change to either is a change to both.
+ */
+export const PEER_OVERRIDE_MAX_COMPANIES = 5;
+
+/**
+ * A hand-picked peer set for one combination of answers.
+ *
+ * **What it is for: control where the data is thin.** For most combinations the scored
+ * engine is right and nothing here exists. For the ones where it is not — a
+ * sub-industry with four eligible companies, an industry where the two obvious
+ * comparisons happen to score below the floor, a company ANSR would rather not put in
+ * front of a particular visitor — this replaces the engine's answer with a named list.
+ * It is a REPLACEMENT and not a nudge: whatever is in `companyIds` is the peer set, in
+ * that order, and whatever is not is not shown. That is what makes it both an include
+ * list and an exclude list without a second field.
+ *
+ * ## The combination is a pattern, not a tuple
+ *
+ * `industry` is required; the other three are optional and an absent one means ANY. So
+ * one row can cover the whole of Education, or exactly one band inside one sub-industry
+ * inside one country. `matchPeerOverride` picks the MOST SPECIFIC row that fits, which is
+ * what lets a broad safety net and a narrow correction coexist — see it for the
+ * precedence and for why a duplicate combination is refused rather than resolved.
+ *
+ * `industry` is required for two reasons and both matter. It is the hard boundary peer
+ * matching may never cross, so an override that omitted it could put a bank in front of
+ * a retailer; and it is what scopes the candidate list the admin picks from, which is
+ * unusable at 1,834 rows.
+ *
+ * ## What it deliberately cannot do
+ *
+ * It cannot reach outside the industry — the schema refuses a company from another one.
+ * It cannot pin an empty set: a zero-peer result is a real state the engine can produce
+ * and the copy handles, but arriving at it by hand is indistinguishable from a row
+ * somebody half-filled, so the minimum is one. And it cannot invent a company; every id
+ * is checked against `companies`, so deleting a company sweeps it out of every override
+ * rather than leaving a publish that fails validation.
+ */
+export const peerOverrideSchema = z.object({
+  id: slug,
+  /** Required, and checked against `taxonomy.industries`. The hard boundary. */
+  industry: nonEmpty,
+  /** Absent means every sub-industry, including a visitor who named none. */
+  businessTypeId: z.string().trim().min(1).optional(),
+  /** Absent means every band. Checked against `taxonomy.revenueBands`. */
+  revenueBand: z.string().trim().min(1).optional(),
+  /**
+   * Absent means every country.
+   *
+   * Checked against the taxonomy UNION the world list, which is the same asymmetry
+   * `peerViewInputSchema` applies to the visitor's own answer and for the same reason:
+   * HQ is a sort preference, so a country with no companies in the data is a perfectly
+   * coherent thing for a visitor to have answered and therefore a coherent thing to
+   * write an override against.
+   */
+  hqCountry: z.string().trim().min(1).optional(),
+  /**
+   * The peer set, in the order it is drawn. Left to right is the ranking — there is no
+   * ordinal on a card, so position is the only statement of order and the admin owns it.
+   */
+  companyIds: z.array(nonEmpty).min(1).max(PEER_OVERRIDE_MAX_COMPANIES),
+  /**
+   * Why this exists, for whoever finds it in six months. Admin-only and read by nothing
+   * on the public screens.
+   *
+   * Optional rather than required: a required justification field is one people fill
+   * with a full stop. It is here because an override is invisible from the public screen
+   * — the peers just look chosen — so the alternative to a note is git archaeology.
+   */
+  note: z.string().trim().max(280).optional(),
 });
 
 /**
@@ -949,7 +1057,12 @@ export const publicCopySchema = z.object({
   askLead: nonEmpty.max(200),
   askSubmit: nonEmpty.max(32),
   /**
-   * The four form field LABELS, and the four controls' placeholders and hints.
+   * The three form field LABELS, and the three controls' placeholders and hints.
+   *
+   * **There were four, and `askCompanyLabel` went with the control it named.** The
+   * company name asked the visitor for something no figure, no peer and no ordering
+   * ever read — it personalised two strings — so the field was removed and the key
+   * with it, on the rule that an editable field drawing nothing is worse than none.
    *
    * **These are the most spec-coupled strings in the repo and that is the thing to know
    * before rewording one.** The labels are how every browser spec reaches a control
@@ -966,7 +1079,6 @@ export const publicCopySchema = z.object({
    * the trigger but is read whole as the popup's name; a hint is 12px on one line inside
    * the panel, and 80 is what fits without wrapping at the panel's narrowest.
    */
-  askCompanyLabel: nonEmpty.max(32),
   askIndustryLabel: nonEmpty.max(32),
   askRevenueLabel: nonEmpty.max(32),
   askHqLabel: nonEmpty.max(32),
@@ -1029,8 +1141,13 @@ export const publicCopySchema = z.object({
    * `project.md` requires they read identically. `pillRevenueBand` carries the currency
    * because the pill has no hint to put it in; the FORM's own label for the same input is
    * `askRevenueLabel` and the two are deliberately different strings.
+   *
+   * **THREE pills now, not four, and `pillCompany` was deleted rather than left
+   * unread.** The form no longer asks for a company name, so the pill it labelled can
+   * never render — and a key an admin can edit that draws nothing is the one thing this
+   * object is not allowed to hold. `ContextPanels` divides three cells as evenly as
+   * four, which is why nothing else moved.
    */
-  pillCompany: nonEmpty.max(24),
   pillIndustry: nonEmpty.max(24),
   pillHeadquarters: nonEmpty.max(24),
   pillRevenueBand: nonEmpty.max(24),
@@ -1072,12 +1189,12 @@ export const publicCopySchema = z.object({
   /**
    * Peer landscape section headings.
    *
-   * **`peersTitle` IS BACK, as a template, and that reverses a documented retreat.** It
-   * left this object when ANSR's wording started naming the visitor's own company:
-   * the name is optional, so the heading has two branches and a flat field could hold
-   * only one of them. A template holds both — `peersTitle` carries `{company}` and
-   * `peersTitleFallback` is the word substituted when no name was given — so the
-   * mechanism that forced it into code is the mechanism that brings it back.
+   * **`peersTitle` IS A FLAT FIELD AGAIN, because the branch that made it a template is
+   * gone.** It was a template carrying `{company}` beside a `peersTitleFallback` for the
+   * visitor who typed no name — two keys for one heading, and the whole reason they were
+   * two is that the company name was optional. The form no longer asks for it, so there
+   * is one branch, one key, and no slot: `peersTitleFallback` is deleted rather than left
+   * as an unreachable second wording.
    *
    * **The snapshot's opening label is still NOT here**, and its reasoning is unchanged
    * rather than superseded: it is composed over the visitor's SCOPE, so its two branches
@@ -1109,22 +1226,33 @@ export const publicCopySchema = z.object({
    */
   industryBasisNote: nonEmpty.max(120),
   snapshotHeading: copyTemplate("snapshotHeading"),
-  peersTitle: copyTemplate("peersTitle"),
-  peersTitleFallback: nonEmpty.max(32),
   /**
-   * The line under the peer grid when the set is short because the visitor named a
+   * The peer grid's own heading. **80 is the cap the template's FILLED length carried**,
+   * so an admin has exactly the room they had before, measured on the same `weight="lead"`
+   * line.
+   */
+  peersTitle: nonEmpty.max(80),
+  /**
+   * The line ABOVE the peer grid when the set is short because the visitor named a
    * SUB-INDUSTRY, not because their industry is thin in India.
+   *
+   * **It sits above the cards, under the heading, at ANSR's request, and the wording had
+   * to change with the position.** It closed on "the closest comparisons above" while it
+   * was drawn under the grid; read first, it has to point FORWARD at the cards instead.
+   * That is the whole reason a move is a copy edit here rather than a JSX one.
    *
    * **The one branch of `shortfallLine` that is editable, and it qualifies on the
    * template rule rather than in spite of the code rule.** A sentence that states a
    * count has to move when the count moves, which is why the other three branches stay
    * derived — the thin-industry one names both the count and the limit, and the two
    * empty-set ones name the population. This branch states no quantity at all. It names
-   * the SCOPE that produced a short list, and the exact count is already on the line
-   * directly above it, which `peerCountLine` states as "Showing 3 of 314". Two
-   * statements of the same number, one of them wrong the moment the engine changes, is
-   * what that rule exists to prevent — so removing the count from here is what makes it
-   * editable, and it reads better for the same reason.
+   * the SCOPE that produced a short list, and `peerCountLine` states the exact figure
+   * under the grid as "Showing 3 of 314". Two statements of the same number, one of them
+   * wrong the moment the engine changes, is what that rule exists to prevent — so
+   * removing the count from here is what makes it editable, and it reads better for the
+   * same reason. **The move above the cards does not weaken that**: the count is still
+   * stated exactly once on the screen, and this line is now read before it rather than
+   * after.
    *
    * **It is also where an em dash was still shipping.** The sentence was "{industry} is
    * not short of companies in India — but only 3 are close enough to your sub-industry
@@ -1135,10 +1263,10 @@ export const publicCopySchema = z.object({
    * `{industry}` is required, because without it the sentence claims something about
    * India at large rather than about the industry a reader has just been shown.
    *
-   * **160 filled, measured.** It sets at 14px inside `max-w-measure` in the peer block,
-   * so 160 is two lines at 1440 and three on a phone — past which a note qualifying one
-   * short grid is taller than the count line and the Fortune line above and below it
-   * combined.
+   * **160 filled, measured, and the cap matters more above the grid than it did below
+   * it.** It sets at 14px inside `max-w-measure`, so 160 is two lines at 1440 and three
+   * on a phone — and every one of those lines now stands between the heading and the
+   * first card, which is the evidence the section exists to show.
    */
   peersNarrowNote: copyTemplate("peersNarrowNote"),
   largestTitle: copyTemplate("largestTitle"),
@@ -1425,7 +1553,6 @@ export const DEFAULT_PUBLIC_COPY: PublicCopy = {
     "Share your company details to identify relevant companies with GCCs in " +
     "India and explore talent, capability and location metrics.",
   askSubmit: "Build my GCC Landscape",
-  askCompanyLabel: "Company name",
   askIndustryLabel: "Industry",
   /**
    * **"Annual revenue" on the FORM, "Revenue band (USD)" on the pill**, and the two are
@@ -1452,7 +1579,6 @@ export const DEFAULT_PUBLIC_COPY: PublicCopy = {
   headerFunctions: "The India market beyond your industry",
   viewPeers: "Peer Landscape",
   viewFunctions: "Function Metrics",
-  pillCompany: "Company",
   pillIndustry: "Industry",
   pillHeadquarters: "Headquarters",
   pillRevenueBand: "Revenue band (USD)",
@@ -1471,28 +1597,37 @@ export const DEFAULT_PUBLIC_COPY: PublicCopy = {
     "Indicative counts, drawn from the GCCs ANSR tracks rather than every centre in India.",
   /* "GCCs", never "GCC's", which ANSR asked never to appear. */
   snapshotHeading: "Snapshot of {industry} GCCs in India",
-  peersTitle: "GCC details of peers closest to {company}",
   /**
-   * **"your profile", never "yours".** "Closest to yours" presumes the visitor already
-   * runs an India centre, and `gccStatus` is a constant the form never asks for.
+   * **"your closest peers", and what went is the words the layout already says.** The
+   * heading was "GCC details of peers closest to {company}" and, for most visitors, "…
+   * closest to your profile" — eleven characters of scaffolding around a possessive. The
+   * cards are ordered by closeness and the band above states the profile they were
+   * matched on, so "your closest peers" says the same thing in three words.
+   *
+   * **"GCC details" stays and is the load-bearing half.** The cards carry a headcount, a
+   * city list and a start year — facts about the CENTRE, not about the company — and this
+   * is the only place on the block that says so. **Never "closest to yours"**, which
+   * presumes the visitor already runs an India centre; `gccStatus` is a constant the form
+   * never asks for.
    */
-  peersTitleFallback: "your profile",
+  peersTitle: "GCC details of your closest peers",
   /**
    * **Two clauses, one fact each, and no number in either.** The first answers the
    * question a short list actually raises — is India thin in my industry? — and answers
    * it no. The second says what did the narrowing, which is the visitor's own answer
-   * rather than a limit of the data. The count is on the line above, stated exactly
-   * once.
+   * rather than a limit of the data, and it says plainly that few companies clear it.
+   * The count is under the grid, stated exactly once.
    *
    * "well established" rather than "not short of companies": a sentence that opens on
    * what the market is NOT makes the reader hold the negative through the whole clause,
-   * and the finding here is positive. "comparisons" rather than "peers", because the
-   * grid's own heading has already used the product's word and this line is describing
-   * what a reader is looking at. "above" is literal — the note sits under the grid.
+   * and the finding here is positive. **"These are the closest" points FORWARD**, because
+   * the line is read before the cards now; it closed on "the closest comparisons above"
+   * while it was drawn beneath them, which the move made false. A comma before "but",
+   * never a dash: no em dash reaches a visitor.
    */
   peersNarrowNote:
-    "{industry} is well established in India. " +
-    "Your sub-industry narrows the list to the closest comparisons above.",
+    "{industry} is well established in India, but few of its GCCs " +
+    "closely match your sub-industry. These are the closest.",
   largestTitle: "The largest {industry} GCCs in India",
   /* Not "Where …": the block's own heading would then open the way the lead used to. */
   mapTitle: "Cities where {industry} companies have set up",
@@ -1647,6 +1782,22 @@ export const datasetSchema = z
      * lives beside taxonomy instead of inside it.
      */
     businessTypes: z.array(businessTypeSchema).max(400).default([]),
+    /**
+     * Hand-picked peer sets, by combination of answers. Defaulted on the same
+     * argument as `businessTypes` and `metrics`: a dataset written before the key
+     * existed still reads, so this is a backwards-compatible addition rather than a
+     * `DATASET_VERSION` bump the fs store would refuse.
+     *
+     * Beside taxonomy rather than inside it, for the reason recorded on
+     * `businessTypes` — taxonomy is four flat string lists and every generic walk
+     * over it assumes that shape.
+     *
+     * **200 is a ceiling on a control surface, not on a dataset.** Overrides are
+     * corrections to the engine's answer, so a repo holding hundreds of them is a repo
+     * whose scoring should be fixed instead; the cap is where that stops being
+     * arguable.
+     */
+    peerOverrides: z.array(peerOverrideSchema).max(200).default([]),
     /**
      * The Screen 2 catalogue. Defaulted rather than required, so a dataset
      * written before this key existed still reads and `DATASET_VERSION` does not
@@ -1818,6 +1969,139 @@ export const datasetSchema = z
       }
     }
 
+    /* ----------------------------------------------------------------------
+       Peer overrides.
+
+       Every check here exists because the alternative is a silent wrong answer to a
+       real visitor rather than an error. An override that names a deleted company
+       shows a shorter set than the admin pinned; one whose industry was renamed
+       stops firing altogether and the engine answers instead, with nothing anywhere
+       saying so. Both look like the feature not working.
+
+       The DUPLICATE-COMBINATION check is the one that is about the admin rather than
+       about the data: two rows matching the same answers would be resolved by list
+       position, which is not a thing the editor shows, so which set a visitor sees
+       would depend on something invisible. Refused, so the admin merges them.
+       ---------------------------------------------------------------------- */
+    const overrideIds = new Set<string>();
+    const overrideKeys = new Map<string, string>();
+    const companyById = new Map(dataset.companies.map((c) => [c.id, c]));
+    const overrideHqAllowed = new Set<string>([
+      ...dataset.taxonomy.hqCountries,
+      ...HQ_COUNTRIES,
+    ]);
+
+    for (const [index, override] of dataset.peerOverrides.entries()) {
+      const at = (...rest: Array<string | number>) => [
+        "peerOverrides",
+        index,
+        ...rest,
+      ];
+
+      if (overrideIds.has(override.id)) {
+        ctx.addIssue({
+          code: "custom",
+          path: at("id"),
+          message: `duplicate peer override id: ${override.id}`,
+        });
+      }
+      overrideIds.add(override.id);
+
+      if (!industrySet.has(override.industry)) {
+        ctx.addIssue({
+          code: "custom",
+          path: at("industry"),
+          message: `industry "${override.industry}" is not in taxonomy.industries`,
+        });
+      }
+
+      if (
+        override.revenueBand !== undefined &&
+        !dataset.taxonomy.revenueBands.includes(override.revenueBand)
+      ) {
+        ctx.addIssue({
+          code: "custom",
+          path: at("revenueBand"),
+          message: `revenue band "${override.revenueBand}" is not in taxonomy.revenueBands`,
+        });
+      }
+
+      if (
+        override.hqCountry !== undefined &&
+        !overrideHqAllowed.has(override.hqCountry)
+      ) {
+        ctx.addIssue({
+          code: "custom",
+          path: at("hqCountry"),
+          message: `HQ location "${override.hqCountry}" is not a country a visitor can pick`,
+        });
+      }
+
+      if (override.businessTypeId !== undefined) {
+        const owner = industryOfType.get(override.businessTypeId);
+        if (owner === undefined) {
+          ctx.addIssue({
+            code: "custom",
+            path: at("businessTypeId"),
+            message: `sub-industry "${override.businessTypeId}" is not in businessTypes`,
+          });
+        } else if (owner !== override.industry) {
+          // Same failure as a company carrying a type from another industry, and the
+          // same reason it is an error: the combination could never be answered, so
+          // the override would sit there matching nothing.
+          ctx.addIssue({
+            code: "custom",
+            path: at("businessTypeId"),
+            message: `sub-industry "${override.businessTypeId}" belongs to ${owner}, but this override is for ${override.industry}`,
+          });
+        }
+      }
+
+      if (new Set(override.companyIds).size !== override.companyIds.length) {
+        ctx.addIssue({
+          code: "custom",
+          path: at("companyIds"),
+          message: `peer override "${override.id}" pins the same company twice`,
+        });
+      }
+
+      for (const [companyIndex, id] of override.companyIds.entries()) {
+        const company = companyById.get(id);
+        if (!company) {
+          ctx.addIssue({
+            code: "custom",
+            path: at("companyIds", companyIndex),
+            message: `company "${id}" is not in companies`,
+          });
+          continue;
+        }
+        if (company.industry !== override.industry) {
+          ctx.addIssue({
+            code: "custom",
+            path: at("companyIds", companyIndex),
+            message: `${company.name} is in ${company.industry}, and peer matching may not leave ${override.industry}`,
+          });
+        }
+      }
+
+      const key = [
+        override.industry,
+        override.businessTypeId ?? "*",
+        override.revenueBand ?? "*",
+        override.hqCountry ?? "*",
+      ].join("||");
+      const owner = overrideKeys.get(key);
+      if (owner !== undefined) {
+        ctx.addIssue({
+          code: "custom",
+          path: at("id"),
+          message: `peer override "${override.id}" covers the same combination as "${owner}" — merge them, because which one a visitor sees would depend on list order`,
+        });
+      } else {
+        overrideKeys.set(key, override.id);
+      }
+    }
+
     const metricIds = new Set<string>();
     for (const [index, metric] of dataset.metrics.entries()) {
       if (metricIds.has(metric.id)) {
@@ -1859,6 +2143,7 @@ export const datasetSchema = z
 export type FteRange = z.infer<typeof fteRangeSchema>;
 export type Company = z.infer<typeof companySchema>;
 export type BusinessType = z.infer<typeof businessTypeSchema>;
+export type PeerOverride = z.infer<typeof peerOverrideSchema>;
 export type Taxonomy = z.infer<typeof taxonomySchema>;
 export type Dataset = z.infer<typeof datasetSchema>;
 

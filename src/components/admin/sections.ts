@@ -59,7 +59,7 @@ export const NAV_GROUPS: readonly {
         href: "/admin/entry-point",
         label: "Site copy",
         summary:
-          "The hero, the closing call to action, ANSR's impact figures, the function tags, the customer logos and the 28 fixed labels.",
+          "The hero, the closing call to action, ANSR's impact figures, the function tags, the customer logos and the fixed labels.",
         terms: ["headline", "hero", "wording", "strings", "labels", "cta", "logos"],
       },
       {
@@ -101,7 +101,37 @@ export const NAV_GROUPS: readonly {
         label: "Sub-industries",
         summary:
           "The business-type catalogue and its tags, which drive peer similarity.",
-        terms: ["business types", "tags", "similarity", "peers"],
+        terms: ["business types", "tags", "similarity"],
+      },
+      {
+        /**
+         * **Under *Data* rather than under *Public screens*, and the filing is a
+         * judgement worth recording.** A pinned peer set decides what a visitor is
+         * SHOWN, which argues for the first group. But it is a decision about which
+         * companies are comparable — the same kind of decision as tagging a
+         * sub-industry, and unusable without the company table beside it — so it sits
+         * with the data it is about, immediately after the sub-industries whose tags it
+         * exists to overrule.
+         *
+         * `peers` moved here off the Sub-industries tab, where it was a content word on
+         * a page entry: pages sort first, so any query containing it resolved to that
+         * tab ahead of the thing actually being looked for. Same defect the Companies
+         * tab's terms record.
+         */
+        href: "/admin/peer-overrides",
+        label: "Pinned peer sets",
+        summary:
+          "Hand-picked comparable companies for one combination of answers, where the scoring engine's own answer is wrong.",
+        terms: [
+          "peers",
+          "override",
+          "brute force",
+          "pin",
+          "force",
+          "comparable companies",
+          "exclude",
+          "hide a company",
+        ],
       },
     ],
   },

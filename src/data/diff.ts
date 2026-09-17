@@ -2,6 +2,7 @@ import { publicCopySchema } from "./schema";
 import type {
   BusinessType,
   Company,
+  PeerOverride,
   CustomerLogo,
   Dataset,
   CloseCopy,
@@ -224,6 +225,37 @@ export interface SiteContentDiff {
   };
 }
 
+/**
+ * Pinned peer sets, and this is the category with the least visible consequence and
+ * the largest one.
+ *
+ * A change here is invisible from every angle a reviewer would otherwise check. No
+ * company row moves, no taxonomy value moves, no string on the page moves — and the
+ * public screen deliberately never says a peer set was hand-picked, so the result
+ * looks exactly like the engine's own answer. That is precisely why it needs its own
+ * count: an override added, retargeted or deleted changes which five companies a real
+ * visitor is shown, and a diff that folded it into anything else would let that reach
+ * production under "no changes".
+ *
+ * `combination` is carried on every entry rather than only the id, because the id is a
+ * slug an admin never chose to read and the combination IS the thing being approved.
+ */
+export interface PeerOverrideFieldChange {
+  field: keyof PeerOverride;
+  before: unknown;
+  after: unknown;
+}
+
+export interface PeerOverridesDiff {
+  added: Array<{ id: string; combination: string }>;
+  removed: Array<{ id: string; combination: string }>;
+  changed: Array<{
+    id: string;
+    combination: string;
+    changes: PeerOverrideFieldChange[];
+  }>;
+}
+
 export interface DatasetDiff {
   /** No previous dataset — a first import. */
   firstImport: boolean;
@@ -232,6 +264,7 @@ export interface DatasetDiff {
   changed: ChangedCompany[];
   taxonomy: TaxonomyDiff[];
   businessTypes: BusinessTypesDiff;
+  peerOverrides: PeerOverridesDiff;
   metrics: MetricsDiff;
   siteContent: SiteContentDiff;
   /** Metadata that moves on every publish; called out so it is not mistaken for an edit. */
@@ -245,6 +278,7 @@ export interface DatasetDiff {
     changed: number;
     taxonomy: number;
     businessTypes: number;
+    peerOverrides: number;
     metrics: number;
     siteContent: number;
   };
@@ -304,8 +338,82 @@ const METRIC_FIELDS: ReadonlyArray<keyof Metric> = [
   "gated",
 ];
 
+/**
+ * Every override field an admin can change. `id` is absent for the reason it is absent
+ * from `COMPANY_FIELDS`: it identifies the row, so changing it is an add plus a remove.
+ *
+ * **`companyIds` is compared as an ORDERED array, unlike `tags`**, and the asymmetry is
+ * the whole point of the field. Left-to-right position on the comparison grid IS the
+ * ranking — there is no ordinal on a card — so reordering a pinned set changes which
+ * company a visitor reads first, which is a real change and the kind of edit somebody
+ * makes in ten seconds and forgets.
+ */
+const PEER_OVERRIDE_FIELDS: ReadonlyArray<keyof PeerOverride> = [
+  "industry",
+  "businessTypeId",
+  "revenueBand",
+  "hqCountry",
+  "companyIds",
+  "note",
+];
+
+/**
+ * A combination as one line, for both renderers.
+ *
+ * An absent field reads "any" rather than being left out, because the difference
+ * between "every band" and "one band" is the entire meaning of the row and a reviewer
+ * cannot infer it from a gap.
+ */
+export function describePeerOverride(override: PeerOverride): string {
+  return [
+    override.industry,
+    override.businessTypeId ?? "any sub-industry",
+    override.revenueBand ?? "any revenue band",
+    override.hqCountry ?? "any HQ",
+  ].join(" · ");
+}
+
 function sameValue(a: unknown, b: unknown): boolean {
   return JSON.stringify(a) === JSON.stringify(b);
+}
+
+function diffPeerOverrides(
+  next: readonly PeerOverride[],
+  previous: readonly PeerOverride[],
+): PeerOverridesDiff {
+  const before = new Map(previous.map((o) => [o.id, o]));
+  const after = new Map(next.map((o) => [o.id, o]));
+
+  const added: PeerOverridesDiff["added"] = [];
+  const changed: PeerOverridesDiff["changed"] = [];
+  for (const [id, override] of after) {
+    const old = before.get(id);
+    if (!old) {
+      added.push({ id, combination: describePeerOverride(override) });
+      continue;
+    }
+    const changes = PEER_OVERRIDE_FIELDS.filter(
+      (field) => !sameValue(override[field], old[field]),
+    ).map((field) => ({ field, before: old[field], after: override[field] }));
+    if (changes.length > 0) {
+      changed.push({ id, combination: describePeerOverride(override), changes });
+    }
+  }
+
+  const removed: PeerOverridesDiff["removed"] = [];
+  for (const [id, override] of before) {
+    // The combination named is the one that STOPS applying, which is the old row's —
+    // there is no new row to read it off.
+    if (!after.has(id)) {
+      removed.push({ id, combination: describePeerOverride(override) });
+    }
+  }
+
+  return { added, removed, changed };
+}
+
+function peerOverridesCount(diff: PeerOverridesDiff): number {
+  return diff.added.length + diff.removed.length + diff.changed.length;
 }
 
 function diffMetrics(
@@ -694,6 +802,14 @@ export function diffDatasets(
         removed: [],
         changed: [],
       },
+      peerOverrides: {
+        added: next.peerOverrides.map((o) => ({
+          id: o.id,
+          combination: describePeerOverride(o),
+        })),
+        removed: [],
+        changed: [],
+      },
       metrics: {
         added: next.metrics.map((m) => ({ id: m.id, title: m.title })),
         removed: [],
@@ -747,6 +863,7 @@ export function diffDatasets(
         // hold something.
         taxonomy: taxonomy.length,
         businessTypes: next.businessTypes.length,
+        peerOverrides: next.peerOverrides.length,
         metrics: next.metrics.length,
         siteContent:
           next.siteContent.impactStats.length +
@@ -802,6 +919,7 @@ export function diffDatasets(
   taxonomy.push(...diffParallelTaxonomy(next.taxonomy, previous.taxonomy));
 
   const businessTypes = diffBusinessTypes(next.businessTypes, previous.businessTypes);
+  const peerOverrides = diffPeerOverrides(next.peerOverrides, previous.peerOverrides);
   const metrics = diffMetrics(next.metrics, previous.metrics);
   const siteContent = diffSiteContent(next.siteContent, previous.siteContent);
 
@@ -811,6 +929,7 @@ export function diffDatasets(
     changed: changed.length,
     taxonomy: taxonomy.length,
     businessTypes: businessTypesCount(businessTypes),
+    peerOverrides: peerOverridesCount(peerOverrides),
     metrics: metricsCount(metrics),
     siteContent: siteContentCount(siteContent),
   };
@@ -822,6 +941,7 @@ export function diffDatasets(
     changed,
     taxonomy,
     businessTypes,
+    peerOverrides,
     metrics,
     siteContent,
     generatedAtChanged: next.generatedAt !== previous.generatedAt,
@@ -832,6 +952,7 @@ export function diffDatasets(
         counts.changed +
         counts.taxonomy +
         counts.businessTypes +
+        counts.peerOverrides +
         counts.metrics +
         counts.siteContent ===
       0,
@@ -871,7 +992,6 @@ export const PUBLIC_COPY_LABELS: Record<keyof PublicCopy, string> = {
   askTitle: "Form heading",
   askLead: "Form intro",
   askSubmit: "Form submit",
-  askCompanyLabel: "Form field, company name",
   askIndustryLabel: "Form field, industry",
   askRevenueLabel: "Form field, revenue",
   askHqLabel: "Form field, headquarters",
@@ -890,7 +1010,6 @@ export const PUBLIC_COPY_LABELS: Record<keyof PublicCopy, string> = {
   headerFunctions: "Function view finding",
   viewPeers: "Peer view switch",
   viewFunctions: "Function view switch",
-  pillCompany: "Answer pill, company",
   pillIndustry: "Answer pill, industry",
   pillHeadquarters: "Answer pill, headquarters",
   pillRevenueBand: "Answer pill, revenue band",
@@ -908,7 +1027,6 @@ export const PUBLIC_COPY_LABELS: Record<keyof PublicCopy, string> = {
   industryBasisNote: "Industry count, basis line",
   snapshotHeading: "Snapshot heading",
   peersTitle: "Peer grid heading",
-  peersTitleFallback: "Peer grid heading, no company given",
   peersNarrowNote: "Peer grid, sub-industry note",
   largestTitle: "Largest GCCs heading",
   mapTitle: "City map heading",
@@ -1031,6 +1149,7 @@ export function renderDiffText(diff: DatasetDiff): string {
       "Diff: no existing dataset — this is the first import.",
       `  + ${diff.counts.added} companies`,
       `  + ${diff.counts.businessTypes} business types`,
+      `  + ${diff.counts.peerOverrides} pinned peer sets`,
       `  + ${diff.counts.metrics} metrics`,
       `  + ${diff.counts.siteContent} site content entries — the impact figures, the function list and the logo strip, plus the hero and close copy`,
     ].join("\n");
@@ -1085,6 +1204,22 @@ export function renderDiffText(diff: DatasetDiff): string {
       (b) => `${b.id} (${b.changes.map((c) => c.field).join(", ")})`,
     ),
   );
+  /* Pinned peer sets, spelled out by COMBINATION rather than sampled by id. The id is
+     a slug nobody chose to read, and the whole content of the change is which answers
+     it fires on — so this reads like the site content below it rather than like the
+     keyed collections above it. */
+  for (const entry of diff.peerOverrides.added) {
+    lines.push(`  peer override added: ${entry.combination}`);
+  }
+  for (const entry of diff.peerOverrides.removed) {
+    lines.push(`  peer override removed: ${entry.combination}`);
+  }
+  for (const entry of diff.peerOverrides.changed) {
+    lines.push(
+      `  peer override ${entry.combination}: ${entry.changes.map((c) => c.field).join(", ")}`,
+    );
+  }
+
   sample(
     "metrics added",
     diff.metrics.added.map((m) => m.id),
@@ -1166,7 +1301,7 @@ export function renderDiffText(diff: DatasetDiff): string {
 
   if (diff.isEmpty) {
     lines.push(
-      "  no company, taxonomy, business type, metric or site content changes",
+      "  no company, taxonomy, business type, pinned peer set, metric or site content changes",
     );
   }
 

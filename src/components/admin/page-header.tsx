@@ -26,7 +26,18 @@ export function AdminPageHeader({
   children?: ReactNode;
 }) {
   return (
-    <div className="flex flex-wrap items-end justify-between gap-x-6 gap-y-3">
+    /**
+     * **A hairline under the header, which is the one structural thing this row was
+     * missing.** Every admin page is a heading, then a filter row on its own bordered
+     * fill, then a bordered section — three boxes of the same weight in a column, so
+     * nothing said which of them was the page's title and which were its contents. The
+     * rule closes the header band, and it is a border rather than extra space because
+     * space is what the rest of the page is already using to separate sections.
+     *
+     * `items-end` keeps the primary action on the title's own baseline rather than
+     * centred against a two-line lead.
+     */
+    <div className="flex flex-wrap items-end justify-between gap-x-6 gap-y-3 border-b border-border-subtle pb-4">
       <div>
         <h1 className="text-xl font-semibold tracking-heading text-text">
           {title}
@@ -60,6 +71,8 @@ export function AdminSection({
   title,
   description,
   meta,
+  actions,
+  padded = false,
   children,
 }: {
   id: string;
@@ -67,19 +80,55 @@ export function AdminSection({
   description?: ReactNode;
   /** Sits on the heading's baseline: a count, or a warning that order matters. */
   meta?: ReactNode;
+  /**
+   * The section's own control, trailing-aligned in the heading row.
+   *
+   * Added because three sections had grown one anyway, each putting it somewhere
+   * different — inside `meta`, above the body, or as the first row of the list. A
+   * section-scoped action belongs on the section's heading row for the same reason a
+   * page-scoped one belongs on the page's.
+   */
+  actions?: ReactNode;
+  /**
+   * Pad the body.
+   *
+   * Defaults to FALSE, and the default is the load-bearing half: a divided list has to
+   * reach the card's edges or its hairlines stop short of them, so every list-shaped
+   * caller needs no padding and would have to undo it. Callers whose body is a form or a
+   * paragraph opt in, which is what stops each of them choosing a different inset — the
+   * drift this component was extracted to end, arriving one level down.
+   */
+  padded?: boolean;
   children: ReactNode;
 }) {
   return (
     <section
       aria-labelledby={id}
-      className="border border-border-subtle bg-surface"
+      /**
+       * **Radius `md`, which is admin's own default and what this card was the last
+       * thing not to use.** Every control inside it is `rounded-md` — that is
+       * `--radius` in the shadcn contract block — so a square card full of rounded
+       * controls read as two design systems in one box. The public screens are the ones
+       * on radius `none`, deliberately, and `primitives.tsx` is where that lives.
+       */
+      className="overflow-hidden rounded-md border border-border-subtle bg-surface"
     >
-      <div className="border-b border-border-subtle px-5 py-4">
-        <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
-          <h2 id={id} className="text-base font-semibold text-text">
-            {title}
-          </h2>
-          {meta}
+      {/* The heading row takes the sunken fill, so a section reads as a titled card
+          rather than as a paragraph with a rule under it. It is the same relationship
+          the page header's hairline draws, one level down — and it is a FILL here rather
+          than a second rule because two identical rules in a column say nothing about
+          which contains which. */}
+      <div className="border-b border-border-subtle bg-surface-subtle px-5 py-3.5">
+        <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
+          <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
+            <h2 id={id} className="text-base font-semibold text-text">
+              {title}
+            </h2>
+            {meta}
+          </div>
+          {actions ? (
+            <div className="flex shrink-0 items-center gap-2">{actions}</div>
+          ) : null}
         </div>
         {description ? (
           <div className="mt-1 flex max-w-measure flex-col gap-1 text-sm text-text-muted">
@@ -87,7 +136,7 @@ export function AdminSection({
           </div>
         ) : null}
       </div>
-      {children}
+      {padded ? <div className="px-5 py-4">{children}</div> : children}
     </section>
   );
 }

@@ -65,9 +65,27 @@ export const GCC_STATUS_LABELS: Readonly<Record<GccStatus, string>> = {
   expanding: "We run one and are expanding it",
 };
 
+/**
+ * The five fields the visitor's answers arrive as, four of them asked.
+ *
+ * **`companyName` WAS THE SIXTH AND IS DELETED, not kept as an unasked field.** It
+ * personalised two strings — the peer grid's heading and one answer pill — and was read
+ * by nothing else: no figure, no count, no ordering. It is not the `gccStatus` case, and
+ * the difference is worth stating because the two look alike from the form. `gccStatus`
+ * stays because it is still RENDERED, supplied as a constant and branching five strings on
+ * Screen 2; a name had no consumer left once both sentences were reworded to say what they
+ * needed without it. So the field went with the control rather than becoming an optional
+ * property nothing could ever set.
+ *
+ * **One consequence is real and is not a defect being hidden.** `isVisitorsOwn` in
+ * `peers.ts` used the name to keep the visitor's own company out of its own peer set, and
+ * nothing supplies a name now, so that exclusion no longer fires for a visitor. The guard
+ * stays — `VisitorInput.companyName` is a separate optional field, still exercised by the
+ * unit suite and by the analysis scripts, which is where the behaviour is asserted — and
+ * restoring it for visitors means asking for a name again, which is a product decision
+ * rather than a bug fix.
+ */
 export interface PeerViewInput {
-  /** Personalises copy only. Optional, so the form has four required fields. */
-  companyName?: string;
   industry: string;
   revenueBand: string;
   /** Country. A sort preference on the peer set, never a filter. */
@@ -303,9 +321,10 @@ export function peerViewInputSchema(taxonomy: Taxonomy, businessTypeIds?: readon
 
   return z
     .object({
-      // Trimmed, length-capped, and never stored or logged anywhere. There is no
-      // lead capture in this codebase.
-      companyName: z.string().trim().max(120).optional(),
+      // **No `companyName`, and the omission is the strictest thing here.** zod objects
+      // strip an unrecognised key by default, so a name posted at this action is dropped
+      // rather than accepted — which is the state to keep. There is no lead capture in
+      // this codebase and now no field a name could arrive in.
       industry: oneOf(taxonomy.industries, "industry"),
       revenueBand: oneOf(taxonomy.revenueBands, "revenue band"),
       hqCountry: oneOf([...hqAllowed], "HQ location"),
@@ -824,19 +843,13 @@ export interface PeerView {
  * is nowhere.
  */
 /**
- * The visitor's company name when they gave one, else null.
+ * `companyName()` WAS HERE and is deleted with the field it read.
  *
- * Here rather than in either screen's `copy.ts` because it is a question about the
- * input rather than a sentence: "did they actually type one", with the whitespace-only
- * case answered the same way every time. Three callers now — both screens' context
- * rows and Screen 2's framing — and it used to be three separate inline trims, which
- * is how a blank-but-not-empty name ends up personalising one screen and not the
- * other.
+ * It was the single definition of "did the visitor type one", shared by both screens'
+ * context rows and by `peersTitle`, so that a blank-but-not-empty name could not
+ * personalise one screen and not the other. All three callers now render a string that
+ * names no company, so the helper had nothing left to answer. See `PeerViewInput`.
  */
-export function companyName(input: PeerViewInput): string | null {
-  const name = input.companyName?.trim();
-  return name && name.length > 0 ? name : null;
-}
 
 export function roundProfessionals(total: number): number {
   return Math.round(total / 10_000) * 10_000;

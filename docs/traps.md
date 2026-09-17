@@ -82,6 +82,24 @@ session. Read on demand, and add to it whenever something costs more than one at
   `style.getPropertyValue("--gcc-at")` instead. Any spec asserting a position is coupled to HOW the
   position is set, so moving a measurement into CSS means grepping the specs for the old property.
 
+- **A LITERAL-TOKEN MATCH AGAINST ADMIN-EDITABLE COPY GOES SILENTLY NO-OP WHEN THE STORED STRING SPELLS
+  THE TOKEN DIFFERENTLY.** `withCasedGccPlural` in `snapshot.tsx` exempts "GCCs" from the eyebrow's
+  `uppercase` so the plural keeps its small s. It split on the literal string while `dataset.json` held
+  "GCCS", so the split found nothing, the exemption never applied, and the eyebrow drew exactly the
+  corruption the mechanism exists to prevent — with the code reading as though it worked. The match is
+  case-insensitive now and always emits the canonical spelling, and a unit test pins the datum. The general
+  form: `withBrandMark` and `withProductMark` in `ask-hero.tsx` fail the same way and nothing enforces
+  either, so any renderer that finds a token in an editable string needs a test on the shipped value.
+
+- **A PER-CONTROL GEOMETRY RULE CARRIED IN A COMMENT RATHER THAN A TYPE BREAKS WHEN THE LAYOUT MOVES, and
+  it breaks without failing.** `SelectField`'s `wide` was a boolean whose offset is only correct for a field
+  in the form grid's trailing column — a constraint stated in prose beside the prop. Removing the
+  company-name field shifted every control one cell along, both wide controls landed in the leading column,
+  and each panel drew a column and a gap off the leading edge of the card. `tsc`, the unit suite and
+  `brand_lint` were all clean. It is a union of positions now (`"grid" | "column"`), so the invariant is
+  checked at the call site; see `project.md`. Anything positional expressed as a boolean is the same bug
+  waiting for the next reflow.
+
 - **`display: flex` on a `<summary>` silently removes the native disclosure marker**, leaving a
   pressable heading with no affordance. `list-inside` then puts the marker ABOVE the heading rather than
   beside it; `list-item list-outside` plus inline padding is the fix, with the flex moved to a wrapper
@@ -144,6 +162,19 @@ session. Read on demand, and add to it whenever something costs more than one at
   value the resolver returns null for every company, the CSP allows no extra origin, and every card
   draws the name alone. A deployment that "lost its logos" almost certainly lost that env var, and
   Vercel applies env vars only to builds created after they were added.
+
+## Verifying a deployment
+
+- **"I cannot see the change on the live URL" is usually the IMMUTABLE CSS cache or a desktop window, not
+  a failed deploy.** The stylesheet ships from `/_next/static/immutable/chunks/`, so an ordinary reload may
+  reuse the old file, and any change scoped below `lg` renders identically in a desktop-width window.
+- **Verify a deploy by reading the deployed CSS and the computed style, never by eye.** `git ls-remote
+  origin refs/heads/main` for the commit; then `curl` the `href` the live HTML names and grep for both the
+  new value AND the absence of the old one; then load the page with a cache-busting query at the width the
+  change applies to and read `getComputedStyle` off the element. Eyeballing a cached page is how a shipped
+  change gets debugged as a broken one.
+- **`grep -oE` with a `{0,400}` bound fails on macOS** — "maximum repetition exceeds 255". Split the
+  pattern or pipe through `tr '}' '}\n'` first.
 
 ## Data and the catalogue
 
@@ -287,3 +318,23 @@ session. Read on demand, and add to it whenever something costs more than one at
   `aria-hidden` span — so `textContent` on a cell gains the hub's name at phone widths while its
   accessible name does not. The browser projects run at Desktop Chrome 1280, where none of this is
   active; a spec that sets a phone viewport has to know.
+- **A HINT INSIDE THE `<label>` BECOMES PART OF THE CONTROL'S ACCESSIBLE NAME, and on a form with two
+  related fields that makes both unaddressable.** The obvious admin field is
+  `<label><span>Industry</span><select/><span>the hint</span></label>` — three surfaces wrote exactly
+  that — and it names the select "Industry The hard boundary. Peer matching never leaves it, so a pinned
+  company must be in it too.", which a screen reader reads before every option. It also breaks lookups:
+  `getByLabel` matches on SUBSTRING, so on a form holding both "Industry" and "Sub-industry" a lookup for
+  the first resolves to two controls and fails on strict mode. `AdminField` in `controls.tsx` now wires
+  the hint through `aria-describedby` and clones its single child to inject the ids. Two consequences
+  worth carrying: a hint is a DESCRIPTION and never a name, and `getByLabel("Industry")` still needs
+  `{ exact: true }` wherever "Sub-industry" is on the same page, because the substring rule is
+  Playwright's and not the markup's.
+- **A `SEARCH_KINDS` member whose collection is legitimately EMPTY breaks the universal search's coverage
+  test, and the test is right to be strict.** `search-index.test.ts` asserts every declared kind has at
+  least one entry, because a kind that is not indexed is a thing an admin is told does not exist.
+  `peer-override` is the one exemption: pinned peer sets are corrections to the scoring engine and none at
+  all is the healthy state, so the assertion for that kind is one entry per row instead. Do not relax the
+  rule for a kind that merely happens to be empty in a fixture.
+- **`getByLabel("Search")` reaches any control whose name CONTAINS it**, which is why the palette's
+  trigger is "Find anything" and why the peer-override editor's candidate filter is "Find a company". A
+  second search box on a page that already has one must not use the word.

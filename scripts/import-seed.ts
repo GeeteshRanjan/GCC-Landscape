@@ -543,13 +543,67 @@ async function main(): Promise<void> {
     `  tagged ${tagged}/${companies.length} companies (${Math.round((tagged / companies.length) * 100)}%) with a business type`,
   );
 
+  /**
+   * Peer overrides are PRESERVED and then PRUNED, and there is no `--reseed` flag for
+   * them because there is nothing in code to reseed from.
+   *
+   * They are hand-authored control decisions with no seed behind them, so the importer
+   * must not erase them — that is the rule the metric catalogue's own values are kept
+   * under. But a re-import rebuilds the companies and the taxonomy from the
+   * spreadsheet, so a row can be left naming a company id or an industry that no longer
+   * exists, and the schema would then refuse the whole import: a correct-but-useless
+   * outcome on a script whose job is to be the recovery path. So a row that no longer
+   * resolves is DROPPED and named, loudly, rather than silently repaired — an override
+   * is a decision, and half of one is worse than none.
+   */
+  const taxonomy = buildTaxonomy(companies);
+  const companyIds = new Set(companies.map((c) => c.id));
+  const industryOfCompany = new Map(companies.map((c) => [c.id, c.industry]));
+  const businessTypeIds = new Set(businessTypes.map((t) => t.id));
+  const storedOverrides = previous?.peerOverrides ?? [];
+  const dropped: string[] = [];
+  const peerOverrides = storedOverrides.filter((override) => {
+    const reasons: string[] = [];
+    if (!taxonomy.industries.includes(override.industry)) {
+      reasons.push(`industry "${override.industry}" is gone`);
+    }
+    if (
+      override.businessTypeId !== undefined &&
+      !businessTypeIds.has(override.businessTypeId)
+    ) {
+      reasons.push(`sub-industry "${override.businessTypeId}" is gone`);
+    }
+    if (
+      override.revenueBand !== undefined &&
+      !taxonomy.revenueBands.includes(override.revenueBand)
+    ) {
+      reasons.push(`revenue band "${override.revenueBand}" is gone`);
+    }
+    const missing = override.companyIds.filter(
+      (id) =>
+        !companyIds.has(id) || industryOfCompany.get(id) !== override.industry,
+    );
+    if (missing.length > 0) reasons.push(`companies gone: ${missing.join(", ")}`);
+    if (reasons.length === 0) return true;
+    dropped.push(`${override.id} — ${reasons.join("; ")}`);
+    return false;
+  });
+
+  if (storedOverrides.length > 0) {
+    console.log(
+      `  keeping ${peerOverrides.length}/${storedOverrides.length} pinned peer sets`,
+    );
+    for (const line of dropped) console.log(`  DROPPED peer override ${line}`);
+  }
+
   const dataset: Dataset = {
     version: DATASET_VERSION,
     generatedAt: new Date().toISOString(),
     source: path.basename(inputPath),
-    taxonomy: buildTaxonomy(companies),
+    taxonomy,
     companies,
     businessTypes,
+    peerOverrides,
     metrics,
     siteContent,
   };

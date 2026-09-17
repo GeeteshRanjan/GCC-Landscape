@@ -26,11 +26,10 @@ kind. No form, no email field, no stored visitor input anywhere in this codebase
 
 ## Inputs — the contract
 
-**Six fields, five asked, four controls.**
+**Five fields, four asked, four controls. Every asked field is read by the matching.**
 
 | Input | Control | What uses it |
 | --- | --- | --- |
-| Company name | text | Personalises copy only |
 | Industry | custom listbox → tree | Primary peer match key, and a hard boundary |
 | Revenue band | custom listbox, the seven bands in the data | Peer similarity axis, weighted below business |
 | HQ location | custom listbox, **every country** | Sort preference on the peer set |
@@ -39,6 +38,20 @@ kind. No form, no email field, no stored visitor input anywhere in this codebase
 
 Never ask for a revenue figure — the data holds bands, so the input is a band. Hold any new field to the
 standard that killed global headcount: if nothing consumes it, it does not get asked.
+
+**COMPANY NAME IS GONE — the field, the zod property, the `companyName()` helper and three copy keys —
+and it is the standard above applied to a field that had already shipped.** It personalised two strings
+and was read by nothing else: no figure, no peer, no count, no ordering. Both strings now say what they
+need to without it, so there was nothing left to consume it. Four consequences hold together. **It is not
+the `gccStatus` case and the two must not be reasoned about together**: `gccStatus` is unasked and still
+RENDERED, supplied as a constant, so its field is load-bearing; a name had no renderer left. **`peersTitle`
+is a FLAT published key again** — see below — and `askCompanyLabel`, `pillCompany` and `peersTitleFallback`
+were deleted rather than left editable and undrawn, which took the copy block from 70 keys to 67 and the
+draft `STORAGE_KEY` to v10. **The pill row is THREE pills on both result screens**, and the parity is
+asserted on each. And **`isVisitorsOwn` in `peers.ts` no longer fires for a visitor**: it keyed on the
+name, so a visitor's own company can now appear in its own peer set. The guard is unchanged, still keyed on
+`VisitorInput.companyName`, and is asserted through `matchPeers` in the unit suite — restoring the exclusion
+means asking for a name again, which is a product decision and not a bug fix.
 
 **"Sub-industry" is the term everywhere a visitor or an admin can read it**, at ANSR's request. The DATA
 is untouched: the field is still `businessTypeId`, the collection is still `dataset.businessTypes`, and
@@ -68,10 +81,15 @@ eight of 24 industries, so a visitor was deciding between industries without see
 who cannot find their own row takes the broad answer, which is the findability failure below. `wide`
 widens the panel to the whole form grid; `columns` is 2 for industry (its longest name is 41 characters
 and needs a full half of the 800px body) and 3 for countries. Four things hold it together: **the
-widening is a negative inline-start margin of `calc(-100% - space-6)`, expressed in the FIELD's own
-width and never the viewport's**, gated on `md` where the grid gains its second column; it is
-LEADING-side, so `wide` is set per control rather than derived from a count, because only the grid's
-trailing column may widen; **columns are CSS multi-column so DOM order IS column order**, which is what
+widening is expressed in the FIELD's own width and never the viewport's**, gated on `md` where the grid
+gains its second column; **`wide` NAMES THE FIELD'S POSITION rather than being a boolean**, because the
+offset needed depends on it — `"grid"` for a field that spans the whole grid, which takes NO margin, and
+`"column"` for a field in the grid's TRAILING column, which reaches back over its sibling with
+`calc(-100% - space-6)` (`.gcc-select-panel--reach`, its own class so the width and the offset are two
+decisions). A field in the LEADING column may not widen at all and there is deliberately no value for it:
+it was a boolean carrying that constraint in a comment, and when a removed field shifted every cell along
+both wide panels drew a column and a gap off the leading edge of the card. **Columns are CSS multi-column
+so DOM order IS column order**, which is what
 keeps the keyboard walking what is drawn; and tier headings take `column-span: all`, so each tier
 balances into its own equal columns. The body is a FIXED height on a wide panel and a CEILING otherwise
 — seven revenue bands in a 416px box read as a list that failed to load. Opening a branch drops the
@@ -247,9 +265,14 @@ fade with it. From `xl` the hero outdents by the card's whole margin and its lea
 `--ansr-container-lead`; the two are gated on `xl` together, because widening the lead without shifting
 left by the same step puts text on the map's visible field.
 
-The form grid is **two equal columns**, two rows of two with the submit spanning both — one column below
-`md`, where the gap tightens to 16px because there it is only vertical rhythm and not also the interior
-boundary between the columns.
+The form grid is **two equal columns, so there is exactly ONE interior boundary** — one column below `md`,
+where the gap tightens to 16px because there it is only vertical rhythm and not also that boundary.
+**THREE CONTROLS MEANS THE FIRST ONE SPANS THE ROW**: industry takes the whole first row, revenue band and
+headquarters complete the second, and the submit spans both. A plain flow would leave the third field
+beside an empty cell, which is the hole this layout keeps being rearranged to close. Two things depend on
+industry being the field that spans — it is the primary match key, the hard boundary and the only control
+with a second level, so it is the right one to widen; and its popup then needs no offset, which is why it
+takes `wide="grid"` while headquarters, in the trailing column, takes `wide="column"`.
 
 **THE PHONE STEP IS BUDGETED AGAINST A PHONE ON BOTH SURFACES, never derived from the desktop one by a
 smaller multiplier.** What a visitor sees of the hero-and-card pair is `pb − pull`, the strip of band between
@@ -329,7 +352,7 @@ card's top row.**
   neighbours were sized against in the first place.
 
 **The band carries three things:** `ANSR ATLAS` as the `h1`, the finding as a non-heading
-display line, and the visitor's four answers as pills with one "Edit answers" button.
+display line, and the visitor's three answers as pills with one "Edit answers" button.
 
 **The `h1` is the FULL LOCKUP — mark and wordmark — AND IT IS THE WAY HOME.** `ansr-logo-on-dark.svg`,
 used literally, sized off the WORDMARK's cap height rather than the artboard (letters occupy 37.9 of the
@@ -367,23 +390,25 @@ INTERPOLATES the industry** — `HeaderFinding` is capped at `--ansr-container-l
 past ~36 characters it wraps, and a two-line band beside a one-line band is the height jump this pair
 exists to remove.
 
-**The four answers are read-only pills with no hover state, and one button labelled "Edit answers" in
+**The answers are read-only pills with no hover state, and one button labelled "Edit answers" in
 the SAME wrapping row, immediately after the last pill.** The button is the SIZE of a pill; the 44px
 target is expanded off-screen by `.gcc-context-edit::after`, 7px top and bottom, with
 `inset-inline: 0` — never a negative one, because the row's `gap-x` is 8px and a press landing on a pill
 does nothing while feeling like a miss. **`.gcc-hit-44` is that expansion generalised, BLOCK-ONLY for the
 same reason, and the answer editor's own Close pill is its other consumer** — the caller supplies
 `position: relative` and a 30–32px control, so it cannot be dropped on anything and be assumed correct.
-Company name (when given), industry, headquarters, revenue band.
+Industry, headquarters, revenue band. **THREE pills, and the fourth was the company name** — it was
+conditional on the one field a visitor could leave blank, and it went with the question; `pillCompany` was
+deleted rather than left as a label for a pill that can never render.
 **BELOW `md` THE PILLS ARE READ BUT NOT DRAWN, at the project owner's instruction, so the row draws the
-button alone.** Four pills wrapped to three lines at 390 to restate what the visitor typed thirty seconds
+button alone.** The pills wrapped to three lines at 390 to restate what the visitor chose thirty seconds
 earlier, on the one band they meet before any evidence. The markup is identical at every width and the
-group keeps all four members: the media query on `.gcc-context-pill` is the sr-only treatment, never
+group keeps every member: the media query on `.gcc-context-pill` is the sr-only treatment, never
 `display: none`, so nothing leaves the reading order — and it is done on the class rather than with
 `sr-only md:not-sr-only`, which would leave `not-sr-only`'s `padding: 0` and the pill's own padding
 fighting on generated order.
-**"India today" is not among them and must not be.** `companyName` in `src/data/screen1.ts` is the single
-definition of "did they type one".
+**"India today" is not among them and must not be**, and neither is a company name: the tool must echo
+back only what the visitor actually answered.
 
 **"EDIT ANSWERS" IS A DISCLOSURE, NOT A NAVIGATION, at ANSR's request, and this REVERSES the rule that
 the pills' one control goes to the form.** It opens `AnswerEditor` — the entry point's own `InputPanel`,
@@ -401,8 +426,8 @@ and it does NOT push a history entry, the answers having changed while the scree
 resolves to whether it worked and the panel closes only on success, so a failure keeps the error in front
 of the visitor; Screen 1 also closes it by remount, Screen 2 cannot be keyed on the input because that
 would throw the visitor off their function tab. And the button carries `aria-expanded` and `aria-controls`,
-which a navigation had no use for. **The band still collects nothing** — same four controls, same six-field
-contract, no new field.
+which a navigation had no use for. **The band still collects nothing** — same four controls, same five-field
+contract, no new field, and no free-text input on either surface.
 
 ## Screen 1 — Peer Landscape
 
@@ -440,10 +465,15 @@ count, mean centre size, spread of cities, leading city. It **introduces no figu
 evidence**, holds four cells whatever the result, and says "Data unavailable" rather than a dash, a zero
 or an estimate. The SECTION HEADING carries the industry (`snapshotHeading`) and **no label does**.
 **Never "GCC's".** **THE HEADING IS DRAWN `uppercase` AND THE PLURAL `s` IS EXEMPT FROM IT** —
-`withCasedGccPlural` in `snapshot.tsx` returns the literal token `GCCs` to `normal-case`, because a full-caps
-transform makes the s a fourth initial and the eyebrow reads "GCCS", which is the same corruption as
-"GCC's" arriving from the presentation rather than the copy. Matched as a literal token on
-`withBrandMark`'s argument, the heading being admin-editable, and the accessible name never changed.
+`withCasedGccPlural` in `snapshot.tsx` returns the token to `normal-case`, because a full-caps transform
+makes the s a fourth initial and the eyebrow reads "GCCS", which is the same corruption as "GCC's" arriving
+from the presentation rather than the copy. Still a literal token on `withBrandMark`'s argument, the heading
+being admin-editable and there being no position to slice at. **The match is CASE-INSENSITIVE and the output
+is always the canonical `GCCs`, and both halves are load-bearing**: it matched literally while the published
+heading said "GCCS", so the exemption was a silent no-op and the eyebrow drew the corruption the mechanism
+exists to prevent. So the drawn line and the accessible name now agree on the house spelling whatever an
+admin types — and the datum is corrected too, pinned by a unit test over the whole copy block, because a
+tolerant renderer is not a reason to store the wrong spelling.
 **TWO COLUMNS ON A PHONE, four from `lg`, and every size steps at `sm` as well as
 `md`** — one column drew four full-width rows of a desktop-sized numeral beside an empty half-measure, and
 the four cells are a SET whose point is that they are properties of one industry, which is something a
@@ -482,13 +512,23 @@ three lines and made the two-column card taller than the column it replaced. It 
 LOWER BOUND rather than a utility: a cell has to hold a 112px band and a 116px year line, so two columns
 need 248px of card and a 320px viewport gives 200 — below `23rem` the flex column renders unchanged.
 
-**THE HEADING NAMES THE VISITOR'S OWN COMPANY, so it is DERIVED and no longer published copy.**
-`peersTitle(view)` in `screen1/copy.ts` reads "GCC details of peers closest to {company}", falling back
-to **"closest to your profile"** — never "closest to yours", which presumes the visitor already runs an
-India centre when `gccStatus` is a constant the form never asks for. It left `publicCopySchema` under
-that object's own rule: the company name is the one OPTIONAL input, so a flat field could hold only one
-of two branches, which is exactly why the snapshot's opening label never became a field. Both branches
-are unit-tested and both are asserted in the browser; `public-copy.test.ts` asserts the key stays out.
+**THE HEADING NAMES NO COMPANY AND IS ONE FLAT PUBLISHED KEY — "GCC details of your closest peers".** It
+interpolated the visitor's own company for one pass, as a template plus a `peersTitleFallback` for the
+majority who typed nothing; the field is gone, so there is one branch and one key and the fallback is
+deleted. `peersTitle(view, copy)` in `screen1/copy.ts` keeps its unused `view` parameter so all seven call
+sites are untouched. Two rules survive the collapse. **"GCC details" is the load-bearing half** — the cards
+carry a headcount, a city list and a start year, facts about the CENTRE, and this is the only place on the
+block that says so. And **never "closest to yours"**, which presumes the visitor already runs an India
+centre when `gccStatus` is a constant the form never asks for; asserted in both suites.
+
+**THE SHORT-SET LINE IS DRAWN ABOVE THE CARDS, under the heading, at ANSR's request.** `shortfallLine`
+led the block from below for every earlier pass, which meant a reader met a short grid, counted it, and only
+then found the reason few companies clear their own sub-industry. Read first it is a call-out. Three things
+hold together. **The published branch's wording moved with the position** — `peersNarrowNote` closed on "the
+closest comparisons above" and now points forward at the cards, so a move here is a copy edit and not only a
+JSX one. **The COUNT line stays under the grid**, because it states what the grid shows, which is also what
+keeps the count stated exactly once and this sentence free of a number. And the position is asserted by
+GEOMETRY rather than DOM order, a CSS reorder being how a block reads wrong while its markup looks right.
 
 **`company.domain` IS THE IDENTIFIER A MARK IS SOURCED BY, AND IT IS `.optional()` RATHER THAN
 `.default("")`.** A defaulted string is written back on every publish, so it would put `"domain": ""` on all
@@ -1366,9 +1406,9 @@ against its own copy in `tests/browser/.tmp`.
 **The dataset is read server-side and held in memory. It is never shipped whole to the browser** —
 Screen 1 sends five peers and a few counts.
 
-**Three editable collections, one file.** Companies, metrics, and `siteContent` — the entry point's hero
+**Four editable collections, one file.** Companies, `peerOverrides`, metrics, and `siteContent` — the entry point's hero
 copy, ANSR's impact figures, the result screens' CLOSE, the peer view's `commonFunctions` tags, the
-entry point's `logos`, and `copy`, the 69 static visitor-facing strings — all live in `dataset.json`. A second file would mean a second write
+entry point's `logos`, and `copy`, the 67 static visitor-facing strings — all live in `dataset.json`. A second file would mean a second write
 target, a second diff, a second cache and a publish that could half-succeed. `metrics` is **defaulted to
 `[]` rather than required**, so a dataset written before it existed still reads — the fs store refuses an
 unrecognised version, so bumping `DATASET_VERSION` would have turned a compatible addition into a broken
@@ -1376,7 +1416,7 @@ read.
 
 **THE LINE BETWEEN AN EDITABLE STRING AND A CODE ONE IS WHETHER IT STATES A CLAIM ABOUT THE DATASET.**
 A heading, a label or an attribution names what a reader is looking at and asserts nothing about it, so it
-is `siteContent.copy` — 63 flat keys and 6 templates, each capped at a render limit measured on the real layout, grouped by
+is `siteContent.copy` — 61 flat keys and 6 templates, each capped at a render limit measured on the real layout, grouped by
 screen in the editor. A sentence that states a count, a share or an ordering has to move when the thing it
 describes moves, so it stays a function in `copy.ts`: `peerCountLine`, `shortfallLine`, `largestLine`,
 `industrySentence`, `largestOverlapLine` and their siblings are derived and have no fixed wording to edit.
@@ -1392,13 +1432,19 @@ containment chart's basis line is the only thing between three exact counts and 
 which argued for code, and it was overruled because a basis line is ANSR's own voice. `nonEmpty` is what
 survives of the argument — the note can be reworded and cannot be emptied — so the wording rule is enforced
 by a unit test on the shipped value and by the admin hint, not by the schema.
-**Two keys have been removed rather than left unread, and the second is the one worth remembering.**
-`snapshotShareLabel` rendered nowhere, and an editable field nothing draws is a change an admin makes and
-cannot see. `peersTitle` rendered fine and still had to go: ANSR's new wording names the visitor's own
-company, and the company name is optional, so the heading composes over an answer the way the snapshot's
-opening label does. **Removing a key needs the STORAGE KEY bumped too** — zod strips an unrecognised key
-rather than refusing it, so a draft written before the removal would publish cleanly with the extra string
-silently dropped, which no shape check can catch. `draft-provider.tsx` is at v8.
+**A KEY IS REMOVED WHEN ITS CONSUMER GOES, and the reason is always the same one: an editable field that
+draws nothing is a change an admin makes and cannot see.** `snapshotShareLabel` rendered nowhere.
+`askCompanyLabel` and `pillCompany` labelled a control and a pill that the company-name removal deleted, and
+`peersTitleFallback` existed only because that heading had a no-name branch. **Removing a key needs the
+STORAGE KEY bumped too** — zod strips an unrecognised key rather than refusing it, so a draft written before
+the removal would publish cleanly with the extra string silently dropped, which no shape check can catch;
+`peersTitle` is the sharper half of the same bump, having stopped being a template, so a stale draft's value
+would still validate and then draw `{company}` as literal text over the primary evidence.
+**A whole new COLLECTION is the blunt case the version was always right for, and `peerOverrides` took it
+to v11 — with a line in the shape check as well**, because the key is `.default([])`-ed: a v10 draft parses
+with the gap filled by an empty list, so publishing one would DELETE every pinned peer set and report it as
+an ordinary edit, and a pinned set is invisible on the public screen by design.
+`draft-provider.tsx` is at v11.
 
 **A STRING THAT NAMES ITS SCOPE RATHER THAN ASSERTING ANYTHING IS A TEMPLATE, NOT A REASON TO STAY IN
 CODE.** `copyTemplate` in `schema.ts` builds a field that MUST contain its declared `{slot}`s, and the
@@ -1411,22 +1457,24 @@ characters, so the factory subtracts the slot's own width and a template that va
 substituted, asserted against the real taxonomy. **`COPY_PLACEHOLDERS` is a CLOSED set**, each name a
 promise the render path holds that value, so an admin cannot invent a slot that publishes as literal text.
 **`fillTemplate` leaves an unsupplied slot AS TYPED**, so a caller that forgets one draws a visible
-`{industry}` rather than a gap that reads as intended copy. **`peersTitle` came BACK this way and that
-reverses a recorded retreat** — it left because the company name is optional and a flat field could hold
-only one branch; a template plus `peersTitleFallback` holds both. And **the snapshot's opening label is
-still NOT a field**: its branches differ by which NOUN the sentence uses, not by a value in a slot, so a
-template cannot express it and faking one would hand an admin the choice of population.
+`{industry}` rather than a gap that reads as intended copy. **A SLOT IS DELETED WITH THE INPUT IT NAMED** —
+`{company}` and its `peersTitle` entry went when the form stopped asking for a name, and the placeholder set
+being CLOSED is what made that a type error at every site rather than a string that quietly stopped being
+substituted. And **the snapshot's opening label is still NOT a field**: its branches differ by which NOUN
+the sentence uses, not by a value in a slot, so a template cannot express it and faking one would hand an
+admin the choice of population.
 
 **ONE BRANCH OF `shortfallLine` IS PUBLISHED THIS WAY — `peersNarrowNote` — AND DROPPING ITS COUNT IS WHAT
 MADE IT POSSIBLE.** The sub-industry branch read "{industry} is not short of companies in India — but only
 3 are close enough to your sub-industry to be worth naming", which stated a number `peerCountLine` already
-states exactly one line above it, ungrammatically at a set of one, alongside an em dash and the tool
-narrating its own restraint. Without the count it names the SCOPE that shortened the list and nothing else,
-which is this rule's own category; `{industry}` stays required, because without it the sentence claims
-something about India at large. **The other three branches stay derived and are not candidates**: each
-names a quantity or a population, so each has to move when the engine does. A unit test pins the
-publishable branch on the properties rather than the wording — industry named, no digit, no em dash — and
-it is also the branch's first assertion of any kind.
+states exactly, ungrammatically at a set of one, alongside an em dash and the tool narrating its own
+restraint. Without the count it names the SCOPE that shortened the list and nothing else, which is this
+rule's own category; `{industry}` stays required, because without it the sentence claims something about
+India at large. **The other three branches stay derived and are not candidates**: each names a quantity or
+a population, so each has to move when the engine does. A unit test pins the publishable branch on the
+properties rather than the wording — industry named, no digit, no em dash. **The wording is DIRECTIONAL now
+that the line sits above the cards**: it says few GCCs closely match the sub-industry and then points
+forward at them, so a reword may not restore "above".
 
 **A NEW COPY KEY IS WRITTEN INTO `data/dataset.json` IN THE SAME COMMIT, BECAUSE THE MERGE MAKES THE DIFF
 BLIND TO IT.** Both sides of a publish diff are schema-parsed, so the merge fills both and a missing key
@@ -1445,7 +1493,8 @@ before a new KEY has a `copy` that is present and short by one, so without the m
 refuses the committed dataset and production's alike. **A merge rather than a `.default()` per field**, so
 the shipped value stays in exactly one place — and no future key needs a default of its own. The cost is
 that the merge makes the draft restore's shape check BLIND, since the keys are present after it: that is
-why twenty-nine additions bumped `STORAGE_KEY` to v7 and ONE more took it to v8 — the merge is per-KEY, so
+why twenty-nine additions bumped `STORAGE_KEY` to v7 and ONE more took it to v8, and why three REMOVALS
+took it to v10 — the merge is per-KEY, so
 a draft short by one string has that gap filled with the shipped value and publishes it as an approved
 edit. A bump is now the only instrument for a copy-shape change, at any size.
 
@@ -1581,6 +1630,54 @@ being rarity within the industry, **never hand-authored**. `bandProximity` is th
 Electrical & Electronics has two and stays three short and says so. Relaxing the boundary is cheap under
 this architecture and is a separate decision.
 
+**AN ADMIN MAY REPLACE THE COMPUTED SET FOR ONE COMBINATION OF ANSWERS — `dataset.peerOverrides` — AND IT
+IS A REPLACEMENT AND NEVER A NUDGE.** Whatever is in `companyIds` is the peer set, in that order, and
+whatever is not is not shown, which is what makes one field both an include list and an exclude list. It
+exists because the data is thin in places: a sub-industry with four eligible companies, two obvious
+comparisons that score below the floor, a company ANSR would rather not put in front of one kind of
+visitor. **The engine is right almost everywhere and this collection should stay empty** — it ships empty,
+`data:verify` profiles the count, and a number climbing over time is the signal that the scoring wants
+fixing rather than overruling. Ten things hold together.
+
+**A combination is a PATTERN, not a tuple.** `industry` is required; sub-industry, revenue band and HQ are
+each optional and absent means ANY, so one row can cover the whole of Education. `industry` is required
+twice over: it is the hard boundary, so a row without it could put a bank in front of a retailer, and it
+is what scopes the candidate list the admin picks from, which is unusable at 1,834 rows. **An absent field
+on the INPUT is a real answer** — a visitor who named no sub-industry — so the test is equality and not
+truthiness, which is what lets one set be pinned for the broad answer and another for a narrowed one.
+
+**Precedence is by SPECIFICITY, weighted as distinct powers of two — sub-industry 4, band 2, HQ 1** — which
+mirrors what each field means to the engine and makes a tie unreachable. `industry` scores nothing, being
+on every row. **A DUPLICATE COMBINATION IS REFUSED BY THE SCHEMA rather than resolved**, because the
+tiebreak would be list position, which no editor shows; so which set a visitor saw would depend on
+something invisible. A BROADER row already covering a combination is legal and is the useful case — the
+editor states it as a finding and only an exact duplicate blocks a save. **Refusing on "anything covers
+this" instead was a real bug**: the broad row still covers the combination until the narrow one exists, so
+the check was permanently true and narrowing was unreachable.
+
+**`matchPeers` decides it, and four reported fields are deliberately NOT what the scored path would say.**
+`shortfall` is ZERO whatever the length — every branch of `shortfallLine` is a claim about the DATA, and a
+curated set of three is three because somebody chose three. `floorShortened` is false for the same reason.
+`sharedTags` is empty and `businessMatched` false, because naming what the peers share would invent a
+rationale for a decision made by hand. `tier` IS computed from the returned companies' own bands, that
+being an observation rather than a story. **Every POPULATION count is untouched** — `industryTotal`,
+`closeMatches`, `sameBusinessType` — so the containment chart and the count line under the grid stay true.
+
+**Nothing on the public screen says a set was hand-picked, and there is no honest sentence that could.**
+`overriddenBy` is on `PeerResult` for `data:verify` and the admin preview and stops at the view-model
+boundary. **The admin's candidate list is `rankCandidates`, the engine's own ranking**, so the five it
+would have shown are marked and the ones the floor REJECTED are visible — the latter being why most people
+will come here. `eligible` is `ranked` FILTERED, so the two agree on order. **`compareScored` is one
+comparator with two callers** for the same reason: a second sort written for the admin would drift.
+
+Referential integrity is the schema's: every pinned company must exist and be in the row's own industry, a
+sub-industry must belong to it, the set is 1 to 5, and no company twice. So the cascades are mandatory —
+`deleteCompany` unpins and drops a row left empty, `removeBusinessType` DROPS the row rather than widening
+it to "any", and the taxonomy rename and remove sweep all three fields. **Widening on a delete is the wrong
+move every time**: it applies a hand-picked set to more visitors than it was written for, silently. The
+importer PRESERVES overrides and PRUNES what no longer resolves, loudly, and has no `--reseed` flag because
+there is nothing in code to seed from.
+
 **A similarity floor of 0.20 applies to `businessSimilarity` ALONE, never the combined score** — a perfect
 band match is worth 0.3, which on the combined score would drag a business-irrelevant company over the
 line. The floor can shorten a set; that is invariant 3, not a defect, and `data:verify` counts how often.
@@ -1593,23 +1690,36 @@ a `data:verify` invariant. Do not delete it without deleting those.
 **Sub-industry is never a match key.** 620 values over 1834 companies is not a taxonomy: it is read on
 import, collapsed through `scripts/business-type-map.ts` into one of 164 business types, and discarded.
 
-**Tags are code, business types are data.** `BUSINESS_TAGS` (138) is the scoring substrate — deleting one
-silently re-scores every peer set, so the vocabulary is a code change. Business types are admin-editable.
-**A NEW TAG CANNOT BE MADE ADMIN-EDITABLE WITHOUT BOUNDING THE WEIGHT FIRST, and that is measured.** IDF
-is unbounded, so a fresh tag arrives at roughly 100x a common one (Software & Internet: 6.44 on one
-carrier, 5.75 on two, 0.05 for `b2b`) and dominates the visitor's denominator — one invented tag cut the
+**TAGS ARE DATA NOW, AND THE WEIGHT CAP IS WHAT PAID FOR IT.** `BUSINESS_TAGS` (138) is still the
+AUTHORED vocabulary and still code, but `businessTypeSchema.tags` validates SHAPE rather than enum
+membership, so an admin can add a tag of their own. What made that shippable is measured: IDF is
+unbounded, so a fresh tag arrives at roughly 100x a common one (Software & Internet: 6.44 on one carrier,
+5.75 on two, 0.05 for `b2b`) and dominates the visitor's own denominator — one invented tag cut the
 eligible population 20% on average and 95% at worst, and took the named five to two in five
-sub-industries. **Skipping a tag with one carrier does NOT fix it**: a type with two companies still
-scores 5.75, 65 of 164 types still moved, and the tweak itself changed 41 existing peer sets. So
-`business-type-manager.tsx`'s claim that a one-type tag "has no effect at all" is backwards — it is the
-maximum-weight case. Opening tags up means re-running `sweep-floor.ts` and re-baselining, the same bar
-`log(1 + N/f)` was rejected against; an unscored admin LABEL field is the cheap way to buy the
-expressiveness instead.
+sub-industries. **`capCustomTagWeights` in `similarity.ts` holds a tag OUTSIDE the authored vocabulary to
+the sharpest AUTHORED weight in its own industry**, so a custom tag can be as discriminating as the best
+reviewed one and no more. **The cap is scoped by PROVENANCE and not by frequency, and that is not a
+stylistic choice**: eleven authored tag-and-industry pairs already sit at company frequency 1
+(`agrochemicals` in Agribusiness, `defense` in Architecture, Engineering & Construction, `services-firm`
+in Restaurant & Food Service and eight more), so a flat clamp at the two-carrier weight would have
+silently re-scored eleven industries as the side effect of an unrelated feature. It is provably a NO-OP on
+the shipped dataset — every tag in it is authored, asserted in `peer-overrides.test.ts` — so no peer set
+that ships today can have moved. **A tag is a SLUG**, on `id`'s argument: it is compared by equality, so
+`Quick Commerce` and `quick-commerce` would be two tags sharing nothing, which is how a vocabulary rots
+back towards 620 values of one member. `normaliseTagInput` runs in the EDITOR and shows the slug before
+the tag is added, never silently at the publish gate. **`isBusinessTag` no longer means "valid" and now
+means "was reviewed"** — the weight cap is the only thing in the product that reads it.
+**The nudge says a lonely tag is the MAXIMUM-weight case, and the old hint said the opposite.**
+`business-type-manager.tsx` claimed a one-type tag "has no effect at all", in a docblock and under the
+picker; both were backwards and both are corrected. Adding such a tag is allowed and is the admin's call.
 **A business type's NAME is Title Case**, at ANSR's request — "Apparel & Footwear Brand". Applied in
 `business-type-catalogue.ts` AND `dataset.json`, because the catalogue is what a re-import seeds from.
 The rule and the acronym and hyphen cases: `docs/business-types.md`. Nothing that matches moved — a
 company, a tag, a search term and `business-type-map.ts` all key on `id`.
-**Every tag must be carried by at least two business types**, asserted by `data:verify`. **A company's
+**Every tag FROM THE AUTHORED VOCABULARY must be carried by at least two business types**, asserted by
+`data:verify` — scoped there rather than left blanket, because an admin's addition necessarily starts on
+one type and `--accept` deliberately cannot silence an invariant. An admin's one-carrier tag is a profile
+figure (`tags added in admin`, `tags on a single business type`) and is bounded by the cap instead. **A company's
 business types must belong to its own industry**, enforced by the schema — so an industry rename cascades
 into `businessTypes[].industry` as well as into companies. **An untagged company is a safe state**: 38 are
 deliberately untagged. It still counts in every total, but it can never be shown as a peer to a visitor
@@ -1692,13 +1802,13 @@ What lives where. Never a file listing — the tree is supplied each session.
 | Path | Responsibility |
 | --- | --- |
 | `src/app/` | App Router. `layout.tsx` self-hosts the display face via `next/font` and exposes it as `--gcc-font-display-loaded`, which `tokens.css` reads — the generated family name is hashed, so naming the face literally would fall through to the sans stack and lose Light 300. **`font-display` is set ONCE, on the public root in `tool.tsx`**, never per surface. `body` stays on `--ansr-font-sans` so admin keeps Inter. `page.tsx` is the only public route, serves both screens, and is `force-dynamic`. `actions.ts` is the public surface's single server action — one seam, so there is one place to check the dataset does not cross. Screen 2 needs none: its payload does not depend on the visitor. `globals.css` is the Tailwind theme aliased onto brand tokens; it restates no values and clears Tailwind's palette. **`--ansr-gradient-teal` and `--ansr-gradient-orange` are `background` SHORTHAND values, not images** — a colour is not a valid `<image>`, so aliasing them into `--background-image-*` emits an invalid `background-image` that paints nothing silently while still generating a class that looks correct. Both go through `.gcc-ground-gradient`; only `--ansr-gradient-conic` stays aliased. |
-| `src/data/` | The whole data layer, and the only place that knows the dataset shape. `schema.ts` (zod contract), `normalize.ts` (cleaning primitives, shared by importer and admin upload so one format never gets two parsers), `derive.ts`, `peers.ts` (scored engine + Screen 1 counts + the ladder oracle), `similarity.ts` (IDF weighting, band steps, `SIMILARITY_FLOOR`), `search.ts` + `search-terms.ts` (the matcher and its vocabulary — the two modules in here a CLIENT component imports, which is why neither may ever take `server-only` and why they hold no dataset; `search.ts` now serves the ADMIN filters as well as the visitor's dropdown, and `searchableText` is the variadic haystack builder that made that possible without a second matcher), `business-tags.ts`, `business-type-catalogue.ts`, `company-mark.ts` (the resolver) + `company-marks.ts` (`COMPANY_MARKS`, the committed tier's one table), `diff.ts` (one computation, two renderers), `metrics.ts` (`publicMetric`, the gate), `metric-catalogue.ts`, `store.ts` + `store/{fs,github}-store.ts`, `publish-store.ts` (selects the write target, refuses to guess), `dataset.ts` (cached read, mtime+size invalidation, `server-only` — which is what makes "never ship the dataset" a build error). `screen1.ts` is Screen 1's view model; two fields carry their own justification — `industry.averageHeadcount` is a mean of FTE BAND MIDPOINTS, industry-level, rounded coarser than the narrowest band, and never renderable without a method line; `scale.asOf` is the dataset's `generatedAt`, the only date here that is a machine fact, and `dataset.source` is deliberately not carried across. `screen2.ts` is Screen 2's view model and holds `figureParts`, `layoutArea`, `metricWidth`, `packWidths`, `breakdownDisplay`, `gridDisplay`, `breakdownScale`, `selfLabelling`, `journeyLegs`; it imports the gate rather than `dataset.metrics`, so there is no path around it, and resolves every metric to pre-formatted figures with no nullable value left in the type. `geo.ts` (city coordinates, `MAP_FRAME`), `india-outline.ts` and `dot-world-map.ts` (both GENERATED, never hand-edited), `countries.ts`. |
-| `src/app/admin/` | Six routes, and the NAV groups them the way the product is: *Public screens* (Site copy, Function metrics), *Data* (Companies, Taxonomy, Sub-industries), *Release* (Publish). **The labels use the product's own vocabulary and the ROUTES never move** — `/admin/business-types` reads "Sub-industries" because that is the word a visitor sees, while the route, the dataset key and the component keep their names. The nav is `role="group"` rather than a list, because `listitem` is counted page-wide by a spec where it means an impact figure. `page-header.tsx` holds `AdminPageHeader` and `AdminSection`, the two idioms every page is built from — they were hand-rolled at fifteen call sites, which is how the pages drifted to two different outer gaps and three heading densities. `login/` sits outside the `(authed)` route group; the group's layout is the guard and hosts the draft provider. A route group rather than middleware — middleware would be a second runtime to keep Node-only for no gain. |
+| `src/data/` | The whole data layer, and the only place that knows the dataset shape. `schema.ts` (zod contract), `normalize.ts` (cleaning primitives, shared by importer and admin upload so one format never gets two parsers), `derive.ts`, `peers.ts` (scored engine + Screen 1 counts + the ladder oracle + `rankCandidates`, the one ranking the admin's override editor draws, and `matchPeerOverride`, the one precedence rule), `similarity.ts` (IDF weighting, band steps, `SIMILARITY_FLOOR`, `capCustomTagWeights`), `search.ts` + `search-terms.ts` (the matcher and its vocabulary — the two modules in here a CLIENT component imports, which is why neither may ever take `server-only` and why they hold no dataset; `search.ts` now serves the ADMIN filters as well as the visitor's dropdown, and `searchableText` is the variadic haystack builder that made that possible without a second matcher), `business-tags.ts`, `business-type-catalogue.ts`, `company-mark.ts` (the resolver) + `company-marks.ts` (`COMPANY_MARKS`, the committed tier's one table), `diff.ts` (one computation, two renderers), `metrics.ts` (`publicMetric`, the gate), `metric-catalogue.ts`, `store.ts` + `store/{fs,github}-store.ts`, `publish-store.ts` (selects the write target, refuses to guess), `dataset.ts` (cached read, mtime+size invalidation, `server-only` — which is what makes "never ship the dataset" a build error). `screen1.ts` is Screen 1's view model; two fields carry their own justification — `industry.averageHeadcount` is a mean of FTE BAND MIDPOINTS, industry-level, rounded coarser than the narrowest band, and never renderable without a method line; `scale.asOf` is the dataset's `generatedAt`, the only date here that is a machine fact, and `dataset.source` is deliberately not carried across. `screen2.ts` is Screen 2's view model and holds `figureParts`, `layoutArea`, `metricWidth`, `packWidths`, `breakdownDisplay`, `gridDisplay`, `breakdownScale`, `selfLabelling`, `journeyLegs`; it imports the gate rather than `dataset.metrics`, so there is no path around it, and resolves every metric to pre-formatted figures with no nullable value left in the type. `geo.ts` (city coordinates, `MAP_FRAME`), `india-outline.ts` and `dot-world-map.ts` (both GENERATED, never hand-edited), `countries.ts`. |
+| `src/app/admin/` | Seven routes, and the NAV groups them the way the product is: *Public screens* (Site copy, Function metrics), *Data* (Companies, Taxonomy, Sub-industries, Pinned peer sets), *Release* (Publish). **"Pinned peer sets" is filed under *Data* rather than under *Public screens*, and the filing is a judgement**: it decides what a visitor is shown, which argues for the first group, but it is a decision about which companies are comparable — the same kind as tagging a sub-industry, and unusable without the company table beside it. **The labels use the product's own vocabulary and the ROUTES never move** — `/admin/business-types` reads "Sub-industries" because that is the word a visitor sees, while the route, the dataset key and the component keep their names. The nav is `role="group"` rather than a list, because `listitem` is counted page-wide by a spec where it means an impact figure. `page-header.tsx` holds `AdminPageHeader` and `AdminSection`, the two idioms every page is built from — they were hand-rolled at fifteen call sites, which is how the pages drifted to two different outer gaps and three heading densities. `login/` sits outside the `(authed)` route group; the group's layout is the guard and hosts the draft provider. A route group rather than middleware — middleware would be a second runtime to keep Node-only for no gain. |
 | `src/app/api/admin/` | Login, logout, diff preview, publish. Each **re-checks the session itself** — a layout cannot guard a route handler, and a route that forgot would be silently public. |
 | `src/lib/admin/` | `password.ts` (scrypt), `session.ts` (signed cookie, `server-only`), `rate-limit.ts` (two budgets), `totp.ts` (RFC 6238 on `node:crypto`, no dependency), `guard.ts` (redirect for pages, bare 401 for APIs), `publish.ts` (validate → read → diff, shared by preview and commit), `constants.ts` (exists because `server-only` throws under `tsx`). |
-| `src/components/admin/` | Client-side admin UI. **`sections.ts` is the one home for what the admin is MADE OF, by name** — the six tabs with a summary and search terms each, and the four taxonomy list titles. The nav renders it, the universal search indexes it and the taxonomy editor titles its lists from it, so a renamed tab cannot stay reachable under its old name; it holds no JSX, because the shell loads on every page and the index must not have to import an editor to learn what its lists are called. **`search-index.ts` + `global-search.tsx` are the UNIVERSAL search: an index and a palette, split so the half that fails silently is testable.** The index is every editable thing in the draft plus the six pages; the palette is a ⌘K dialog in the shell. Rules: **it is a way IN and never a second editor**, so a result navigates and nothing is edited there; results are **capped per KIND, not overall**, so an ambiguous query cannot bury five kinds under 1,834 companies; the jump is carried by the **URL** (`?find=` seeds the target page's own filter, `?open=` opens one row's editor) because admin owns its URL, which makes it bookmarkable and the back button an undo; **`?open=` may only be set for the three surfaces that read it** — asserted, because the other three have nothing to open and the result would quietly under-deliver; a page entry's `terms` name the PAGE and never the fields on it, since every field is indexed on its own and pages sort first; and the index is built on **first open**, not on mount. **The trigger is "Find anything" and must never contain the word "Search"**: the company table's field is labelled `Search` and Playwright's `getByLabel` matches on substring, so a globally-present control naming it breaks four specs. **`search-box.tsx` is the ONE search control and the one filter hook, on all five editing surfaces, and it wraps the PUBLIC matcher rather than an `includes`** — so `&`, accents and punctuation fold, a second word narrows instead of matching nothing, and a one-letter query answers immediately. It decides the CONTROL and never what is searchable: each page builds its own haystack, because only the page knows which of its fields an admin would type. Companies keeps its own markup and gained memoised haystacks, one per row per draft rather than per keystroke. Two rules the pages share: a section with no match is HIDDEN and the count says how many are, since a page that silently loses two thirds of itself reads as broken; and **a filtered list may not be REORDERED** — taxonomy's arrows swap with the row above in the FULL list, which a filter is not showing. `draft-provider.tsx` autosaves locally and pins the baseline it started from; its `STORAGE_KEY` is versioned and **must be bumped whenever the editable shape changes**, because restoring a draft missing a key produces a schema error the admin cannot fix from the UI — and `tests/browser/helpers.ts` owns `DRAFT_STORAGE_KEY` and must move with it. **A DEFAULTED key is the quieter and worse case, and the restore guard is what catches it**: a draft written before one still parses on the way out, so publishing it would silently RESET that collection to the shipped values and report it as an ordinary edit. So the restore checks the keys it is about to trust by shape and drops a draft that predates them. `site-content-manager.tsx` is the one editor with no local form state and no Save button — nothing in it has a cross-field rule, so there is no second copy of the truth. Plus the app shell, company table and editor, taxonomy editor, metric catalogue and editor, publish view. |
+| `src/components/admin/` | Client-side admin UI. **`sections.ts` is the one home for what the admin is MADE OF, by name** — the seven tabs with a summary and search terms each, and the four taxonomy list titles. The nav renders it, the universal search indexes it and the taxonomy editor titles its lists from it, so a renamed tab cannot stay reachable under its old name; it holds no JSX, because the shell loads on every page and the index must not have to import an editor to learn what its lists are called. **`search-index.ts` + `global-search.tsx` are the UNIVERSAL search: an index and a palette, split so the half that fails silently is testable.** The index is every editable thing in the draft plus the seven pages; the palette is a ⌘K dialog in the shell. Rules: **it is a way IN and never a second editor**, so a result navigates and nothing is edited there; results are **capped per KIND, not overall**, so an ambiguous query cannot bury five kinds under 1,834 companies; the jump is carried by the **URL** (`?find=` seeds the target page's own filter, `?open=` opens one row's editor) because admin owns its URL, which makes it bookmarkable and the back button an undo; **`?open=` may only be set for the surfaces that read it** — four now, asserted, because the other three have nothing to open and the result would quietly under-deliver; and `peer-override` is the one KIND whose collection is legitimately empty, so the coverage test asserts one entry per row for it rather than at least one; a page entry's `terms` name the PAGE and never the fields on it, since every field is indexed on its own and pages sort first; and the index is built on **first open**, not on mount. **The trigger is "Find anything" and must never contain the word "Search"**: the company table's field is labelled `Search` and Playwright's `getByLabel` matches on substring, so a globally-present control naming it breaks four specs. **`search-box.tsx` is the ONE search control and the one filter hook, on all six editing surfaces, and it wraps the PUBLIC matcher rather than an `includes`** — so `&`, accents and punctuation fold, a second word narrows instead of matching nothing, and a one-letter query answers immediately. It decides the CONTROL and never what is searchable: each page builds its own haystack, because only the page knows which of its fields an admin would type. Companies keeps its own markup and gained memoised haystacks, one per row per draft rather than per keystroke. Two rules the pages share: a section with no match is HIDDEN and the count says how many are, since a page that silently loses two thirds of itself reads as broken; and **a filtered list may not be REORDERED** — taxonomy's arrows swap with the row above in the FULL list, which a filter is not showing. `draft-provider.tsx` autosaves locally and pins the baseline it started from; its `STORAGE_KEY` is versioned and **must be bumped whenever the editable shape changes**, because restoring a draft missing a key produces a schema error the admin cannot fix from the UI — and `tests/browser/helpers.ts` owns `DRAFT_STORAGE_KEY` and must move with it. **A DEFAULTED key is the quieter and worse case, and the restore guard is what catches it**: a draft written before one still parses on the way out, so publishing it would silently RESET that collection to the shipped values and report it as an ordinary edit. So the restore checks the keys it is about to trust by shape and drops a draft that predates them. `site-content-manager.tsx` is the one editor with no local form state and no Save button — nothing in it has a cross-field rule, so there is no second copy of the truth. **`controls.tsx` is the shared control vocabulary the HAND-ROLLED forms use** — `ADMIN_CONTROL`, `AdminField`, `AdminCount`, `AdminEmpty`, `AdminChip`, `AdminRows` — extracted because three surfaces had grown three control heights, two border tokens and a visible focus ring on only one of them; it is beside `fields.tsx` rather than inside it because that module owns whole labelled fields bound to the draft, and these are the recipes a form composing its own layout needs. **`AdminField` puts the hint in `aria-describedby` and NEVER inside the `<label>`**, which is what it was extracted to fix: the obvious shape folds the hint into the control's accessible NAME, so a select called "Industry" was really called "Industry" plus a sentence — read out before every option, and on a form holding both Industry and Sub-industry it made a name lookup for either one ambiguous. It clones its single child to inject the ids, so the call sites stay plain JSX. `peer-override-manager.tsx` is the pinned-peer-set editor. Plus the app shell, company table and editor, taxonomy editor, metric catalogue and editor, publish view. |
 | `src/components/public/` | What both screens use. `tool.tsx` owns the phase machine — ask, Peer View, Function View — as component state, and moves focus to the new phase's landmark on every transition. **On the result screens that landmark is the tab panel, not the `h1`**, which is identical on both. **The focus move is an effect keyed on the phase, never a call beside `setPhase`** — the `requestAnimationFrame` version assumed React commits before the next frame, and when it did not the ref was null and the only announcement was silently dropped; it passed locally and failed on the deployed build. The effect must skip its first run. **It always takes `preventScroll`, and `tool.tsx` states the position itself**: the visitor's own offset between the two views, document top for anything involving the ask. The offset is read on the press and written back after the commit, because `preventScroll` alone still dropped to 0 when a ~2,900px document was replaced by a ~1,650px one. None of this is the banned scroll logic and every write is inert in the embed. `primitives.tsx` holds `Section`, `Stat`, chip, fact-list and provenance shapes, the number formatters, `Panel` (bordered card, radius `none`, no shadow, `PanelTone` = `plain | inverse | sealed`, plus `chip` and `headingLevel`), `Block` (same landmark contract, no container, `weight="lead"`) and `Zone` (the alternating full-bleed grounds; each screen owns its own SEQUENCE — plus `inverse-soft`, the one ground EXEMPT from the alternation, and `behind`, a full-bleed layer under the padded container, both of which exist for the close). `screen-header.tsx` owns the whole result SURFACE: `ResultSurface` (ornamented band + floating card, taking the tab bar and the panel as separate props because their order is not a caller's decision, plus a `footer` for the caption under the card), `ProductIdentity`, `HeaderFinding`, `ContextPanels`, `ViewTabs`. `charts.tsx` is the shared vocabulary, including `Containment`, `RangeBenchmark`, `MilestoneTrack`, `IndexSpread`, `IndexTable`, `BarTone`, and the five renderers with no live caller. `closing-cta.tsx` is the shared close — `ClosingCta`, `PrimaryCta`, `CloseBackdrop`, the `TILES` field and the one `CLOSE_COPY`; both result screens render it, and neither decides anything about the backdrop or supplies a word of the copy. `atlas-wordmark.tsx` is the product name drawn — supplied outlines, cropped `viewBox`, `currentColor`, sized off the ANSR lockup's cap height, and the one home those contours have; it is here rather than beside `ansr-wordmark.tsx` because both result screens' `h1` and the entry point's headline draw it. `answer-editor.tsx` is the in-place answer editor both result screens mount in `ResultSurface`'s `editor` slot — `AnswerEditor`, `AnswerEditing` and `ANSWER_EDITOR_ID`; it wraps the entry point's own `InputPanel` rather than rebuilding the form, holds no open state (each screen does) and owns none of the request (the tool does). This folder exists because Screen 2 wanted most of `screen1/primitives.tsx`. |
-| `src/components/screen1/` | The public Peer View. `peer-view.tsx` (ask and answer states), `ask-hero.tsx` (the one band using the brand's real display ground, which **admits white ink only** — every muted token measures under 3:1 on it), `customer-logos.tsx`, `impact-band.tsx`, `ansr-wordmark.tsx` (drawn lockup, sized off cap height, word carried in `sr-only` so the accessible name is unchanged), `dotted-world-map.tsx` (layout only — two `<path>` elements over generated geometry; all ink, opacity, radius and edge fade in `.gcc-hero-map` and `.gcc-header-map`, so the two placements cannot diverge), `input-panel.tsx` (four controls over six fields, its own field primitives because a public form and a dense internal tool want different densities; `AskOptions` bundles the four option lists because the form is mounted in two places now, and `submitLabel` is the one thing the answer editor's copy of it changes), `select-field.tsx` (the widget all four use, and the one place an option carrying children turns the popup into a tree; `.gcc-select-*` in globals.css carries both shapes and the measured room table), `evidence.tsx` (comparison grid, containment layers, largest-centres chart, function tags, scale strip; `CityCells` has two consumers, and `JumpToClose` is the count line's arrow), `city-map.tsx`, `snapshot.tsx`, `fortune-badge.tsx` (`FortuneBadge`, the one place the badge's size is decided), `copy.ts` (**every DERIVED visitor-facing sentence, and the reasoning behind every wording** — the static strings are `siteContent.copy` now and each constant here reads its key, so there is one shipped value per string), `use-frame-height.ts`. **Both ranked TABLES are gone, and with them the focusable horizontal scroller.** |
+| `src/components/screen1/` | The public Peer View. `peer-view.tsx` (ask and answer states), `ask-hero.tsx` (the one band using the brand's real display ground, which **admits white ink only** — every muted token measures under 3:1 on it), `customer-logos.tsx`, `impact-band.tsx`, `ansr-wordmark.tsx` (drawn lockup, sized off cap height, word carried in `sr-only` so the accessible name is unchanged), `dotted-world-map.tsx` (layout only — two `<path>` elements over generated geometry; all ink, opacity, radius and edge fade in `.gcc-hero-map` and `.gcc-header-map`, so the two placements cannot diverge), `input-panel.tsx` (four controls over five fields, all four of them dropdowns and no free-text input since the company name went, its own field primitives because a public form and a dense internal tool want different densities; `AskOptions` bundles the four option lists because the form is mounted in two places now, and `submitLabel` is the one thing the answer editor's copy of it changes), `select-field.tsx` (the widget all four use, and the one place an option carrying children turns the popup into a tree; `.gcc-select-*` in globals.css carries both shapes and the measured room table), `evidence.tsx` (comparison grid, containment layers, largest-centres chart, function tags, scale strip; `CityCells` has two consumers, and `JumpToClose` is the count line's arrow), `city-map.tsx`, `snapshot.tsx`, `fortune-badge.tsx` (`FortuneBadge`, the one place the badge's size is decided), `copy.ts` (**every DERIVED visitor-facing sentence, and the reasoning behind every wording** — the static strings are `siteContent.copy` now and each constant here reads its key, so there is one shipped value per string), `use-frame-height.ts`. **Both ranked TABLES are gone, and with them the focusable horizontal scroller.** |
 | `src/components/screen2/` | The public Function View. `function-view.tsx` (screen + four tabs, on the Radix Tabs primitive rather than the registry wrapper — 44px triggers, no `transition-all`, no shadow; cuts the already-packed card list where widths change). `metric-card.tsx` is layout only — selects no chart and does no arithmetic; owns the shape-only placeholder (static, hatched, uniform, so it reads as sealed rather than loading), `CardMeta`, and the capability grid's row glyphs keyed by LABEL, the single place this screen reads an admin-editable string, guarded all-or-nothing. `summary-figures.tsx` (`SummaryFigures` + `scalarCells`), `zones.tsx` (`TabZones`), `graduate-card.tsx` (`GraduateOutput`) and `milestone-card.tsx` (`ScaleMilestones` + `ANSR_MONTHS`) — both drawn by operations AND HR, here rather than in either file because two views of one shared metric must not be two pieces of markup, and because the ANSR rail's supplied figures must have one home, `hr-view.tsx`, `ops-view.tsx`, `fin-view.tsx` (the three composed tabs; `OpsPanel` has no gated metric and owns `summaryCells`, which selects rather than computes; `FinPanel` refuses most of its own reference and owns the tier spread and location grid). `copy.ts` holds `FIGURES_HEADING`, `SOURCE_LINE`, `VELOCITY_HEADING` (one heading shared by two tabs, a constant rather than the same words typed twice), `heldHeading`, `indexedNote`, `METRIC_NOTES`, each composition's own strings, and six sentences exported, unit-tested and rendered nowhere. |
 | `src/components/ui/` | shadcn/ui, unmodified from the registry. On-brand because `globals.css` maps the contract variables onto brand tokens. |
 | `data/` | `dataset.json`, pretty-printed on purpose — a reviewable diff is the reason there is no database. `verify-baseline.json`, updated only by `data:verify -- --accept`. Both tracked. |

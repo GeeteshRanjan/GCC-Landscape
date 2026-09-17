@@ -64,6 +64,7 @@ function dataset(overrides: Partial<Dataset> = {}): Dataset {
     },
     companies: [company()],
     businessTypes: [],
+    peerOverrides: [],
     metrics: [],
     siteContent: DEFAULT_SITE_CONTENT,
     ...overrides,
@@ -135,6 +136,7 @@ describe("diffDatasets — site content", () => {
       changed: 0,
       taxonomy: 0,
       businessTypes: 0,
+      peerOverrides: 0,
       metrics: 0,
       siteContent: 2,
     });
@@ -204,13 +206,16 @@ describe("diffDatasets — site content", () => {
    * publishes silently — the `businessTypes`-missing-from-`COMPANY_FIELDS` defect,
    * with twenty-eight chances to happen instead of one.
    *
-   * 28 since `peersTitle` left the schema; the count is asserted here as well as in
-   * `public-copy.test.ts` because this is the walk that would silently stop covering a
-   * key.
+   * The count is asserted here as well as in `public-copy.test.ts` because this is the
+   * walk that would silently stop covering a key — and it moves in both directions. It
+   * came down to 67 when the company-name field left the visitor's form and took
+   * `askCompanyLabel`, `pillCompany` and `peersTitleFallback` with it: a key removed from
+   * `PUBLIC_COPY_LABELS` and not from the schema would drop out of the diff while still
+   * publishing, which is this test's own failure mode in reverse.
    */
-  it("catches a change in every one of the seventy copy strings", () => {
+  it("catches a change in every one of the sixty-seven copy strings", () => {
     const keys = Object.keys(DEFAULT_PUBLIC_COPY) as Array<keyof PublicCopy>;
-    expect(keys).toHaveLength(70);
+    expect(keys).toHaveLength(67);
 
     for (const field of keys) {
       const copy: PublicCopy = { ...DEFAULT_PUBLIC_COPY, [field]: "Edited" };
@@ -378,6 +383,7 @@ describe("diffDatasets — no change", () => {
       changed: 0,
       taxonomy: 0,
       businessTypes: 0,
+      peerOverrides: 0,
       metrics: 0,
       siteContent: 0,
     });
@@ -680,7 +686,7 @@ describe("renderDiffText", () => {
 
   it("says so plainly when there is nothing to report", () => {
     expect(renderDiffText(diffDatasets(dataset(), dataset()))).toContain(
-      "no company, taxonomy, business type, metric or site content changes",
+      "no company, taxonomy, business type, pinned peer set, metric or site content changes",
     );
   });
 
@@ -746,6 +752,7 @@ describe("diffDatasets — function metrics", () => {
       changed: 0,
       taxonomy: 0,
       businessTypes: 0,
+      peerOverrides: 0,
       metrics: 1,
       siteContent: 0,
     });

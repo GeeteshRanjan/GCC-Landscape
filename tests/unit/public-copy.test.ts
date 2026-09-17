@@ -175,27 +175,31 @@ describe("the shipped wording is defined once", () => {
   });
 
   /**
-   * **The comparable-companies heading is BACK in this object, as a template, and this
-   * assertion is the inverse of the one it replaces.**
+   * **The comparable-companies heading is a FLAT key again, and this assertion is the
+   * inverse of the one it replaces.**
    *
-   * It left because ANSR's wording names the visitor's own company, which is the one
-   * OPTIONAL input: the heading has two branches and a flat field could hold only one of
-   * them. A template holds both — `{company}` plus a `peersTitleFallback` for the branch
-   * where no name was given — so what forced it out is what lets it return.
-   *
-   * What is still asserted is that it came back as a TEMPLATE rather than as the flat
-   * field it used to be, and that the pre-ANSR wording is in neither place, so a revert
-   * cannot land half-done.
+   * It was a template for one pass, carrying `{company}` beside a `peersTitleFallback`,
+   * because the company name was optional and the heading therefore had two branches. The
+   * form no longer asks for a name, so there is one branch and one key — and what is
+   * asserted is the whole of that collapse: the key is present, it interpolates NOTHING,
+   * the fallback key is gone, and `{company}` is not a placeholder any part of this
+   * object may still reach for.
    */
-  it("publishes the comparable-companies heading as a template", () => {
+  it("publishes the comparable-companies heading as one flat key", () => {
     expect(Object.keys(DEFAULT_PUBLIC_COPY)).toContain("peersTitle");
-    expect(DEFAULT_PUBLIC_COPY.peersTitle).toContain(COPY_PLACEHOLDERS.company);
+    // No slot of any kind. A `{company}` left in the value would render as literal
+    // braces in the heading over the primary evidence, which is exactly what a stale
+    // draft would have carried.
+    expect(DEFAULT_PUBLIC_COPY.peersTitle).not.toMatch(/[{}]/);
+    expect(Object.keys(COPY_TEMPLATES)).not.toContain("peersTitle");
+    expect(Object.keys(COPY_PLACEHOLDERS)).not.toContain("company");
+    // Both siblings the two-branch shape needed are gone, not merely unread.
+    expect(Object.keys(DEFAULT_PUBLIC_COPY)).not.toContain("peersTitleFallback");
+    expect(Object.keys(DEFAULT_PUBLIC_COPY)).not.toContain("pillCompany");
+    expect(Object.keys(DEFAULT_PUBLIC_COPY)).not.toContain("askCompanyLabel");
     expect(Object.values(DEFAULT_PUBLIC_COPY)).not.toContain(
       "India GCCs closest to your profile",
     );
-    // "your profile", never "yours": the latter presumes the visitor already runs a
-    // centre in India, which `gccStatus` is a constant the form never asks for.
-    expect(DEFAULT_PUBLIC_COPY.peersTitleFallback).toBe("your profile");
   });
 
   /**
@@ -206,11 +210,40 @@ describe("the shipped wording is defined once", () => {
    * cannot express that, and inventing a slot to fake it would hand an admin the choice
    * of noun — which is a claim about which population the figure was measured over.
    */
+  /**
+   * **"GCCs" is the house spelling and neither "GCCS" nor "GCC's" may be stored, however
+   * forgiving the renderer is.** The snapshot eyebrow is drawn `uppercase`, so
+   * `withCasedGccPlural` in `snapshot.tsx` exempts the plural and returns its small s —
+   * and that mechanism was a silent no-op for a while precisely because it matched the
+   * token literally while the published heading said "GCCS". The match is
+   * case-insensitive now, which fixes the drawing; this fixes the datum, because a
+   * renderer that tolerates the wrong spelling is not a reason to keep it, and every other
+   * place a published string is drawn has no such exemption.
+   *
+   * Asserted over the whole block rather than the one key: any heading may gain the
+   * plural, and "GCC's" is banned everywhere on ANSR's own instruction.
+   */
+  it("spells the plural GCCs everywhere, never GCCS and never GCC's", () => {
+    for (const [key, value] of Object.entries(DEFAULT_PUBLIC_COPY)) {
+      expect(value, key).not.toMatch(/GCC(?:'s|\u2019s|S)\b/);
+    }
+  });
+
+  /**
+   * **The sweep is scoped to the SNAPSHOT's own keys, and it used to be the whole object
+   * by accident.** It read every published value, which passed only because the shipped
+   * `peersNarrowNote` happened to capitalise "Your sub-industry" and the pattern is
+   * case-sensitive — so the guard was one reword away from firing on a string it was never
+   * about. The rule is that a snapshot LABEL may not name the sub-industry, because three
+   * of the four cells are measured over the industry; `peersNarrowNote` names the visitor's
+   * sub-industry correctly, that being the scope which shortened their peer set.
+   */
   it("keeps the snapshot's opening label out of the published copy", () => {
     const keys = Object.keys(DEFAULT_PUBLIC_COPY);
     expect(keys).not.toContain("snapshotComparableLabel");
-    for (const value of Object.values(DEFAULT_PUBLIC_COPY)) {
-      expect(value).not.toMatch(/your sub-industry/);
+    for (const [key, value] of Object.entries(DEFAULT_PUBLIC_COPY)) {
+      if (!key.startsWith("snapshot")) continue;
+      expect(value, key).not.toMatch(/your sub-industry/i);
     }
   });
 });
@@ -329,7 +362,6 @@ describe("the derived shapes read the keys they name", () => {
  */
 describe("the snapshot's labels are an argument", () => {
   const input = (industry: string): PeerViewInput => ({
-    companyName: "",
     industry,
     revenueBand: "$1 Bn - $5 Bn",
     hqCountry: "United States",
@@ -389,23 +421,32 @@ describe("the snapshot's labels are an argument", () => {
     // The rule the removed fourth label broke. Every key in the schema is read by
     // one of the derived shapes above or by a component asserted in the browser
     // suite; the count is the cheap guard that a new key arrived with a consumer.
-    // 68 after the copy audit moved forty strings out of code: four form field
-    // labels, six control placeholders and hints, two error strings, the four answer
-    // pills shared by both screens, the function panel's name, four city-map toggle
-    // labels, the snapshot's missing-figure text, and six templates plus one fallback.
-    // 69 with the containment chart's basis line, which moved out of code one pass
-    // after it was written in it. 70 with the peer grid's sub-industry note, the one
-    // branch of `shortfallLine` that states no count and so may be edited.
-    expect(Object.keys(DEFAULT_PUBLIC_COPY)).toHaveLength(70);
+    // 68 after the copy audit moved forty strings out of code: form field labels,
+    // control placeholders and hints, two error strings, the answer pills shared by
+    // both screens, the function panel's name, four city-map toggle labels, the
+    // snapshot's missing-figure text, and the templates. 69 with the containment
+    // chart's basis line, which moved out of code one pass after it was written in
+    // it. 70 with the peer grid's sub-industry note, the one branch of
+    // `shortfallLine` that states no count and so may be edited.
+    //
+    // **67 once the company name left the form.** Three keys went with the control:
+    // `askCompanyLabel`, which labelled it; `pillCompany`, which echoed it on both
+    // result screens; and `peersTitleFallback`, which existed only because the
+    // heading had a no-name branch. That is this test's own rule applied to a
+    // removal rather than an addition — a key whose consumer is gone is a change an
+    // admin can make and never see.
+    expect(Object.keys(DEFAULT_PUBLIC_COPY)).toHaveLength(67);
   });
 });
 
 /**
- * The one heading on this screen that composes over the visitor's own answer.
+ * The heading over the primary evidence, which used to compose over the visitor's own
+ * answer and no longer composes over anything.
  *
- * **Both branches get an assertion, which is this project's standing rule for a derived
- * sentence** — the branch nobody tests is the branch that ships wrong, and here it is the
- * one most visitors see, since the company name is optional.
+ * **The two-branch tests are deleted rather than adapted, because there is one branch.**
+ * What replaces them is the property that made the removal safe: whatever a visitor
+ * answered, and whatever an admin publishes, the heading names no company and presumes no
+ * India centre.
  */
 describe("the comparable-companies heading", () => {
   const base: PeerViewInput = {
@@ -415,19 +456,24 @@ describe("the comparable-companies heading", () => {
     gccStatus: "evaluating",
   };
 
-  it("names the company when one was given", async () => {
+  it("reads the published key and interpolates nothing", async () => {
     const dataset = await getDataset();
-    const view = buildPeerView(dataset, { ...base, companyName: "Nike" });
-    expect(peersTitle(view)).toBe("GCC details of peers closest to Nike");
+    const view = buildPeerView(dataset, base);
+    expect(peersTitle(view)).toBe("GCC details of your closest peers");
+    expect(peersTitle(view)).toBe(DEFAULT_PUBLIC_COPY.peersTitle);
   });
 
-  it("falls back to the profile when no company was given", async () => {
+  /**
+   * **The heading is the same string for every visitor, and that is the assertion.** It
+   * interpolated a company name for one pass; the field is gone, so a heading that varied
+   * with the answers would mean something had started reading an input again.
+   */
+  it("says the same thing whatever was answered", async () => {
     const dataset = await getDataset();
-    for (const companyName of [undefined, "", "   "]) {
-      const view = buildPeerView(dataset, { ...base, companyName });
-      expect(peersTitle(view), JSON.stringify(companyName)).toBe(
-        "GCC details of peers closest to your profile",
-      );
+    const industries = ["BFSI", "Retail", "Software & Internet"];
+    for (const industry of industries) {
+      const view = buildPeerView(dataset, { ...base, industry });
+      expect(peersTitle(view), industry).toBe(DEFAULT_PUBLIC_COPY.peersTitle);
     }
   });
 
@@ -439,7 +485,7 @@ describe("the comparable-companies heading", () => {
    */
   it("claims nothing about what the visitor already runs", async () => {
     const dataset = await getDataset();
-    const view = buildPeerView(dataset, { ...base, companyName: "Nike" });
+    const view = buildPeerView(dataset, base);
     expect(peersTitle(view)).not.toMatch(/closest to yours/);
   });
 });

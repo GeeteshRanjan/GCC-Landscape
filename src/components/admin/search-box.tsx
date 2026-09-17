@@ -190,7 +190,7 @@ export function AdminSearch({
 
   return (
     <div className="flex flex-col gap-2">
-      <div className="flex flex-wrap items-end gap-4 border border-border-subtle bg-surface p-4">
+      <div className="flex flex-wrap items-end gap-4 rounded-md border border-border-subtle bg-surface p-4">
         <div className="flex min-w-64 flex-1 flex-col gap-1.5">
           <Label htmlFor={fieldId}>{label}</Label>
           <Input
@@ -252,7 +252,7 @@ export function NoSearchMatches({
   hint?: string;
 }) {
   return (
-    <div className="border border-border-subtle bg-surface px-6 py-12 text-center">
+    <div className="rounded-md border border-border-subtle bg-surface px-6 py-12 text-center">
       <p className="text-sm text-text">
         No {what} match &ldquo;{query.trim()}&rdquo;.
       </p>

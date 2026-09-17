@@ -298,6 +298,53 @@ export const BUSINESS_TAG_AXES: ReadonlyArray<{
 
 const TAG_SET: ReadonlySet<string> = new Set(BUSINESS_TAGS);
 
+/**
+ * Whether a tag belongs to the AUTHORED vocabulary above.
+ *
+ * **This stopped meaning "is this tag valid" and now means "was this tag reviewed",
+ * and the difference is load-bearing.** An admin may add a tag of their own, so the
+ * schema validates SHAPE rather than membership — see `businessTagSchema`. What this
+ * predicate still decides is whether a tag's IDF weight is capped: the vocabulary
+ * above was swept against the real dataset and baselined, an admin's addition has been
+ * neither, so `buildSimilarityModel` holds a custom tag to the most discriminating
+ * authored weight in its own industry and no higher. Nothing else in the product
+ * distinguishes the two.
+ */
 export function isBusinessTag(value: string): value is BusinessTag {
   return TAG_SET.has(value);
+}
+
+/**
+ * The shape any tag must take, authored or added in admin.
+ *
+ * A slug, on `id`'s own argument: a tag is a matching KEY, compared by equality
+ * across business types, so two spellings of one idea are two tags that share
+ * nothing. Lowercase and hyphenated is what the authored 138 already are, so an
+ * admin's addition is indistinguishable in form from a reviewed one — which is
+ * what keeps `similarity.ts` from having to care about provenance beyond the
+ * weight cap.
+ */
+export const BUSINESS_TAG_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
+
+/**
+ * 40 characters. The longest authored tag is `hr-workforce-systems` at 20, so this
+ * is twice the observed need — a bound against a pasted sentence rather than a
+ * judgement about naming.
+ */
+export const BUSINESS_TAG_MAX_LENGTH = 40;
+
+/**
+ * What an admin typed, as a tag.
+ *
+ * Applied in the editor before the value is offered rather than inside the schema,
+ * so the admin SEES the slug they are about to add and can reject it. `Quick
+ * Commerce` becoming `quick-commerce` silently at the publish gate is how a tag
+ * gets added twice under two spellings.
+ */
+export function normaliseTagInput(value: string): string {
+  return value
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
 }

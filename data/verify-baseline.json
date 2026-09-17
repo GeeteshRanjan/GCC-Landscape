@@ -1,6 +1,6 @@
 {
   "describedAs": "1834 companies, from Consolidated_GCC_India_Database_2026_New.xlsx",
-  "recordedAt": "2026-09-04T11:53:44.263Z",
+  "recordedAt": "2026-09-17T14:45:33.395Z",
   "figures": {
     "companies": 1834,
     "industries": 24,
@@ -34,10 +34,13 @@
     "multi-city companies": 626,
     "business types defined": 164,
     "distinct tags in use": 138,
+    "tags added in admin": 0,
+    "tags on a single business type": 0,
     "companies with a business type": 1796,
     "companies with two business types": 69,
     "industries fully tagged": 20,
     "peer sets the floor shortens": 126,
+    "pinned peer sets": 0,
     "business types with no company": 1,
     "metrics defined": 35,
     "metrics with every figure entered": 35,

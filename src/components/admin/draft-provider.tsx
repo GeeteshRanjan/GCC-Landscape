@@ -21,6 +21,7 @@ import type {
   ImpactStat,
   LatLon,
   Metric,
+  PeerOverride,
   PublicCopy,
   TaxonomyListKey,
 } from "@/data/schema";
@@ -104,14 +105,39 @@ import { slugify, uniqueSlug } from "@/data/normalize";
  * **v9 is `copy.peersNarrowNote`, one key, on v8's reasoning exactly** — and it carries
  * v7's second lesson as well as v8's first: the key is a TEMPLATE, so a v8 draft filled
  * from the merge would be validated against an `{industry}` slot it has never held.
+ *
+ * **v10 is THREE keys REMOVED and one that stopped being a template, which is v6's case
+ * arriving three times at once.** The company-name field left the visitor's form, so
+ * `copy.askCompanyLabel` and `copy.pillCompany` had nothing to label, and `peersTitle`
+ * lost its `{company}` slot and its `peersTitleFallback` sibling with it. A v9 draft still
+ * holds all four strings and zod strips an unrecognised key rather than refusing it, so
+ * such a draft would publish cleanly with three of them dropped and no diff entry naming
+ * any of them. `peersTitle` is the sharper half: it is now a FLAT field, so a v9 draft's
+ * value still carries `{company}` and would validate — and then render the slot as
+ * literal text in the heading over the primary evidence. There is no key whose absence
+ * marks a v9 draft, so the bump is again the only instrument.
+ *
+ * **v11 is a whole new COLLECTION, `peerOverrides`, which is the blunt case a version
+ * bump was always the right instrument for** — and it takes a line in the shape check
+ * below as well, because the key is `.default([])`-ed in the schema and that is what
+ * makes the quiet failure available: a v10 draft parses on the way out with the gap
+ * filled by an empty list, so publishing one would DELETE every pinned peer set and
+ * report it as an ordinary edit. A pinned set is invisible on the public screen by
+ * design, so nobody would notice it go. Belt and braces, on the reasoning already
+ * recorded for the five defaulted keys.
  */
-const STORAGE_KEY = "gcc-admin-draft-v9";
+const STORAGE_KEY = "gcc-admin-draft-v11";
 const AUTOSAVE_DEBOUNCE_MS = 800;
 
 /** Everything the admin can edit. Metadata is server-owned. */
 type EditableDataset = Pick<
   Dataset,
-  "taxonomy" | "companies" | "businessTypes" | "metrics" | "siteContent"
+  | "taxonomy"
+  | "companies"
+  | "businessTypes"
+  | "peerOverrides"
+  | "metrics"
+  | "siteContent"
 >;
 
 export type TaxonomyKey = TaxonomyListKey;
@@ -160,6 +186,18 @@ interface DraftContextValue {
   addBusinessType: (type: BusinessType) => void;
   updateBusinessType: (id: string, patch: Partial<Omit<BusinessType, "id">>) => void;
   removeBusinessType: (id: string) => void;
+
+  /**
+   * Pinned peer sets. A whole-row replace rather than a patch, on the metric mutator's
+   * argument: the combination and the company list have a cross-field rule the schema
+   * enforces — every pinned company must be in the row's own industry — so changing the
+   * industry and the list has to land as one edit or a render sees a row that could not
+   * publish.
+   */
+  peerOverrideById: (id: string) => PeerOverride | undefined;
+  addPeerOverride: (override: Omit<PeerOverride, "id">) => string;
+  replacePeerOverride: (id: string, next: Omit<PeerOverride, "id">) => void;
+  removePeerOverride: (id: string) => void;
 
   /**
    * The hero's copy. A patch rather than a whole-object replace, because the two
@@ -257,6 +295,13 @@ export type RevertTarget =
   | { kind: "company"; id: string }
   | { kind: "metric"; id: string }
   | { kind: "businessType"; id: string }
+  /**
+   * Reverted as a whole ROW, not field by field, on the same argument as a metric: an
+   * override's combination and its pinned list are not independently meaningful. Putting
+   * the industry back while leaving five companies from the old one pinned is a row that
+   * fails the schema, so the grain has to be the entity.
+   */
+  | { kind: "peerOverride"; id: string }
   | { kind: "taxonomy"; key: keyof Dataset["taxonomy"] }
   | { kind: "heroField"; field: keyof HeroCopy }
   | { kind: "closeField"; field: keyof CloseCopy }
@@ -333,6 +378,15 @@ function revertEditable(
         ...current,
         businessTypes: revertById(current.businessTypes, base.businessTypes, target.id),
       };
+    case "peerOverride":
+      return {
+        ...current,
+        peerOverrides: revertById(
+          current.peerOverrides,
+          base.peerOverrides,
+          target.id,
+        ),
+      };
     case "taxonomy":
       return {
         ...current,
@@ -400,12 +454,32 @@ function editableOf(dataset: Dataset): EditableDataset {
     taxonomy: dataset.taxonomy,
     companies: dataset.companies,
     businessTypes: dataset.businessTypes,
+    peerOverrides: dataset.peerOverrides,
     metrics: dataset.metrics,
     siteContent: dataset.siteContent,
   };
 }
 
 
+
+/**
+ * The words a new override's id is minted from: its own combination.
+ *
+ * So `Retail · ret-sportswear · any band · any HQ` becomes `retail-ret-sportswear`,
+ * which is legible in a publish diff and in the URL the universal search jumps to. The
+ * wildcards contribute nothing rather than the word "any" — an id reading
+ * `retail-any-any` is noise where the absence is already the default.
+ */
+function peerOverrideSlugSeed(override: Omit<PeerOverride, "id">): string {
+  return [
+    override.industry,
+    override.businessTypeId,
+    override.revenueBand,
+    override.hqCountry,
+  ]
+    .filter((part): part is string => Boolean(part))
+    .join(" ");
+}
 
 /**
  * What a new row in the logo strip starts as.
@@ -520,7 +594,12 @@ export function DraftProvider({
       // admin has deliberately left a link unset. The presence of the key is what marks a
       // draft written after the field existed, so the type is what is checked.
       typeof stored.editable.siteContent.close?.ctaHrefPeers !== "string" ||
-      typeof stored.editable.siteContent.close?.ctaHrefFunctions !== "string"
+      typeof stored.editable.siteContent.close?.ctaHrefFunctions !== "string" ||
+      // A whole collection, defaulted in the schema — so a draft predating it parses on
+      // the way out with an empty list and would publish every pinned peer set away.
+      // Invisible on the public screen by design, which is what makes the check worth
+      // having on top of the version bump.
+      !stored.editable.peerOverrides
     ) {
       window.localStorage.removeItem(STORAGE_KEY);
       return;
@@ -632,6 +711,7 @@ export function DraftProvider({
       taxonomy: editable.taxonomy,
       companies: editable.companies,
       businessTypes: editable.businessTypes,
+      peerOverrides: editable.peerOverrides,
       metrics: editable.metrics,
       siteContent: editable.siteContent,
     }),
@@ -673,10 +753,31 @@ export function DraftProvider({
     [applyEdit],
   );
 
+  /**
+   * Deleting a company also unpins it from every override, and drops any override left
+   * with nothing pinned.
+   *
+   * The schema refuses an override naming a company that does not exist and refuses one
+   * with an empty list, so both halves are needed or a company deletion becomes a
+   * publish that fails on a row the admin never touched. The row is dropped rather than
+   * kept empty because an override that pins nothing is indistinguishable from one
+   * somebody abandoned half-built — and an override is a decision, so half of one is
+   * worse than none.
+   */
   const deleteCompany = useCallback((id: string) => {
     applyEdit((current) => ({
       ...current,
       companies: current.companies.filter((company) => company.id !== id),
+      peerOverrides: current.peerOverrides
+        .map((override) =>
+          override.companyIds.includes(id)
+            ? {
+                ...override,
+                companyIds: override.companyIds.filter((c) => c !== id),
+              }
+            : override,
+        )
+        .filter((override) => override.companyIds.length > 0),
     }));
   }, [applyEdit]);
 
@@ -774,6 +875,68 @@ export function DraftProvider({
           ? { ...company, businessTypes: company.businessTypes.filter((t) => t !== id) }
           : company,
       ),
+      /**
+       * And every override keyed on it, which is a DROP rather than a widening.
+       *
+       * An override naming this sub-industry fails the schema once the type is gone, so
+       * something has to happen. Clearing the field instead would silently widen the row
+       * to the whole industry — the same five companies pinned for every visitor from it
+       * — which is a decision nobody made, applied to more visitors than the one that
+       * was. The row goes and the engine answers again, which is the state before the
+       * override existed.
+       */
+      peerOverrides: current.peerOverrides.filter(
+        (override) => override.businessTypeId !== id,
+      ),
+    }));
+  }, [applyEdit]);
+
+  /* ----------------------------------------------------------------------
+     Pinned peer sets.
+
+     A row is added and replaced whole. `id` is minted here from the combination
+     rather than taken from the form, because the combination IS the row's identity
+     and a slug an admin typed would be a second name for it.
+     ---------------------------------------------------------------------- */
+
+  const addPeerOverride = useCallback(
+    (override: Omit<PeerOverride, "id">) => {
+      const id = uniqueSlug(
+        peerOverrideSlugSeed(override),
+        new Set(editable.peerOverrides.map((o) => o.id)),
+      );
+      applyEdit((current) => ({
+        ...current,
+        // Newest first, matching `addCompany`: an admin who just pinned a set expects
+        // to see it. Order carries no meaning here — `matchPeerOverride` resolves by
+        // specificity and the schema refuses two rows on one combination — so this is
+        // purely about where the row appears.
+        peerOverrides: [{ ...override, id }, ...current.peerOverrides],
+      }));
+      return id;
+    },
+    [applyEdit, editable.peerOverrides],
+  );
+
+  const replacePeerOverride = useCallback(
+    (id: string, next: Omit<PeerOverride, "id">) => {
+      applyEdit((current) => ({
+        ...current,
+        // The id is re-pinned from the row being replaced rather than re-minted from the
+        // new combination. Re-minting would make every edit an add plus a remove in the
+        // diff, and would break a pending revert that names this row.
+        peerOverrides: current.peerOverrides.map((override) =>
+          override.id === id ? { ...next, id } : override,
+        ),
+      }));
+    },
+    [applyEdit],
+  );
+
+  const removePeerOverride = useCallback((id: string) => {
+    applyEdit((current) => ({
+      ...current,
+      peerOverrides: current.peerOverrides.filter((override) => override.id !== id),
     }));
   }, [applyEdit]);
 
@@ -1064,6 +1227,34 @@ export function DraftProvider({
                   : []),
               ]);
 
+        /**
+         * And a THIRD place industries are referenced from, plus two the other lists
+         * are: an override pins an industry, and optionally a revenue band and an HQ
+         * country.
+         *
+         * Same failure as the business-type cascade, one level along and quieter. The
+         * schema checks all three referentially, so a row left under the old name is a
+         * publish that fails on an edit the UI reported as successful — and unlike a
+         * stale pin, this one would ALSO have stopped firing for the visitors it was
+         * written for, with nothing on the public screen to say so.
+         */
+        const overrideField =
+          key === "industries"
+            ? "industry"
+            : key === "revenueBands"
+              ? "revenueBand"
+              : key === "hqCountries"
+                ? "hqCountry"
+                : null;
+        const peerOverrides =
+          overrideField === null
+            ? current.peerOverrides
+            : current.peerOverrides.map((override) =>
+                override[overrideField] === from
+                  ? { ...override, [overrideField]: next }
+                  : override,
+              );
+
         return {
           ...current,
           taxonomy: {
@@ -1074,6 +1265,7 @@ export function DraftProvider({
           },
           companies,
           businessTypes,
+          peerOverrides,
         };
       });
     },
@@ -1107,6 +1299,31 @@ export function DraftProvider({
             )
           : current.taxonomy.cityCoordinates;
 
+      /**
+       * And every override that named the removed value.
+       *
+       * A DROP for each of the three fields, including the two that are optional. The
+       * temptation with an optional field is to clear it and let the row widen to "any",
+       * and that is the same wrong move as widening on a deleted sub-industry: it applies
+       * a hand-picked set to more visitors than it was written for, silently. The editor
+       * already refuses to delete a taxonomy value a company still uses, so this only
+       * fires for a value nothing depends on except possibly one of these rows.
+       */
+      const overrideField =
+        key === "industries"
+          ? "industry"
+          : key === "revenueBands"
+            ? "revenueBand"
+            : key === "hqCountries"
+              ? "hqCountry"
+              : null;
+      const peerOverrides =
+        overrideField === null
+          ? current.peerOverrides
+          : current.peerOverrides.filter(
+              (override) => override[overrideField] !== value,
+            );
+
       return {
         ...current,
         taxonomy: {
@@ -1116,6 +1333,7 @@ export function DraftProvider({
           cityCoordinates,
         },
         businessTypes,
+        peerOverrides,
       };
     });
   }, [applyEdit]);
@@ -1254,6 +1472,11 @@ export function DraftProvider({
       addBusinessType,
       updateBusinessType,
       removeBusinessType,
+      peerOverrideById: (id) =>
+        editable.peerOverrides.find((override) => override.id === id),
+      addPeerOverride,
+      replacePeerOverride,
+      removePeerOverride,
       updateCloseCopy,
       addCompany,
       updateCompany,
@@ -1312,6 +1535,10 @@ export function DraftProvider({
       addBusinessType,
       updateBusinessType,
       removeBusinessType,
+      editable.peerOverrides,
+      addPeerOverride,
+      replacePeerOverride,
+      removePeerOverride,
       setTaxonomyValues,
       addTaxonomyValue,
       renameTaxonomyValue,

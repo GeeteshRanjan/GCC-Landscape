@@ -37,12 +37,14 @@ async function ask(
     industry: string;
     revenueBand: string;
     hqCountry?: string;
-    companyName?: string;
   },
 ): Promise<void> {
-  if (options.companyName) {
-    await page.getByLabel(/^Company name/).fill(options.companyName);
-  }
+  /**
+   * **No company name, because there is no field.** This helper carried an optional
+   * `companyName` and filled a text input with it; the form asks four questions now, all
+   * of them dropdowns, and every one is read by the matching. The absence of the control
+   * is asserted on its own below rather than here.
+   */
   await choose(page, "Industry", options.industry);
   await choose(page, "Annual revenue", options.revenueBand);
   await choose(page, "Headquarters", options.hqCountry ?? "USA");
@@ -77,7 +79,14 @@ test.describe("the ask", () => {
     // else. The headline's own words are asserted once, on their own, below.
     await expect(page.locator("h1#ask-title")).toBeVisible();
 
-    await expect(page.getByLabel(/^Company name/)).toBeVisible();
+    /**
+     * **No company-name control, and its absence is asserted the way the two other
+     * removed questions are.** It was the form's only free-text input and the only
+     * answer nothing consumed: no figure, no peer, no count and no ordering read it.
+     * The field is gone from `PeerViewInput` as well, so a control reappearing here
+     * means the contract was widened rather than a label being restored.
+     */
+    expect(await page.getByLabel(/^Company name/).count()).toBe(0);
     await expect(page.getByLabel("Industry")).toBeVisible();
     // **No sub-industry control, and its absence is asserted.** The field still
     // exists on `PeerViewInput`; it is answered inside the industry dropdown, as a
@@ -94,15 +103,20 @@ test.describe("the ask", () => {
     expect(await page.locator("form input[type='radio']").count()).toBe(0);
 
     /*
-      Four controls, and no fifth: a field added without a consumer should fail here
+      THREE controls, and no fourth: a field added without a consumer should fail here
       rather than ship silently.
 
-      Counted as one text input plus three comboboxes, because the three dropdowns
-      are a custom listbox rather than `<select>` — see `select-field.tsx`. Counting
-      `form select` would now find zero and the total would pass at 1, which is the
-      way this assertion would rot rather than fail.
+      Counted as three comboboxes and ZERO text inputs. The three dropdowns are a
+      custom listbox rather than `<select>` — see `select-field.tsx` — so counting
+      `form select` would find zero and the total would pass at 0, which is the way
+      this assertion would rot rather than fail.
+
+      **The text-input count is 0 rather than 1, and it is now the stronger half.** It
+      was 1 for the company name; with that field gone the form has no free-text input
+      at all, which is the property worth holding — there is no lead capture in this
+      codebase, and a text input reappearing here is the first thing that would change.
     */
-    expect(await page.locator("form input[type='text']").count()).toBe(1);
+    expect(await page.locator("form input[type='text']").count()).toBe(0);
     expect(await page.locator("form [role='combobox']").count()).toBe(3);
 
     // Revenue is a band, never a figure — the data holds bands, so the input is a
@@ -138,8 +152,9 @@ test.describe("the ask", () => {
    *  - "Nothing you enter is stored or sent to us" was false in the half that
    *    matters. The answers are sent, to a server action, because peer matching
    *    cannot happen in the browser without shipping the dataset there.
-   *  - "(optional)" beside the company name talked visitors out of the one input
-   *    that personalises every sentence of the result.
+   *  - "(optional)" beside the company name, which was then the only input a visitor
+   *    could skip. That field has since been removed outright, on the ground that
+   *    nothing in the result consumed it.
    */
   test("says what it is, once, and makes no claim it cannot keep", async ({
     page,
@@ -179,8 +194,8 @@ test.describe("the ask", () => {
     // disabled until an industry was chosen — the label was what explained why it
     // could be left alone. It is a nested level inside the industry dropdown now,
     // where an unexplored second level needs no label to read as optional. Company
-    // name deliberately never carried it: it personalises every sentence of the
-    // result, and the marker talked visitors out of it.
+    // name deliberately never carried it either, and that field has now left the form
+    // altogether — so every control drawn here is one we want answered.
     expect(
       await page.locator("form label", { hasText: "(optional)" }).count(),
     ).toBe(0);
@@ -417,7 +432,6 @@ test.describe("the answer", () => {
     await ask(page, {
       industry: "BFSI",
       revenueBand: "Above $20 Bn",
-      companyName: "Northwind Financial",
     });
     /**
      * **The `h1` is the PRODUCT, and that is a deliberate reversal.** It used to state
@@ -583,19 +597,21 @@ test.describe("the answer", () => {
      */
     const peers = band(page, "peers");
     /**
-     * **The block's heading names the visitor's own company**, which is why it stopped
-     * being published copy: the name is optional, so the heading has two branches and no
-     * single string an admin could type would serve both. The no-name branch is asserted
-     * in the profile-pills test below, and both branches are unit-tested.
+     * **The block's heading names no company, and it is read off the KEY rather than
+     * typed.** It interpolated the visitor's own company for one pass, which is why it
+     * had two branches and a fallback; the form no longer asks for a name, so it is one
+     * published string for every visitor. Reading `COPY.peersTitle` is what keeps this
+     * from breaking on a reword — the fixture publishes the shipped defaults, so the key
+     * resolves to whatever renders.
      *
-     * Located by the band's `id` as every band is; this reads the heading's words
-     * deliberately, which is the one thing this assertion is for.
+     * Located by the band's `id` as every band is.
      */
     await expect(
-      peers.getByRole("heading", {
-        name: "GCC details of peers closest to Northwind Financial",
-      }),
+      peers.getByRole("heading", { name: COPY.peersTitle }),
     ).toBeVisible();
+    // Never "closest to yours", which would presume the visitor already runs an India
+    // centre. Asserted literally, because a removed wording has no key to read.
+    await expect(peers.getByText(/closest to yours/)).toHaveCount(0);
     /**
      * **A packed grid of five cards, not a table, and each company name is an `h3`.**
      * The table was one pass and it was a spreadsheet dropped into a brand page — four
@@ -633,7 +649,7 @@ test.describe("the answer", () => {
     /**
      * **Two of the three labels dropped the "GCC" prefix, at ANSR's request.** All three
      * opened on the same three letters inside 120px, on a card whose section heading
-     * already says "India GCCs closest to your profile". What each replacement had to
+     * already names the subject as a GCC. What each replacement had to
      * keep is the thing the prefix was protecting: the year is the CENTRE's, so a bare
      * "Since 1799" on a JPMorgan Chase card is exactly the misreading the label exists
      * to prevent — "In India since" says the same thing without the third "GCC".
@@ -1355,40 +1371,45 @@ test.describe("the answer", () => {
    * press, and each panel's accessible name says what pressing it does rather than
    * just naming the field.
    *
-   * The company panel is OMITTED rather than stubbed when the field was left blank,
-   * since it is optional on the form.
+   * **There are THREE pills now.** The fourth was the company name, conditional on a
+   * field most visitors left blank; the question is gone, so the row is the three answers
+   * the matching reads and one control.
    */
-  test("shows the profile as quiet pills with one way back, and omits the company when none was given", async ({
+  test("shows the profile as three quiet pills with one way back", async ({
     page,
   }) => {
     await page.goto("/");
     await ask(page, {
       industry: "BFSI",
       revenueBand: "Above $20 Bn",
-      companyName: "Northwind Financial",
     });
     const profile = page.getByRole("group", { name: /Your profile/ });
     await expect(profile).toBeVisible();
     /**
-     * **ONE control, not four, and the four answers are quiet pills again.** For one
-     * pass each answer was its own chevroned button. All four went to the same place —
+     * **ONE control, not four, and the answers are quiet pills again.** For one pass
+     * each answer was its own chevroned button. All of them went to the same place —
      * the form, with the answers intact — so there were four affordances for one
-     * destination, and the chevron promised an in-place editor that does not exist. On
-     * screen it read as four dropdowns the visitor was expected to operate, directly
+     * destination, and the chevron promised an in-place editor that did not then exist.
+     * On screen it read as four dropdowns the visitor was expected to operate, directly
      * under the product name.
      *
-     * So the answers are a summary and the way back is explicit. A count of four here
+     * So the answers are a summary and the way back is explicit. A count above one here
      * means the panels became controls again.
      */
     await expect(profile.getByRole("button")).toHaveCount(1);
     await expect(
       profile.getByRole("button", { name: "Edit answers" }),
     ).toBeVisible();
-    // The four answers, as text. "Company" rather than "Your company": a pill is sized
-    // to its own content and the possessive was two thirds of the width of the value.
-    await expect(profile.getByText("Company")).toBeVisible();
-    await expect(profile.getByText("Northwind Financial")).toBeVisible();
+    /**
+     * **THREE answers now, and the fourth was the company name.** Its pill was
+     * conditional on the one field a visitor could leave blank, and it went with the
+     * question — `pillCompany` was deleted rather than left as a label for a pill that
+     * can never render. So the assertions that named it are gone rather than loosened:
+     * a "Company" pill reappearing here would mean the form started asking again.
+     */
+    await expect(profile.getByText("Industry")).toBeVisible();
     await expect(profile.getByText("Above 20 Bn")).toBeVisible();
+    await expect(profile.getByText(/^Company/)).toHaveCount(0);
     // And no affordance survives on the answers themselves.
     await expect(profile.getByText("Edit profile")).toHaveCount(0);
     /**
@@ -1426,25 +1447,12 @@ test.describe("the answer", () => {
     await expect(
       page.getByRole("button", { name: "Update my results" }),
     ).toHaveCount(0);
-    // Without a name: three pills, no empty fourth, no stub — and still one control.
+    // Three pills, no empty fourth, no stub — and still one control.
     await page.goto("/");
     await ask(page, { industry: "BFSI", revenueBand: "Above $20 Bn" });
-    /**
-     * **The comparable-companies heading's other branch, asserted here because this is
-     * the test that has the anonymous visitor.** With no company name it falls back to
-     * "your profile" — and NOT to "yours", which would presume the visitor already runs
-     * an India centre. `gccStatus` is a constant the form never asks for, so the tool
-     * cannot know either way.
-     */
-    await expect(
-      band(page, "peers").getByRole("heading", {
-        name: "GCC details of peers closest to your profile",
-      }),
-    ).toBeVisible();
-    await expect(band(page, "peers").getByText(/closest to yours/)).toHaveCount(0);
     const anon = page.getByRole("group", { name: /Your profile/ });
     await expect(anon.getByRole("button")).toHaveCount(1);
-    await expect(anon.getByText("Company")).toHaveCount(0);
+    await expect(anon.getByText("Company", { exact: true })).toHaveCount(0);
   });
 
   /**
@@ -1763,6 +1771,13 @@ test.describe("the answer", () => {
     await expect(
       profile.getByRole("button", { name: "Edit answers" }),
     ).toHaveCount(1);
+    /**
+     * **And no company pill, asserted as the absence of its own label.** It was the
+     * fourth pill and `copy.pillCompany` was its label; both are gone with the field.
+     * Read literally rather than off a key, because a removed key has none to read —
+     * which is the convention for anything asserted absent.
+     */
+    await expect(profile.getByText("Company", { exact: true })).toHaveCount(0);
   });
 
   test("returns to the form with the answers still in it", async ({ page }) => {
@@ -1771,7 +1786,6 @@ test.describe("the answer", () => {
       industry: "BFSI",
       revenueBand: "Above $20 Bn",
       hqCountry: "Germany",
-      companyName: "Northwind Financial",
     });
     // Waits on the answer, not on a name in the heading — the `h1` is the product, and
     // the answers are the four context panels.
@@ -1788,10 +1802,14 @@ test.describe("the answer", () => {
       .getByRole("button", { name: "Edit answers" })
       .click();
 
-    // The editor holds the SAME four controls as the entry point — it mounts the entry
+    // The editor holds the SAME controls as the entry point — it mounts the entry
     // point's own `InputPanel` — and a correction starts from the last answer rather
     // than from an empty form.
-    await expect(page.getByLabel(/^Company name/)).toHaveValue("Northwind Financial");
+    //
+    // **Four controls, and no text input among them.** This used to open by asserting the
+    // company name had round-tripped; that field is gone from the form and from
+    // `PeerViewInput`, so what is checked is that the editor did not keep a copy of it.
+    expect(await page.getByLabel(/^Company name/).count()).toBe(0);
     // The three dropdowns are a custom listbox now, not `<select>`, so what carries
     // the answer is the trigger's own label rather than a `value` property. A button
     // has no `value` at all, so `toHaveValue` here would not fail loudly — it would
@@ -1799,7 +1817,6 @@ test.describe("the answer", () => {
     await expect(page.getByLabel("Industry")).toContainText("BFSI");
     await expect(page.getByLabel("Annual revenue")).toContainText("Above 20 Bn");
     await expect(page.getByLabel("Headquarters")).toContainText("Germany");
-    await expect(page.getByLabel(/^Company name/)).toBeVisible();
   });
 });
 
@@ -1833,9 +1850,25 @@ test.describe("a thin industry", () => {
     // shortfall and does NOT narrate our own restraint — "we would rather show you
     // two defensible comparisons than pad the list" answered a question the reader
     // had not asked, and planted it by answering.
-    await expect(peers.getByText(/Electrical & Electronics is thin in India/)).toBeVisible();
+    const shortfall = peers.getByText(/Electrical & Electronics is thin in India/);
+    await expect(shortfall).toBeVisible();
     await expect(peers.getByText(/Early ground, not absent ground/)).toBeVisible();
     await expect(peers.getByText(/pad/i)).toHaveCount(0);
+
+    /**
+     * **AND IT IS ABOVE THE CARDS, at ANSR's request — asserted by geometry, because that
+     * is what the change was.** The line closed the block for every previous pass: a
+     * reader met a short grid, counted it, wondered, and only then found the reason. Read
+     * first it is a call-out. DOM order alone would not catch a CSS reordering, and the
+     * `order`/`flex-direction` mistake is exactly how a block reads wrong while its markup
+     * looks right — so this compares drawn positions.
+     *
+     * The count line is deliberately NOT part of this: it states what the grid shows, so
+     * it stays under the grid and is asserted separately.
+     */
+    const notePosition = (await shortfall.boundingBox())!;
+    const firstCard = (await peers.getByRole("listitem").first().boundingBox())!;
+    expect(notePosition.y).toBeLessThan(firstCard.y);
 
     /**
      * The industry card degrades instead of reading "and 0 others".

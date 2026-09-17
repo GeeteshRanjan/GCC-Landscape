@@ -1,6 +1,6 @@
 import { formatCount } from "@/components/public/primitives";
 import { DEFAULT_PUBLIC_COPY, fillTemplate, type PublicCopy } from "@/data/schema";
-import { companyName, type PeerView } from "@/data/screen1";
+import { type PeerView } from "@/data/screen1";
 
 /**
  * **Every STATIC heading and label in this file is now DERIVED from
@@ -468,6 +468,13 @@ export function peerLead(view: PeerView): string {
  *
  * Returns null at a full set, so the component renders nothing rather than a
  * reassuring line nobody needed.
+ *
+ * **It is drawn ABOVE the cards now, under the section heading, at ANSR's request** —
+ * so that a set of three reads as a stated finding about the market rather than as a
+ * grid a visitor has to notice is short and then find an explanation for. Every branch
+ * moved together: the two empty-set ones already stood alone with no grid under them,
+ * and the thin-industry one is the same claim wherever it sits. Only the published
+ * branch needed rewording, because it pointed at the cards as "above".
  */
 export function shortfallLine(
   view: PeerView,
@@ -503,9 +510,9 @@ export function shortfallLine(
    * **This branch is the ONE published one, as a template — `copy.peersNarrowNote`.**
    * It was "`${industry}` is not short of companies in India — but only `${count}` are
    * close enough to your sub-industry to be worth naming", which had three faults and
-   * the count was the load-bearing one: `peerCountLine` renders directly above it and
-   * states the same number exactly, so the sentence restated a figure it did not own —
-   * and it restated it ungrammatically at a set of one ("only one are close enough").
+   * the count was the load-bearing one: `peerCountLine` states the same number exactly,
+   * so the sentence restated a figure it did not own — and it restated it
+   * ungrammatically at a set of one ("only one are close enough").
    * Dropping the count is what makes the sentence a statement of SCOPE, which is the
    * category that may be edited; it also took out an em dash, and "worth naming", which
    * is the tool narrating its own restraint. The reasoning for the shipped wording is in
@@ -747,26 +754,28 @@ export function largestLine(view: PeerView): string {
  * nothing about what the visitor runs.
  */
 /**
- * **It names the visitor's company, at ANSR's request, and it is published copy AGAIN —
- * as a TEMPLATE.** It was a flat `siteContent.copy.peersTitle`, which ANSR's wording
- * forced out: the company name is the one OPTIONAL input, so the heading has two
- * branches and a flat field could hold only one of them. A template holds both, as two
- * keys — `peersTitle` carries `{company}` and `peersTitleFallback` is the word put in
- * its place when no name was given.
+ * **IT NO LONGER NAMES THE VISITOR'S COMPANY, BECAUSE THE FORM NO LONGER ASKS.** The
+ * heading interpolated a company name for one pass — as a template, `{company}` beside a
+ * `peersTitleFallback` for the majority of visitors who left the field blank. The field
+ * asked for something nothing consumed: no figure, no peer and no ordering read it, and
+ * `isVisitorsOwn` was the only non-copy consumer. It went, and with it both keys' reason
+ * to be two.
  *
- * **The fallback ships as "your profile", which is the wording the whole heading used
- * to be**, and the reason it was chosen is the reason the admin field carries a warning:
- * "closest to yours" presumes the visitor already runs an India centre, and `gccStatus`
- * is a constant the form never asks for, so the tool cannot know.
+ * So this reads the ONE key and interpolates nothing. It keeps its `view` parameter,
+ * unused, so every call site and every variant in `peers-variants.tsx` is untouched and
+ * a heading that goes back to naming the scope is a change here rather than at seven
+ * call sites.
  *
- * `companyName` in `screen1.ts` is the single definition of "did they type one", so this
- * branches on the same call the context pills do and the two cannot disagree.
+ * **"GCC details of your closest peers"** — the reasoning for the wording is in
+ * `schema.ts` beside the value, as it is for every published string. The one rule worth
+ * repeating: never "closest to yours", which presumes the visitor already runs an India
+ * centre when `gccStatus` is a constant the form never asks for.
  */
-export function peersTitle(view: PeerView, copy: PublicCopy = DEFAULT_PUBLIC_COPY): string {
-  const name = companyName(view.input);
-  return fillTemplate(copy.peersTitle, {
-    company: name ?? copy.peersTitleFallback,
-  });
+export function peersTitle(
+  _view: PeerView,
+  copy: PublicCopy = DEFAULT_PUBLIC_COPY,
+): string {
+  return copy.peersTitle;
 }
 
 /**

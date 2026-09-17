@@ -4,7 +4,7 @@ import { useState } from "react";
 import { Tabs as TabsPrimitive } from "radix-ui";
 
 import type { CloseCopy, PublicCopy } from "@/data/schema";
-import { companyName, type PeerViewInput } from "@/data/screen1";
+import type { PeerViewInput } from "@/data/screen1";
 import type { FunctionAreaView, FunctionView, LaidOutCard } from "@/data/screen2";
 import {
   AnswerEditor,
@@ -110,7 +110,6 @@ export function FunctionViewScreen({
   closeCopy,
 }: FunctionViewScreenProps) {
   const copy = usePublicCopy();
-  const name = companyName(input);
   const first = view.areas[0]?.functionArea ?? "tech";
   const [active, setActive] = useState<string>(first);
 
@@ -126,7 +125,10 @@ export function FunctionViewScreen({
   const [editorOpen, setEditorOpen] = useState(false);
 
   /**
-   * The same four panels Screen 1 shows, from the same answers, in the same order.
+   * The same three panels Screen 1 shows, from the same answers, in the same order.
+   *
+   * **The company pill went with the question**, on both screens in one change, for the
+   * reason the rows have to match: they are two readings of one set of answers.
    *
    * **Both screens carry the same facts, and Screen 2 was wrong about this for
    * months.** Its summary used to include "India today" — the label of a question
@@ -142,7 +144,6 @@ export function FunctionViewScreen({
    * `ContextPanels`.
    */
   const facts: ContextFact[] = [
-    ...(name ? [{ label: copy.pillCompany, value: name }] : []),
     { label: copy.pillIndustry, value: input.industry },
     { label: copy.pillHeadquarters, value: input.hqCountry },
     // Same treatment as Screen 1's row, from the same function. See `peer-view.tsx`:

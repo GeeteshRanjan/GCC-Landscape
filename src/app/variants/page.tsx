@@ -19,10 +19,12 @@ export const dynamic = "force-dynamic";
  * The sample answer. BFSI at the top-but-one revenue band with a US headquarters is the
  * ordinary case and the demanding one: it returns five peers, several of them Fortune
  * Global 500, and the widest headcount bands in the dataset — which is what a treatment
- * has to survive. The company name is supplied because the heading interpolates it.
+ * has to survive.
+ *
+ * **No company name, because the form no longer asks for one** — the peer heading names
+ * no company, so a treatment is judged on the same four answers a visitor gives.
  */
 const SAMPLE: PeerViewInput = {
-  companyName: "Northbridge Financial",
   industry: "BFSI",
   revenueBand: "$10 Bn – $20 Bn",
   hqCountry: "United States",

@@ -12,9 +12,9 @@ import {
 } from "@/data/geo";
 import { INDIA_OUTLINE_FRAME, INDIA_OUTLINE_PATH } from "@/data/india-outline";
 import { sumProfessionals } from "@/data/derive";
+import { matchPeers } from "@/data/peers";
 import {
   buildPeerView,
-  companyName,
   COMMON_FUNCTIONS,
   GCC_STATUSES,
   industryOptions,
@@ -137,18 +137,21 @@ describe("input validation", () => {
     );
   });
 
-  it("treats company name as optional and trims it", () => {
-    expect(schema.safeParse(input({ companyName: undefined }).valueOf()).success).toBe(
-      true,
-    );
-    const parsed = schema.parse(input({ companyName: "  Acme  " }));
-    expect(parsed.companyName).toBe("Acme");
-  });
-
-  it("refuses an absurdly long company name rather than rendering it", () => {
-    expect(
-      schema.safeParse(input({ companyName: "x".repeat(500) })).success,
-    ).toBe(false);
+  /**
+   * **The company name is not a field any more, and this replaces the two tests that
+   * validated it.** They checked that it was optional, trimmed, and refused past 120
+   * characters. The form no longer asks, so what has to hold is stronger and simpler: a
+   * name posted at this action does not survive validation. zod strips an unrecognised key
+   * rather than refusing it, which is the behaviour to pin — the parsed input is what the
+   * server acts on, and nothing about a visitor's identity may reach it. There is no lead
+   * capture in this codebase.
+   */
+  it("drops a company name rather than accepting one", () => {
+    const posted = { ...input(), companyName: "  Acme  " };
+    const result = schema.safeParse(posted);
+    expect(result.success).toBe(true);
+    expect(result.success && result.data).not.toHaveProperty("companyName");
+    expect(Object.keys(result.success ? result.data : {})).not.toContain("companyName");
   });
 });
 
@@ -307,14 +310,26 @@ describe("buildPeerView", () => {
     expect(peerShares).not.toEqual(largestShares);
   });
 
-  it("never includes the visitor's own company in its own peer set", () => {
+  /**
+   * **This asserts the ENGINE's guard, because the view model can no longer reach it.**
+   * It used to build a `PeerView` with the visitor's own name in the input; the form no
+   * longer asks for a name, `PeerViewInput` has no field for one, and `buildPeerView`
+   * therefore cannot exclude anybody. The guard itself is unchanged and still lives on
+   * `VisitorInput.companyName` in `peers.ts`, exercised here and by the analysis scripts.
+   *
+   * The consequence for a visitor is real and is recorded on `PeerViewInput`: their own
+   * company can now appear in its own peer set. Restoring the exclusion means asking for a
+   * name again, which is a product decision — so this test is what keeps the mechanism
+   * working for whenever that is taken.
+   */
+  it("keeps the visitor's own company out of the set when a name is supplied to the engine", () => {
     const own = dataset.companies.find((c) => c.industry === "BFSI")!;
-    const view = buildPeerView(
-      dataset,
-      input({ companyName: own.name, revenueBand: own.revenueBand }),
-    );
-    expect(view.peers.peers.map((p) => p.id)).not.toContain(own.id);
-    expect(view.largest.entries.map((e) => e.company.id)).not.toContain(own.id);
+    const result = matchPeers(dataset, {
+      companyName: own.name,
+      industry: "BFSI",
+      revenueBand: own.revenueBand,
+    });
+    expect(result.peers.map((p) => p.id)).not.toContain(own.id);
   });
 
   it("shows headcount as a band, never a point figure", () => {
@@ -393,21 +408,24 @@ describe("buildPeerView", () => {
     }
 
     /**
-     * And the case that made it wrong: a visitor whose own company IS in our data. The
-     * peer pool drops it, so `total` is one short of the industry — dividing that by the
-     * full base is the defect. The share must not move when the visitor names a company
-     * we happen to hold, because the industry's share of India does not depend on who is
-     * asking.
+     * **The counter-example this test used to end on is GONE, and it is worth saying why
+     * rather than quietly dropping it.** It built two views of BFSI, one naming JPMorgan
+     * Chase, and asserted that `total` fell by one while `shareOfIndia` did not — which is
+     * what proves the share is computed over the industry rather than as
+     * `total / companies.length`. Both figures were only ever different for a visitor who
+     * named a company we hold, and the form no longer asks for a name, so the two are now
+     * equal for every input and the case cannot be constructed through `buildPeerView`.
+     *
+     * What survives is the loop above, which pins the share to the industry's own count
+     * for all 24 industries. The derivation it guards is unchanged and `shareOfIndia` is
+     * rendered by nothing today; the rule that it must never be recomputed from two
+     * populations is in `project.md`.
      */
     const anonymous = buildPeerView(dataset, input({ industry: "BFSI" }));
-    const named = buildPeerView(
-      dataset,
-      input({ industry: "BFSI", companyName: "JPMorgan Chase" }),
-    );
-    expect(named.industry.total).toBe(anonymous.industry.total - 1);
-    expect(named.industry.shareOfIndia).toBe(anonymous.industry.shareOfIndia);
-    expect(named.industry.shareOfIndia).not.toBe(
-      named.industry.total / dataset.companies.length,
+    expect(anonymous.industry.shareOfIndia).toBeCloseTo(
+      dataset.companies.filter((c) => c.industry === "BFSI").length /
+        dataset.companies.length,
+      10,
     );
   });
 
@@ -758,29 +776,24 @@ describe("copy", () => {
   });
 
   /**
-   * **The company name is no longer in the headline, and this test moved with it.**
-   * It used to assert the h1 contained "Acme". The h1 now states the finding — how
-   * many relevant peers were found — and the name is persistent context beside the
-   * three answers that produced it, which is where a visitor can still see it for the
-   * whole page rather than for one sentence.
-   *
-   * So what has to hold is the derivation, not the interpolation: a name that is
-   * whitespace, or absent, must resolve to null rather than reaching a context row as
-   * an empty fact, and the headline must be a real sentence in both cases.
+   * **`companyName()` is deleted and this test is what is left of it.** It used to pin the
+   * helper's four cases — a name, a padded name, whitespace, absent — because a
+   * blank-but-not-empty name must not personalise one screen and not the other. The form
+   * no longer asks, the helper has no callers and no field to read, so what remains to
+   * assert is that nothing composes over a name any more: the headline is one sentence for
+   * every visitor, and it is a real one.
    */
-  it("resolves the company name the same way however it was left, and keeps it out of the headline", () => {
-    expect(companyName(input({ companyName: "Acme" }))).toBe("Acme");
-    expect(companyName(input({ companyName: "  Acme  " }))).toBe("Acme");
-    expect(companyName(input({ companyName: "   " }))).toBeNull();
-    expect(companyName(input({ companyName: "" }))).toBeNull();
-    expect(companyName(input())).toBeNull();
-
-    const named = framing(buildPeerView(dataset, input({ companyName: "Acme" })));
-    const anon = framing(buildPeerView(dataset, input()));
-    expect(named.title).not.toContain("Acme");
-    expect(named.title).toBe(anon.title);
-    expect(anon.title).not.toContain("undefined");
-    expect(anon.title.length).toBeGreaterThan(0);
+  it("states a headline that names no company, whatever else it composes over", () => {
+    for (const industry of ["BFSI", "Retail", "Software & Internet"]) {
+      const line = framing(buildPeerView(dataset, input({ industry }))).title;
+      // It composes over the INDUSTRY, which is an answer the form still asks for.
+      expect(line, industry).toContain(industry);
+      // What it can no longer compose over is a name, so neither a stale interpolation
+      // nor an unfilled slot may appear.
+      expect(line, industry).not.toContain("undefined");
+      expect(line, industry).not.toContain("{");
+      expect(line.length, industry).toBeGreaterThan(0);
+    }
   });
 
   /**
@@ -1683,7 +1696,6 @@ describe("the peer lead describes the peer set it sits above", () => {
     revenueBand: TOP_BAND,
     businessTypeId: "ret-apparel",
     hqCountry: "USA",
-    companyName: "Nike",
   });
 
   it("does not claim revenue band leads when a line of business was chosen", () => {

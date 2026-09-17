@@ -3,7 +3,7 @@ import {
   TAXONOMY_LIST_TITLES,
   tabLabel,
 } from "@/components/admin/sections";
-import { PUBLIC_COPY_LABELS } from "@/data/diff";
+import { PUBLIC_COPY_LABELS, describePeerOverride } from "@/data/diff";
 import { METRIC_FUNCTION_LABELS, METRIC_LENS_ADMIN_LABELS } from "@/data/metrics";
 import { searchableText, type SearchablePart } from "@/data/search";
 import type { Dataset } from "@/data/schema";
@@ -39,6 +39,14 @@ export const SEARCH_KINDS = [
   "copy",
   "metric",
   "sub-industry",
+  /**
+   * Pinned peer sets, ranked between the sub-industries they overrule and the taxonomy.
+   *
+   * **The one kind whose collection is legitimately EMPTY on the shipped dataset**, which
+   * is the healthy state — the engine is right almost everywhere. So the coverage test
+   * asserts one entry per row rather than at least one entry, for this kind alone.
+   */
+  "peer-override",
   "taxonomy",
   "company",
 ] as const;
@@ -51,18 +59,24 @@ export const KIND_LABELS: Record<EntryKind, string> = {
   copy: "Public copy and figures",
   metric: "Function metrics",
   "sub-industry": "Sub-industries",
+  "peer-override": "Pinned peer sets",
   taxonomy: "Taxonomy",
   company: "Companies",
 };
 
 /**
- * The three surfaces that act on `?open=`, and the only ones an entry may set it for.
+ * The surfaces that act on `?open=`, and the only ones an entry may set it for.
  *
  * The other three have nothing to open: taxonomy rows have a Rename button rather than
  * an editor, and every field on the site-copy page writes straight to the draft. An
  * `open` sent to one of those would be read by nothing.
  */
-export const OPENABLE = ["/admin", "/admin/metrics", "/admin/business-types"] as const;
+export const OPENABLE = [
+  "/admin",
+  "/admin/metrics",
+  "/admin/business-types",
+  "/admin/peer-overrides",
+] as const;
 
 export interface SearchEntry {
   /** Stable across renders and unique across kinds — the React key and the DOM id. */
@@ -290,6 +304,35 @@ export function buildAdminIndex(draft: Dataset): readonly SearchEntry[] {
     );
   }
 
+  /**
+   * Pinned peer sets, found by their combination or by any company in them.
+   *
+   * **The company names are the load-bearing half of the haystack.** The question an
+   * admin arrives with is "is Lowe's pinned anywhere" — an audit that is otherwise every
+   * row read by eye, and one they need before wondering why a company keeps appearing.
+   * The `detail` is the pinned list itself, so the palette answers it without navigating.
+   */
+  const companyNames = new Map(draft.companies.map((c) => [c.id, c.name]));
+  const overrides = tabLabel("/admin/peer-overrides");
+  for (const override of draft.peerOverrides) {
+    const pinned = override.companyIds.map((id) => companyNames.get(id) ?? id);
+    out.push(
+      entry({
+        key: `peer-override:${override.id}`,
+        kind: "peer-override",
+        title: describePeerOverride(override),
+        detail: pinned.join(" → "),
+        where: overrides,
+        href: searchHref(
+          "/admin/peer-overrides",
+          override.industry,
+          override.id,
+        ),
+        terms: [override.id, override.note, pinned],
+      }),
+    );
+  }
+
   for (const key of Object.keys(TAXONOMY_LIST_TITLES) as (keyof typeof TAXONOMY_LIST_TITLES)[]) {
     for (const value of draft.taxonomy[key]) {
       out.push(
@@ -305,6 +348,7 @@ export function buildAdminIndex(draft: Dataset): readonly SearchEntry[] {
   }
 
   const typeNames = new Map(draft.businessTypes.map((type) => [type.id, type.name]));
+  // `companyNames` is built above, for the pinned peer sets.
   for (const company of draft.companies) {
     out.push(
       entry({

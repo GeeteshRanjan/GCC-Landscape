@@ -1,11 +1,12 @@
 import { fteMidpoint, sumProfessionals } from "./derive";
-import type { Company, Dataset } from "./schema";
+import type { Company, Dataset, PeerOverride } from "./schema";
 import {
   BAND_ADJACENT,
   BAND_SAME,
   buildSimilarityModel,
   meetsFloor,
   scoreCompany,
+  type ScoredCompany,
   visitorTags,
 } from "./similarity";
 
@@ -110,6 +111,17 @@ export interface PeerResult {
    * the copy and to `data:verify`.
    */
   floorShortened: boolean;
+  /**
+   * The id of the `peerOverrides` row that supplied this set, or null when the engine
+   * did.
+   *
+   * Carried on the RESULT and deliberately not onto `PeerView`: `data:verify` and the
+   * admin preview both need to know an override fired, and the public screen must
+   * never be able to say so. There is no honest visitor-facing sentence about a
+   * hand-picked peer set — "chosen by ANSR" invites "chosen how" — so the field stops
+   * at the view-model boundary.
+   */
+  overriddenBy: string | null;
 }
 
 function normalizeName(value: string): string {
@@ -219,6 +231,161 @@ function tierOf(proximity: number): PeerTier {
 }
 
 /**
+ * Score first, then HQ country, then size, then age, then name.
+ *
+ * Country sits BELOW the score rather than above it, which is a change from the old
+ * band ladder's comparator. Recognisability used to outrank everything; it now outranks
+ * only ties, because a peer from the visitor's own market that is in the wrong business
+ * is still the wrong peer. It remains a preference and never a filter, so it still
+ * cannot change how many peers come back.
+ *
+ * Extracted from `matchPeers` when the admin gained a candidate list to pick overrides
+ * from. **One comparator, so the list an admin chooses from is in the order the engine
+ * would have used** — a second sort written for the admin would drift, and an admin
+ * comparing their pinned set against "what the algorithm would show" would be comparing
+ * it against something the algorithm does not do.
+ */
+function compareScored(input: VisitorInput) {
+  return (a: ScoredCompany, b: ScoredCompany): number => {
+    if (b.score !== a.score) return b.score - a.score;
+    if (input.hqCountry) {
+      const aHome = a.company.hqCountry === input.hqCountry ? 0 : 1;
+      const bHome = b.company.hqCountry === input.hqCountry ? 0 : 1;
+      if (aHome !== bHome) return aHome - bHome;
+    }
+    const sizeDelta = fteMidpoint(b.company.fte) - fteMidpoint(a.company.fte);
+    if (sizeDelta !== 0) return sizeDelta;
+    if (a.company.establishedYear !== b.company.establishedYear) {
+      return a.company.establishedYear - b.company.establishedYear;
+    }
+    return a.company.name.localeCompare(b.company.name);
+  };
+}
+
+export interface CandidateRanking {
+  /** Every company in the visitor's industry, bar their own. */
+  pool: Company[];
+  /** All of `pool`, scored, in the order the engine takes them. Includes the rejected. */
+  ranked: ScoredCompany[];
+  /**
+   * Those clearing the similarity floor, in the same order — so `ranked` minus
+   * `eligible` is exactly what the floor removed, which is what the admin's candidate
+   * list needs in order to show it.
+   */
+  eligible: ScoredCompany[];
+  /** How many tags the visitor's sub-industry carries. Zero means the floor is off. */
+  visitorTagCount: number;
+}
+
+/**
+ * The whole industry, scored and ordered, with the floor's verdict on each.
+ *
+ * Two callers and that is the point of it existing: `matchPeers` takes the top of
+ * `eligible`, and the admin's peer-override editor draws the same list so an admin
+ * picking a hand-made set sees precisely what the engine would have offered and why
+ * each company sits where it does. Exported for the second caller — the first would
+ * not have needed it extracted.
+ */
+export function rankCandidates(
+  dataset: Dataset,
+  input: VisitorInput,
+): CandidateRanking {
+  const pool = companiesInIndustry(dataset, input.industry).filter(
+    (company) => !isVisitorsOwn(company, input),
+  );
+
+  const model = buildSimilarityModel(dataset, input.industry);
+  const visitor = visitorTags(dataset.businessTypes, input.businessTypeId);
+
+  const ranked = pool
+    .map((company) =>
+      scoreCompany(company, {
+        model,
+        revenueBands: dataset.taxonomy.revenueBands,
+        visitorTags: visitor,
+        visitorBand: input.revenueBand,
+      }),
+    )
+    .sort(compareScored(input));
+
+  return {
+    pool,
+    ranked,
+    // Filtered AFTER the sort rather than before it. The comparator is a total order
+    // ending in the name, so the sequence is identical either way — and taking the
+    // subset out of the sorted list is what guarantees the two agree on order.
+    eligible: ranked.filter((entry) => meetsFloor(entry, visitor.size)),
+    visitorTagCount: visitor.size,
+  };
+}
+
+/**
+ * How specific an override's combination is. Higher wins.
+ *
+ * **Weighted by how much each field means to the match, and the weights are distinct
+ * powers of two so the comparison can never tie.** Sub-industry is the primary
+ * ordering signal, revenue band is the secondary one, and HQ is a sort preference — so
+ * an override naming a sub-industry beats one naming only a band, which is what lets a
+ * broad row cover a whole industry while a narrow row corrects one case inside it.
+ *
+ * Industry contributes nothing because it is required on every row, so it is not a
+ * point of difference. Two rows with the same field-presence set would score equally,
+ * and that is precisely the duplicate `datasetSchema` refuses — so a tie is
+ * unreachable rather than resolved by list order.
+ */
+function overrideSpecificity(override: PeerOverride): number {
+  return (
+    (override.businessTypeId !== undefined ? 4 : 0) +
+    (override.revenueBand !== undefined ? 2 : 0) +
+    (override.hqCountry !== undefined ? 1 : 0)
+  );
+}
+
+function overrideFits(override: PeerOverride, input: VisitorInput): boolean {
+  if (override.industry !== input.industry) return false;
+  // An absent field on the override means ANY. An absent field on the INPUT is a real
+  // answer — a visitor who named no sub-industry — so a row that pins one does not fit
+  // them, which is why this is an equality test and not a truthiness one.
+  if (
+    override.businessTypeId !== undefined &&
+    override.businessTypeId !== input.businessTypeId
+  ) {
+    return false;
+  }
+  if (override.revenueBand !== undefined && override.revenueBand !== input.revenueBand) {
+    return false;
+  }
+  if (override.hqCountry !== undefined && override.hqCountry !== input.hqCountry) {
+    return false;
+  }
+  return true;
+}
+
+/**
+ * The override that governs this visitor's answers, or null.
+ *
+ * Exported because the admin editor asks the same question the engine does — "is this
+ * combination already pinned" is one call, not a second reimplementation of the
+ * precedence rules.
+ */
+export function matchPeerOverride(
+  dataset: Dataset,
+  input: VisitorInput,
+): PeerOverride | null {
+  let best: PeerOverride | null = null;
+  let bestScore = -1;
+  for (const override of dataset.peerOverrides) {
+    if (!overrideFits(override, input)) continue;
+    const score = overrideSpecificity(override);
+    if (score > bestScore) {
+      best = override;
+      bestScore = score;
+    }
+  }
+  return best;
+}
+
+/**
  * The peer set: every company in the industry, scored and ordered.
  *
  * One engine, not two code paths. An industry with no business types is the
@@ -237,48 +404,78 @@ export function matchPeers(
   input: VisitorInput,
   limit: number = DEFAULT_PEER_LIMIT,
 ): PeerResult {
-  const pool = companiesInIndustry(dataset, input.industry).filter(
-    (company) => !isVisitorsOwn(company, input),
-  );
-
-  const model = buildSimilarityModel(dataset, input.industry);
-  const visitor = visitorTags(dataset.businessTypes, input.businessTypeId);
-  const bands = dataset.taxonomy.revenueBands;
-
-  const scored = pool.map((company) =>
-    scoreCompany(company, {
-      model,
-      revenueBands: bands,
-      visitorTags: visitor,
-      visitorBand: input.revenueBand,
-    }),
-  );
-
-  const eligible = scored.filter((entry) => meetsFloor(entry, visitor.size));
+  const { pool, ranked, eligible, visitorTagCount } = rankCandidates(dataset, input);
+  const visitorSize = visitorTagCount;
 
   /**
-   * Score first, then HQ country, then size, then age, then name.
+   * Counts about the POPULATION rather than about the set shown, so they are computed
+   * once and are the same whether an override fired or not.
    *
-   * Country sits BELOW the score rather than above it, which is a change from the
-   * old comparator. Recognisability used to outrank everything; it now outranks
-   * only ties, because a peer from the visitor's own market that is in the wrong
-   * business is still the wrong peer. It remains a preference and never a filter,
-   * so it still cannot change how many peers come back.
+   * That is the whole reason the override branch below is short. `industryTotal`,
+   * `closeMatches` and `sameBusinessType` are facts about the visitor's industry — how
+   * many companies are in it, how many clear the floor, how many carry their exact
+   * sub-industry — and none of them changes because an admin chose which five to name.
+   * The containment chart and the count line under the grid both read these, and both
+   * stay true.
    */
-  eligible.sort((a, b) => {
-    if (b.score !== a.score) return b.score - a.score;
-    if (input.hqCountry) {
-      const aHome = a.company.hqCountry === input.hqCountry ? 0 : 1;
-      const bHome = b.company.hqCountry === input.hqCountry ? 0 : 1;
-      if (aHome !== bHome) return aHome - bHome;
-    }
-    const sizeDelta = fteMidpoint(b.company.fte) - fteMidpoint(a.company.fte);
-    if (sizeDelta !== 0) return sizeDelta;
-    if (a.company.establishedYear !== b.company.establishedYear) {
-      return a.company.establishedYear - b.company.establishedYear;
-    }
-    return a.company.name.localeCompare(b.company.name);
-  });
+  const closeMatches = visitorSize === 0 ? 0 : eligible.length;
+  const sameBusinessType = input.businessTypeId
+    ? pool.filter((c) => c.businessTypes.includes(input.businessTypeId!)).length
+    : 0;
+
+  const override = matchPeerOverride(dataset, input);
+  if (override) {
+    /**
+     * A hand-picked set, in the admin's order.
+     *
+     * Resolved against the POOL rather than against `dataset.companies`, which is what
+     * keeps the industry boundary and the visitor's-own exclusion true of an override as
+     * of the engine — the schema already refuses a company from another industry, so in
+     * practice this only ever drops a company that has since left the industry, and it
+     * drops it rather than putting a bank in front of a retailer.
+     *
+     * Four of the reported fields are deliberately NOT what the scored path would say,
+     * and each is a claim the override has not earned:
+     *
+     *   - `shortfall` is ZERO whatever the length. It is what `shortfallLine` fires on,
+     *     and every branch of that sentence is a statement about the DATA — "this
+     *     industry is thin", "only so many are close enough". A curated set of three is
+     *     three because somebody chose three, so all three sentences would be false.
+     *   - `floorShortened` is false for the same reason: the floor did not do this.
+     *   - `sharedTags` is empty and `businessMatched` false. Naming a characteristic the
+     *     peers share would be inventing a rationale for a decision made by hand.
+     *
+     * `tier` IS computed, from the bands of the companies actually returned, because
+     * that is an observation about the set rather than a story about how it was chosen.
+     */
+    const byId = new Map(pool.map((company) => [company.id, company]));
+    const scoreById = new Map(ranked.map((entry) => [entry.company.id, entry]));
+    const picked = override.companyIds
+      .map((id) => byId.get(id))
+      .filter((company): company is Company => company !== undefined)
+      .slice(0, limit);
+
+    const overrideTier = picked.reduce<PeerTier>((deepest, company) => {
+      const rung = tierOf(scoreById.get(company.id)?.bandProximity ?? 0);
+      if (deepest === "industry" || rung === "industry") return "industry";
+      if (deepest === "adjacent-band" || rung === "adjacent-band") return "adjacent-band";
+      return "same-band";
+    }, "same-band");
+
+    return {
+      peers: picked,
+      tier: overrideTier,
+      basis: { tier: overrideTier, businessMatched: false, sharedTags: [] },
+      limit,
+      shortfall: 0,
+      industryTotal: pool.length,
+      industryOthers: Math.max(0, pool.length - picked.length),
+      closeMatches,
+      sameBusinessType,
+      floorShortened: false,
+      overriddenBy: override.id,
+    };
+  }
 
   const chosen = eligible.slice(0, limit);
   const peers = chosen.map((entry) => entry.company);
@@ -303,17 +500,12 @@ export function matchPeers(
           .slice()
       : [];
 
-  const closeMatches = visitor.size === 0 ? 0 : eligible.length;
-  const sameBusinessType = input.businessTypeId
-    ? pool.filter((c) => c.businessTypes.includes(input.businessTypeId!)).length
-    : 0;
-
   return {
     peers,
     tier,
     basis: {
       tier,
-      businessMatched: visitor.size > 0 && sharedTags.length > 0,
+      businessMatched: visitorSize > 0 && sharedTags.length > 0,
       sharedTags,
     },
     limit,
@@ -325,6 +517,7 @@ export function matchPeers(
     // Only a floor effect if there WERE companies left over that the floor removed.
     floorShortened:
       peers.length < limit && eligible.length < Math.min(limit, pool.length),
+    overriddenBy: null,
   };
 }
 

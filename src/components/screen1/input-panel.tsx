@@ -15,10 +15,14 @@ import { SelectField } from "./select-field";
 import { ASK } from "./copy";
 
 /**
- * The ask: four controls over six fields, three of them required.
+ * The ask: four controls over five fields, three of them required.
  *
- * Every input has a consumer. Company name is the one optional answer asked for on
- * its own — it personalises copy. There is deliberately no revenue *figure* (the
+ * **EVERY INPUT HAS A CONSUMER THAT READS IT, and company name was the exception until
+ * it was removed.** It personalised two strings and nothing else: no figure, no peer, no
+ * count and no ordering read it. So it went, on the standard that killed global
+ * headcount — if nothing consumes it, it does not get asked — and the peer grid's
+ * heading was reworded to say what it needs to without a name. What is left is four
+ * answers the matching actually uses. There is deliberately no revenue *figure* (the
  * data holds bands, so the input is a band) and no email: this tool informs and
  * earns a conversation, and there is no lead capture anywhere in the codebase.
  *
@@ -46,15 +50,15 @@ import { ASK } from "./copy";
  * not.** `gccStatus` still exists on `PeerViewInput`, still branches Screen 2's
  * `functionFraming` and reaches the page through it, and is now supplied as a
  * constant — see `ASSUMED_GCC_STATUS` for which value and why.
- * So this is a form with five controls over a six-field contract, deliberately,
+ * So this is a form with four controls over a five-field contract, deliberately,
  * and restoring the question is a UI change rather than a data migration.
  *
- * **No company-name autocomplete.** It was built and removed. Completions could
- * only ever come from the 1834 companies in our own database, so a visitor at a
- * large company we have not mapped would type their name, see an empty dropdown,
- * and read it as "this tool does not know who we are" — the opposite of what the
- * screen is for. There is no version of the feature that avoids this, because the
- * absence of a suggestion is itself the message. Left as a plain text input.
+ * **The company-name autocomplete argument is now moot, and it is worth knowing it was
+ * settled twice.** Completions could only ever have come from the 1834 companies in our
+ * own database, so a visitor at a large company we have not mapped would have typed their
+ * name, seen an empty dropdown, and read it as "this tool does not know who we are". The
+ * feature was built and removed on that; the FIELD has now gone as well, so there is
+ * nothing left to complete.
  *
  * **No per-field help text.** Each field carried a line explaining what it was
  * for — why we ask for a band rather than a figure, what the HQ answer sorts. A
@@ -79,6 +83,25 @@ interface FieldProps {
   label: string;
   error?: string;
   /**
+   * Give the field the whole grid row instead of one column, from `md`.
+   *
+   * **A `span` existed on this component once, was removed, and is back for ONE field —
+   * so the reasoning for both decisions matters.** What was removed was a per-field
+   * column COUNT on a six-column grid, where two 3-wide inputs sat above three 2-wide
+   * selects: the two rows shared no interior boundary, so five fields drew six unaligned
+   * vertical edges. The grid is two equal columns now and this is a boolean, so there is
+   * only one interior boundary and a spanning field is flush with both outer edges of the
+   * ones beneath it. It cannot reintroduce the ragged edge that killed the old prop.
+   *
+   * Three controls in two columns is what needs it: a plain flow leaves the third one
+   * beside an empty cell, which is the hole this layout keeps being rearranged to close.
+   * Industry takes the row instead, and the pair below it is complete.
+   *
+   * The submit does not use it — it is not a `Field` — but it takes the same
+   * `md:col-span-2`, so the three block edges on this form are one measurement.
+   */
+  span?: boolean;
+  /**
    * Marks a field the visitor may skip.
    *
    * **Nothing carries it now, and the prop is kept rather than deleted.** It
@@ -87,13 +110,12 @@ interface FieldProps {
    * is gone: sub-industry is a cascading second pane inside the industry dropdown,
    * where the pane's own leading row says what happens if it is left alone.
    *
-   * Company name deliberately never carried it, though the server accepts an empty
-   * name: it is what personalises every sentence in the result, and labelling it
-   * optional talked visitors out of the one field that costs nothing and changes
-   * the most.
+   * Company name was the other candidate and never carried it either; that field is
+   * gone now, so the last input a visitor could have skipped has left the form.
    *
    * So the form has no "(optional)" on it at all, which is the honest state — every
-   * control that is drawn is one we want answered.
+   * control that is drawn is one we want answered, and every one of the four is read
+   * by the matching.
    */
   optional?: boolean;
   children: (ids: { controlId: string; describedBy?: string }) => React.ReactNode;
@@ -111,28 +133,46 @@ interface FieldProps {
  * nothing below the outer edges lines up. Five fields, six different vertical edges.
  * That raggedness is most of what read as dated.
  *
- * The grid is two equal columns now — two full rows of two, then the submit across
- * both — so every control is the same width and every edge agrees. DOM order is
- * unchanged, which matters twice: it is the tab order, and it is the order the
- * browser specs read in.
+ * The grid is two equal columns — so there is exactly ONE interior boundary, and every
+ * edge on the form is either that or the card's own. DOM order is unchanged, which
+ * matters twice: it is the tab order, and it is the order the browser specs read in.
  *
- * **The submit spans the grid rather than sitting in a fifth cell, and that is a
- * consequence of the industry merge.** With five controls the submit filled the
- * sixth cell, which was the only arrangement that left no hole; with four it would
- * leave one beside it. A full-width terminal action leaves none and is the plainer
- * shape: two rows of fields, then the one thing to do.
+ * **THREE CONTROLS IN TWO COLUMNS, so the first one takes the whole row.** With four it
+ * was two clean rows of two; the company-name removal left three, and three in a
+ * two-column flow puts the last field beside an empty cell — a hole in the middle of the
+ * form, which is the artefact this layout keeps being rearranged to close. Industry spans
+ * the first row and revenue band and headquarters complete the second, so nothing is
+ * half-filled and the block reads as one field, then a pair, then the action.
+ *
+ * Two things fall out of that and both are load-bearing. **Industry is the right field to
+ * widen**: it is the primary match key and the hard boundary on the whole result, it is
+ * the only control carrying a second level, and it is the one a visitor answers first.
+ * And **its popup no longer needs an offset** — a panel is drawn at the width of the form
+ * grid, which this field now is, so `wide="grid"` replaces a negative margin that would
+ * otherwise have to reach across a sibling. Headquarters keeps `wide="column"` because it
+ * sits in the trailing column, which is the one position that margin is correct for. See
+ * `SelectField`'s `wide` prop.
+ *
+ * **The submit spans the grid rather than sitting in a spare cell.** With five controls it
+ * filled the sixth; with fewer it would leave a hole beside it. A full-width terminal
+ * action leaves none and is the plainer shape: the fields, then the one thing to do.
  *
  * `group` is here for the label, which tints to the accent while anything inside the
  * field is focused. Decoration only — the focus ring and the field's own edge carry
  * the state, so nothing is signalled by colour alone.
  */
-function Field({ label, error, optional, children }: FieldProps) {
+function Field({ label, error, optional, span, children }: FieldProps) {
   const controlId = useId();
   const errorId = `${controlId}-error`;
   const describedBy = error ? errorId : undefined;
 
   return (
-    <div className="group flex min-w-0 flex-col gap-2">
+    <div
+      className={cn(
+        "group flex min-w-0 flex-col gap-2",
+        span && "md:col-span-2",
+      )}
+    >
       {/* Sentence case, not caps. Tracked uppercase labels were tried and are the
           wrong idiom here: at 14px across five fields they turned a public form into
           a data-entry table, and the reference's own small label is sentence-case
@@ -167,29 +207,19 @@ function Field({ label, error, optional, children }: FieldProps) {
 }
 
 /**
- * A filled field with one bottom rule, radius 0. See `.gcc-field` in globals.css
- * for the three measurements that produced the shape — the short version is that
- * the bordered box this replaces had a 1.78:1 boundary, which is not a boundary.
+ * **`CONTROL_CLASS` WENT WITH THE COMPANY NAME FIELD, and nothing inherited it because
+ * nothing had to.** It was the filled-field shape for the one free-text `<input>` on
+ * this form: 48px, `.gcc-field`, a uniform `px-4` inset. Every remaining control is a
+ * `SelectField`, whose trigger states the same measurement on itself — one class, at the
+ * one place a trigger is drawn — so keeping a second copy here would have been a shape
+ * for a control that no longer exists, and the next reader would have to check which of
+ * the two the form actually used.
  *
- * 44px (`h-11`) stays. A public form has to survive a phone and a first-time
- * visitor, and this is the reason these primitives are local rather than shared
- * with admin's 36px ones.
+ * The reasoning behind the shape is unchanged and is in `.gcc-field` in globals.css: the
+ * bordered box it replaced had a 1.78:1 boundary, which is not a boundary. 48px rather
+ * than the 44px touch floor, because a public form on a rounded card reads tight at the
+ * floor and 48 is what the submit button shares.
  */
-const CONTROL_CLASS = cn(
-  // 48px, up from 44. The floor for a touch target is 44 and that is what the
-  // previous pass used; a public form on a rounded card reads tight at the floor,
-  // and 48 is what the controls in the card now share with the submit button.
-  //
-  // **The `md:px-3` clipping workaround is gone, and the two-column grid is why.**
-  // It existed because the three selects were two-of-six columns at `md` — 179px,
-  // which left 119px for a placeholder needing 125, so "Choose a country" silently
-  // rendered as "Choose a coun…". At two equal columns the narrowest select is 284px
-  // at that breakpoint, so the padding no longer has to be clawed back at one
-  // width. A uniform inset is also the point: the old version had one inset at `md`
-  // and another either side of it, which is three shapes for one control.
-  "gcc-field h-12 w-full min-w-0 px-4 text-base font-light text-text",
-  "outline-none",
-);
 
 /**
  * A plain string list as options, where the value and the label are the same thing.
@@ -311,7 +341,6 @@ export function InputPanel({
   submitLabel,
 }: InputPanelProps) {
   const copy = usePublicCopy();
-  const [companyName, setCompanyName] = useState(initial?.companyName ?? "");
   const [industry, setIndustry] = useState(initial?.industry ?? "");
   const [revenueBand, setRevenueBand] = useState(initial?.revenueBand ?? "");
   const [hqCountry, setHqCountry] = useState(initial?.hqCountry ?? "");
@@ -431,7 +460,6 @@ export function InputPanel({
     }
 
     onSubmit({
-      companyName: companyName.trim() || undefined,
       industry,
       revenueBand,
       hqCountry,
@@ -460,44 +488,33 @@ export function InputPanel({
           between the columns as well, so the two axes have to match or the grid stops
           reading as a grid. */}
       <div className="grid items-start gap-4 md:grid-cols-2 md:gap-6">
-        {/* Not marked optional, though the server accepts it empty. See
-            `FieldProps.optional` — this is the input that personalises every
-            sentence in the result, and the marker was talking a visitor out of the
-            one field that costs nothing and changes the most. */}
-        <Field label={copy.askCompanyLabel}>
-          {({ controlId, describedBy }) => (
-            <input
-              id={controlId}
-              type="text"
-              value={companyName}
-              autoComplete="organization"
-              // Deliberately no example text in the field. It carried a stock
-              // company name, which restated a control already labelled "Company
-              // name (optional)" and spent the only piece of sample copy on either
-              // screen on something invented — in front of the audience this tool
-              // exists to look credible to. Hint text that repeats its own label is
-              // noise, and it is noise at reduced contrast.
-              aria-describedby={describedBy}
-              onChange={(event) => setCompanyName(event.target.value)}
-              className={CONTROL_CLASS}
-            />
-          )}
-        </Field>
+        {/* **THE COMPANY NAME FIELD IS GONE, and what it cost is why.** It was the
+            first cell of this grid and the only free-text input on the form. Nothing
+            consumed it: no figure, no peer, no ordering and no count read the name —
+            it personalised two sentences, the peer grid's heading and one answer pill,
+            both of which say what they need to without it. So it fell to the standard
+            that killed global headcount: if nothing consumes it, it does not get asked.
 
-        {/*
-          Industry, and sub-industry cascading out of it.
+            What the removal buys is the shape of the ask. Four controls in two equal
+            rows, every one of them an answer the matching actually reads, and no field
+            a visitor has to decide whether to fill in. `askCompanyLabel` and
+            `pillCompany` were deleted with it rather than left editable and undrawn.
 
-          The two groups are there for the same reason the country list has them:
-          the industries that cover most of the data lead, plus the two ANSR expects
-          out of proportion to the dataset, and the rest is alphabetical so a
-          mid-frequency industry is findable. See `industryOptions`.
+            Industry, and sub-industry cascading out of it, now lead.
 
-          The label stays "Industry" rather than becoming "Industry and line of
-          business": the field's primary answer is the industry, and a label naming
-          both would promise a second required choice. The hint inside the panel is
-          where the nested level is offered, which is where it can be seen.
-        */}
-        <Field label={copy.askIndustryLabel} error={errors.industry}>
+            The two groups are there for the same reason the country list has them:
+            the industries that cover most of the data lead, plus the two ANSR expects
+            out of proportion to the dataset, and the rest is alphabetical so a
+            mid-frequency industry is findable. See `industryOptions`.
+
+            The label stays "Industry" rather than becoming "Industry and line of
+            business": the field's primary answer is the industry, and a label naming
+            both would promise a second required choice. The hint inside the panel is
+            where the nested level is offered, which is where it can be seen.
+
+            **It takes the whole first row** — see `InputPanel` for why the primary match
+            key is the field that spans and what that buys its popup. */}
+        <Field label={copy.askIndustryLabel} error={errors.industry} span>
           {({ controlId, describedBy }) => (
             <SelectField
               id={controlId}
@@ -518,8 +535,13 @@ export function InputPanel({
                  between industries without seeing the set — and one who cannot find
                  their own row takes the broad answer, which drops the primary ordering
                  signal off the peer set. Two columns rather than three because the
-                 taxonomy's longest name is 41 characters; see the `columns` prop. */
-              wide
+                 taxonomy's longest name is 41 characters; see the `columns` prop.
+
+                 **`"grid"`, not `"column"`: this field already spans the form grid**, so
+                 the panel inherits the width and takes no margin. It was the boolean, and
+                 with the field in the leading column that margin drew the panel a column
+                 and a gap off the leading edge of the card. */
+              wide="grid"
               invalid={Boolean(errors.industry)}
               describedBy={describedBy}
               onChange={handleIndustryChange}
@@ -588,8 +610,12 @@ export function InputPanel({
               /* Three columns, where industry takes two: a country name is short, so
                  the list that gains most from density is also the one that can afford
                  it. This is the longest list on the form by a wide margin and the
-                 filter is still what most visitors will use to cross it. */
-              wide
+                 filter is still what most visitors will use to cross it.
+
+                 **`"column"`, because this is the field in the TRAILING column** — the one
+                 position the panel's negative leading margin is correct for. It is also
+                 why headquarters is second in the pair rather than first. */
+              wide="column"
               columns={3}
               invalid={Boolean(errors.hqCountry)}
               describedBy={describedBy}

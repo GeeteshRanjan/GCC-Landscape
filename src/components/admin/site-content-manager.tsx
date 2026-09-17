@@ -1136,7 +1136,6 @@ const COPY_GROUPS: readonly CopyGroupConfig[] = [
       { key: "askTitle" },
       { key: "askLead" },
       { key: "askSubmit" },
-      { key: "askCompanyLabel" },
       { key: "askIndustryLabel" },
       {
         key: "askRevenueLabel",
@@ -1203,10 +1202,9 @@ const COPY_GROUPS: readonly CopyGroupConfig[] = [
       },
       { key: "viewFunctions" },
       {
-        key: "pillCompany",
-        hint: "The four answer pills, drawn on BOTH result screens from these four keys. Below md they are read out but not drawn.",
+        key: "pillIndustry",
+        hint: "The three answer pills, drawn on BOTH result screens from these three keys. Below md they are read out but not drawn.",
       },
-      { key: "pillIndustry" },
       { key: "pillHeadquarters" },
       {
         key: "pillRevenueBand",
@@ -1248,19 +1246,15 @@ const COPY_GROUPS: readonly CopyGroupConfig[] = [
     fields: [
       {
         key: "snapshotHeading",
-        hint: "Must keep {industry}. This heading is the ONE place the industry is named \u2014 the four cell labels below it deliberately do not.",
+        hint: "Must keep {industry}. This heading is the ONE place the industry is named \u2014 the four cell labels below it deliberately do not. It is drawn in capitals, and the plural \u201cGCCs\u201d keeps its small s however you type it. Never \u201cGCC\u2019s\u201d.",
       },
       {
         key: "peersTitle",
-        hint: "Must keep {company}, which is replaced with the visitor's own company name.",
-      },
-      {
-        key: "peersTitleFallback",
-        hint: "Substituted for {company} when the visitor did not give a name. Do not write \u201cyours\u201d \u2014 it presumes they already run a centre in India.",
+        hint: "The heading over the comparison cards. Do not write \u201cclosest to yours\u201d \u2014 it presumes the visitor already runs a centre in India.",
       },
       {
         key: "peersNarrowNote",
-        hint: "Must keep {industry}. Drawn under the peer grid only when the visitor named a sub-industry and that is what shortened the list \u2014 so it explains the SCOPE and must state no count, which the line above it already does exactly.",
+        hint: "Must keep {industry}. Drawn ABOVE the peer cards, under the heading, only when the visitor named a sub-industry and that is what shortened the list \u2014 so it explains the SCOPE, points forward at the cards, and must state no count, which the line under the grid already does exactly.",
       },
       { key: "industryTitle" },
       {

@@ -1431,21 +1431,28 @@
    table is gone: the cascade pane now lives INSIDE this box (see `.gcc-select-pane`), so
    there is no longer a question of what fits between the card and the window edge.
 
-   **Leading-side, which is why `wide` is set per control rather than derived from the
-   option count.** Only a field in the grid's trailing column can widen this way, and a
-   count-based rule would eventually widen the leading column's panel off the card.
+   **THE REACH IS LEADING-SIDE, SO IT BELONGS ONLY TO A FIELD IN THE GRID'S TRAILING
+   COLUMN — and it is its own class for that reason.** It was on `--wide` itself, which
+   made "this panel is grid-wide" and "this panel reaches back one column" a single
+   decision; a field spanning the whole grid is already the right width and being moved as
+   well puts it a column and a gap off the leading edge, which is what happened to both
+   wide controls when the company-name field was removed and every cell shifted along. So
+   `--wide` is the width and the columns, `--reach` is the offset, and the `wide` prop in
+   `select-field.tsx` names which of the two positions a field is in.
 
    Gated on `md`, where `md:grid-cols-2` gives the grid its second column. Below that the
-   grid is one column, there is no sibling to widen into, and the margin is absent — so
+   grid is one column, there is no sibling to reach into, and the margin is absent — so
    the panel is field-width and the options are one column, which on a phone is the only
    shape available anyway.
 
    Measured, for the two widths the columns below are fitted to: the card is capped at
    `--ansr-container-card` and padded `md:px-10 lg:px-12`, so the grid — and therefore
-   this panel — is 592px at `md` and 800px from `lg`.
+   this panel — is 592px at `md` and 800px from `lg`. **A `--wide` panel on a field that
+   spans the grid measures the same two numbers without the margin**, the field and the
+   grid being the same box there.
    -------------------------------------------------------------------------- */
 @media (min-width: 48rem) {
-  .gcc-select-panel--wide {
+  .gcc-select-panel--reach {
     margin-inline-start: calc(-100% - var(--ansr-space-6));
   }
 }

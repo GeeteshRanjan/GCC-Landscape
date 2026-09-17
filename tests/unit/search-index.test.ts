@@ -134,16 +134,25 @@ describe("every entry's destination", () => {
 });
 
 describe("what is indexed", () => {
+  /**
+   * **`peer-override` is exempt, and it is the only exemption.** Every other kind has
+   * rows in every plausible dataset, so a zero means a loop was never written. Pinned
+   * peer sets are corrections to the scoring engine and the healthy state is none at
+   * all — so an empty collection here is the product working, and the assertion that
+   * catches a missing loop for this kind is the one-entry-per-row check below.
+   */
   it("covers every kind it declares a heading for", () => {
     for (const kind of SEARCH_KINDS) {
+      if (kind === "peer-override") continue;
       expect(of(kind).length, KIND_LABELS[kind]).toBeGreaterThan(0);
     }
   });
 
-  it("holds one entry per company, metric, sub-industry and taxonomy value", () => {
+  it("holds one entry per company, metric, sub-industry, pinned peer set and taxonomy value", () => {
     expect(of("company").length).toBe(dataset.companies.length);
     expect(of("metric").length).toBe(dataset.metrics.length);
     expect(of("sub-industry").length).toBe(dataset.businessTypes.length);
+    expect(of("peer-override").length).toBe(dataset.peerOverrides.length);
     const taxonomyValues = (
       Object.keys(TAXONOMY_LIST_TITLES) as (keyof typeof TAXONOMY_LIST_TITLES)[]
     ).reduce((n, key) => n + dataset.taxonomy[key].length, 0);

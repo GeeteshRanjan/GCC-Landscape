@@ -2,7 +2,16 @@
 
 import { useMemo, useState } from "react";
 
-import { AdminPageHeader } from "@/components/admin/page-header";
+import {
+  ADMIN_CONTROL,
+  AdminChip,
+  AdminCount,
+  AdminField,
+  AdminRow,
+  AdminRowActions,
+  AdminRows,
+} from "@/components/admin/controls";
+import { AdminPageHeader, AdminSection } from "@/components/admin/page-header";
 import {
   AdminSearch,
   NoSearchMatches,
@@ -11,7 +20,12 @@ import {
   useDeepLinkQuery,
 } from "@/components/admin/search-box";
 import { Button } from "@/components/ui/button";
-import { BUSINESS_TAG_AXES, type BusinessTag } from "@/data/business-tags";
+import {
+  BUSINESS_TAG_AXES,
+  BUSINESS_TAG_MAX_LENGTH,
+  isBusinessTag,
+  normaliseTagInput,
+} from "@/data/business-tags";
 import type { BusinessType } from "@/data/schema";
 import { slugify } from "@/data/normalize";
 
@@ -21,25 +35,30 @@ import { useDraft } from "./draft-provider";
  * The business-type catalogue: what a visitor picks on Screen 1, and what a company
  * is assigned.
  *
- * Editable here, unlike the TAG vocabulary it draws from. The split is deliberate and
- * it is the same one Screen 2 makes between metric definitions and metric values:
- * ANSR must be able to add "Quick commerce" without a developer, but must not be able
- * to invent a tag, because a tag nobody else carries matches nothing and deleting one
- * silently re-scores every peer set in the product.
+ * **The TAG VOCABULARY is editable here now too, which reverses the split this file was
+ * written under.** It used to be business types editable and tags fixed in code, because
+ * a tag nobody else carries matches nothing. The real objection was sharper than that and
+ * is now handled properly: IDF is unbounded, so a tag on one type arrives at roughly a
+ * hundred times a common one and swamps the visitor's own denominator — measured cutting
+ * the eligible population 20% on average and 95% at worst. `capCustomTagWeights` in
+ * `similarity.ts` holds a tag outside the authored vocabulary to the sharpest AUTHORED
+ * weight in the same industry, so the expressiveness is available and the engine cannot
+ * be blown up by it. The authored 138 keep their exact weights, so nothing that ships
+ * today moves.
  *
- * Two things about editing here are worth knowing before you do it:
+ * Three things about editing here are worth knowing before you do it:
  *
- *  - **A tag change re-scores an industry.** Adding `luxury` to "Apparel & footwear
- *    brand" changes which five companies a visitor from Nike sees, with no company row
+ *  - **A tag change re-scores an industry.** Adding `luxury` to "Apparel & Footwear
+ *    Brand" changes which five companies a visitor from Nike sees, with no company row
  *    touched. The publish diff reports it as a real change for exactly that reason.
- *  - **A tag on only one type does nothing.** It can only be shared in a
- *    type-against-itself comparison, which already scores maximum. `data:verify`
- *    fails on it rather than letting the vocabulary rot, and the count beside each tag
- *    below is there so the situation is visible while editing rather than at publish.
+ *  - **A tag on only one type is the MAXIMUM-weight case, not a no-op.** This file used
+ *    to say the opposite, in a docblock and in a hint under the picker, and both were
+ *    backwards: a rare tag is the most discriminating thing in the pool, which is why
+ *    the cap exists. The nudge in the form says so now.
+ *  - **A tag is a matching KEY, compared by equality.** So it is a slug: `Quick
+ *    Commerce`, `quick commerce` and `quick-commerce` would otherwise be three tags
+ *    sharing nothing, which is how a vocabulary rots back into 620 values of one member.
  */
-
-const CONTROL =
-  "min-h-11 w-full rounded-md border border-border bg-surface px-3 text-sm text-text";
 
 export function BusinessTypeManager() {
   const { draft, addBusinessType, updateBusinessType, removeBusinessType } = useDraft();
@@ -69,6 +88,41 @@ export function BusinessTypeManager() {
     }
     return { byType, byTag };
   }, [draft.companies, draft.businessTypes]);
+
+  /**
+   * Every tag in the draft that is NOT in the authored vocabulary.
+   *
+   * Collected here and handed to the form so an admin's addition is reusable across types
+   * — a custom tag that only ever appeared on the type it was typed into would be the
+   * one-carrier case by construction, which is exactly what the cap exists to contain and
+   * not what anybody wants.
+   */
+  const customTags = useMemo(
+    () =>
+      [...usage.byTag.keys()].filter((tag) => !isBusinessTag(tag)).sort(),
+    [usage.byTag],
+  );
+
+  /**
+   * Which sub-industries have a pinned peer set, so a tag edit here can be read against
+   * the fact that it will not reach that combination.
+   *
+   * The cue that would otherwise be missing: an admin retagging a type to fix a bad peer
+   * set has no way to know the set is pinned and the retag will change nothing a visitor
+   * sees. That is a silent no-op on a deliberate edit, which is the class of failure this
+   * repo spends most of its comments on.
+   */
+  const pinned = useMemo(() => {
+    const byType = new Map<string, number>();
+    for (const override of draft.peerOverrides) {
+      if (!override.businessTypeId) continue;
+      byType.set(
+        override.businessTypeId,
+        (byType.get(override.businessTypeId) ?? 0) + 1,
+      );
+    }
+    return byType;
+  }, [draft.peerOverrides]);
 
   /**
    * Filtered by industry, then by the query, then sorted.
@@ -115,15 +169,14 @@ export function BusinessTypeManager() {
         onChange={search.setQuery}
         onClear={() => setIndustryFilter("")}
       >
-        <label className="flex w-64 flex-col gap-1.5">
-          {/* "Filter by industry", not "Industry": the edit form below has its own
-              Industry select, and two controls with the same accessible name make
-              both unaddressable by name. */}
-          <span className="text-sm font-medium text-text">Filter by industry</span>
+        {/* "Filter by industry", not "Industry": the edit form below has its own
+            Industry select, and two controls with the same accessible name make
+            both unaddressable by name. */}
+        <AdminField label="Filter by industry" className="w-64">
           <select
             value={industryFilter}
             onChange={(event) => setIndustryFilter(event.target.value)}
-            className={CONTROL}
+            className={ADMIN_CONTROL}
           >
             <option value="">Every industry ({draft.businessTypes.length})</option>
             {draft.taxonomy.industries.map((industry) => (
@@ -132,13 +185,12 @@ export function BusinessTypeManager() {
               </option>
             ))}
           </select>
-        </label>
+        </AdminField>
       </AdminSearch>
 
-      <p className="text-sm text-text-muted">
-        {visible.length} business {visible.length === 1 ? "type" : "types"}. Editing tags
-        re-scores every peer set in that industry.
-      </p>
+      <AdminCount note="Editing tags re-scores every peer set in that industry.">
+        {visible.length} business {visible.length === 1 ? "type" : "types"}.
+      </AdminCount>
 
       {visible.length === 0 && search.searching ? (
         <NoSearchMatches
@@ -149,86 +201,136 @@ export function BusinessTypeManager() {
       ) : null}
 
       {adding ? (
-        <BusinessTypeForm
-          industries={draft.taxonomy.industries}
-          existingIds={draft.businessTypes.map((type) => type.id)}
-          onCancel={() => setAdding(false)}
-          onSave={(type) => {
-            addBusinessType(type);
-            setAdding(false);
-          }}
-        />
+        <AdminSection
+          id="add-business-type"
+          title="New business type"
+          padded
+        >
+          <BusinessTypeForm
+            industries={draft.taxonomy.industries}
+            existingIds={draft.businessTypes.map((type) => type.id)}
+            customTags={customTags}
+            tagUsage={usage.byTag}
+            onCancel={() => setAdding(false)}
+            onSave={(type) => {
+              addBusinessType(type);
+              setAdding(false);
+            }}
+          />
+        </AdminSection>
       ) : null}
 
-      <ul className="flex flex-col gap-3">
-        {visible.map((type) => {
-          const companies = usage.byType.get(type.id) ?? 0;
-          const isEditing = editing === type.id;
-          return (
-            <li
-              key={type.id}
-              className="rounded-md border border-border bg-surface p-4"
-            >
-              {isEditing ? (
-                <BusinessTypeForm
-                  industries={draft.taxonomy.industries}
-                  existingIds={draft.businessTypes.map((t) => t.id)}
-                  initial={type}
-                  tagUsage={usage.byTag}
-                  onCancel={() => setEditing(null)}
-                  onSave={(next) => {
-                    updateBusinessType(type.id, {
-                      name: next.name,
-                      industry: next.industry,
-                      tags: next.tags,
-                    });
-                    setEditing(null);
-                  }}
-                />
-              ) : (
-                <div className="flex flex-col gap-2">
-                  <div className="flex flex-wrap items-baseline justify-between gap-2">
-                    <div>
-                      <p className="text-sm font-medium text-text">{type.name}</p>
-                      <p className="text-xs text-text-muted">
-                        {type.industry} · {type.id} ·{" "}
-                        {companies === 0
-                          ? "no companies"
-                          : `${companies} ${companies === 1 ? "company" : "companies"}`}
+      {visible.length > 0 ? (
+        <AdminSection
+          id="business-type-catalogue"
+          title="Catalogue"
+          meta={
+            <span className="text-xs text-text-muted">
+              {industryFilter || "every industry"}
+            </span>
+          }
+        >
+          <AdminRows>
+            {visible.map((type) => {
+              const companies = usage.byType.get(type.id) ?? 0;
+              const isEditing = editing === type.id;
+              const pins = pinned.get(type.id) ?? 0;
+              return (
+                <AdminRow key={type.id} className="flex-col items-stretch">
+                  {isEditing ? (
+                    <BusinessTypeForm
+                      industries={draft.taxonomy.industries}
+                      existingIds={draft.businessTypes.map((t) => t.id)}
+                      initial={type}
+                      customTags={customTags}
+                      tagUsage={usage.byTag}
+                      onCancel={() => setEditing(null)}
+                      onSave={(next) => {
+                        updateBusinessType(type.id, {
+                          name: next.name,
+                          industry: next.industry,
+                          tags: next.tags,
+                        });
+                        setEditing(null);
+                      }}
+                    />
+                  ) : (
+                    <div className="flex flex-col gap-2">
+                      <div className="flex flex-wrap items-start justify-between gap-x-4 gap-y-2">
+                        <div className="min-w-0">
+                          <p className="flex flex-wrap items-center gap-2 text-sm font-medium text-text">
+                            {type.name}
+                            {/* The cue a retag needs: this sub-industry's peer set is
+                                pinned, so editing tags will not change what those
+                                visitors see. */}
+                            {pins > 0 ? (
+                              <AdminChip
+                                tone="strong"
+                                title="A pinned peer set covers this sub-industry, so a tag edit will not change the peers those visitors see."
+                              >
+                                {pins === 1
+                                  ? "peer set pinned"
+                                  : `${pins} peer sets pinned`}
+                              </AdminChip>
+                            ) : null}
+                          </p>
+                          <p className="text-xs text-text-muted">
+                            {type.industry} · {type.id} ·{" "}
+                            {companies === 0
+                              ? "no companies"
+                              : `${companies} ${companies === 1 ? "company" : "companies"}`}
+                          </p>
+                        </div>
+                        <AdminRowActions>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setEditing(type.id)}
+                          >
+                            Edit {type.name} ({type.industry})
+                          </Button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const message =
+                                companies > 0
+                                  ? `Remove ${type.name}? ${companies} ${companies === 1 ? "company" : "companies"} will fall back to industry-level matching.`
+                                  : `Remove ${type.name}?`;
+                              if (window.confirm(message)) removeBusinessType(type.id);
+                            }}
+                            className="ansr-destructive h-9 rounded-md px-3 text-sm"
+                          >
+                            Remove
+                          </button>
+                        </AdminRowActions>
+                      </div>
+                      {/* Tags as chips rather than as one interpuncted string. Sixteen
+                          tags joined by middots is a line a reader has to parse before
+                          they can find one; a chip per tag is scannable, and the custom
+                          ones are distinguishable, which the string could not show. */}
+                      <p className="flex flex-wrap gap-1">
+                        {type.tags.map((tag) => (
+                          <AdminChip
+                            key={tag}
+                            tone={isBusinessTag(tag) ? "quiet" : "strong"}
+                            title={
+                              isBusinessTag(tag)
+                                ? undefined
+                                : "Added in admin — its weight is capped at the sharpest authored tag in this industry."
+                            }
+                          >
+                            {tag}
+                          </AdminChip>
+                        ))}
                       </p>
                     </div>
-                    <div className="flex gap-2">
-                      <button
-                        type="button"
-                        onClick={() => setEditing(type.id)}
-                        className="min-h-11 rounded-md border border-border px-3 text-sm text-text"
-                      >
-                        Edit {type.name} ({type.industry})
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          const message =
-                            companies > 0
-                              ? `Remove ${type.name}? ${companies} ${companies === 1 ? "company" : "companies"} will fall back to industry-level matching.`
-                              : `Remove ${type.name}?`;
-                          if (window.confirm(message)) removeBusinessType(type.id);
-                        }}
-                        className="ansr-destructive min-h-11 rounded-md px-3 text-sm"
-                      >
-                        Remove
-                      </button>
-                    </div>
-                  </div>
-                  <p className="text-xs text-text-muted">
-                    {type.tags.join(" · ")}
-                  </p>
-                </div>
-              )}
-            </li>
-          );
-        })}
-      </ul>
+                  )}
+                </AdminRow>
+              );
+            })}
+          </AdminRows>
+        </AdminSection>
+      ) : null}
     </div>
   );
 }
@@ -237,6 +339,7 @@ function BusinessTypeForm({
   industries,
   existingIds,
   initial,
+  customTags,
   tagUsage,
   onCancel,
   onSave,
@@ -244,17 +347,57 @@ function BusinessTypeForm({
   industries: readonly string[];
   existingIds: readonly string[];
   initial?: BusinessType;
-  tagUsage?: Map<string, number>;
+  /** Tags added in admin elsewhere in the draft, so they are reusable here. */
+  customTags: readonly string[];
+  tagUsage: Map<string, number>;
   onCancel: () => void;
   onSave: (type: BusinessType) => void;
 }) {
   const [name, setName] = useState(initial?.name ?? "");
   const [industry, setIndustry] = useState(initial?.industry ?? "");
-  const [tags, setTags] = useState<BusinessTag[]>([...(initial?.tags ?? [])]);
+  const [tags, setTags] = useState<string[]>([...(initial?.tags ?? [])]);
+  const [newTag, setNewTag] = useState("");
   const [error, setError] = useState<string | null>(null);
 
   const isNew = initial === undefined;
   const id = isNew ? slugify(name) : initial.id;
+
+  /**
+   * Custom tags from elsewhere in the draft, plus any typed into THIS form.
+   *
+   * Both, because a tag added here is not in the draft until Save — so a picker reading
+   * the draft alone would show the admin's own new tag vanishing the moment they added
+   * it, which reads as the addition having failed.
+   */
+  const customOptions = useMemo(
+    () =>
+      [...new Set([...customTags, ...tags.filter((tag) => !isBusinessTag(tag))])].sort(),
+    [customTags, tags],
+  );
+
+  /** What `newTag` will actually become, shown before it is added. */
+  const pendingTag = normaliseTagInput(newTag);
+  const pendingProblem = (() => {
+    if (!pendingTag) return null;
+    if (tags.includes(pendingTag)) return "already on this type";
+    if (pendingTag.length < 2) return "too short";
+    if (pendingTag.length > BUSINESS_TAG_MAX_LENGTH) return "too long";
+    return null;
+  })();
+
+  function toggle(tag: string) {
+    setTags((current) =>
+      current.includes(tag)
+        ? current.filter((t) => t !== tag)
+        : [...current, tag],
+    );
+  }
+
+  function addTag() {
+    if (!pendingTag || pendingProblem) return;
+    setTags((current) => [...current, pendingTag]);
+    setNewTag("");
+  }
 
   function save() {
     if (!name.trim()) return setError("Name is required.");
@@ -276,26 +419,27 @@ function BusinessTypeForm({
   return (
     <div className="flex flex-col gap-4">
       <div className="grid gap-4 md:grid-cols-2">
-        <label className="flex flex-col gap-1.5">
-          <span className="text-sm font-medium text-text">Name</span>
+        <AdminField
+          label="Name"
+          hint={isNew ? `Id will be "${id || "—"}"` : `Id stays "${id}"`}
+        >
           <input
             value={name}
             onChange={(event) => setName(event.target.value)}
-            className={CONTROL}
+            className={ADMIN_CONTROL}
             placeholder="Quick commerce"
           />
-          <span className="text-xs text-text-muted">
-            {isNew ? `Id will be "${id || "—"}"` : `Id stays "${id}"`}
-          </span>
-        </label>
-        <label className="flex flex-col gap-1.5">
-          {/* Distinct from the list's "Filter by industry" above. Two selects whose
-              accessible names both start "Industry" cannot be told apart by name. */}
-          <span className="text-sm font-medium text-text">Belongs to industry</span>
+        </AdminField>
+        {/* Distinct from the list's "Filter by industry" above. Two selects whose
+            accessible names both start "Industry" cannot be told apart by name. */}
+        <AdminField
+          label="Belongs to industry"
+          hint="Only companies in this industry can carry this type."
+        >
           <select
             value={industry}
             onChange={(event) => setIndustry(event.target.value)}
-            className={CONTROL}
+            className={ADMIN_CONTROL}
           >
             <option value="">Choose an industry</option>
             {industries.map((option) => (
@@ -304,21 +448,24 @@ function BusinessTypeForm({
               </option>
             ))}
           </select>
-          <span className="text-xs text-text-muted">
-            Only companies in this industry can carry this type.
-          </span>
-        </label>
+        </AdminField>
       </div>
 
       <fieldset className="flex flex-col gap-3">
         <legend className="text-sm font-medium text-text">
           Tags ({tags.length} selected)
         </legend>
+        {/*
+          **The hint used to say a one-carrier tag "has no effect at all", and that was
+          backwards.** IDF makes a rare tag the MOST influential thing in the pool, which
+          is the whole reason the vocabulary was closed and the whole reason the cap now
+          exists. Saying the opposite invited exactly the edit the cap has to absorb.
+        */}
         <p className="text-xs text-text-muted">
-          The similarity signal. Weighting is automatic — a tag most of the industry
-          carries counts for little, a rare one counts for a lot — so pick what is true
-          rather than what sounds distinctive. The count beside each tag is how many
-          types already carry it; a tag on only one type has no effect at all.
+          The similarity signal. Weighting is automatic and it runs the other way from
+          intuition: a tag most of the industry carries counts for almost nothing, a rare
+          one counts for a great deal. So pick what is true rather than what sounds
+          distinctive. The count beside each tag is how many types already carry it.
         </p>
         {BUSINESS_TAG_AXES.map((axis) => (
           <div key={axis.axis} className="flex flex-col gap-1">
@@ -326,38 +473,94 @@ function BusinessTypeForm({
               {axis.axis} — {axis.hint}
             </p>
             <div className="flex flex-wrap gap-x-4 gap-y-1">
-              {axis.tags.map((tag) => {
-                const checked = tags.includes(tag);
-                const carriers = tagUsage?.get(tag);
-                return (
-                  <label
-                    key={tag}
-                    className="flex min-h-8 items-center gap-1.5 text-xs text-text"
-                  >
-                    <input
-                      type="checkbox"
-                      checked={checked}
-                      onChange={() =>
-                        setTags((current) =>
-                          checked
-                            ? current.filter((t) => t !== tag)
-                            : [...current, tag],
-                        )
-                      }
-                      className="size-4 shrink-0 accent-[var(--ansr-accent)]"
-                    />
-                    <span>
-                      {tag}
-                      {carriers !== undefined ? (
-                        <span className="text-text-muted"> ({carriers})</span>
-                      ) : null}
-                    </span>
-                  </label>
-                );
-              })}
+              {axis.tags.map((tag) => (
+                <TagCheckbox
+                  key={tag}
+                  tag={tag}
+                  checked={tags.includes(tag)}
+                  carriers={tagUsage.get(tag)}
+                  onToggle={() => toggle(tag)}
+                />
+              ))}
             </div>
           </div>
         ))}
+
+        {customOptions.length > 0 ? (
+          <div className="flex flex-col gap-1">
+            <p className="text-xs font-medium text-text">
+              Added in admin — outside the reviewed vocabulary
+            </p>
+            <div className="flex flex-wrap gap-x-4 gap-y-1">
+              {customOptions.map((tag) => (
+                <TagCheckbox
+                  key={tag}
+                  tag={tag}
+                  checked={tags.includes(tag)}
+                  carriers={tagUsage.get(tag)}
+                  onToggle={() => toggle(tag)}
+                />
+              ))}
+            </div>
+          </div>
+        ) : null}
+
+        {/*
+          Adding a tag, with the nudge rather than a refusal.
+
+          The nudge is the deal: a tag no other type carries is legal and is the admin's
+          call, but it is the maximum-weight case, so what they are told is what it costs
+          rather than that it does nothing. The slug is shown BEFORE the tag is added, so
+          "Quick Commerce" becoming `quick-commerce` is visible and rejectable — a
+          normaliser that ran silently at the publish gate is how one idea gets two tags.
+        */}
+        <div className="flex flex-col gap-2 rounded-md border border-border-subtle bg-surface-subtle p-3">
+          <div className="flex flex-wrap items-end gap-3">
+            <AdminField
+              label="Add a tag of your own"
+              hint={
+                pendingTag
+                  ? pendingProblem
+                    ? `Will be "${pendingTag}" — ${pendingProblem}.`
+                    : `Will be added as "${pendingTag}".`
+                  : "Lowercase and hyphenated, because a tag is matched by equality — two spellings would be two tags."
+              }
+              className="min-w-56 flex-1"
+            >
+              <input
+                value={newTag}
+                onChange={(event) => setNewTag(event.target.value)}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter") {
+                    // Inside a form-shaped block with a Save button beside it, so Enter
+                    // has to be claimed here or it submits the type.
+                    event.preventDefault();
+                    addTag();
+                  }
+                }}
+                className={ADMIN_CONTROL}
+                placeholder="quick-commerce"
+              />
+            </AdminField>
+            <Button
+              variant="outline"
+              disabled={!pendingTag || pendingProblem !== null}
+              onClick={addTag}
+            >
+              Add tag
+            </Button>
+          </div>
+          {pendingTag && !pendingProblem && (tagUsage.get(pendingTag) ?? 0) === 0 ? (
+            <p role="status" className="text-xs text-text">
+              <span className="font-semibold">No other business type carries this.</span>{" "}
+              That is allowed and it is your call — but a tag nobody else has is the
+              STRONGEST signal in its industry, not a weak one, so it will dominate the
+              match for anyone who selects this sub-industry. Its weight is capped at the
+              sharpest reviewed tag in the industry, which is what keeps that survivable.
+              Add it to a second type to make it a comparison rather than a fingerprint.
+            </p>
+          ) : null}
+        </div>
       </fieldset>
 
       {error ? (
@@ -367,21 +570,47 @@ function BusinessTypeForm({
       ) : null}
 
       <div className="flex gap-2">
-        <button
-          type="button"
-          onClick={save}
-          className="min-h-11 rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground"
-        >
-          {isNew ? "Add to draft" : "Save to draft"}
-        </button>
-        <button
-          type="button"
-          onClick={onCancel}
-          className="min-h-11 rounded-md border border-border px-4 text-sm text-text"
-        >
+        <Button onClick={save}>{isNew ? "Add to draft" : "Save to draft"}</Button>
+        <Button variant="outline" onClick={onCancel}>
           Cancel
-        </button>
+        </Button>
       </div>
     </div>
+  );
+}
+
+/**
+ * One tag checkbox.
+ *
+ * **The tag's own text leads the label and nothing precedes it**, which is a spec
+ * contract: `3-business-types.spec.ts` reaches these by `getByRole("checkbox", { name:
+ * /^luxury/ })`. The carrier count follows it, muted.
+ */
+function TagCheckbox({
+  tag,
+  checked,
+  carriers,
+  onToggle,
+}: {
+  tag: string;
+  checked: boolean;
+  carriers: number | undefined;
+  onToggle: () => void;
+}) {
+  return (
+    <label className="flex min-h-8 items-center gap-1.5 text-xs text-text">
+      <input
+        type="checkbox"
+        checked={checked}
+        onChange={onToggle}
+        className="size-4 shrink-0 accent-[var(--ansr-accent)]"
+      />
+      <span>
+        {tag}
+        {carriers !== undefined ? (
+          <span className="text-text-muted"> ({carriers})</span>
+        ) : null}
+      </span>
+    </label>
   );
 }

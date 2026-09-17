@@ -103,7 +103,7 @@ export function MetricsManager() {
       />
 
       {draft.metrics.length === 0 ? (
-        <p className="border border-border-subtle bg-surface px-6 py-12 text-center text-sm text-text-muted">
+        <p className="rounded-md border border-border-subtle bg-surface px-6 py-12 text-center text-sm text-text-muted">
           No metrics in this dataset.
         </p>
       ) : (

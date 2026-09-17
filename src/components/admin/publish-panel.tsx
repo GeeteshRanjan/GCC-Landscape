@@ -14,6 +14,7 @@ import {
   formatFieldValue,
   formatMetricFieldValue,
   type DatasetDiff,
+  type PeerOverrideFieldChange,
 } from "@/data/diff";
 
 /**
@@ -196,7 +197,7 @@ export function PublishPanel() {
 
 function EmptyState() {
   return (
-    <div className="border border-border-subtle bg-surface px-6 py-12 text-center">
+    <div className="rounded-md border border-border-subtle bg-surface px-6 py-12 text-center">
       <p className="text-sm text-text">Nothing to publish.</p>
       <p className="mt-1 text-sm text-text-muted">
         The draft matches what is already live. Edit a company, a taxonomy value
@@ -210,7 +211,7 @@ function SkeletonState() {
   return (
     <div
       role="status"
-      className="border border-border-subtle bg-surface p-6"
+      className="rounded-md border border-border-subtle bg-surface p-6"
       aria-label="Checking the changes"
     >
       <div className="flex flex-col gap-3">
@@ -261,7 +262,7 @@ function BlockedState({
 
 function PublishedState({ diff }: { diff: DatasetDiff }) {
   return (
-    <div className="border border-border-subtle bg-surface p-6">
+    <div className="rounded-md border border-border-subtle bg-surface p-6">
       {/* Success carried by form and words, not a colour: this palette has no
           success hue, by measurement. See tokens.css. */}
       <h2 className="flex items-center gap-2 text-base font-semibold text-text">
@@ -291,11 +292,52 @@ function summarise(diff: DatasetDiff): string {
       `${diff.counts.metrics} metric${diff.counts.metrics === 1 ? "" : "s"} updated`,
     );
   }
+  // Named in the summary rather than folded into a total, on the site-copy argument
+  // below: this is the change with no visible consequence anywhere else in the review,
+  // so the one-line summary is the only place a reviewer might catch it before scrolling.
+  if (diff.counts.peerOverrides) {
+    parts.push(
+      `${diff.counts.peerOverrides} pinned peer set${diff.counts.peerOverrides === 1 ? "" : "s"} updated`,
+    );
+  }
   // Named rather than counted, because "1 edit" here can be the headline every
   // visitor reads and the admin should see which surface moved before they read
   // how much of it did.
   if (diff.counts.siteContent) parts.push("site copy edited");
   return parts.length > 0 ? parts.join(", ") : "No changes";
+}
+
+/**
+ * What each override field is called in the review.
+ *
+ * Same reasoning as `CLOSE_FIELD_LABELS` and `METRIC_FIELD_LABELS`: `businessTypeId`
+ * tells a reviewer nothing, and `companyIds` least of all — what changed is the peer
+ * set, which is the thing being approved.
+ */
+const PEER_OVERRIDE_FIELD_LABELS: Record<
+  PeerOverrideFieldChange["field"],
+  string
+> = {
+  id: "id",
+  industry: "industry",
+  businessTypeId: "sub-industry",
+  revenueBand: "revenue band",
+  hqCountry: "HQ location",
+  companyIds: "the peer set, in order",
+  note: "note",
+};
+
+/**
+ * An override field for the review, with the wildcard spelled out.
+ *
+ * A cleared field reads "any" rather than as a blank, because the difference between
+ * "one revenue band" and "all seven" is the whole meaning of the row and a reviewer
+ * cannot read it off an absence — the same rule `describePeerOverride` follows.
+ */
+function formatOverrideValue(value: unknown): string {
+  if (value === undefined || value === null || value === "") return "any";
+  if (Array.isArray(value)) return value.join(" → ");
+  return String(value);
 }
 
 /**
@@ -333,7 +375,7 @@ function DiffView({
 }) {
   if (diff.isEmpty) {
     return (
-      <div className="border border-border-subtle bg-surface px-6 py-12 text-center">
+      <div className="rounded-md border border-border-subtle bg-surface px-6 py-12 text-center">
         <p className="text-sm text-text">
           These changes match what is already live.
         </p>
@@ -346,11 +388,15 @@ function DiffView({
 
   return (
     <div className="flex flex-col gap-5">
-      <dl className="grid grid-cols-2 gap-px border border-border-subtle bg-border-subtle sm:grid-cols-3 lg:grid-cols-6">
+      {/* Seven cells now, so the row goes to seven columns at `lg` rather than six. The
+          hairline grid is `gap-px` over a border-coloured fill, so the column count is
+          the only thing that has to move. */}
+      <dl className="grid grid-cols-2 gap-px overflow-hidden rounded-md border border-border-subtle bg-border-subtle sm:grid-cols-3 lg:grid-cols-7">
         <Count label="Added" value={diff.counts.added} />
         <Count label="Removed" value={diff.counts.removed} />
         <Count label="Edited" value={diff.counts.changed} />
         <Count label="Taxonomy lists" value={diff.counts.taxonomy} />
+        <Count label="Pinned peers" value={diff.counts.peerOverrides} />
         <Count label="Metrics" value={diff.counts.metrics} />
         <Count label="Site copy" value={diff.counts.siteContent} />
       </dl>
@@ -695,6 +741,82 @@ function DiffView({
                 <RemoveButton
                   label={`Restore the removed business type ${type.name}`}
                   onClick={() => onRevert({ kind: "businessType", id: type.id })}
+                />
+              </li>
+            ))}
+          </ul>
+        </DiffSection>
+      ) : null}
+
+      {/*
+        Pinned peer sets, immediately after the business types whose scoring they
+        overrule — and it is the section with the least visible consequence in the whole
+        review. No company row moves, no string on the page moves, and the public screen
+        deliberately never says a peer set was hand-picked, so the result is
+        indistinguishable from the engine's own answer. A reviewer's only handle on it is
+        this section, which is why every entry names the COMBINATION rather than the id
+        and spells the pinned companies out in order.
+      */}
+      {diff.counts.peerOverrides > 0 ? (
+        <DiffSection title={`Pinned peer sets (${diff.counts.peerOverrides})`}>
+          <p className="border-b border-border-subtle px-5 py-3 text-sm text-text-muted">
+            A pinned set replaces what the scoring engine would show, for exactly the
+            answers it names. Nothing on the public screen says so.
+          </p>
+          <ul className="divide-y divide-border-subtle">
+            {diff.peerOverrides.changed.map((entry) => (
+              <li key={entry.id} className="flex items-start gap-3 px-5 py-3 text-sm">
+                <div className="min-w-0 flex-1">
+                  <p className="font-medium text-text">{entry.combination}</p>
+                  <ul className="mt-1.5 flex flex-col gap-1">
+                    {entry.changes.map((change) => (
+                      <li key={change.field} className="flex flex-col gap-0.5">
+                        <span className="text-xs uppercase tracking-caps text-text-muted">
+                          {PEER_OVERRIDE_FIELD_LABELS[change.field]}
+                        </span>
+                        <span className="text-text-muted line-through">
+                          {formatOverrideValue(change.before)}
+                        </span>
+                        <span className="text-text">
+                          {formatOverrideValue(change.after)}
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+                <RemoveButton
+                  label={`Remove these changes to ${entry.combination}`}
+                  onClick={() => onRevert({ kind: "peerOverride", id: entry.id })}
+                />
+              </li>
+            ))}
+            {diff.peerOverrides.added.map((entry) => (
+              <li
+                key={entry.id}
+                className="flex items-center gap-3 px-5 py-2.5 text-sm text-text"
+              >
+                <span className="min-w-0 flex-1">Pinned: {entry.combination}</span>
+                <RemoveButton
+                  label={`Remove the pinned peer set for ${entry.combination}`}
+                  onClick={() => onRevert({ kind: "peerOverride", id: entry.id })}
+                />
+              </li>
+            ))}
+            {diff.peerOverrides.removed.map((entry) => (
+              <li
+                key={entry.id}
+                className="flex items-center gap-3 px-5 py-2.5 text-sm text-text"
+              >
+                <span className="min-w-0 flex-1">
+                  Unpinned: {entry.combination}
+                  <span className="text-text-muted">
+                    {" "}
+                    — the scoring engine answers it again
+                  </span>
+                </span>
+                <RemoveButton
+                  label={`Restore the pinned peer set for ${entry.combination}`}
+                  onClick={() => onRevert({ kind: "peerOverride", id: entry.id })}
                 />
               </li>
             ))}

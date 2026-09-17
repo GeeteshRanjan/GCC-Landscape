@@ -3,6 +3,7 @@
 import { useEffect, useId, useMemo, useState } from "react";
 
 import { CompanyEditor } from "@/components/admin/company-editor";
+import { ADMIN_CONTROL } from "@/components/admin/controls";
 import { useDraft } from "@/components/admin/draft-provider";
 import { AdminPageHeader } from "@/components/admin/page-header";
 import { Badge } from "@/components/ui/badge";
@@ -137,7 +138,10 @@ export function CompanyManager() {
         <Button onClick={() => setEditing({ company: null })}>Add a company</Button>
       </AdminPageHeader>
 
-      <div className="flex flex-wrap items-end gap-4 border border-border-subtle bg-surface p-4">
+      {/* `rounded-md`, matching `AdminSearch`'s own row and every section card. This was
+          the last square box in the admin, which made the one page with a hand-rolled
+          filter row look like a different product from the four using the shared one. */}
+      <div className="flex flex-wrap items-end gap-4 rounded-md border border-border-subtle bg-surface p-4">
         <div className="flex min-w-64 flex-1 flex-col gap-1.5">
           <Label htmlFor={searchId}>Search</Label>
           <Input
@@ -161,7 +165,7 @@ export function CompanyManager() {
               setIndustry(event.target.value);
               setPage(0);
             }}
-            className="h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm text-text shadow-xs outline-none transition-[color,box-shadow] duration-fast focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
+            className={ADMIN_CONTROL}
           >
             <option value="">All industries</option>
             {draft.taxonomy.industries.map((value) => (
@@ -194,14 +198,14 @@ export function CompanyManager() {
       </p>
 
       {filtered.length === 0 ? (
-        <div className="border border-border-subtle bg-surface px-6 py-12 text-center">
+        <div className="rounded-md border border-border-subtle bg-surface px-6 py-12 text-center">
           <p className="text-sm text-text">Nothing matches that search.</p>
           <p className="mt-1 text-sm text-text-muted">
             Try a shorter term, or clear the industry filter.
           </p>
         </div>
       ) : (
-        <div className="border border-border-subtle bg-surface">
+        <div className="overflow-hidden rounded-md border border-border-subtle bg-surface">
           <Table>
             <TableHeader>
               <TableRow>
