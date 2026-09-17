@@ -4,6 +4,7 @@ import { ChevronRight } from "lucide-react";
 import { type PeerView } from "@/data/screen1";
 import { cn } from "@/lib/utils";
 import {
+  broadenedLine,
   largestLine,
   largestShortfallLine,
   peerCountLine,
@@ -713,6 +714,10 @@ export function PeerBlockView({ view }: { view: PeerView }) {
   // resolved block rather than the shipped default. See `shortfallLine`.
   const copy = usePublicCopy();
   const shortfall = shortfallLine(view, copy);
+  // The two call-outs are mutually exclusive by construction — `broadened` requires
+  // `shortfall === 0` — so this coalesce renders exactly one, shortfall first. See
+  // `broadenedLine`.
+  const note = shortfall ?? broadenedLine(view);
 
   if (peers.length === 0) {
     return <p className="max-w-measure text-base text-text">{shortfall}</p>;
@@ -746,8 +751,8 @@ export function PeerBlockView({ view }: { view: PeerView }) {
           changed; what changed is which side of the grid it sits on. The count line stays
           under the grid, which is the only place it can be — it states what the grid
           shows. */}
-      {shortfall ? (
-        <p className="max-w-measure text-sm text-text">{shortfall}</p>
+      {note ? (
+        <p className="max-w-measure text-sm text-text">{note}</p>
       ) : null}
       {/* One row at `lg`, one column per peer. Two columns between `sm` and `lg`, one
           below — a 205px card is the floor for a five-digit range, so the row can only

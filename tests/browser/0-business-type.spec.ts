@@ -402,6 +402,43 @@ test("choosing it narrows the peer set to the same sub-industry", async ({
 });
 
 /**
+ * The broadened-set call-out: when the exact sub-industry cannot fill five and the set
+ * reaches into the wider industry, one line says so.
+ *
+ * Cybersecurity in Software & Internet is a thin sub-industry that returns a FULL set
+ * mixed with other software businesses at the top band — so the line fires there and
+ * stays silent for a well-populated sub-industry like apparel. The engine logic is
+ * unit-tested across every sub-industry in `screen1.test.ts`; this covers only that the
+ * sentence reaches the render, and that it is not confused with the thin-set line (which
+ * fires on a SHORT set, never a full one).
+ */
+test("calls out a set that reached past the sub-industry, and only then", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await submit(page, {
+    industry: "Software & Internet",
+    businessType: "Cybersecurity",
+  });
+
+  const peers = page.locator("#peers");
+  await expect(peers).toBeVisible();
+  await expect(peers.getByRole("listitem")).toHaveCount(5);
+  await expect(
+    peers.getByText(/extend beyond your sub-industry to the closest comparable/i),
+  ).toBeVisible();
+
+  // A well-populated sub-industry fills the set from itself, so the call-out is absent —
+  // the line appears only when required.
+  await page.goto("/");
+  await submit(page, { industry: "Retail", businessType: "Apparel & Footwear Brand" });
+  await expect(page.locator("#peers").getByRole("listitem")).toHaveCount(5);
+  await expect(
+    page.getByText(/extend beyond your sub-industry/i),
+  ).toHaveCount(0);
+});
+
+/**
  * The peer block's lead must describe the set under it.
  *
  * This is the check that was missing. The lead was a hardcoded "Same industry,

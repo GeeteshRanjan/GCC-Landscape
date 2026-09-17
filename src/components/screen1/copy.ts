@@ -529,6 +529,36 @@ export function shortfallLine(
   return `${industry} is thin in India at any size: ${count} rather than ${limit}. Early ground, not absent ground.`;
 }
 
+/**
+ * The broadened-set line, and it is the OTHER half of a pair with `shortfallLine`.
+ *
+ * The gap it fills: a visitor names a sub-industry, the set comes back FULL, but the
+ * sub-industry could not fill it on its own, so the remaining slots went to the closest
+ * comparable businesses elsewhere in the industry. Every one is above the similarity
+ * floor — a defensible peer — but not a literal sub-industry twin, and nothing on the
+ * screen said so. A CIO from a fintech who sees two payments companies and three other
+ * software firms was left to notice the mix and wonder. This names it, once, as a
+ * deliberate widening rather than a miss.
+ *
+ * **Derived, not editable, and mutually exclusive with `shortfallLine`.** It asserts a
+ * property of the matching RESULT (that the set reached past the sub-industry), which is
+ * the same reason the other `shortfallLine` branches stay in code — a scope label would
+ * be editable, a claim about what the engine did is not. And `view.peers.broadened`
+ * already requires `shortfall === 0`, so this returns null exactly when `shortfallLine`
+ * returns a sentence; the caller renders `shortfallLine(view) ?? broadenedLine(view)`
+ * and never both.
+ *
+ * The wording is the same register as the shortfall line: no count, no apology, no
+ * per-company tag. "Closest comparable businesses" is the frame that keeps a widened set
+ * from reading as a padded one — it is invariant 3's own word, "defensibly comparable",
+ * said to the visitor. Forward-facing, so it introduces the cards rather than excusing
+ * them.
+ */
+export function broadenedLine(view: PeerView): string | null {
+  if (!view.peers.broadened) return null;
+  return `These extend beyond your sub-industry to the closest comparable businesses across ${view.industry.industry}.`;
+}
+
 /* The industry card's heading used to be DERIVED — "All of X in India, in one view"
    when the peer set was the whole industry, and "Your peers sit within a much larger
    industry base" otherwise. It is gone, not moved: the card headings on the result

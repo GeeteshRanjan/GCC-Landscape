@@ -35,6 +35,7 @@ import {
   type LatLon,
 } from "@/data/schema";
 import {
+  broadenedLine,
   framing,
   industryLine,
   FUNCTIONS_LEAD,
@@ -772,6 +773,61 @@ describe("copy", () => {
       expect(line, view.industry.industry).not.toMatch(/worth naming/i);
       // The ban that this sentence was the last visitor-facing holder of.
       expect(line, view.industry.industry).not.toContain("\u2014");
+    }
+  });
+
+  /**
+   * The broadened-set line: fires on a FULL set that reached past the visitor's exact
+   * sub-industry, and is mutually exclusive with the shortfall line.
+   *
+   * The two properties that make it failproof are asserted directly: it never fires
+   * without a sub-industry, and it never fires alongside `shortfallLine`. The wording is
+   * pinned to the non-negotiables — names the industry, no count, no em dash — rather
+   * than to the exact sentence, which is an editorial choice.
+   */
+  it("names a broadened set only when the set reached past the sub-industry", () => {
+    const broadened = dataset.businessTypes.flatMap((type) => {
+      const view = buildPeerView(
+        dataset,
+        input({ industry: type.industry, businessTypeId: type.id }),
+      );
+      return view.peers.broadened ? [view] : [];
+    });
+    // The shipped data has thin sub-industries, so at least one full-but-mixed set
+    // exists; finding none would mean the branch is unreachable, itself worth failing on.
+    expect(broadened.length).toBeGreaterThan(0);
+
+    for (const view of broadened) {
+      const line = broadenedLine(view)!;
+      expect(line, view.industry.industry).not.toBeNull();
+      expect(line).toContain(view.industry.industry);
+      expect(line).not.toContain("{");
+      // No count, no em dash — the same discipline as the published shortfall branch.
+      expect(line, view.industry.industry).not.toMatch(/\d/);
+      expect(line, view.industry.industry).not.toContain("\u2014");
+      // Mutually exclusive with the shortfall line: the set is full, so that one is null.
+      expect(view.peers.shortfall).toBe(0);
+      expect(shortfallLine(view)).toBeNull();
+    }
+  });
+
+  it("never broadens without a sub-industry, and never on a full pure set", () => {
+    // No sub-industry: "beyond your sub-industry" is meaningless, so it must not fire
+    // for any industry, however the set was filled across bands.
+    for (const industry of dataset.taxonomy.industries) {
+      const view = buildPeerView(dataset, input({ industry }));
+      expect(view.peers.broadened, industry).toBe(false);
+      expect(broadenedLine(view), industry).toBeNull();
+    }
+
+    // A well-populated sub-industry fills the set from itself, so the line stays silent —
+    // "only when required" is the whole point.
+    const apparel = buildPeerView(
+      dataset,
+      input({ industry: "Retail", businessTypeId: "ret-apparel" }),
+    );
+    if (apparel.peers.shortfall === 0 && !apparel.peers.broadened) {
+      expect(broadenedLine(apparel)).toBeNull();
     }
   });
 

@@ -103,6 +103,22 @@ export interface PeerResult {
    */
   sameBusinessType: number;
   /**
+   * How many of the peers ACTUALLY SHOWN carry the visitor's exact business type.
+   *
+   * Distinct from `sameBusinessType`, which counts the whole pool: this counts the
+   * returned set, and the gap between it and `peers.length` is the signal
+   * `broadenedLine` fires on. When a visitor named a sub-industry and the shown set
+   * could not be filled from it, the remaining slots go to the closest comparable
+   * businesses elsewhere in the industry — every one still above the similarity floor,
+   * so still a defensible peer, but not a literal sub-industry twin. The copy says so
+   * rather than leaving the reader to notice a chemicals company in a pharma set.
+   *
+   * Zero when no business type was given, where "beyond your sub-industry" is
+   * meaningless. Set equal to `peers.length` for an override, so the line cannot fire
+   * on a hand-picked set — the same "make no automatic claim" move `shortfall` makes.
+   */
+  shownSameBusinessType: number;
+  /**
    * The floor removed companies that would otherwise have filled a slot.
    *
    * Tracked rather than hidden, because it is the one way this change can return
@@ -472,6 +488,10 @@ export function matchPeers(
       industryOthers: Math.max(0, pool.length - picked.length),
       closeMatches,
       sameBusinessType,
+      // Equal to the shown count, so `broadenedLine` cannot fire on a hand-picked set.
+      // Same reasoning as `shortfall: 0` above: an override makes no automatic claim
+      // about how its companies relate to the sub-industry.
+      shownSameBusinessType: picked.length,
       floorShortened: false,
       overriddenBy: override.id,
     };
@@ -514,6 +534,12 @@ export function matchPeers(
     industryOthers: Math.max(0, pool.length - peers.length),
     closeMatches,
     sameBusinessType,
+    // Counted on the SHOWN set, not the pool. Membership by the exact business type id,
+    // which is the honest, explainable line — a company is in your sub-industry or it is
+    // not — and it aligns with a business similarity of 1.0 in all but a contrived case.
+    shownSameBusinessType: input.businessTypeId
+      ? peers.filter((c) => c.businessTypes.includes(input.businessTypeId!)).length
+      : 0,
     // Only a floor effect if there WERE companies left over that the floor removed.
     floorShortened:
       peers.length < limit && eligible.length < Math.min(limit, pool.length),

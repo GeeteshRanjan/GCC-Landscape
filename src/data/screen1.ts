@@ -540,6 +540,23 @@ export interface PeerBlock {
    * early ground". Both are honest and they are not interchangeable.
    */
   floorShortened: boolean;
+  /**
+   * A sub-industry was given, the set is FULL, and some of the peers shown are not
+   * of that exact sub-industry — so the set reaches into the closest comparable
+   * businesses across the wider industry. `broadenedLine` fires on this.
+   *
+   * **Mutually exclusive with `shortfall` by construction, not by luck.** It requires
+   * `shortfall === 0`: when the set is short with a sub-industry, `shortfallLine`
+   * already carries the whole story ("few GCCs closely match your sub-industry"), and
+   * a second call-out above one short grid is noise. So exactly one of the two lines
+   * ever renders, and `shortfallLine` wins the tie because "the set is short" is the
+   * more urgent fact.
+   *
+   * It is a claim about the RESULT, not a label, which is why the sentence stays a
+   * derived function in `copy.ts` rather than an editable key — the same category as
+   * the other three `shortfallLine` branches.
+   */
+  broadened: boolean;
 }
 
 export interface IndustryBlock {
@@ -982,6 +999,13 @@ export function buildPeerView(
       largest: largestPeer,
       shortfall: match.shortfall,
       floorShortened: match.floorShortened,
+      // Full set, a sub-industry was named, and not every shown peer is of it — so the
+      // set reached into the wider industry. Gated on `shortfall === 0` so it is
+      // mutually exclusive with `shortfallLine`; see `PeerBlock.broadened`.
+      broadened:
+        input.businessTypeId !== undefined &&
+        match.shortfall === 0 &&
+        match.shownSameBusinessType < match.peers.length,
     },
     industry: {
       industry: input.industry,
