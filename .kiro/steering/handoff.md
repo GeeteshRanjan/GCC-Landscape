@@ -8,15 +8,16 @@ visual. Bounded by SHAPE, not length — see the `handoff.md` subsection of "Doc
 
 ## Where we are
 
-- **`main` is at `2825c79`, pushed and LIVE, and the tree is clean** apart from five untracked scratch
+- **`main` is at `732bbfb`, pushed and LIVE, and the tree is clean** apart from five untracked scratch
   files from an earlier session (`probe-mobile.mjs`, two mobile-review notes, `companies-export.csv`,
   `untitled folder/`). Nothing tracked is outstanding.
 - **Pinned peer sets ship end to end** — `dataset.peerOverrides`, the `/admin/peer-overrides` page, the
   diff category and the cascades. Rules in `project.md` under "Peer matching".
 - **Tags are admin-editable, bounded by `capCustomTagWeights`**, provably inert on today's data because
   every shipped tag is authored. Rules in `project.md` beside "TAGS ARE DATA NOW".
-- **The broadened-set call-out ships** — `broadenedLine` names when a full set reached past the visitor's
-  sub-industry. Mutually exclusive with `shortfallLine`. Rule in `project.md` under "Peer matching".
+- **The broadened-set call-out ships on BOTH axes** — `broadenedLine` names when a full set reached past
+  the visitor's sub-industry, revenue band (beyond ±1), or both, on one line. Mutually exclusive with
+  `shortfallLine`. Rule in `project.md` under "Peer matching".
 - **Admin UX pass**: `controls.tsx` is the one control recipe; `AdminField` moved every hint into
   `aria-describedby`; section cards and the nav gained hierarchy.
 
