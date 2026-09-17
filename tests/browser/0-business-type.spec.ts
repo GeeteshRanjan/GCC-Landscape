@@ -402,17 +402,17 @@ test("choosing it narrows the peer set to the same sub-industry", async ({
 });
 
 /**
- * The broadened-set call-out: when the exact sub-industry cannot fill five and the set
- * reaches into the wider industry, one line says so.
+ * The broadened-set call-out: when the visitor's own answers cannot fill five and the
+ * set reaches past them — a different line of business, a different size, or both — one
+ * line names the axis that widened.
  *
- * Cybersecurity in Software & Internet is a thin sub-industry that returns a FULL set
- * mixed with other software businesses at the top band — so the line fires there and
- * stays silent for a well-populated sub-industry like apparel. The engine logic is
- * unit-tested across every sub-industry in `screen1.test.ts`; this covers only that the
- * sentence reaches the render, and that it is not confused with the thin-set line (which
- * fires on a SHORT set, never a full one).
+ * Cybersecurity in Software & Internet is thin enough at the top band to reach on BOTH
+ * axes, so the line names them together; apparel fills the set from itself and stays
+ * silent. The engine logic and the per-axis wording are unit-tested across every
+ * sub-industry and band in `screen1.test.ts`; this covers only that the sentence reaches
+ * the render and is not confused with the thin-set line (which fires on a SHORT set).
  */
-test("calls out a set that reached past the sub-industry, and only then", async ({
+test("calls out a set that reached past the visitor's answers, and only then", async ({
   page,
 }) => {
   await page.goto("/");
@@ -424,18 +424,20 @@ test("calls out a set that reached past the sub-industry, and only then", async 
   const peers = page.locator("#peers");
   await expect(peers).toBeVisible();
   await expect(peers.getByRole("listitem")).toHaveCount(5);
+  // Both axes trip here, so the line names both. The regex tolerates the single-axis
+  // wording too, since which axes fire is a property of the data, not this test.
   await expect(
-    peers.getByText(/extend beyond your sub-industry to the closest comparable/i),
+    peers.getByText(
+      /extend beyond your (sub-industry|revenue band).* to the closest comparable companies/i,
+    ),
   ).toBeVisible();
 
-  // A well-populated sub-industry fills the set from itself, so the call-out is absent —
-  // the line appears only when required.
+  // A well-populated sub-industry fills the set from itself and within band, so the
+  // call-out is absent — the line appears only when required.
   await page.goto("/");
   await submit(page, { industry: "Retail", businessType: "Apparel & Footwear Brand" });
   await expect(page.locator("#peers").getByRole("listitem")).toHaveCount(5);
-  await expect(
-    page.getByText(/extend beyond your sub-industry/i),
-  ).toHaveCount(0);
+  await expect(page.getByText(/extend beyond your/i)).toHaveCount(0);
 });
 
 /**

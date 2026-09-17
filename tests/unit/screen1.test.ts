@@ -20,6 +20,7 @@ import {
   industryOptions,
   peerViewInputSchema,
   roundProfessionals,
+  type PeerView,
   type PeerViewInput,
 } from "@/data/screen1";
 import {
@@ -777,25 +778,37 @@ describe("copy", () => {
   });
 
   /**
-   * The broadened-set line: fires on a FULL set that reached past the visitor's exact
-   * sub-industry, and is mutually exclusive with the shortfall line.
+   * The broadened-set line: fires on a FULL set that reached past the visitor's own
+   * answers on EITHER axis, names exactly the axis that widened, and is mutually
+   * exclusive with the shortfall line.
    *
-   * The two properties that make it failproof are asserted directly: it never fires
-   * without a sub-industry, and it never fires alongside `shortfallLine`. The wording is
-   * pinned to the non-negotiables — names the industry, no count, no em dash — rather
-   * than to the exact sentence, which is an editorial choice.
+   * The properties that make it failproof are asserted directly: every fire names an
+   * axis that actually widened, it never fires alongside `shortfallLine`, and the axis
+   * phrase matches the signals. The wording is pinned to the non-negotiables — names the
+   * industry, no count, no em dash — rather than to the exact sentence.
    */
-  it("names a broadened set only when the set reached past the sub-industry", () => {
-    const broadened = dataset.businessTypes.flatMap((type) => {
-      const view = buildPeerView(
-        dataset,
-        input({ industry: type.industry, businessTypeId: type.id }),
-      );
-      return view.peers.broadened ? [view] : [];
-    });
-    // The shipped data has thin sub-industries, so at least one full-but-mixed set
-    // exists; finding none would mean the branch is unreachable, itself worth failing on.
+  it("names a broadened set by the axis that widened, only on a full set", () => {
+    const broadened: PeerView[] = [];
+    for (const industry of dataset.taxonomy.industries) {
+      // Both paths: no sub-industry (band axis only), and each sub-industry (either).
+      const inputs = [
+        input({ industry }),
+        ...dataset.businessTypes
+          .filter((type) => type.industry === industry)
+          .map((type) => input({ industry, businessTypeId: type.id })),
+      ];
+      for (const answers of inputs) {
+        const view = buildPeerView(dataset, answers);
+        if (view.peers.broadenedBusiness || view.peers.broadenedBand) {
+          broadened.push(view);
+        }
+      }
+    }
+    // The shipped data trips both axes somewhere; finding none would mean the branch is
+    // unreachable, itself worth failing on.
     expect(broadened.length).toBeGreaterThan(0);
+    expect(broadened.some((v) => v.peers.broadenedBusiness)).toBe(true);
+    expect(broadened.some((v) => v.peers.broadenedBand)).toBe(true);
 
     for (const view of broadened) {
       const line = broadenedLine(view)!;
@@ -805,28 +818,32 @@ describe("copy", () => {
       // No count, no em dash — the same discipline as the published shortfall branch.
       expect(line, view.industry.industry).not.toMatch(/\d/);
       expect(line, view.industry.industry).not.toContain("\u2014");
+      // The axis named matches the signals — never a reach that did not happen.
+      expect(line.includes("sub-industry")).toBe(view.peers.broadenedBusiness);
+      expect(line.includes("revenue band")).toBe(view.peers.broadenedBand);
       // Mutually exclusive with the shortfall line: the set is full, so that one is null.
       expect(view.peers.shortfall).toBe(0);
       expect(shortfallLine(view)).toBeNull();
     }
   });
 
-  it("never broadens without a sub-industry, and never on a full pure set", () => {
-    // No sub-industry: "beyond your sub-industry" is meaningless, so it must not fire
-    // for any industry, however the set was filled across bands.
+  it("never names the sub-industry axis when none was given", () => {
+    // No sub-industry: "beyond your sub-industry" is meaningless, so that axis must never
+    // fire — but the band axis still may, and the line then names the revenue band alone.
     for (const industry of dataset.taxonomy.industries) {
       const view = buildPeerView(dataset, input({ industry }));
-      expect(view.peers.broadened, industry).toBe(false);
-      expect(broadenedLine(view), industry).toBeNull();
+      expect(view.peers.broadenedBusiness, industry).toBe(false);
+      const line = broadenedLine(view);
+      if (line) expect(line, industry).not.toContain("sub-industry");
     }
 
-    // A well-populated sub-industry fills the set from itself, so the line stays silent —
-    // "only when required" is the whole point.
+    // A well-populated sub-industry fills the set from itself and within band, so the
+    // line stays silent — "only when required" is the whole point.
     const apparel = buildPeerView(
       dataset,
       input({ industry: "Retail", businessTypeId: "ret-apparel" }),
     );
-    if (apparel.peers.shortfall === 0 && !apparel.peers.broadened) {
+    if (!apparel.peers.broadenedBusiness && !apparel.peers.broadenedBand) {
       expect(broadenedLine(apparel)).toBeNull();
     }
   });

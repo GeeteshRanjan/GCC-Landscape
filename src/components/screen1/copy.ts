@@ -532,31 +532,42 @@ export function shortfallLine(
 /**
  * The broadened-set line, and it is the OTHER half of a pair with `shortfallLine`.
  *
- * The gap it fills: a visitor names a sub-industry, the set comes back FULL, but the
- * sub-industry could not fill it on its own, so the remaining slots went to the closest
- * comparable businesses elsewhere in the industry. Every one is above the similarity
- * floor — a defensible peer — but not a literal sub-industry twin, and nothing on the
- * screen said so. A CIO from a fintech who sees two payments companies and three other
- * software firms was left to notice the mix and wonder. This names it, once, as a
- * deliberate widening rather than a miss.
+ * The gap it fills: a visitor's own answers could not fill a set of five on their own,
+ * so the remaining slots went to the closest comparable companies that sit a little
+ * further out — a different line of business, a different size, or both. Every one is
+ * above the similarity floor, so a defensible peer, but not a literal twin, and nothing
+ * on the screen said so. A CIO seeing two payments firms and three other software
+ * companies, or a set that quietly spans four revenue bands, was left to notice and
+ * wonder. This names it once, as a deliberate widening rather than a miss.
+ *
+ * **One frame, variable axis, so it never claims a reach that did not happen.** It names
+ * exactly what widened — the sub-industry, the revenue band, or both — and no more. The
+ * two signals are independent: a visitor who named no sub-industry can still trip the
+ * band axis, which is why `broadenedBand` does not depend on `broadenedBusiness`.
  *
  * **Derived, not editable, and mutually exclusive with `shortfallLine`.** It asserts a
- * property of the matching RESULT (that the set reached past the sub-industry), which is
- * the same reason the other `shortfallLine` branches stay in code — a scope label would
- * be editable, a claim about what the engine did is not. And `view.peers.broadened`
- * already requires `shortfall === 0`, so this returns null exactly when `shortfallLine`
- * returns a sentence; the caller renders `shortfallLine(view) ?? broadenedLine(view)`
- * and never both.
+ * property of the matching RESULT (which axis the set reached on), the same category as
+ * the other `shortfallLine` branches — a scope label would be editable, a claim about
+ * what the engine did is not. Both signals require `shortfall === 0`, so this returns
+ * null exactly when `shortfallLine` returns a sentence; the caller renders
+ * `shortfallLine(view) ?? broadenedLine(view)` and never both.
  *
- * The wording is the same register as the shortfall line: no count, no apology, no
- * per-company tag. "Closest comparable businesses" is the frame that keeps a widened set
- * from reading as a padded one — it is invariant 3's own word, "defensibly comparable",
- * said to the visitor. Forward-facing, so it introduces the cards rather than excusing
- * them.
+ * The register matches the shortfall line: no count, no apology, no per-company tag.
+ * "Closest comparable companies" is the frame that keeps a widened set from reading as a
+ * padded one — invariant 3's own word, "defensibly comparable", said to the visitor.
  */
 export function broadenedLine(view: PeerView): string | null {
-  if (!view.peers.broadened) return null;
-  return `These extend beyond your sub-industry to the closest comparable businesses across ${view.industry.industry}.`;
+  const { broadenedBusiness, broadenedBand } = view.peers;
+  if (!broadenedBusiness && !broadenedBand) return null;
+
+  const axis =
+    broadenedBusiness && broadenedBand
+      ? "sub-industry and revenue band"
+      : broadenedBusiness
+        ? "sub-industry"
+        : "revenue band";
+
+  return `These extend beyond your ${axis} to the closest comparable companies in ${view.industry.industry}.`;
 }
 
 /* The industry card's heading used to be DERIVED — "All of X in India, in one view"

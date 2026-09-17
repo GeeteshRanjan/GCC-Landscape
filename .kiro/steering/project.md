@@ -1683,6 +1683,20 @@ band match is worth 0.3, which on the combined score would drag a business-irrel
 line. The floor can shorten a set; that is invariant 3, not a defect, and `data:verify` counts how often.
 Reasoning for 0.20 over 0.15 sits beside the constant in `similarity.ts`.
 
+**A FULL SET THAT REACHED PAST THE VISITOR'S ANSWERS SAYS SO, IN ONE LINE ON TWO AXES.** `broadenedLine`
+is `shortfallLine`'s pair: where the short line explains a set of three, this explains a set of five that
+could not be filled from the visitor's own sub-industry or size, so it reached the closest comparable
+companies a little further out. Two independent signals on `PeerResult`: `shownSameBusinessType` (its gap
+to `peers.length` is the sub-industry reach) and `bandReached` (some shown peer beyond ±1 revenue band —
+±1 is comfortable, further is the call-out). The view model exposes `broadenedBusiness` and `broadenedBand`;
+the line names whichever fired — "beyond your sub-industry", "beyond your revenue band", or both — and
+never a reach that did not happen. **The band axis does not need a sub-industry**: a visitor thin at their
+own size trips it alone. **Both signals require `shortfall === 0`, so the line is mutually exclusive with
+`shortfallLine` by construction** — that one wins the tie, and the caller renders
+`shortfallLine(view) ?? broadenedLine(view)`. **It stays a DERIVED function, not an editable key**: it
+asserts which axis the result reached on, the same category as the other `shortfallLine` branches, and an
+override sets both signals so it cannot fire on a hand-picked set.
+
 **The old three-rung band ladder survives as `matchPeersByBandLadder`, as the test oracle.** With no
 sub-industry the scored engine reproduces it company-for-company, asserted in `similarity.test.ts` and as
 a `data:verify` invariant. Do not delete it without deleting those.

@@ -2,6 +2,7 @@ import { fteMidpoint, sumProfessionals } from "./derive";
 import type { Company, Dataset, PeerOverride } from "./schema";
 import {
   BAND_ADJACENT,
+  BAND_DISTANT,
   BAND_SAME,
   buildSimilarityModel,
   meetsFloor,
@@ -118,6 +119,21 @@ export interface PeerResult {
    * on a hand-picked set — the same "make no automatic claim" move `shortfall` makes.
    */
   shownSameBusinessType: number;
+  /**
+   * At least one shown peer is more than ONE revenue band from the visitor's — so the
+   * set reached past the ±1-band comfort zone to stay full.
+   *
+   * The band ladder treats same-band and adjacent-band as close (proximity 1 and 0.66);
+   * anything further is `BAND_DISTANT`, and that is what this flags. It is the size-axis
+   * twin of the sub-industry gap above, and `broadenedLine` folds the two into one
+   * sentence — a set can reach on either axis or both. Unlike the business signal it does
+   * NOT need a sub-industry: a visitor who named none but is thin at their own size gets
+   * peers from other bands, and that is worth saying too.
+   *
+   * False for an override, so the line cannot fire on a hand-picked set — the same "make
+   * no automatic claim" move `shortfall` and `shownSameBusinessType` make.
+   */
+  bandReached: boolean;
   /**
    * The floor removed companies that would otherwise have filled a slot.
    *
@@ -488,10 +504,12 @@ export function matchPeers(
       industryOthers: Math.max(0, pool.length - picked.length),
       closeMatches,
       sameBusinessType,
-      // Equal to the shown count, so `broadenedLine` cannot fire on a hand-picked set.
-      // Same reasoning as `shortfall: 0` above: an override makes no automatic claim
-      // about how its companies relate to the sub-industry.
+      // Both set so `broadenedLine` cannot fire on a hand-picked set: the shown count
+      // suppresses the sub-industry axis, `bandReached: false` the revenue-band axis.
+      // Same reasoning as `shortfall: 0` above — an override makes no automatic claim
+      // about how its companies relate to the visitor's answers.
       shownSameBusinessType: picked.length,
+      bandReached: false,
       floorShortened: false,
       overriddenBy: override.id,
     };
@@ -540,6 +558,9 @@ export function matchPeers(
     shownSameBusinessType: input.businessTypeId
       ? peers.filter((c) => c.businessTypes.includes(input.businessTypeId!)).length
       : 0,
+    // Some shown peer is beyond ±1 band. Read off the chosen entries' own proximity
+    // rather than recomputed, so it cannot drift from the score the set was ordered by.
+    bandReached: chosen.some((entry) => entry.bandProximity === BAND_DISTANT),
     // Only a floor effect if there WERE companies left over that the floor removed.
     floorShortened:
       peers.length < limit && eligible.length < Math.min(limit, pool.length),
