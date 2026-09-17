@@ -41,7 +41,7 @@ import { TabZones } from "./zones";
  *
  *   - `ops-power-uptime` is deliberately split so the campus figure and the Tier 1 grid
  *     figure sit together — its own note says a single number "would hide the weaker
- *     one", which is exactly what showing 99.95% alone does. What keeps that honest is
+ *     one", which is exactly what showing the campus figure alone does. What keeps that honest is
  *     the cell's supporting note, which is the PART'S OWN LABEL: "At a Grade A campus
  *     with N+1 backup" scopes the figure to the campus, so the card claims nothing about
  *     the grid rather than quietly claiming the campus figure for it. That is why the
@@ -169,14 +169,14 @@ function summaryCells(shown: readonly ShownMetric[]): SummaryFigure[] {
    * **The part's own label used to ride along as the cell's note, and the SCOPE it was
    * carrying now lives in the metric's title instead.** A cell is one line under its
    * figure, so there is nowhere for a second string to go — and the reason the label was
-   * there at all was that a lifted part must not claim its parent's population: 99.95% is
+   * there at all was that a lifted part must not claim its parent's population: the uptime figure is
    * true of a Grade A campus and not of the Tier 1 grid. Both titles state that
    * themselves now ("Uptime at a Grade A campus", "Grade A stock in top 7 cities"), which
    * is one authored string rather than two strings that have to agree.
    *
    * **The office cell also carries a UNIT, and it is the only cell on any tab that
    * does.** Its figure is a bare 854, which is unreadable without "mn sq ft" — where
-   * uptime's is "99.95%" and carries its own unit inside the formatted string. ANSR asked
+   * uptime's carries its own unit inside the formatted string. ANSR asked
    * for that unit up beside the number rather than buried in the title, so it is passed
    * through as the metric's own `unit` and drawn two scale steps down; see
    * `SummaryFigure.unit`. Nothing here abbreviates or composes it.
@@ -273,7 +273,7 @@ export function OpsPanel({ area }: { area: FunctionAreaView }) {
 
    **Four bordered cards are gone; the discipline they were carrying is not.** The
    instruction was typography and nothing else — no glyph, no illustration, no ring, no
-   bar — because a gauge behind 99.95% would be a part-to-whole claim about a figure that
+   bar — because a gauge behind the uptime figure would be a part-to-whole claim about a figure that
    is not part of anything, and a mark behind a single number invents a scale it has no
    axis for. All of that still holds. What the border was doing was making four labels of
    four different lengths read as four equal cells, and the shared row does it with a

@@ -509,7 +509,22 @@ export const METRIC_CATALOGUE: readonly Metric[] = [
       kind: "breakdown",
       entries: ["At a Grade A campus with N+1 backup", "Tier 1 city grid"],
     },
-    value: { kind: "breakdown", values: [99.95, 99.5] },
+    /**
+     * **Both figures were raised to 100 in an admin publish, and this line is the cascade
+     * that publish needed rather than an endorsement of it.** The catalogue is what
+     * `--reseed-metrics` adopts, so leaving 99.95 and 99.5 here would silently revert a
+     * live edit the next time the seed is re-imported — the third leg of the
+     * load-bearing-title rule in `docs/traps.md`.
+     *
+     * Two things to know before touching it. **A 100% uptime claim is stronger than the
+     * one this card was built to make**, and its own `note` still explains a split that
+     * exists so a single number cannot hide the weaker figure — with both at 100 there is
+     * no weaker figure and the note describes a distinction the values no longer draw. And
+     * 99.95 against 99.5 was the WORKED EXAMPLE for `clusteredHigh`, the rule that drops a
+     * bar rather than truncate an axis; two identical values are a different case. Both are
+     * on the blocked list for ANSR to confirm.
+     */
+    value: { kind: "breakdown", values: [100, 100] },
     gated: false,
   },
   {
@@ -559,7 +574,20 @@ export const METRIC_CATALOGUE: readonly Metric[] = [
     id: "ops-disruption-days",
     functionArea: "operations",
     lens: "place",
-    title: "Working days lost a year, by city",
+    /**
+     * **Retitled and rewritten in an admin publish, and cascaded here for the reason
+     * recorded on `ops-power-uptime` above**: the catalogue is what `--reseed-metrics`
+     * adopts, so a stale copy silently reverts a live edit.
+     *
+     * "by city" left the title when the city breakdown went, which is right — the title
+     * would otherwise name a scope the metric no longer holds. What is worth knowing is
+     * that the metric now stores ZEROES, where the supplied figures were 4, 2, 3 and 6 and
+     * the note put the national extent at 3–6. The 0 was previously supplied in
+     * `ops-view.tsx` (`DISRUPTION_FIGURE`) precisely so the datum stayed truthful and the
+     * fabrication was confined to one cell; it is now in the datum as well, so that
+     * separation is gone. On the blocked list with the uptime figures.
+     */
+    title: "Working days lost a year",
     question: "How many working days a year does the city actually lose?",
     unit: "days a year",
     format: "duration",
@@ -567,9 +595,9 @@ export const METRIC_CATALOGUE: readonly Metric[] = [
       "By city, as supplied, rather than by cause — the seeded split of power, flooding and transit had no figures behind it. Monsoon, civic strikes and extreme weather together account for 3–6 days nationally.",
     structure: {
       kind: "breakdown",
-      entries: ["Bengaluru", "Hyderabad", "Pune", "Chennai"],
+      entries: ["Pune", "Chennai"],
     },
-    value: { kind: "breakdown", values: [4, 2, 3, 6] },
+    value: { kind: "breakdown", values: [0, 0] },
     gated: false,
   },
 

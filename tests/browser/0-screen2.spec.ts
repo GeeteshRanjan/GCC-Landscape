@@ -1632,7 +1632,7 @@ test.describe("the operations composition", () => {
      * breakdown whose own section was removed, which is what makes the notes below
      * load-bearing rather than decorative.
      */
-    for (const [index, figure] of ["8.7M+", "99.95%"].entries()) {
+    for (const [index, figure] of ["8.7M+", "100%"].entries()) {
       await expect(cells.nth(index).getByText(figure, { exact: true })).toBeVisible();
     }
     /**
@@ -1668,7 +1668,7 @@ test.describe("the operations composition", () => {
      * **A cell is ONE line under its figure now, and the SCOPE a lifted figure must not
      * lose is inside that line.** Three of these four are the leading part of a breakdown
      * whose own section was removed, so the cell has to say what population its figure
-     * covers — 99.95% is true of a Grade A campus and not of the Tier 1 grid, and the
+     * covers — the uptime figure is true of a Grade A campus and not of the Tier 1 grid, and the
      * metric is deliberately split so the weaker of the two is not hidden. It used to be
      * carried by a second line holding the part's own label; the titles state it
      * themselves now, which is one authored string instead of two that have to agree.
@@ -1692,7 +1692,7 @@ test.describe("the operations composition", () => {
 
     /**
      * **No mark on any of them, at ANSR's instruction and for a reason.** A gauge behind
-     * 99.95% would be a part-to-whole claim about a figure that is not part of anything,
+     * the uptime figure would be a part-to-whole claim about a figure that is not part of anything,
      * and a bar behind a single number invents a scale it has no axis for. So a cell holds
      * a figure and one label, and nothing else.
      */
@@ -1721,7 +1721,7 @@ test.describe("the operations composition", () => {
       .locator("#function-metrics ul")
       .first()
       .locator("li")
-      .filter({ hasText: "Working days lost a year, by city" });
+      .filter({ hasText: "Working days lost a year" });
     await expect(cell).toHaveCount(1);
     // The label carries the unit and the by-city scope itself, the cell being one line
     // under its figure — the "Across the cities assessed" note went with the second line.
@@ -1769,7 +1769,7 @@ test.describe("the operations composition", () => {
      * `getByText` matches the smallest element containing the whole string, which is the
      * span wrapping the pair.
      */
-    for (const figure of ["99.95%", "854", "8.7M+"]) {
+    for (const figure of ["100%", "854", "8.7M+"]) {
       await expect(band_.getByText(figure, { exact: true }).first()).toBeVisible();
     }
   });
