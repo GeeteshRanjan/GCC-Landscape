@@ -390,11 +390,23 @@ function MapLeaders({
   width,
   pointerRadius,
   className,
+  hovered,
 }: {
   labels: readonly Label[];
   width: number;
   pointerRadius: number;
   className: string;
+  /**
+   * The hovered city's name, whose leader is drawn in the text ink instead of the grey.
+   *
+   * **This is what stops the readout being a restatement.** Above `sm` the label already
+   * carries the count, so a plate repeating it says nothing new — what a reader hovering a
+   * name actually wants is WHICH dot it belongs to, and with up to twenty-two leaders
+   * crossing the peninsula that is the hard part. Darkening the one leader answers it; the
+   * plate at the dot is the confirmation at the far end. No width change, so nothing moves
+   * and no other leader is displaced.
+   */
+  hovered: string | null;
 }) {
   return (
     <g className={className} aria-hidden="true">
@@ -422,7 +434,7 @@ function MapLeaders({
             fill="none"
             strokeLinejoin="round"
             strokeLinecap="round"
-            className="stroke-grey-500"
+            className={label.city === hovered ? "stroke-text" : "stroke-grey-500"}
             strokeWidth={width * 0.002}
           />
         );
@@ -443,12 +455,22 @@ function MapNames({
   className,
   scope,
   showFigure,
+  onHover,
 }: {
   labels: readonly Label[];
   width: number;
   fontSize: number;
   pointerRadius: number;
   className: string;
+  /**
+   * Reports which city the pointer is on, so hovering a NAME reads out the same city
+   * hovering its dot does.
+   *
+   * A name is the easier of the two to hit — it is a word, where the mark it belongs to
+   * can be a few pixels across — and it is the thing the visitor is actually looking at
+   * when they are working out which city a leader points to. See `CityReadout`.
+   */
+  onHover: (city: string | null) => void;
   /**
    * Whether each name carries its count. Passed rather than derived from `scope`, so
    * the two decisions — which layer this is, and what a label says — stay separable;
@@ -469,7 +491,15 @@ function MapNames({
   return (
     <g className={className} aria-hidden="true" data-map-labels={scope}>
       {labels.map((label) => (
-        <g key={`name-${label.city}`}>
+        <g
+          key={`name-${label.city}`}
+          /* `pointerenter` / `pointerleave` rather than `mouseenter`, so a pen and a
+             finger take the same path as a mouse; `pointercancel` because a touch that
+             turns into a scroll never sends a leave. */
+          onPointerEnter={() => onHover(label.city)}
+          onPointerLeave={() => onHover(null)}
+          onPointerCancel={() => onHover(null)}
+        >
           {/* **The dotted pointer sits at the LABEL end, at ANSR's request** — where the
               name is, rather than at the city. It replaced a solid pin at the city end,
               which had a problem of its own: that end already has the halo's hard core,
@@ -510,6 +540,81 @@ function MapNames({
           </text>
         </g>
       ))}
+    </g>
+  );
+}
+
+/**
+ * The hovered city's name and count, drawn at its own dot.
+ *
+ * **This replaced a native `<title>`, and latency is the whole reason.** A `<title>`
+ * inside a shape is an OS tooltip: it arrives about a second after the pointer settles,
+ * in browser chrome, at the pointer rather than at the mark. On a card where the figure
+ * is already in the list beside it, a second of nothing happening reads as the graphic
+ * being inert — which is what it was reported as. This is immediate, has no transition,
+ * and is positioned by the data rather than by the cursor.
+ *
+ * **It is not a figure kept behind a hover**, which this project forbids: every count is
+ * in the ranked list, and above `sm` on the map's own labels too. What the readout buys is
+ * not access to the number but proximity — it puts it at the dot, so a reader working out
+ * which mark a leader belongs to does not travel back to the list and lose their place.
+ *
+ * Placed above the dot and clamped to the frame on both axes, so a hub near an edge does
+ * not draw its plate outside the viewBox. `pointer-events: none` on the whole group,
+ * because a readout that can be hovered is a readout that flickers when the plate covers
+ * the mark that opened it.
+ */
+function CityReadout({
+  city,
+  figure,
+  x,
+  y,
+  radius,
+  width,
+  fontSize,
+}: {
+  city: string;
+  figure: string;
+  x: number;
+  y: number;
+  /** The mark's own radius, so the plate clears the halo rather than sitting on it. */
+  radius: number;
+  width: number;
+  fontSize: number;
+}) {
+  const padX = fontSize * 0.5;
+  const padY = fontSize * 0.34;
+  const textWidth = `${city} ${figure}`.length * GLYPH_ADVANCE * fontSize;
+  const plateWidth = textWidth + padX * 2;
+  const plateHeight = fontSize + padY * 2;
+  // Above the mark, or below it where there is no room above.
+  const above = y - radius - fontSize * 0.5 - plateHeight;
+  const plateY = above < 0 ? y + radius + fontSize * 0.5 : above;
+  const plateX = Math.min(
+    Math.max(x - plateWidth / 2, 0),
+    Math.max(width - plateWidth, 0),
+  );
+  return (
+    <g aria-hidden="true" className="pointer-events-none">
+      <rect
+        x={plateX}
+        y={plateY}
+        width={plateWidth}
+        height={plateHeight}
+        rx={fontSize * 0.3}
+        strokeWidth={width * 0.002}
+        className="gcc-map-tip-plate"
+      />
+      <text
+        x={plateX + padX}
+        y={plateY + plateHeight / 2}
+        dominantBaseline="middle"
+        className="gcc-map-tip-label font-display font-medium tracking-body"
+        style={{ fontSize: `${fontSize}px` }}
+      >
+        {city}
+        <tspan className="gcc-map-tip-figure tabular-nums"> {figure}</tspan>
+      </text>
     </g>
   );
 }
@@ -679,36 +784,20 @@ function layOutLabels(
 }
 
 /**
- * How many hubs carry the pulse.
+ * **THERE IS NO HUB PULSE, at the project owner's instruction, and `PULSED` /
+ * `PULSE_CYCLES` are deleted rather than set to zero.**
  *
- * **The halo pulses, never the dot.** A dot's radius is the encoding — it is how
- * many GCCs are in that city — so animating the radius animates the claim, and a
- * mark that grows and shrinks is a figure that grows and shrinks. The halo is a
- * separate ring that carries no value, starts at the dot's own radius and expands
- * out of it, so nothing measurable moves.
+ * Three leading hubs carried an expanding accent ring for two cycles as the screen
+ * arrived. Every constraint this project puts on motion was satisfied — the ring
+ * carried no value, so no figure moved; it ran on three marks rather than the whole
+ * field; it stopped rather than looping — and it was still emphasis by RANK, drawn in
+ * motion, on the one graphic whose entire claim is the comparison of dot areas. A
+ * reader sizing Chennai against Bengaluru was doing it while two of the marks moved.
  *
- * Three, staggered, rather than all of them: the whole field breathing at once is
- * a screen artefact, and three offset by a third of the cycle each reads as the
- * leading hubs taking turns. Ambient motion, on the same footing as the customer
- * logo strip — see `--ansr-duration-pulse`.
+ * It is the same argument that took `emphasis` off the ranked list's leading row: the
+ * three cities are already first in the list, already the largest marks, and already
+ * labelled. `.gcc-map-pulse` and its keyframes went from globals.css in the same pass.
  */
-const PULSED = 3;
-
-/**
- * Cycles the halo runs before it stops.
- *
- * **Two, not forever.** An infinite loop on a data mark is the one place the
- * project's motion read as decoration: nothing about the map changes after the
- * screen arrives, so a pulse that never stops is announcing an event that is not
- * happening, and a reader comparing two dot sizes is doing it against a graphic
- * that keeps moving. Two cycles is enough to say "these three are the leading
- * hubs" and then get out of the way — the same logic as the enter animations,
- * which are tied to a state change and then done.
- *
- * Ambient period, not a step on the duration scale, so it stays on
- * `--ansr-duration-pulse`. What changed is the iteration count, in CSS beside it.
- */
-const PULSE_CYCLES = 2;
 
 /** How many cities the ranked list shows before "Explore all cities". */
 const RANKED = 8;
@@ -765,6 +854,15 @@ export function CityMap({ map }: { map: MapBlock }) {
    */
   const copy = usePublicCopy();
   const [showAll, setShowAll] = useState(false);
+
+  /**
+   * Which city the pointer is on, by name.
+   *
+   * Held as the NAME rather than the row, so the readout always reads today's figure out
+   * of `map.cities` — a disclosure or a new industry replaces that array, and a captured
+   * row would keep drawing the count it was hovered with.
+   */
+  const [hovered, setHovered] = useState<string | null>(null);
 
   const plotted = map.cities.filter((city) => city.point !== null);
   const ranked = showAll ? map.cities : map.cities.slice(0, RANKED);
@@ -881,6 +979,14 @@ export function CityMap({ map }: { map: MapBlock }) {
     false,
   );
   const phonePointerRadius = pointerRadiusFor(phoneLabelFontSize);
+
+  /**
+   * The hovered row, resolved out of today's `plotted` rather than captured on the
+   * pointer event. A city with no coordinate has no dot to draw a readout at, and a name
+   * held from a previous industry simply resolves to nothing.
+   */
+  const hoveredCity =
+    hovered === null ? null : (plotted.find((city) => city.city === hovered) ?? null);
 
   return (
     /**
@@ -1044,28 +1150,6 @@ export function CityMap({ map }: { map: MapBlock }) {
               />
             </g>
 
-            {/* The pulse, behind every dot so a halo never crosses a mark. */}
-            {plotted.slice(0, PULSED).map((city, index) => {
-              const point = city.point!;
-              return (
-                <circle
-                  key={`pulse-${city.city}`}
-                  aria-hidden="true"
-                  className="gcc-map-pulse"
-                  cx={point.x}
-                  cy={point.y}
-                  r={radiusFor(city.companies, map.peak, map.width)}
-                  strokeWidth={map.width * 0.004}
-                  style={
-                    {
-                      "--gcc-pulse-index": index,
-                      "--gcc-pulse-cycles": PULSE_CYCLES,
-                    } as React.CSSProperties
-                  }
-                />
-              );
-            })}
-
             {/* **Angled elbow callouts, at ANSR's request.** A 45° leg out of the
                 city, then a horizontal leg out to the gutter where the name sits.
 
@@ -1093,12 +1177,14 @@ export function CityMap({ map }: { map: MapBlock }) {
               width={map.width}
               pointerRadius={phonePointerRadius}
               className="sm:hidden"
+              hovered={hovered}
             />
             <MapLeaders
               labels={labels}
               width={map.width}
               pointerRadius={pointerRadius}
               className="hidden sm:block"
+              hovered={hovered}
             />
 
             {/* **ONE mark form on the field, at ANSR's request.** It was a solid
@@ -1123,24 +1209,50 @@ export function CityMap({ map }: { map: MapBlock }) {
               const point = city.point!;
               const radius = radiusFor(city.companies, map.peak, map.width);
               return (
-                <g key={city.city}>
+                <g
+                  key={city.city}
+                  onPointerEnter={() => setHovered(city.city)}
+                  onPointerLeave={() => setHovered(null)}
+                  onPointerCancel={() => setHovered(null)}
+                >
                   {/* Area is still the encoding and the radius function is
                       untouched — the halo's outer edge is the same circle the
-                      solid disc drew, so the claim has not moved. */}
+                      solid disc drew, so the claim has not moved.
+
+                      **The `<title>` is gone and `CityReadout` is what replaced
+                      it.** A `<title>` is an OS tooltip about a second behind the
+                      pointer, which is what "too slow" was; the readout is
+                      immediate and sits at the dot. Nothing is lost to assistive
+                      technology: this `<svg>` is a `role="img"` with its own
+                      `aria-label`, so its descendants were never in the
+                      accessibility tree, and the ranked list beside it names every
+                      city with its figure. */}
                   <circle
+                    aria-hidden="true"
                     cx={point.x}
                     cy={point.y}
                     r={radius}
                     className="gcc-map-halo"
-                  >
-                    <title>{`${city.city}: ${formatCount(city.companies)}`}</title>
-                  </circle>
+                  />
                   <circle
                     aria-hidden="true"
                     cx={point.x}
                     cy={point.y}
                     r={coreFor(radius, map.width)}
                     className="fill-action"
+                  />
+                  {/* The hit area, and it is deliberately larger than the mark. A
+                      halo has no edge, and the smallest one in a thin industry is a
+                      couple of device pixels across — so hovering the mark itself is
+                      a precision task on exactly the cities a reader most needs
+                      named. Transparent rather than a low opacity, so it adds no ink
+                      to a field whose whole point is the density of what is on it. */}
+                  <circle
+                    aria-hidden="true"
+                    cx={point.x}
+                    cy={point.y}
+                    r={Math.max(radius, map.width * 0.02)}
+                    className="gcc-map-hit"
                   />
                 </g>
               );
@@ -1165,6 +1277,7 @@ export function CityMap({ map }: { map: MapBlock }) {
               className="sm:hidden"
               scope="phone"
               showFigure={false}
+              onHover={setHovered}
             />
             <MapNames
               labels={labels}
@@ -1174,7 +1287,24 @@ export function CityMap({ map }: { map: MapBlock }) {
               className="hidden sm:block"
               scope="wide"
               showFigure
+              onHover={setHovered}
             />
+
+            {/* **Last in the tree, so the readout is over every mark, leader and name.**
+                One layer for both widths — the plate is sized off the frame and the
+                position comes from the city's own dot, neither of which is a property of
+                which label layer is drawn. See `CityReadout`. */}
+            {hoveredCity ? (
+              <CityReadout
+                city={hoveredCity.city}
+                figure={formatCount(hoveredCity.companies)}
+                x={hoveredCity.point!.x}
+                y={hoveredCity.point!.y}
+                radius={radiusFor(hoveredCity.companies, map.peak, map.width)}
+                width={map.width}
+                fontSize={map.width * 0.032}
+              />
+            ) : null}
           </svg>
         </div>
 

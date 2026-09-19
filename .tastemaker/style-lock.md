@@ -33,10 +33,101 @@ through its whole stack to `system-ui` and with it the one typographic fact that
 this brand: **body copy is the display face's Light 300**. A missing face does not fail loudly — it
 renders in the system sans at Regular, which looks deliberate.
 
-Hanken Grotesk, self-hosted through `next/font` in `layout.tsx`, with real 300/400/500/600/700
-files. It is the stand-in; the brand's face is Moderat and its licence for an embedded tool is
-ANSR's to answer. When it is, Moderat goes in front of it in `--ansr-font-display` and nothing else
-changes.
+**AND IT IS MODERAT NOW — the brand's own face, supplied by ANSR.** Four woff2 faces converted
+from the supplied TTFs, self-hosted through `next/font/local` in `layout.tsx`: Light 300 (the body
+weight and the brand's biggest tell), Regular 400, Medium 500, Bold 700. Hanken Grotesk was the
+stand-in for the passes in this file above and is deleted, not parked.
+
+**What the swap was NOT is a one-line token edit, and two things are worth keeping.**
+
+- **THE FAMILY HAS NO SEMIBOLD, so 600 is drawn by MEDIUM and the direction of that collapse is
+  the decision.** Moderat's real weights are Thin 100, Light 300, Regular 400, Medium 500, Bold
+  700, Black 900. Declare four faces and leave 600 out, and CSS matching resolves it UPWARD onto
+  Bold — which is the collapse that cannot be had, because `IndexTable` marks its base column in
+  bold against semibold siblings and nothing else ("ink alone is the whole signal"), and the same
+  pairing carries the anchor cell in `IndexLollipop` and the emphasised row in two other charts.
+  So the Medium file is declared across `500 600` and the collapse goes the other way: `font-medium`
+  and `font-semibold` are now one ink, and every bold-against-not-bold pairing gained a step. The
+  cost is the 12px caps eyebrows, which sat on a real 600 and now sit on a 500 — accepted, because
+  they are also separated from what they label by size, case and colour. The token stays 600 rather
+  than folding into `medium`, so a licensed SemiBold would light all ~130 call sites up again.
+- **Anything measured ink-to-ink had to be RE-MEASURED rather than scaled.** Moderat's content area
+  is 1.2 em against `--ansr-leading-display` at 1.05, so display ink hangs outside its own line box
+  at both ends. The hero's three corrections moved by three unrelated factors — the cap trim barely
+  at all, because the ink under the lockup is a drawn SVG and only the baseline beneath it shifted;
+  the lead's by a step, being pure font metrics; the baseline pad nearly tripled, because Moderat's
+  descender ink is 0.21 em against the 0.125 em the line box holds below the baseline. One factor
+  applied to all three would have been wrong three ways. Numbers in `ask-hero.tsx`.
+
+Also settled by the swap: the `h1`'s Medium 500 was chosen to match the drawn marks' stems against
+*Hanken's* weights, and it survives on Moderat's own with a wider margin — ATLAS's stem is 0.1417 of
+its cap height against Moderat's 0.130 at Regular, 0.150 at Medium and 0.189 at Bold.
+
+### Figures take Moderat's LINING set: its tabular zero is slashed and its default figures are short
+
+**Two separate defects in the same family, and one declaration answers both.** The tabular set slashes
+its zero; the DEFAULT set is 8.6% shorter than the capitals. So neither of the family's two obvious
+figure sets is right, and the third one is.
+
+**The short-figure half was ANSR's report and it is measured.** The default `5` reaches 0.640em and the
+default `0` 0.651em, against capitals at 0.700em — so any string mixing digits with letters drew the
+number visibly smaller than the words beside it. "50 FTEs" on the scale-milestone card is where it read
+worst, with "100+ FTEs", "10+ years" and "$2.5B+" carrying the same defect; measured on the real render
+at 12px, the digits' ink started 0.50px below the letters'. `lnum` substitutes the lining set at
+0.700em for `5` and 0.710em for `0` — the capitals' own height to within their overshoot — and raises
+`$` and `%` to their `.case` variants for the same reason. After: 0.25px, which is the round zero's
+overshoot and is correct. **Those glyphs are 2-contour, so cap-height figures cost nothing**: the slash
+belongs to the tabular set, not the lining one.
+
+**Applied to the SURFACE rather than to the strings that mix.** Mixed figure heights across one product
+is worse than either height chosen consistently, and this tool is figures throughout — a card's display
+numeral and the eyebrow above it should share a cap line as much as "50 FTEs" should.
+
+
+
+**RESOLVED at ANSR's request: `tabular-nums` is neutralised on the public surface.** Every figure in the
+product carries the class, and on Moderat the feature substitutes the whole tabular set — the zero gains
+a slash and the `1` loses its flag for a footed stem — so "800K", "19,700–19,800", "1,250" and every axis
+zero were reading with a slash through them where the approved comps had none.
+
+**There was no tabular variant to switch to instead.** The family holds four — `zero.tf`, `zero.tosf` and
+both of their `ss01` alternates — and all four are three-contour glyphs, which is to say all four are
+slashed. The foundry designed the tabular set that way, which is the conventional reason for one to
+exist: a slashed zero is unmistakable in a column. **`lining-nums` ALONGSIDE `tabular-nums` does not
+rescue it** — that pair selects `zero.tf`, which is cap-height and still slashed — which is why the
+tabular set had to come off entirely and why lining is applied on its own. So the unslashed zeros in
+Moderat are the default one and the lining one, and reaching either means not asking for tabular
+figures at all.
+
+**What it cost, measured.** Moderat's default figures are PROPORTIONAL — at 200px, `1` is 369 units
+against `0` at 604 — so a stacked pair of figures is now very slightly ragged. Affordable because nothing
+here is a true numeric column: `IndexTable` is `table-fixed` and CENTRED, the ranked rows put one figure
+in an auto-sized trailing column, and every display figure is alone in its own cell. Checked on the
+finance index table, the containment chart and the impact band's row of five before shipping.
+
+**One rule in `globals.css` rather than ~100 deletions, and the classes stay as INTENT.** Several call
+sites carry a docblock naming the column their figures were meant to align in; deleting the class would
+delete that reasoning, and this is a decision ANSR can reverse in one line. It is scoped to
+`.font-display`, so admin keeps real tabular figures for its own dense tables.
+
+### There is exactly ONE comma in Moderat, and `ss01` is a THIN set rather than a plain one
+
+**Asked for and not applied, with the measurements as the reason.** The family's only punctuation
+alternate is `ss01`, which the font itself names **"Thin Symbols & Accents"** (`ss02` is "Alternate
+a/g/y"). Two findings settle it:
+
+- **The comma is not in it in any meaningful sense.** `comma` and `comma.ss01` measure 157 × 299 and
+  157 × 294 units at Bold — a 0.5%-of-em difference in height and none in width. Whatever is read as
+  fancy in the thousands separator is Moderat's comma, and the family offers no second one.
+- **What `ss01` really changes damages the weights this tool draws.** It halves the en dash (100 → 44
+  units of thickness at Bold), thins the brackets and the `%` and `+`, and swaps the ampersand for a
+  different, MORE decorative form — which lands on all 24 industry names. Rendered at the four real
+  pairs (Bold 44 headcount, Medium 30 industry name, Medium 24 card name, Light 20 hero lead): it is
+  designed to pair with Light, where it is near-invisible, and under-weights punctuation everywhere
+  above it.
+
+So the set is available and deliberately unused. If a lighter separator is wanted on the big figures
+specifically, that is a targeted change at those call sites rather than a surface-wide feature.
 
 **Opted into per surface, not set on `body`.** Both states of Screen 1 carry `font-display` now;
 Screen 2 and admin still resolve to `--ansr-font-sans`. Admin stays on Inter deliberately —
@@ -610,6 +701,34 @@ ask has no muted copy on it and can therefore use the real ground.
 **The hero is leading-aligned and inset, and carries exactly two text elements.** 80px
 Medium 500 at 1.05 leading, then 24px Light 300. Nothing else — no eyebrow, no pill, no
 proof line.
+
+### The hero's brand lockup — `masthead`, and the four compositions it beat
+
+ANSR's lockup sits above the headline at 44px on a phone and 56px from `md`, with 20/24px of
+optical space under it and the same under the title. Chosen by the project owner from five
+compositions built at `/variants/logo`, now deleted. Every one of them was built on the two
+corrections that are NOT candidates and now apply always — the lockup sized by its wordmark's
+letters against the lead's type, and every interval declared ink to ink — so what was being
+compared was the relationship, not the fix. `project.md` carries both rules.
+
+What it beat, and why each is worth knowing rather than re-trying:
+
+- **`pair`** — 48px lockup, 16px above the title and 32px below it, so the mark and the
+  headline read as one block with the lead set off. Genuinely good, and the reason it lost is
+  that the band's job is to name the product first: pairing the brand with the title makes
+  `ANSR` read as part of the product's own name, which is the failure `BRAND` /
+  `withBrandMark` were deleted for in the first place.
+- **`masthead-lg`** — the same relationship with a 64px lockup and 32px under it. Rejected as
+  the brand competing with the title for the band's first read.
+- **`logo-led`** — 80px lockup, 48px shoulder. The brand reads first and the title hangs off
+  it. The strongest claim about whose tool this is, and too strong: the visitor came for their
+  own peer set, not for ANSR's identity.
+- **`corner`** — the lockup pinned in the band's top trailing corner, costing the band no
+  height at all. The one structurally different answer, and it has a real advantage on a phone
+  where the band is 48px shorter. It lost on two counts: the corner is where the dot map's own
+  field begins, and the brand there reads as site furniture rather than as the publisher of
+  what follows. Restoring it means rewriting the leading-edge assertion in `0-screen1.spec.ts`,
+  not deleting it.
 
 - **Leading-aligned, which reverses a centred pass and is back to the reference's own hero
   anatomy.** Centring was the honest composition for a band with nothing on either side of
@@ -2633,8 +2752,11 @@ blocked on ANSR; each is a call somebody has to make with a render in front of t
 - **The hero map is absent below 1024px**, which is most phone and tablet traffic. Entry point only,
   so no evidence is lost; what is lost is the one ornament that makes the ask band read as ANSR's.
 - **The locations map's labels are about 12px at 390 and the three leading hubs cluster tightly
-  there.** The in-place labels are set against Hanken's metrics, so re-read this once Moderat lands
-  rather than tuning it twice.
+  there.** Re-read on Moderat, which is what this was waiting for, and it HELD on the two things
+  that would have broken: no two of the eight labels overlap at 390 or at 1440, and none is clipped
+  by the panel's `overflow: hidden`. One label reaches past the SVG frame at 1440, which is what the
+  9% wrapper reserve is for. So the estimate in viewBox units survives a face 8% wider than the one
+  it was tuned against; the clustering itself is unchanged and still a judgement rather than a defect.
 - **Deferred from the earlier critique, not refused:** hover cross-highlighting between the
   locations map and its ranked list, and map filter controls. Both are interactions rather than
   omissions, and neither is blocked on anyone.
@@ -3209,7 +3331,9 @@ the density lands in the corner the content never reaches.
   size is a fraction of the SVG's viewBox width. That proportionality is correct for the marks and
   wrong for text a person reads, but the label layout estimates its own text widths in viewBox units —
   so a fixed CSS size would need `layOutLabels` reworked, and this pass had just changed its geometry.
-  Left as measured rather than half-fixed. Re-read it when Moderat lands, with the 390 clustering.
+  Left as measured rather than half-fixed. Re-read on Moderat with the 390 clustering, and it held —
+  no overlaps and nothing clipped at either width, so `layOutLabels`' viewBox-unit estimate absorbed
+  the wider face. Still open as a decision about proportional type, not as a bug.
 - **The halo clusters**, above. Needs ANSR's eye on whether the mark form can change at all, since one
   mark form was their instruction.
 - **Two zones carry a white card on a white ground** — the containment chart and the map — which the
@@ -3651,10 +3775,11 @@ Hanken Grotesk, and every rendered size is on the scale — the `%` suffix was t
 is now two real steps down. The 12.339px density-map label is unchanged and still measured rather than
 half-fixed.
 
-**The brand's face is still not on the page.** Moderat is what ansr.com sets and what this pass was
-asked for; there are no licensed files in the repo, so `--ansr-font-display` still resolves to Hanken
-Grotesk. Nothing about the plumbing needs designing — drop woff2 files in and put Moderat at the front
-of the token — so this is a licence question rather than a design one. On the blocked list.
+**RESOLVED SINCE: the brand's face IS on the page.** ANSR supplied Moderat and four converted woff2
+faces ship; `--ansr-font-display` resolves to it. The prediction that the plumbing needed no designing
+held, and the prediction that nothing else would change did not — the family has no SemiBold and every
+ink-to-ink correction on the hero had to be re-measured. See the typeface section at the top of this
+file.
 
 ## The second client list — six more, and two of them were arithmetic
 
@@ -6147,3 +6272,474 @@ how the graphic came to be lit three ways in the first place.
 **Accepted cost, at 320 only:** India's dots sit behind the tail of the headline's second line. They clear
 the floor there by measurement, and the alternative is the top hold that was just removed for reading as a
 different composition. It is ornament behind two words, not a contrast failure.
+
+## The role map's second pass — the slide, measured rather than read
+
+Four asks from ANSR, all about the graphic looking unlike `Slide4.jpg`. What the rules that came out of it
+say is in `project.md`'s role map block; this is what was tried, what was measured and what was refused.
+
+### The instrument
+
+The first pass read the slide by eye. This one scanned it: a flood-fill over saturated and mid-grey pixels
+in `Slide4.jpg` recovers all thirty-six discs plus the seven legend swatches, each with a centroid, an area
+and a mean colour, against a field measured at x 60..1218 and bands at y 81..319 and 320..556. **The
+recovered POSITIONS agree with the stored `complexity` and `lane` to about one unit**, which is the finding
+that mattered most: the hand placement was sound and everything else was not. Run the scan again before
+arguing about any number below.
+
+### Sizes — the ramp was fitted to a wrong claim, twice, in the same direction
+
+The shipped ramp ran 0.875 / 1.25 / 1.75 / 2.75 of the unit on a note claiming the slide's largest disc is
+3.7 times its smallest. Measured, the slide's extremes are 47.1 and 18.3 px — 2.57 — and its four classes
+centre on 21.22 / 26.60 / 34.16 / 47.11, which is 2.22 end to end. Scaled by 1070/1160 for this field's own
+plot and divided by the 16px unit, that is **1.224 / 1.533 / 1.969 / 2.716**, and the fifth step extrapolates
+on the same growth to 3.749.
+
+**The second pass took cluster figures off a histogram rather than the class MEANS, and every disc drew
+small.** It shipped 1.175 / 1.50 / 1.90 / 2.70 against figures of 20.4 / 26.0 / 33.1 / 46.6 — each a point or
+two under its class's own mean. Measured disc by disc against the slide at 1440, mean diameter error was
+1.24px, **signed almost entirely negative**, worst 2.7px on `salesforce-engineer`. A uniform undershoot is
+the hardest kind of size error to see: nothing looks wrong beside its neighbour, the whole field just reads
+as marks too small for their labels — which is what "the sizes are wrong" turned out to mean. Take the mean
+of the class, never a round number near it.
+
+**The four classes are the OPTIMAL contiguous partition, computed rather than judged.** An exhaustive DP over
+the sorted diameters minimising within-class variance returns 20 / 9 / 6 / 1 at 18.3–23.3, 25.2–28.6,
+30.7–35.6 and 47.1, and **all thirty-six discs land on the step already stored** — so the assignments are
+confirmed, not changed. `qa-test-engineer` at 30.7 is the only borderline one and it belongs at step 3: it is
+4.2px under that class's mean and 3.7 over step 2's, but the largest gap in the region is 30.7→33.5 the other
+way, and the partition puts it with the six.
+
+**REFUSED: a fifth demand step.** The same DP at k=5 splits the twenty-disc low class into 7 and 13, halving
+RMSE from 1.34 to 1.04 — a real improvement in fidelity, and the schema and the ramp both already allow five.
+It was refused on two grounds. The two new steps draw 18.2 and 20.3px, a 2px difference nobody can read, so
+it buys a fifth ordinal WORD for an imperceptible size step; and that word is ANSR's to pick — it would have
+to be inserted between "Moderate" and "High", which re-rates every bubble in the table. Naive k-means is
+worse than useless here for the same question: from a quantile init it splits the dense low cluster and lumps
+33.5 with 47.1, because it assumes equal variance and this distribution has none.
+
+**The error was at the BOTTOM of the scale, which is why it was hard to see.** A step-1 disc drew at 14px
+against the slide's 18.8 — nineteen of thirty-six discs, the whole low-demand majority — while step 4 was
+within a pixel. So the chart's densest region was a third too small and the one disc anybody looks at was
+right.
+
+### Placement — it was already right, and four lanes cannot be
+
+Rendered dot centres, measured against the slide's own scaled by 1070/1160: **mean 3.2px out, worst 9.9px**,
+on a field 1070 by 440. So every complaint about this chart's placement has resolved to something else — the
+band height in one pass, the dot sizes in this one.
+
+Two values were a unit off and moved onto the measurement: `security-engineer` 36→35, `full-stack-developer`
+complexity 25→26. **Four were tried at their measured value and reverted, each because `rolemap:check` named
+a collision**: `ai-ml-engineer` at 13 puts its label into `agentic-engineer`'s disc by 4.9px (15 clears by
+3.7, and 14 still fails by 0.7); `full-stack-developer` at 90 meets `application-developer`'s disc by 0.5;
+and `backend-engineer` 93 with `frontend-engineer` 95 — the slide's own two lanes apart — overlap their two
+labels by 28px, where 92 and 96 clear. One cause in all four: Moderat sets these names wider relative to the
+plot than the slide's face does, so a label needs vertical room the source never had to give it. **A value
+that matches the source is not a value that fits.**
+
+The three discs on the SEAM need no nudge at all — `systems-engineer` 51, `data-annotator` 52,
+`integration-engineer` 48 are the slide's own — and the one canvas is what bought that.
+
+**Re-measured after the ramp refit, at 1280 and 1440**: zero collisions at 27.5rem. A bigger disc pushes its
+own label outward, so growing every step did not cost a pair.
+
+### The join, and the three discs on it
+
+The two fields sat in the parent column's `gap-5`, so 20px of the panel's white ran between two washes. The
+slide draws them as one block with one seam. Closing the gap is one line; what it costs is that
+`systems-engineer` (lane 1.5), `data-annotator` (3.4) and `integration-engineer` (96.7) then straddle the
+seam, which says a role is in both bands at once.
+
+**Fixed in the data, at lanes 6, 12 and 95.** Rejected: clamping the lane in CSS against the disc's own
+radius. It would have worked and it puts the placement in two places — the stored lane would no longer be
+where the disc is, which is exactly the property that makes this table auditable against the slide.
+`data-annotator` went to 12 rather than 7 because at 7 its label ran into `systems-engineer`'s disc 2.4px
+deep, and at 13 it grazed `software-engineer`'s.
+
+### The fields — hue, not another step of the teal ramp
+
+Both bands were `surface-tint`, on the argument that the slide's warm-and-cool pair reads as a judgement
+about the work. What that missed: two identical fills touching across a seam do not say "two groups", they
+say one field with its label repeated. So emerging took `--ansr-surface-warm`, which is `orange-100` and the
+first warm ground in the system.
+
+Measured: orange-100 is 1.150:1 on white, teal-100 is 1.271, and the two are 1.105:1 against each other.
+**That smallness is the decision** — hue carries the split, and a bigger luminance step is what would bring
+back the judgement the single fill was protecting against. Every ink the mint takes is legal on the warm
+field and 0.35 better.
+
+Rejected: a second teal step (`teal-200`) for one band — that is a ranking, and it takes gold to 2.87.
+Rejected: `surface-pale` for one of them at 1.019 on white, which is the fill that made this chart read as
+unstructured in the first place.
+
+### The band label — the pill goes
+
+The slide draws a filled pill per band, in red and in dark teal. Reproduced faithfully, it put a
+button-shaped object at the leading edge of a field whose every other mark is a flat disc, on a surface
+where nothing is pressable. It was there to stop a faint label vanishing on a faint field; with each field
+carrying its own hue the label can be ink. `accent-warm` at 5.68:1 on the warm field, the heading teal at
+7.72:1 on the mint — each band's own hue, which is also the second thing telling a reader the fields differ.
+
+### The inks — what a 3:1 floor can and cannot buy
+
+The palette shipped darkened across the board, every hue at 4.7:1 or better on white. ANSR read it as dirty,
+which it was: darkening costs chroma as well as lightness, so seven inks held to one contrast level are
+seven muted inks. The floor for a non-text mark is 3:1, and the ground that binds is the established
+field rather than white.
+
+Re-derived by darkening each of the slide's own hues in linear light until the worst of white, orange-100
+and teal-100 reaches 3.05. Four need no change at all. Ratios on teal-100, the binding ground:
+
+| family | shipped | now | on teal-100 | note |
+| --- | --- | --- | --- | --- |
+| AI / ML | `#C0372C` | `#E04E2F` | 3.12 | slide's own |
+| Data Engineering | `#0F6E6B` | `#0E7C7B` | 3.94 | slide's own |
+| Cloud & Platform | `#1C6FA8` | `#2A8CA5` | 3.06 | slide's is 2.18 |
+| Cybersecurity | `#566A72` | `#6F7D7D` | 3.37 | slide's own |
+| Application Dev | `#9A6A05` | `#A97907` | 3.05 | slide's is 1.70 |
+| Quality Eng | `#2E7D32` | `#149144` | 3.20 | slide's is 2.55 |
+| Product & Design | `#6A4A9C` | `#7860A4` | 4.12 | slide's own |
+| spare (unused) | `#A33B76` | `#C42C7A` | 4.14 | no family |
+
+**Gold is the one real loss and the obvious fix is REFUSED rather than open.** A yellow at 3:1 is olive:
+`#A97907` is the most chromatic value in that hue that clears, and the slide's `#E5A50D` is 1.70. Pushing it
+toward orange does clear — `#C06A00` is 3.12, `#BF5700` is 3.61 — and at that hue it stops being separable
+from AI / ML's red, which is the one distinction this pair has to keep. Nine of the thirty-six discs are
+Application Development, so the family is the most visible one on the chart and the least improvable.
+
+Also rejected: lightening the established field to `teal-50` so the inks could be brighter. It buys about
+0.8 of ratio and costs the field — 1.019 on white is the fill that reads as nothing.
+
+### The key — three tiers, not three blocks
+
+The demand note led a row with the legend trailing it in three `w-fit` columns under `ms-auto`. Each half
+was solving a different problem in one line: a colour key kept narrow enough to clear a sentence, and a
+sentence pushed to the leading edge of a card whose marks it describes.
+
+Now: the axis ends the chart, one hairline closes it, and below the hairline the legend comes first because
+it decodes seven marks and the two captions second because they qualify rather than decode. The legend keeps
+the capability grid's `w-fit` + `1fr` device and loses `ms-auto` — two columns from `sm`, four from `lg`,
+leading-aligned, which is the slide's own 4-and-3.
+
+**Both breakpoints are measurements.** A column is ~178px at "Data Engineering & Analytics" plus its
+swatch, so four columns and their gaps are ~810px: inside the 1070px field, outside the ~672 a `md` card
+has. The two captions share a row only from `lg` — at 768 the pair is ~490px of ink in 672 minus a gap, and
+both halves wrapped into ragged blocks at opposite ends, which is worse than the stack it replaced.
+
+**The axis lost its own hairline**: the fields now end on a solid tinted edge, so a rule under them was a
+second separator drawn two pixels from a real one.
+
+## The role map's third pass — one canvas, and the slide's own scale
+
+Three more asks, and one of them overturned the pass above. `project.md`'s role map block holds the rules;
+this is the measurement and what was refused. `npm run rolemap:check` reproduces every figure.
+
+### The instrument was measuring the wrong thing
+
+The second pass swept band heights against LINE BOXES and dot BOUNDING boxes and concluded the field needs
+18rem per band. Both readings are wrong in the same direction. A 12px label is about 1.0em of ink inside a
+1.2em content area, so two labels "collide" whenever they are within each other's empty leading; and two
+circles' bounding boxes overlap well before the circles do — at the corners, where a disc has no ink.
+
+Measured as real geometry — circle to circle, circle to ink box, ink box to ink box — the field carries no
+collision at the SLIDE'S OWN aspect. That is the whole of what made the placement read wrong: `lane` is a
+percentage, so a box 31% too tall stretches every vertical interval and leaves the horizontal ones and the
+discs where they were. A compact horizontal scatter became a sparse vertical one.
+
+The instrument is now `scripts/check-role-map.mjs`, with `LANES` and `SIDES` overrides so a candidate
+placement can be measured before it is written to the dataset. Everything below was found with it.
+
+### One canvas, because three discs sit across the divide
+
+The two bands were two positioned boxes with `lane` scoped to each. The slide's own reading needs the
+opposite: Integration Engineer sits above the divide, Systems Engineer and Data Annotator below it, and all
+three overlap it — measured, their discs cross y 319.5 in the source. A disc confined to one box can only be
+clipped to that box's 0..100, so the second pass nudged all three off the join and called the straddle a
+false reading. It is not; it is the graphic saying those roles sit between the registers.
+
+So the divide is a colour stop at 50.2% of one canvas, and `lane` is a percentage of the whole field.
+**Rejected: keeping two boxes and letting them overflow.** `overflow: visible` on the upper box does put a
+disc across the line, but the disc is then painted by one box and the wash beneath it by another, so its
+lower half sits on the wrong ground at any z-order — and the two boxes' paddings still have to cancel
+exactly or the seam moves.
+
+### Scale
+
+| | slide | here | note |
+| --- | --- | --- | --- |
+| plot width | 1159px | 1070px | the result card's cap at `xl` |
+| whole field | 475px | 440px | `--gcc-role-field: 27.5rem` |
+| aspect | 0.4098 | 0.4112 | 0.3% out |
+| divide | 50.2% | 50.2% | `--gcc-role-seam` |
+| scale | — | 0.923 | uniform, so discs and intervals agree |
+
+Lanes are integers, so the granularity is 4.4px against the slide's continuous placement. Six lanes sit more
+than one unit off the slide's own to clear a collision: AI / ML Engineer, Full-Stack Developer, Frontend
+Engineer by about 1.5 units, and three by less. Everything else is the slide's value rounded.
+
+### The wrap bound, and how it bought back a lane
+
+"Forward Deployed Engineer" is the longest name in the set and sits at 86% of the axis. Trailing on one line
+it runs 16.7px past the card, measured. Leading, its 112px label crosses the column that Data Architect,
+Data Scientist, Systems Architect and Platform Engineer all occupy: sweeping its lane, the only gaps are
+above 16 or below 37, and the slide puts it at 19.7.
+
+So the plot's edges are hard bounds — `max-inline-size` of the room on the item's own side — and a label that
+cannot fit wraps. The slide wraps this one name in this one place, so the fix is the source's own. It also
+put FDE's lane back to the slide's value after two passes of deviation.
+
+**The leading side needed `inset-inline-end` rather than the `-100%` translate it had.** An absolutely
+positioned box given `inset-inline-start: 92%` is offered 8% of the canvas to lay out in, whatever it is
+later translated by — so with `nowrap` removed, "Solution Architect" and every other leading label wrapped
+against the room on its right, which is the side it does not use. Anchoring by the trailing edge offers it
+the room on its own side and the translate becomes half a dot.
+
+### The inks, third time
+
+Two passes darkened them and both were read as dirty. The first pulled all seven to 4.7:1+ on white; the
+second moved only the three that fail, to the 3:1 line. The three it moved — blue, gold, green — are the
+three anybody looks at, so the second pass was visually indistinguishable from the first.
+
+Shipping the slide's own values, sampled from the core of each family's largest disc:
+
+| family | value | on the mint | on the warm | on white |
+| --- | --- | --- | --- | --- |
+| AI / ML | `#E0492C` | 3.20 | 3.54 | 4.07 |
+| Data Engineering | `#0E7C7B` | 3.94 | 4.36 | 5.01 |
+| Cloud & Platform | `#2EA7C7` | **2.21** | 2.44 | 2.81 |
+| Cybersecurity | `#6B7A7A` | 3.52 | 3.89 | 4.48 |
+| Application Dev | `#E7A200` | **1.73** | 1.91 | 2.20 |
+| Quality Eng | `#3BA34C` | **2.53** | 2.80 | 3.22 |
+| Product & Design | `#7A5FA6` | 4.11 | 4.55 | 5.23 |
+
+Three under the 3:1 non-text floor, instructed, and on the blocked list. The argument that makes it
+defensible is the one that licensed the palette in the first place: hue is a shortcut back to the legend, not
+an encoding — the legend names all seven in text, and every dot carries its family and its demand level in
+its accessible name. It stops being defensible the moment a family is drawn that the legend does not name.
+
+**Rejected: lightening the established wash to `teal-50` so the inks could be brighter.** Worth about 0.8 of
+ratio and it costs the field — 1.019 against white is the fill that made this chart read as unstructured.
+**Rejected: an orange-leaning gold**, which clears at 3.12 and is then inseparable from AI / ML's red.
+
+### The key, and the label inset
+
+Sides swapped at ANSR's request: the legend and the size note go trailing, together, because they decode the
+same marks; the provenance line goes leading, where a reader picks a line up. `lg:items-end` on the group is
+what stacks the two keys against one edge. The size note reads "Bubble size = Hiring Demand" — the slide's
+equation rather than a sentence.
+
+The band eyebrow was flush to two edges of its own wash. It takes an inline inset on the CANVAS only, where
+it is absolutely positioned; in the flow below `lg` it takes none, because there it is the heading of a
+column whose family headings all start at the wash's leading edge, and 16px on that one read as a
+misalignment. The field itself may never take inline padding: its width IS the axis.
+
+### Admin
+
+One canvas, capped at the public plot's own 1070px. **The cap is the point, not the aspect.** A label is a
+fixed number of pixels, so in the 1350px preview the admin window gave it, every name was 21% narrower
+relative to the axis than it will be live — an admin could clear an overlap that still ships.
+
+**The pin now takes the public geometry, and its old rule was a fidelity bug rather than a simplification.**
+`translate(-50%, -50%)` on the whole button centres the item, not the dot, so every label shifted inward by
+half its own width — different per role. Measured, the preview drew Data Architect and Forward Deployed
+Engineer on top of each other where the public field draws them clear.
+
+**Dragging no longer sets the band.** There is one rect, so there is nothing to drop into; `[` and `]` set
+it, the readout names it, and the numeric table shows it. A lane near 50 says nothing about which register a
+role belongs to — that is the whole reason the straddle is expressible.
+
+## The role map's fourth pass — the labels were bound to the wrong bubbles
+
+"Too cluttered, hard to tell which bubble this text belongs to." The rules are in `project.md`; this is the
+measurement and what was refused. **Nothing was overlapping, and that is the finding.** `rolemap:check`
+reported zero collisions at 1280 and 1440 throughout, because it measured overlap and the failure was
+association.
+
+### The measurement
+
+A label is bound to a mark by PROXIMITY, so the test is each label's ink against its OWN dot's edge versus
+against every other dot's. The own distance was a constant 8px. At 1440, **eleven of the thirty-six labels
+had a foreign dot nearer than their own**:
+
+| label | own | nearest foreign | margin |
+| --- | --- | --- | --- |
+| Data Architect | 8.0 | AI / ML Engineer 1.4 | −6.6 |
+| Infrastructure Engineer | 8.0 | Data Scientist 3.5 | −4.5 |
+| Data Analyst | 8.0 | Business Analyst 3.8 | −4.2 |
+| Cybersecurity Architect | 8.0 | Data Engineer 4.9 | −3.1 |
+| Full-Stack Developer | 8.0 | Application Developer 4.9 | −3.1 |
+| AI / ML Engineer | 8.0 | Agentic Engineer 4.9 | −3.1 |
+| GenAI Developer | 8.0 | Agentic Engineer 5.0 | −3.0 |
+| Integration Engineer | 8.0 | Site Reliability Engineer 5.8 | −2.2 |
+| SDET | 8.0 | Data Analyst 5.8 | −2.2 |
+| Data Scientist | 8.0 | Platform Engineer 7.4 | −0.6 |
+| ServiceNow Developer | 8.0 | SDET 7.4 | −0.6 |
+
+Eleven more sat inside 4px of margin, so **22 of 36 gave the reader no reliable cue**. The tightest dot pairs
+are 8.4px (Integration / Site Reliability) and 14.4 (GenAI / Agentic), which is why a fixed 8px binding
+distance could not work: the gap to a label's own mark was as large as the gap between marks.
+
+### The gap, not the placement
+
+Tightening the gap shortens every own-distance and moves no dot, so the slide's placement survives intact.
+Swept at 1440:
+
+| gap | bound wrong | note |
+| --- | --- | --- |
+| 8px | 11 | shipped |
+| 6px | 9 | |
+| 5px | 6 | |
+| **4px** | **1** | `data-architect` only |
+| 3px | 1 | no further gain, name touches its mark |
+
+`data-architect` is a genuine placement problem rather than a gap one — complexity 74 wedged under
+`ai-ml-engineer` (80/15) and beside `forward-deployed-engineer` (86/20), with its trail label running into
+that column. Four candidates, all at 4px: **lane 22 clears it with zero collisions and zero bound wrong, and
+ships.** Lane 23 leaves it at −0.3. Lane 24 makes it worse and adds a label hit. `labelSide: "lead"` clears
+the binding and puts its label head-on at `cloud-engineer`'s, which shares the line at lane 19.
+
+### REFUSED, and one of them is the obvious idea
+
+- **Colouring each label in its family's ink.** The strongest possible binding — a red name belongs to the
+  red dot — and unavailable: three of the seven inks are already under the 3:1 MARK floor, where text needs
+  4.5:1. Scoping it to the crowded clusters fails the same gate.
+- **Leader lines on the crowded items.** Binds absolutely, and adds a mark per role to the quietest chart on
+  the surface. Held until the gap and the lanes are exhausted, which they now are.
+- **Hover or focus binding**, on `CityReadout`'s pattern. Helps the second read, does nothing for the first,
+  nothing on a phone, and nothing in a screenshot.
+- **Deriving `labelSide` from a complexity threshold** to make the side rule uniform. Refused on
+  `project.md`'s own rule that a threshold is wrong exactly where the author made a judgement — and measured,
+  there is no threshold available: the stored sides run `lead` at 23 and `trail` at 86.
+- **A comfort margin in the assertion.** Eight labels ship at ~0.9px of binding margin, and no move widens
+  them short of deviating from more of the slide's lanes. Their competitors are all off the label's own line,
+  where alignment does the binding a distance cannot. A check that has to be ignored after every legitimate
+  change is `data:verify`'s own definition of a dead check, so the margin is asserted at 0 and the headroom
+  is printed.
+
+### The gap was decided in two places, which is the durable half
+
+The admin canvas drew `gap-1.5` (6px) while the public field drew `--ansr-space-2` (8px). That is a fidelity
+bug in the one instrument an admin fixes overlaps with, and it shifts every label by a different amount
+because a label's whole box moves with its gap — the same class of error as the `translate(-50%, -50%)` pin.
+`--gcc-role-gap` is now declared once on `[data-role-step]`, unscoped, so the public field, the chip flow and
+the canvas take one value. **The chip flow wanted the same 4px by a different argument**: a group's column gap
+is 12px, so an 8px dot-to-name gap was two thirds of the distance between chips and the run read as evenly
+spaced text rather than as chips.
+
+### The key tier — the swatch was the thing reading large, not the type
+
+"The text and the colour code helper are too big, make it faded or the same colour as the two notes."
+**Measured first, and the type was already exactly that**: the legend `<p>`, each entry, `rolesDemandKey`
+and `rolesBasisNote` all compute to 12px / `rgb(76, 76, 76)` / weight 400 / 16px leading in Moderat. There
+was nothing to match.
+
+What differed was ink QUANTITY. The swatch was `--ansr-space-3`, 12px — the same as the type's own size, so
+each disc matched the cap height of the name beside it and the tier put seven saturated marks opposite two
+faint lines. **The swatch goes to `--ansr-space-2` (8px) and the entry's gap to `--gcc-role-gap` (6px → 4px),
+and the type does not move.** 12px is both the notes' size and the caption floor, so lowering it would have
+made the key smaller than the lines it was asked to match — and the scale has no step between 12 and nothing.
+
+The legend block narrows 584px → 566 at three columns, which is the column measurement in `FamilyLegend`'s
+docblock and the only number that moved with it.
+
+**REFUSED: fading the type further.** `--ansr-text-muted` is the reference the request named, and a fainter
+step would have put the key under the two notes rather than level with them. **REFUSED: greying the
+swatches.** They are the legend's entire subject — the colour key is what licenses a categorical palette at
+all.
+
+**`--gcc-role-gap` moved to `:root` in the same pass.** It sat on `[data-role-step]`, which the legend's
+entry does not carry — the attribute is on the swatch inside it — so a fourth surface drawing this same
+one-mark-to-one-name relationship would have needed the selector edited again. That is the drift the
+declaration exists to prevent, so the consumer list is now nobody.
+
+### The legend's columns — an EQUAL grid was drawing UNEQUAL space
+
+"Why are there so many awkward gaps, bring it closer, shift it right, and the two gaps between columns
+are not the same."
+
+**The column gap was equal the whole time — 32px, both of them — and that is the trap.** The columns were
+`1fr` under `w-fit`, which resolves every one of them to the widest label in the whole legend. Measured at
+1440:
+
+| column | width | member | ink | leftover |
+| --- | --- | --- | --- | --- |
+| 1 | 167.3 | AI / ML | 53 | **114** |
+| 2 | 167.3 | Data Engineering & Analytics | 168 | 0 |
+| 3 | 167.3 | Cloud & Platform | 105 | 62 |
+
+What a reader sees between two columns is the cell's leftover PLUS the gap, so row one drew **146px then
+32px**. Both gaps were 32.
+
+**Sized to their own content the three columns are 106 / 167 / 117, every gap is a real 24px, and the block
+goes 566px to 438.** Its trailing edge was already flush with the field's and the axis's "Higher" — measured
+at delta 0 — so narrowing it is what shifts it right: the leading edge moves 128px along.
+
+**The `sm`-to-`lg` step down to two columns is deleted, because two columns were EMPTIER than three.** A
+two-column block is sized by "Application Development", so the shortest entry carried 96px of leftover
+against 53 at three. Three fit the narrowest host this draws in the whole time — 438 against 502 at a 640
+viewport — verified at 640, 700, 768, 1024, 1280 and 1440 with no overflow, no scroll and three rows
+throughout. One shape at every width it draws at.
+
+**The residual is ~53px after "AI / ML", which shares its column with "Product & Design", and it cannot be
+removed while the swatches align.** Two arrangements were measured worse: two columns (96px) and four
+(96px, since AI/ML then shares with "Application Development"). Two constructions would equalise it and both
+cost something ANSR asked for:
+
+- **`justify-items: end`** — every label's last letter would land on its column's edge, so every visible gap
+  would be exactly 24px. The swatches then sit at a different x per row, which is the raggedness the columns
+  were requested to fix.
+- **A wrapping flex row with one gap** — perfectly uniform spacing, no columns at all, and a ragged last
+  line. This is what the block already does below `sm`, and what the capability grid key was moved away from.
+
+**The capability grid key keeps `1fr` and is right to.** Four ordinal words of similar length have almost no
+leftover to give; seven family names run 53px to 167, where an equal column is mostly air.
+
+### Four more role inks, so a ninth group is a publish rather than a deploy
+
+The cap was eight because eight inks existed. Raising it needed colours, and the two bars were
+read off the shipped set rather than chosen:
+
+1. **clear 3:1 on `--ansr-surface-tint`** (#D1E9E7), the darker of the two washes
+2. **be no closer to anything than the tightest pair already in the slide's eight**, which is
+   `teal`/`slate` at Oklab 0.079
+
+Ten candidates were measured against both and the four that maximise the worst pair in the
+resulting twelve were taken, by exhausting every choice of four:
+
+| tone | ink | hue | on tint | on warm | nearest shipped |
+| --- | --- | --- | --- | --- | --- |
+| 9 | `#3B4E9E` | indigo | 5.97 | 6.59 | purple 0.112 |
+| 10 | `#8A5230` | brown | 4.96 | 5.48 | slate 0.126 |
+| 11 | `#6B7A22` | olive | 3.73 | 4.12 | slate 0.111 |
+| 12 | `#9E2B3F` | maroon | 5.75 | 6.36 | magenta 0.115 |
+
+**The worst pair in the twelve is still `teal`/`slate` at 0.079 — the slide's own.** So the
+ceiling rose and separation did not get worse. All four clear the mark floor, which three of the
+slide's own inks do not. The hues are the gaps the slide leaves: no blue between role-3 and
+role-7, no earth tone, nothing between gold and green, nothing dark in the red-to-magenta arc.
+
+Rejected from the ten: `steel-blue` #3F6EA8 and `forest` #1F6B44, both at 0.085 from an existing
+ink — passing, but they would have become the new tightest pair after teal/slate. `terracotta`,
+`olive-deep`, `indigo-deep` and `plum` all pass and are the next four if a thirteenth is ever
+wanted; a thirteenth also needs the `[data-tone]` rule and the test's count.
+
+**What makes it safe is the test, not the colours.** `ROLE_TONES` is one number in three files
+and nothing but a comment held them together. Verified by breaking it: setting the cap to 13
+fails two assertions immediately. Measured in a browser as well — all twelve paint twelve
+distinct inks on a fresh mark, re-toning a live mark repaints, and tone 13 resolves to
+`rgb(0, 76, 77)`, `--ansr-accent`. **Two things are wrong with that fallback and the second is
+worse**: it is the ink headings and figures are set in rather than a categorical one, and it is
+the SAME for every slot past the cap, so a thirteenth and fourteenth family would be identical
+to each other. It is 0.156 from `--ansr-role-2`, so the problem is not that it looks like the
+teal — an earlier draft of this note said that and was wrong.
+
+**REFUSED: letting an admin type a hex.** Invariant 6 — `tokens.css` is the single source of
+truth and `brand_lint` enforces it. A picker over named inks is what keeps a contrast floor
+checkable at all; a free field makes every future ink unmeasured.
+
+**NOT DONE: a third band.** The two washes are one canvas with a hard colour stop at a measured
+seam, and hue is what carries the split — there are two band fills in the system, the seam is a
+single percentage, and `lane` is a percentage of the whole canvas. A third band is a different
+chart, not a bigger enum. The two visitor-facing words stay editable, which is what covers
+renaming "Established" back to the slide's "Traditional".

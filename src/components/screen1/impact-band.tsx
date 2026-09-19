@@ -37,6 +37,39 @@ const DESKTOP_COLUMNS: Readonly<Record<number, string>> = {
 };
 
 /**
+ * The trailing unit on an impact figure, so it can be set under the numeral.
+ *
+ * **A scale letter is not a digit and must not be drawn at the digit's size, at
+ * ANSR's request.** `225K+` shipped as one run at 38/48px, which put a `K` and a `+`
+ * at the full weight and size of the number they qualify — and at Bold the `K` is
+ * optically wider than the `2` beside it, so the unit read as the loudest part of the
+ * figure. Two scale steps down is the relationship the rest of the tool already uses:
+ * `Unit` in `summary-figures.tsx` and `signal.suffix` in `snapshot.tsx` both do it,
+ * and this band was the one figure row that did not.
+ *
+ * **The alphabet is CLOSED and the value comes back WHOLE when it does not match.**
+ * These are five admin-editable strings, so this is a parse of somebody's typing
+ * rather than of a formatter's output — which is why it recognises exactly `K`, `M`
+ * and `B`, each optionally followed by `+`, or a bare `+`, and nothing else. Anything
+ * outside that renders as it does today, at one size, rather than being split at a
+ * character this could not have reasoned about. It deliberately does NOT reuse
+ * `figureParts` from `screen2.ts`: that alphabet is the one the formatters there can
+ * emit, it has no `B`, and widening it would loosen a rule that guards a different
+ * surface.
+ *
+ * A leading `$` stays with the numeral — it is part of the quantity, not a unit on it.
+ */
+const IMPACT_UNIT = /^(.*\d)([KMB]\+?|\+)$/;
+
+function impactParts(value: string): { figure: string; unit?: string } {
+  const match = IMPACT_UNIT.exec(value);
+  // Both groups are non-optional in the pattern, so a match always carries both —
+  // the guard is for the type rather than for a case the regex can produce.
+  if (!match?.[1] || !match[2]) return { figure: value };
+  return { figure: match[1], unit: match[2] };
+}
+
+/**
  * The impact band: ANSR's own corporate figures, on the deepest ground in the
  * palette, between two mirrored domes.
  *
@@ -285,8 +318,27 @@ export function ImpactBand({ stats }: { stats: readonly ImpactStat[] }) {
                   one place it is legal: 6.77:1 here against 2.44:1 on white. It
                   is the reference's whole dark-ground voice and nothing in this
                   tool had used it yet. */}
-              <dd className="order-1 text-4xl leading-tight font-bold tracking-display tabular-nums text-accent-inverse md:text-5xl">
-                {stat.value}
+              {/* **The unit is two scale steps down and shares the numeral's baseline**,
+                  which is `snapshot.tsx`'s own treatment: 24 under 38 and 30 under 48,
+                  both real steps on the scale rather than a fraction of an em. The weight
+                  is inherited rather than stepped — the ask was about size, and a Medium
+                  scale letter beside a Bold numeral on this ground reads as a different
+                  ink. `tracking-normal`, because `tracking-display` is fitted to digits
+                  and closes the gap a letter at this size needs. */}
+              <dd className="order-1 flex items-baseline justify-center text-4xl leading-tight font-bold tracking-display tabular-nums text-accent-inverse md:text-5xl">
+                {(() => {
+                  const { figure, unit } = impactParts(stat.value);
+                  return (
+                    <>
+                      {figure}
+                      {unit ? (
+                        <span className="text-2xl tracking-normal md:text-3xl">
+                          {unit}
+                        </span>
+                      ) : null}
+                    </>
+                  );
+                })()}
               </dd>
               {/* A rule between figure and label, which is ansr.com's own stat
                   shape and the reason these read as figures rather than as cards:

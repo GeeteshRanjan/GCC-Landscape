@@ -59,8 +59,19 @@ export const NAV_GROUPS: readonly {
         href: "/admin/entry-point",
         label: "Site copy",
         summary:
-          "The hero, the closing call to action, ANSR's impact figures, the function tags, the customer logos and the fixed labels.",
-        terms: ["headline", "hero", "wording", "strings", "labels", "cta", "logos"],
+          "The hero, the closing call to action, ANSR's impact figures, the function tags, the role map, the customer logos and the fixed labels.",
+        terms: [
+          "headline",
+          "hero",
+          "wording",
+          "strings",
+          "labels",
+          "cta",
+          "logos",
+          /* The page's own vocabulary and never a field on it, which is the rule for a page
+             entry: every role and group is indexed separately, and pages sort first. */
+          "role map",
+        ],
       },
       {
         href: "/admin/metrics",

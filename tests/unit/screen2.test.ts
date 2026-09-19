@@ -74,6 +74,7 @@ function datasetWith(metrics: Metric[]): Dataset {
     ],
     businessTypes: [],
     peerOverrides: [],
+    peerNoteRules: [],
     metrics,
     siteContent: DEFAULT_SITE_CONTENT,
   };

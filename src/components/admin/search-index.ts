@@ -137,18 +137,33 @@ export function buildAdminIndex(draft: Dataset): readonly SearchEntry[] {
     );
   }
 
-  const { hero, close, impactStats, commonFunctions, logos, copy } = draft.siteContent;
+  const { hero, close, impactStats, commonFunctions, roleMap, logos, copy } =
+    draft.siteContent;
   const site = tabLabel("/admin/entry-point");
 
   out.push(
+    /* **Two entries for the headline, because it is two fields.** It was one `title`
+       holding the product's name and the promise in one string; splitting it means an
+       admin searching for either half has to land on the field that actually holds it,
+       and a single entry would send someone looking for the tagline to a control whose
+       value does not contain it. */
     entry({
-      key: "copy:hero.title",
+      key: "copy:hero.productName",
       kind: "copy",
-      title: "Hero title",
-      detail: hero.title,
+      title: "Hero product name",
+      detail: hero.productName,
       where: site,
       href: searchHref("/admin/entry-point", "hero"),
-      terms: ["headline", "h1", "first screen"],
+      terms: ["headline", "h1", "first screen", "product", "name", "atlas"],
+    }),
+    entry({
+      key: "copy:hero.tagline",
+      kind: "copy",
+      title: "Hero tagline",
+      detail: hero.tagline,
+      where: site,
+      href: searchHref("/admin/entry-point", "hero"),
+      terms: ["headline", "h1", "first screen", "promise", "strapline"],
     }),
     entry({
       key: "copy:hero.lead",
@@ -235,6 +250,65 @@ export function buildAdminIndex(draft: Dataset): readonly SearchEntry[] {
         where: site,
         href: searchHref("/admin/entry-point", value),
         terms: ["function list", "tags"],
+      }),
+    );
+  }
+
+  /**
+   * The role map: one entry per role and one per group.
+   *
+   * **Roles are indexed individually because a role name is what an admin arrives with.**
+   * "Move Data Scientist" and "add Prompt Engineer" are the two requests this section
+   * exists for, and neither is answerable by a section-level entry. Thirty-six entries is
+   * the same order as the copy labels beside them and the palette caps per KIND, so they
+   * cannot bury anything.
+   *
+   * `kind: "copy"` rather than a kind of their own, on the CTA links' argument: the kinds
+   * are how results are capped and grouped, and a whole group for one section of one page
+   * would spend a heading on it. `?find=` seeds the page's own filter, which is what
+   * reveals the section — and no `?open=`, because `/admin/entry-point` is not in
+   * `OPENABLE` and every field there writes straight to the draft.
+   */
+  for (const role of roleMap.roles) {
+    const family = roleMap.families.find((held) => held.id === role.familyId);
+    out.push(
+      entry({
+        key: `copy:role.${role.id}`,
+        kind: "copy",
+        /* The bold line is the role's OWN NAME, not "Role — {name}", and the two are not
+           interchangeable: `find` is seeded with the name, and a palette whose title is a
+           superset of the query it sends is a result that does not match its own
+           destination — which the round-trip test catches. It also reads better, because the
+           name is what the admin typed. The kind's own heading says these are copy entries
+           and the detail says which map they are on. */
+        title: role.name,
+        detail: [
+          "Role map bubble",
+          family?.name,
+          roleMap.demandLevels[role.demand - 1],
+        ]
+          .filter(Boolean)
+          .join(" · "),
+        where: site,
+        href: searchHref("/admin/entry-point", role.name),
+        // `band` in words, because "emerging" is what somebody types and the stored value
+        // is the enum. The id is here on `PUBLIC_COPY_LABELS`' argument: it is the handle
+        // a reader arriving from a publish diff is holding.
+        terms: [role.id, role.band, "role map", "bubble", "job complexity"],
+      }),
+    );
+  }
+
+  for (const family of roleMap.families) {
+    out.push(
+      entry({
+        key: `copy:roleFamily.${family.id}`,
+        kind: "copy",
+        title: family.name,
+        detail: `Role map group · colour ${family.tone}`,
+        where: site,
+        href: searchHref("/admin/entry-point", family.name),
+        terms: [family.id, "role map", "legend", "colour", "group"],
       }),
     );
   }

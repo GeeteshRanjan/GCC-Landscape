@@ -370,11 +370,24 @@ export function InputPanel({
         terms: SUB_INDUSTRY_TERMS[option.id],
       })),
     });
+    /**
+     * **The two tiers OVERLAP now: the leading one is a shortcut and the second holds
+     * every industry, the pinned ones included.** They used to partition the taxonomy, so
+     * the group headed "All industries" was the only one that did not contain all of them
+     * — and a visitor who scanned it alphabetically without finding Retail, because Retail
+     * had been pinned into the tier they skipped, reads that as the industry being absent.
+     * The fallback from there is the broad answer, which drops the primary ordering signal
+     * off the peer set. Built in `industryOptions`; the duplicated row is handled in
+     * `select-field.tsx`, where a first-pane row's id is scoped by its group.
+     *
+     * **The headings are published keys**, so the words that have to stay true about that
+     * overlap are editable in the same place as every other visitor-facing label.
+     */
     return [
-      { label: "Most common", options: industries.common.map(nest) },
-      { label: "All industries", options: industries.others.map(nest) },
+      { label: copy.askGroupCommon, options: industries.common.map(nest) },
+      { label: copy.askGroupIndustriesAll, options: industries.others.map(nest) },
     ];
-  }, [industries, businessTypesByIndustry]);
+  }, [industries, businessTypesByIndustry, copy]);
 
   /**
    * One control, two answers.
@@ -529,7 +542,11 @@ export function InputPanel({
                  is the only thing here a visitor cannot see the shape of before
                  opening the control. */
               hint={copy.askIndustryHint}
-              childLabel="sub-industries"
+              /* Published, because it is the word ANSR asked for and it is drawn in
+                 three places at once — the count cue on a branching row, the cascade
+                 pane's close control, and the pane's "Other …" breaker. One key for all
+                 three; see `askSubIndustryPlural`. */
+              childLabel={copy.askSubIndustryPlural}
               /* **Widened to the whole form grid, in two columns.** 24 industries in a
                  field-width popup showed eight of them, so a visitor was deciding
                  between industries without seeing the set — and one who cannot find
@@ -584,7 +601,7 @@ export function InputPanel({
                  validation sees the rewrite. */
               groups={[
                 {
-                  label: "Revenue bands",
+                  label: copy.askGroupRevenue,
                   options: revenueBands.map((band) => ({
                     value: band,
                     label: formatRevenueBand(band),
@@ -623,17 +640,18 @@ export function InputPanel({
                 setHqCountry(next);
                 clearError("hqCountry");
               }}
-              /* The twelve countries the data has most companies in lead; every
-                 other country in the world follows, alphabetically. Past twelve the
-                 counts are in single figures and frequency stops being informative.
-                 Long enough that the panel gives itself a filter. */
+              /* The twelve countries the data has most companies in lead; the second
+                 group is EVERY country, the twelve included. Past twelve the counts are
+                 in single figures and frequency stops being informative, so the tier is
+                 a shortcut into the same list rather than a partition of it — see
+                 `hqCountryOptions`. Long enough that the panel gives itself a filter. */
               groups={[
                 {
-                  label: "Most common",
+                  label: copy.askGroupCommon,
                   options: asOptions(hqCountries.common, HQ_COUNTRY_TERMS),
                 },
                 {
-                  label: "All countries",
+                  label: copy.askGroupCountriesAll,
                   options: asOptions(hqCountries.others, HQ_COUNTRY_TERMS),
                 },
               ]}

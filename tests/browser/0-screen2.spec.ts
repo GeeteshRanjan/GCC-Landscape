@@ -1,5 +1,7 @@
 import { expect, test, type Page } from "@playwright/test";
 
+import { DEFAULT_PUBLIC_COPY as COPY } from "@/data/schema";
+
 import { band, choose, expectBand, LEAK_CANARY } from "./helpers";
 /**
  * **Imported rather than retyped.** This sentence was spelled out in three places in this
@@ -69,7 +71,7 @@ test.describe("getting there and back", () => {
      * `region`, and the cards inside are `h2` so the outline skips no level.
      */
     await expect(
-      page.getByRole("heading", { level: 1, name: "ANSR ATLAS" }),
+      page.getByRole("heading", { level: 1, name: "ANSR GCC ATLAS" }),
     ).toBeVisible();
     await expectBand(page, "function-metrics");
     await expect(page.getByText(/What an India GCC would give/)).toHaveCount(0);
@@ -187,14 +189,24 @@ test.describe("getting there and back", () => {
      */
     await expect(page.getByText("Germany")).toBeVisible();
     /**
-     * The same three panels Screen 1 shows, from the same answers, in the same order — one
-     * component in one place on both screens, so they cannot come to mean two different
-     * things. What is new here is the route to changing them: this screen once had none at
-     * all, then one that reached the form, and now one that opens the editor in place.
+     * The same panels Screen 1 shows, from the same answers, in the same order — one
+     * component fed by one builder (`answerFacts`) on both screens, so they cannot come to
+     * mean two different things. What is new here is the route to changing them: this
+     * screen once had none at all, then one that reached the form, and now one that opens
+     * the editor in place.
      */
     const profile = page.getByRole("group", { name: /Your profile/ });
     /**
-     * **One control beside three quiet pills, on this screen too.** The chevroned panels
+     * **No sub-industry pill where the visitor gave no sub-industry, which is the same
+     * conditional Screen 1's row has.** This answer is industry-only, so the label must be
+     * absent — a pill here with an empty value would be the tool inventing an answer. The
+     * PRESENT case is covered in `0-business-type.spec.ts`, where the cascade is driven.
+     */
+    await expect(
+      profile.getByText(COPY.pillSubIndustry, { exact: true }),
+    ).toHaveCount(0);
+    /**
+     * **One control beside the quiet pills, on this screen too.** The chevroned panels
      * all went to the same place, so they were four affordances for one destination — see
      * Screen 1's profile test. It is the same component in the same position on both
      * screens, deliberately, so the two cannot mean different things.

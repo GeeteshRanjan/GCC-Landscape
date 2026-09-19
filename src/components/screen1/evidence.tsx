@@ -717,7 +717,7 @@ export function PeerBlockView({ view }: { view: PeerView }) {
   // The two call-outs are mutually exclusive by construction — `broadened` requires
   // `shortfall === 0` — so this coalesce renders exactly one, shortfall first. See
   // `broadenedLine`.
-  const note = shortfall ?? broadenedLine(view);
+  const note = shortfall ?? broadenedLine(view, copy);
 
   if (peers.length === 0) {
     return <p className="max-w-measure text-base text-text">{shortfall}</p>;
@@ -747,13 +747,13 @@ export function PeerBlockView({ view }: { view: PeerView }) {
           **The published branch's wording moved with it** — it closed on "the closest
           comparisons above" and now points forward. See `peersNarrowNote` in `schema.ts`.
 
-          It keeps `max-w-measure` and its 14px setting, so nothing about the line itself
-          changed; what changed is which side of the grid it sits on. The count line stays
-          under the grid, which is the only place it can be — it states what the grid
+          It is NOT capped at `max-w-measure` here, unlike body copy: this is a single
+          call-out sentence sitting between the full-width heading and the full-width card
+          row, and the 68ch reading measure wrapped it to two lines with the whole right
+          half of the block empty. A one-liner takes the block's own width; the count line
+          stays under the grid, which is the only place it can be — it states what the grid
           shows. */}
-      {note ? (
-        <p className="max-w-measure text-sm text-text">{note}</p>
-      ) : null}
+      {note ? <p className="text-sm text-text">{note}</p> : null}
       {/* One row at `lg`, one column per peer. Two columns between `sm` and `lg`, one
           below — a 205px card is the floor for a five-digit range, so the row can only
           exist where there is room for five of them. */}
@@ -1087,13 +1087,6 @@ export function LargestBlockView({ view }: { view: PeerView }) {
 
   return (
     <div className="flex flex-col gap-5">
-      {/* Only when the ranking had to walk down the revenue bands, which three
-          industries do. The general case says nothing here — the section's own
-          heading covers it. */}
-      {view.largest.belowTopBand ? (
-        <p className="max-w-measure text-sm text-text">{line}</p>
-      ) : null}
-
       {/* **A column header, because nothing on the block said what the figure IS.** Five
           ranges at 20px down the trailing edge, over five bars, under a heading that says
           "largest" — a reader could take them for revenue, for the company's Indian
@@ -1222,7 +1215,7 @@ export function LargestBlockView({ view }: { view: PeerView }) {
                   one. */}
               {/* **The marker and the badge are ONE flex item, so they wrap together.**
                   Below `md` a long name plus both qualifiers overflows the row and the
-                  badge broke onto a line of its own at the leading edge — a lone red `500`
+                  badge broke onto a line of its own at the leading edge — a lone stacked
                   mark under a company name, which reads as a stray graphic rather than as
                   that company's accreditation. It only became reachable when the badge
                   stopped being suppressed in the universal case. Grouped, line two is

@@ -15,6 +15,7 @@ import { CloseBackdrop, ClosingCta } from "@/components/public/closing-cta";
 import { usePublicCopy } from "@/components/public/copy-context";
 import { formatRevenueBand, Zone } from "@/components/public/primitives";
 import {
+  answerFacts,
   ContextPanels,
   headerLines,
   HeaderFinding,
@@ -80,6 +81,16 @@ export interface FunctionViewScreenProps {
   view: FunctionView;
   /** Screen 1's answers, reused to frame this screen. Nothing new is asked. */
   input: PeerViewInput;
+  /**
+   * The visitor's sub-industry by NAME, for the pill. Absent where they gave none.
+   *
+   * **A prop rather than a lookup, because the name is not on this side of the seam.**
+   * `input` carries `businessTypeId`; the name lives in `dataset.businessTypes`, which is
+   * read server-side and never shipped. The tool already holds the matched peer view, whose
+   * `industry.businessType` is the resolved name, so it passes it down — which also means
+   * both screens draw the same string from the same resolution rather than two.
+   */
+  subIndustry?: string;
   onBack: () => void;
   /**
    * Back to the entry point, from the band's own lockup.
@@ -102,6 +113,7 @@ export interface FunctionViewScreenProps {
 export function FunctionViewScreen({
   view,
   input,
+  subIndustry,
   onBack,
   onHome,
   editing,
@@ -142,15 +154,20 @@ export function FunctionViewScreen({
    * editor that does not exist. The way back is unchanged and is still real — this
    * screen had none at all before that pass — it is now a single labelled button. See
    * `ContextPanels`.
+   *
+   * **`answerFacts` builds the row for both screens now, and the sub-industry pill is why
+   * it had to.** The two literals were the same three keys in the same order maintained by
+   * hand, which is a parity requirement met by luck; adding a fourth member made that
+   * visible. The NAME arrives as a prop rather than being resolved here, because this
+   * screen holds `businessTypeId` and nothing else — the name is in the dataset, which
+   * never crosses to the browser. See `tool.tsx`.
    */
-  const facts: ContextFact[] = [
-    { label: copy.pillIndustry, value: input.industry },
-    { label: copy.pillHeadquarters, value: input.hqCountry },
-    // Same treatment as Screen 1's row, from the same function. See `peer-view.tsx`:
-    // the band is formatted for the visitor and the currency lives in the label,
-    // because the two screens' pill rows must not read differently.
-    { label: copy.pillRevenueBand, value: formatRevenueBand(input.revenueBand) },
-  ];
+  const facts: ContextFact[] = answerFacts(copy, {
+    industry: input.industry,
+    subIndustry,
+    hqCountry: input.hqCountry,
+    revenueBand: formatRevenueBand(input.revenueBand),
+  });
 
   return (
     <ResultSurface

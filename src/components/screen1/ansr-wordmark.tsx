@@ -2,7 +2,17 @@
  * The ANSR wordmark, set inline inside the hero headline where the brand name
  * would otherwise be typed.
  *
- * **One consumer, and it briefly had two.** The scale curve's ANSR rail caption on the
+ * **NO LIVE CONSUMER, and it is kept deliberately rather than as dead code.** ANSR was
+ * removed from the entry point's headline at the project owner's instruction, which was
+ * this component's last placement — the impact band draws its own inline lockup and the
+ * result screens draw the full one. It stays for two reasons: it is the only home in code
+ * for `ANSR Name.svg`'s contours, and the cap-height measurement in it is cited by
+ * `screen-header.tsx`, which would otherwise have no source for its `1.7em`. It was cited
+ * by the two product-name marks as well until those became type; `product-name.tsx` reads
+ * the FACE's own cap height instead, so this file has one citer now rather than three.
+ * Restoring ANSR to the headline is one call site.
+ *
+ * **Its history, before that.** The scale curve's ANSR rail caption on the
  * operations and HR tabs used it for a pass, which moved this file to `public/`; ANSR then
  * asked for the FULL lockup there — the circular mark as well as the wordmark — so that
  * caption serves `public/brand/ansr-logo.svg` as an image and this went back to the one

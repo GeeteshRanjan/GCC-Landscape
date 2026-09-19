@@ -140,9 +140,9 @@ The docx covers colour only. These were decided for the project and are recorded
 - **Typeface — no longer one of these.** The brand has one: **Moderat**, which ansr.com sets on
   every heading and paragraph and whose advance widths match the reference's outlined glyphs to
   within 1%. **Body copy is its Light 300**, which is the single biggest tell of the brand.
-  Moderat is commercial and its licence for an embedded tool is unresolved, so
-  `--ansr-font-display` resolves to Hanken Grotesk, the licensable stand-in ansr.com already
-  loads as its second family. `--ansr-font-sans` stays Inter for admin and dense UI, where
+  ANSR supplied the family, so `--ansr-font-display` resolves to Moderat itself, self-hosted
+  from four woff2 files; the Hanken Grotesk stand-in is gone. The family has **no SemiBold**, so
+  600 is drawn by Medium. `--ansr-font-sans` stays Inter for admin and dense UI, where
   tabular numerals and small-size legibility matter more than brand voice. See
   `docs/ansrx-visual-language.md` §1.
 - **Spacing — 4px base unit**, scale `1–32`.

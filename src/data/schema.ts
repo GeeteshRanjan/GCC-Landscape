@@ -373,6 +373,136 @@ export const peerOverrideSchema = z.object({
 });
 
 /**
+ * What an admin may do to the sentence above the peer grid, for one combination of answers.
+ *
+ * **The gap this fills is a real collision, not a hypothetical one.** Two sentences can
+ * describe a peer set: `shortfallLine`, when the set came back SHORT, and `broadenedLine`,
+ * when a full set had to reach past the visitor's own sub-industry or revenue band to fill
+ * itself. Swept over every combination the form can produce — 1,316 of them — **122 are
+ * short AND reached**: 1 past the sub-industry, 108 past the band, 13 past both. In every
+ * one of those the engine has a genuine choice and today it is made in code, by the
+ * `shortfall === 0` conjunct on both reach signals in `screen1.ts`, which silently drops the
+ * broadened line. That default is defensible — "the set is short" is the more urgent fact,
+ * and the narrow note's own "so these are the nearest" already carries the reach — but it is
+ * a judgement, and ANSR should be able to make it per combination.
+ *
+ * ## What a policy may and may not do
+ *
+ * The first three cannot make the tool say anything it could not already say:
+ *
+ *   - `auto` — today's behaviour. The short line wins wherever both apply.
+ *   - `prefer-broadened` — where BOTH apply, draw the broadened line instead. Where only
+ *     one applies it is `auto`, so this can never invent a reach.
+ *   - `suppress` — draw neither. A silence is not a claim, so this is always safe.
+ *
+ * The last two CAN, and that is the whole reason they are gated:
+ *
+ *   - `force-narrow`, `force-broadened` — draw the sentence even where its signal did not
+ *     fire.
+ *
+ * **A forcing policy is the one place in this product an admin can put a statement in front
+ * of a visitor that the data does not support**, and it exists because the admin sometimes
+ * knows something the engine cannot: the commonest case is a hand-pinned peer set, where
+ * `matchPeers` deliberately reports no shortfall and no reach — an override "makes no
+ * automatic claim" — so both sentences go silent even though ANSR pinned three companies
+ * precisely BECAUSE few comparable ones exist. Forcing the narrow note there is true, and
+ * nothing else in the system can say it.
+ *
+ * ## `acknowledged` is the second step, and it is PERSISTED rather than a UI state
+ *
+ * A forcing policy is refused by the publish gate unless `acknowledged` is true. The admin
+ * sets it through a confirmation step that states what it costs; storing it means the
+ * approval is a reviewable fact in the diff rather than a click nobody can audit, and it
+ * means a hand-edited `dataset.json` cannot smuggle a forced sentence past either. It is
+ * `.default(false)` rather than optional — unlike `company.domain`, where an absent key and
+ * an empty one had to stay distinct to keep 1,834 diffs quiet — because absent-versus-false
+ * is exactly the ambiguity an approval flag must not have.
+ *
+ * ## The two forcing policies are not symmetric
+ *
+ * `force-narrow` draws `copy.peersNarrowNote`, which says "few GCCs closely match your
+ * sub-industry". For a visitor who named no sub-industry that sentence is not merely
+ * unsupported, it is incoherent — so a rule using it must name a `businessTypeId`, checked
+ * by `datasetSchema`. `force-broadened` needs no such guard: its sentence says "few
+ * companies match your selection exactly", which is true of whatever the visitor selected.
+ *
+ * **Only the two PUBLISHED sentences can be forced.** `shortfallLine`'s other three
+ * branches state counts and populations — "3 rather than 5", "no other X runs an India
+ * centre yet" — so forcing one would print a number the set does not have. Those stay
+ * derived and unreachable from here.
+ */
+export const PEER_NOTE_POLICIES = [
+  "auto",
+  "prefer-broadened",
+  "suppress",
+  "force-narrow",
+  "force-broadened",
+] as const;
+
+export type PeerNotePolicy = (typeof PEER_NOTE_POLICIES)[number];
+
+/**
+ * The policies that can state something the peer set does not support, and therefore the
+ * ones `acknowledged` is required for.
+ *
+ * A list rather than a `startsWith("force-")` test: the set of dangerous policies is a
+ * product decision, and deriving it from the spelling of a name means renaming a policy
+ * silently changes what needs approval.
+ */
+export const FORCING_NOTE_POLICIES: readonly PeerNotePolicy[] = [
+  "force-narrow",
+  "force-broadened",
+];
+
+export function isForcingNotePolicy(policy: PeerNotePolicy): boolean {
+  return FORCING_NOTE_POLICIES.includes(policy);
+}
+
+/**
+ * A sentence rule for one combination of answers.
+ *
+ * **The combination is a PATTERN on exactly the shape `peerOverrideSchema` uses** —
+ * industry required, the other three optional with absent meaning ANY — so `overrideFits`
+ * and `overrideSpecificity` in `peers.ts` serve both collections and the precedence rules
+ * cannot drift apart. See `matchPeerNoteRule`.
+ *
+ * **It is a SEPARATE collection from `peerOverrides` and that is forced by the engine, not
+ * a filing preference.** A pinned peer set already reports `shortfall: 0`,
+ * `bandReached: false` and `shownSameBusinessType === peers.length`, so both sentences are
+ * silent on a pinned combination by construction — a policy field on that row would be dead
+ * for every value except the two forcing ones. And the reverse matters more: the 122
+ * colliding combinations are overwhelmingly ones nobody has pinned or ever will, so tying
+ * the sentence to a pinned set would make the feature unreachable exactly where it is
+ * needed. The two decisions are independent and get one home each.
+ */
+export const peerNoteRuleSchema = z.object({
+  id: slug,
+  /** Required, and checked against `taxonomy.industries`. Scopes the rule, as on an override. */
+  industry: nonEmpty,
+  /** Absent means every sub-industry, including a visitor who named none. */
+  businessTypeId: z.string().trim().min(1).optional(),
+  /** Absent means every band. Checked against `taxonomy.revenueBands`. */
+  revenueBand: z.string().trim().min(1).optional(),
+  /** Absent means every country. Taxonomy UNION the world list, as on an override. */
+  hqCountry: z.string().trim().min(1).optional(),
+  policy: z.enum(PEER_NOTE_POLICIES),
+  /**
+   * The admin has confirmed a forcing policy. Required true for one; meaningless otherwise.
+   *
+   * See the block above `PEER_NOTE_POLICIES` for why this is stored rather than transient.
+   */
+  acknowledged: z.boolean().default(false),
+  /**
+   * Why this rule exists. Admin-only, read by nothing on the public screens.
+   *
+   * Optional on an `auto`-shaped rule and **required in practice on a forcing one**, where
+   * `datasetSchema` insists on it: a sentence the data does not support is the one case
+   * where "why" cannot be left to git archaeology.
+   */
+  note: z.string().trim().max(280).optional(),
+});
+
+/**
  * Where a city sits, so the density map can plot it.
  *
  * Bounded to India's own extent rather than to the globe. `MAP_FRAME` in geo.ts is
@@ -877,26 +1007,77 @@ export const metricSchema = metricObjectSchema.superRefine((metric, ctx) => {
    ========================================================================== */
 
 /**
- * The hero band's copy: a title and a supporting line, and deliberately nothing
- * else.
+ * The product's own name, and the ONE place the shipped spelling lives.
  *
- * **There is no kicker field, and its absence is the design.** The product label
- * IS the title here — the band used to carry an uppercase eyebrow above an
- * unrelated headline, and collapsing the two is what lets a centred block read
- * as one object instead of three stacked fragments. A schema with a `kicker` slot
- * is an invitation to fill it, so the slot is gone rather than left empty.
- *
- * Bounded lengths rather than free text, because both have a typographic job the
- * layout depends on. `title` renders at 40-80px in a leading-aligned column: past
- * ~60 characters it takes a third line on desktop and pushes the overlapping card
- * below it off the first screen. `lead` sits under the headline as a two-line
- * supporting sentence; the cap is set to that target rather than to the reading
- * measure, so an admin cannot quietly grow it into a paragraph that crowds the
- * card. An admin needing more words than this needs a different band, and the form
- * says so rather than letting them find out on the live site.
+ * **It is here rather than in `product-name.tsx` because it is now the DEFAULT of an
+ * editable field, and a default belongs beside the schema that declares it.**
+ * `ProductName` imports it and re-exports it as `PRODUCT_NAME`, so the component that
+ * draws the name and the field an admin edits cannot ship two different spellings. The
+ * data layer may not import a component — `schema.ts` is read by `tsx` scripts with no
+ * React in scope — so the dependency runs this way round and not the other.
  */
+export const DEFAULT_PRODUCT_NAME = "GCC ATLAS";
+
+/**
+ * The hero band's copy: the product's name, the promise under it, and one supporting
+ * line. Three fields, and deliberately nothing else.
+ *
+ * **THE HEADLINE IS TWO FIELDS RATHER THAN ONE, at the project owner's instruction, and
+ * that REVERSES the reason it was ever one.** It was a single `title` matched for the
+ * literal substring `GCC ATLAS` by `withProductMark` in `ask-hero.tsx`, on the argument
+ * that two fields would make an admin responsible for knowing where to split their own
+ * headline. What that argument missed is the failure it bought: the match was silent, so a
+ * headline spelling the name any other way — doubled space, hyphen, a reword that dropped
+ * a letter — rendered as ordinary heading type and looked deliberate. Nothing enforced it
+ * and nothing could, because the field was free text.
+ *
+ * Splitting it deletes the matcher and the class of bug with it. The name is its own
+ * field, so it is drawn as the name by construction; and the two halves can be SIZED
+ * independently, which is what the composition now needs — see `HERO_TAGLINE_EM`.
+ *
+ * **There is still no kicker field, and that absence is unchanged.** The band used to
+ * carry an uppercase eyebrow above an unrelated headline; a schema with a `kicker` slot
+ * is an invitation to fill it, so the slot is gone rather than left empty. What arrived
+ * instead is not an eyebrow — the tagline is the second half of one sentence, under the
+ * name rather than above it.
+ *
+ * **Both new fields are DEFAULTED, which is what makes this a compatible change rather
+ * than a version bump.** A dataset written while the headline was one `title` has neither
+ * key; zod fills them with the shipped values and strips the stale `title`, so the fs
+ * store's refusal of an unrecognised `version` never comes into it. The precedent is
+ * `metrics` and `close`. `data/dataset.json` is rewritten in the same commit all the same
+ * — see the note on `DEFAULT_PUBLIC_COPY` for why a key the diff cannot see is worse than
+ * a key that is missing.
+ *
+ * Bounded lengths rather than free text, because all three have a typographic job the
+ * layout depends on.
+ *
+ * **THE TWO NEW CAPS ARE EXPORTED CONSTANTS RATHER THAN READ OFF THE SCHEMA, for the
+ * reason `CTA_URL_MAX_LENGTH` is.** `.default()` wraps the string in a `ZodDefault`, which
+ * has no readable `maxLength` — so the admin form, which introspects every other bound,
+ * would silently fall through to its own literal and drift from the gate. One constant per
+ * cap, imported by both.
+ *
+ *   - `productName` is drawn `whitespace-nowrap` at up to 72px, so it CANNOT wrap and a
+ *     long one overflows the band instead. 16 characters is the measured ceiling: at
+ *     72px the shipped nine draw 387px inside a 704px `max-w-hero`, and at 38px on a
+ *     390px phone they draw 204px inside ~342px of copy box — both give room for about
+ *     fifteen more of the same average width.
+ *   - `tagline` is sized as a fraction of the name and wraps freely. 56 characters holds
+ *     it to two lines at the narrowest width; the shipped 28 take one line everywhere.
+ *   - `lead` sits under both as a two-line supporting sentence; the cap is set to that
+ *     target rather than to the reading measure, so an admin cannot quietly grow it into
+ *     a paragraph that crowds the card overlapping the band.
+ *
+ * An admin needing more words than this needs a different band, and the form says so
+ * rather than letting them find out on the live site.
+ */
+export const HERO_PRODUCT_NAME_MAX = 16;
+export const HERO_TAGLINE_MAX = 56;
+
 export const heroCopySchema = z.object({
-  title: nonEmpty.max(60),
+  productName: nonEmpty.max(HERO_PRODUCT_NAME_MAX).default(DEFAULT_PRODUCT_NAME),
+  tagline: nonEmpty.max(HERO_TAGLINE_MAX).default("Benchmark against your peers"),
   lead: nonEmpty.max(180),
 });
 
@@ -1027,6 +1208,216 @@ export const customerLogoSchema = z.object({
   height: z.number().int().min(1).max(200),
 });
 
+/* ==========================================================================
+   The role map — which roles India GCCs hire, by complexity and demand
+   ========================================================================== */
+
+/**
+ * The two halves of the role map, and they are an ENUM rather than editable strings.
+ *
+ * A role is in one or the other, and the split is the chart's primary structure — the
+ * whole finding is that the emerging roles sit at the complex end. So the membership has
+ * to be referentially checkable, which a free string is not: an admin who typed
+ * "Emerging " on one row and "emerging" on another would draw three bands. The WORDS a
+ * visitor reads are `copy.rolesBandEmerging` and `copy.rolesBandEstablished`, so
+ * renaming "Established" back to the slide's "Traditional" is a copy edit and the
+ * structure does not move with it.
+ */
+export const ROLE_BANDS = ["emerging", "established"] as const;
+export type RoleBand = (typeof ROLE_BANDS)[number];
+
+/**
+ * How many categorical inks `tokens.css` defines, and therefore how many families the
+ * chart can tell apart.
+ *
+ * **TWELVE IS WHAT THE CODE CAN HONOUR AND SEVEN IS WHAT THE CHART WANTS — the two are
+ * different claims and this constant is only the first.** The slide keys seven families to
+ * seven hues and the shipped dataset uses all seven; the eighth is the slide's own spare.
+ * Nine through twelve are ours, added so a ninth group is a publish rather than a deploy,
+ * and each was picked by measurement: every one clears 3:1 on the darker wash, which three
+ * of the slide's own do not, and the worst pair in the resulting twelve is still the
+ * `teal`/`slate` pair that already ships. So raising the ceiling made nothing harder to tell
+ * apart — but a legend a reader has to work through is still a worse legend, which the admin
+ * hint says rather than the schema.
+ *
+ * **THIS NUMBER IS LOAD-BEARING IN THREE FILES AND `tests/unit/role-tones.test.ts` IS WHAT
+ * KEEPS THEM AGREEING.** It caps `tone` and the family count here; `tokens.css` has to define
+ * exactly this many `--ansr-role-*`; and `globals.css` has to carry a `[data-tone]` rule for
+ * each. Raise it alone and every slot past the last rule takes the `var()` fallback —
+ * measured, `--ansr-accent`, which is the ink headings and figures are set in rather than a
+ * categorical one, and which is the SAME for every slot past the cap, so two extra families
+ * would draw identically to each other and nothing would report it.
+ *
+ * Declared above `roleFamilySchema` because that schema reads it while the module is
+ * evaluating, which a `const` below it would not yet have initialised.
+ */
+export const ROLE_TONES = 12;
+
+/**
+ * One group of roles, and the colour its dots are drawn in.
+ *
+ * **The hue is stored rather than derived from position, at the project owner's
+ * instruction, and that is the whole reason `tone` exists.** Taking the colour from the
+ * family's index in the list would mean reordering the legend silently recolours the
+ * chart — an admin dragging "Cybersecurity" above "Cloud & Platform" to tidy the legend
+ * would repaint eleven dots and have no way to see that coming. Stored, the colour is a
+ * property of the family and a reorder moves nothing but the legend's own order.
+ *
+ * **`tone` is a SLOT in `--ansr-role-*`, not a colour value.** An admin picks from twelve
+ * named inks — the slide's seven, its spare, and four measured additions — and cannot type a
+ * hex, which is what keeps `tokens.css` the single source of truth for what this product is
+ * allowed to draw.
+ * The whole-map refine below refuses two families sharing a slot, because two identical
+ * swatches in a legend is precisely the failure colour coding exists to prevent.
+ *
+ * `name` is capped at 36: it is the legend's own label and the grouping heading in the
+ * reflow below `lg`. The longest shipped name is 28 ("Data Engineering & Analytics").
+ */
+export const roleFamilySchema = z.object({
+  id: slug,
+  name: nonEmpty.max(36),
+  tone: z.number().int().min(1).max(ROLE_TONES),
+});
+
+/**
+ * One role — one dot on the map.
+ *
+ * **`complexity` IS A POSITION AND NOT A SCORE, and nothing ever states it to a
+ * visitor.** The source slide's axis carries "Lower" and "Higher" and no numerals at
+ * all, which is the honest shape: what ANSR holds is an ordering, not a measured index.
+ * So this number exists to place the dot and for no other purpose — the axis draws its
+ * two ends and the chart draws no tick, no gridline and no value. Storing 0–100 rather
+ * than a rank is what lets two roles sit at the same complexity, which several do.
+ *
+ * **`lane` IS THE VERTICAL POSITION AND IT MEANS NOTHING, which is why it is stored
+ * rather than computed.** The chart has one quantitative axis and the other direction is
+ * free room: the slide's author placed thirty-six bubbles by hand so that no label
+ * collides, interleaving them so a dot at 62% complexity can sit above, below or beside
+ * one at 60%. A renderer cannot reproduce that by packing into shared rows — it was tried,
+ * and uniform rows put every right-hand label at the same x, which drew eight false
+ * columns and read as a list rather than a field. So the placement is DATA, exactly as it
+ * is in the source, and the chart says nowhere that height carries a value.
+ *
+ * **`labelSide` is stored for the same reason.** A threshold rule ("flip past 55") is
+ * right most of the time and wrong exactly where the slide's author made a judgement —
+ * "Cloud Engineer" keeps its label on the trailing side at 62% because there is room, and
+ * "SDET" takes the leading side at 22% because "Full-Stack Developer" is beside it. Those
+ * are placements, not derivations.
+ *
+ * **`demand` is a 1-based STEP into `demandLevels`, not a headcount.** The slide encodes
+ * hiring demand as bubble area with no figure anywhere on it, which is exactly the shape
+ * this project's chart rules refuse — a mark whose quantity is available nowhere in text.
+ * An ordinal step fixes that without inventing a number ANSR has not supplied: the dot's
+ * area carries the step, the step's WORD is drawn in the key, and the same word is in
+ * each dot's accessible name. That is the licence the capability grid already runs on.
+ *
+ * Indexed rather than named so that renaming a level is one edit rather than thirty-six,
+ * on `ratingScale`'s own argument. The cost is that REORDERING `demandLevels` re-rates
+ * every role, which is why the diff reports that list as a change in its own right.
+ */
+export const roleSchema = z.object({
+  id: slug,
+  /** Drawn beside its own dot. 40 is what fits the label column at the plot's narrowest. */
+  name: nonEmpty.max(40),
+  familyId: slug,
+  band: z.enum(ROLE_BANDS),
+  /** Position along the one real axis. A position, never a score — see above. */
+  complexity: z.number().int().min(0).max(100),
+  /**
+   * Position down its own band, 0 at the top. Carries no quantity whatsoever.
+   *
+   * Free room rather than a second axis, and the chart draws nothing from it — no
+   * gridline, no label, no scale. It exists so labels do not collide, which on a field of
+   * thirty-six named dots is the difference between a chart and a pile.
+   */
+  lane: z.number().int().min(0).max(100),
+  /** Which side of the dot the name sits on. `trail` is after it, `lead` before. */
+  labelSide: z.enum(["lead", "trail"]),
+  demand: z.number().int().min(1),
+});
+
+/**
+ * The whole role map: a demand scale, the families, and the roles.
+ *
+ * **ONE object rather than three sibling keys on `siteContent`, and that is the point of
+ * it.** The three are meaningless apart — a role names a family and a demand step, so
+ * splitting them would put referential integrity across three keys that can be edited,
+ * diffed and defaulted independently. As one member it is one default, one diff entry,
+ * one line in the draft provider's shape check and one thing to revert.
+ *
+ * **Every cross-reference is checked HERE rather than in the editor**, on the rule the
+ * peer overrides are held to: the schema is the gate, so a row that could not publish
+ * cannot be rendered either. What the editor adds is refusing to DELETE a family that
+ * still has roles, which is the taxonomy rule — the gate can only say a reference is
+ * broken, where the editor can say which four roles are using it.
+ *
+ * Caps: twelve families, because that is how many categorical inks exist — see
+ * `ROLE_TONES`, and note that the number a reader can hold against a legend is smaller than
+ * the number the code allows; 60 roles because the field is sparse
+ * by construction and a label per dot is what makes it legible, and the shipped set is 36.
+ * `demandLevels` is 3 to 5 for the reason `RAMP` has five steps: the area difference
+ * between adjacent steps stops being visible past that, and below three an ordinal
+ * scale is a boolean.
+ */
+export const roleMapSchema = z
+  .object({
+    /** Weakest FIRST, which is what `demand` indexes into and what the key draws. */
+    demandLevels: z.array(nonEmpty.max(20)).min(3).max(5),
+    families: z.array(roleFamilySchema).min(1).max(ROLE_TONES),
+    roles: z.array(roleSchema).max(60),
+  })
+  .superRefine((map, ctx) => {
+    const familyIds = new Set<string>();
+    const tones = new Set<number>();
+    map.families.forEach((family, index) => {
+      if (familyIds.has(family.id)) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["families"],
+          message: `duplicate role family id "${family.id}"`,
+        });
+      }
+      familyIds.add(family.id);
+      /* Two families in one ink is a legend with two identical swatches, which is the
+         one failure colour coding cannot survive — so it is refused here rather than
+         left to the editor. See `roleFamilySchema.tone`. */
+      if (tones.has(family.tone)) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["families", index, "tone"],
+          message: `colour ${family.tone} is already used by another role family`,
+        });
+      }
+      tones.add(family.tone);
+    });
+
+    const roleIds = new Set<string>();
+    map.roles.forEach((role, index) => {
+      if (roleIds.has(role.id)) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["roles", index, "id"],
+          message: `duplicate role id "${role.id}"`,
+        });
+      }
+      roleIds.add(role.id);
+      if (!familyIds.has(role.familyId)) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["roles", index, "familyId"],
+          message: `"${role.familyId}" is not one of the role families`,
+        });
+      }
+      if (role.demand > map.demandLevels.length) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["roles", index, "demand"],
+          message: `demand must be between 1 and ${map.demandLevels.length}`,
+        });
+      }
+    });
+  });
+
 /**
  * The static visitor-facing strings, as data.
  *
@@ -1090,6 +1481,52 @@ export const publicCopySchema = z.object({
   /** The filter above 12 options, in a 40px row. Never the popup's name. */
   askFilterPlaceholder: nonEmpty.max(40),
   /**
+   * The dropdowns' own TIER HEADINGS, published because they are the last visitor-facing
+   * strings on the form that an admin could not touch.
+   *
+   * They clear the first test easily — a tier heading names a group of options and asserts
+   * nothing about the dataset — and they were in code only because nobody had asked. What
+   * makes them worth moving now is that the two tiers OVERLAP: the leading tier is a
+   * shortcut and the second list holds everything, so the words have to be able to say
+   * that. "All industries" above a list that omitted the pinned ones was a heading its own
+   * contents contradicted, and the fix for the contents is not a licence to leave the
+   * heading unowned.
+   *
+   * **`askGroupCommon` is ONE key for two controls, on `VELOCITY_HEADING`'s argument** —
+   * the industry and country popups head their leading tier with the same words, and the
+   * same words typed twice is a pair that eventually disagrees. The two "all" headings are
+   * separate because they name different things.
+   *
+   * **The revenue popup's single group is here too and is a heading nobody sees**: a
+   * one-group popup draws no tier heading, deliberately, because one label above one flat
+   * list is a redundant heading. It stays a published key rather than a code constant so
+   * the four group names are one decision in one place, and it becomes visible the moment
+   * that list gains a second tier. That is the one entry here an admin can edit without
+   * seeing a change, and it is the exception to the rule that killed `snapshotShareLabel`
+   * — the string is not UNDRAWN, it is drawn by a popup that currently has nothing to
+   * distinguish.
+   *
+   * Cap: a tier heading spans all columns of the panel body at 12px, so 32 fits at the
+   * narrowest width the panel is drawn at.
+   */
+  askGroupCommon: nonEmpty.max(32),
+  askGroupIndustriesAll: nonEmpty.max(32),
+  askGroupCountriesAll: nonEmpty.max(32),
+  askGroupRevenue: nonEmpty.max(32),
+  /**
+   * What the industry popup calls the second level, in three places at once.
+   *
+   * It is the count cue on a branching row ("31 sub-industries"), the accessible name of
+   * the pane's own close control, and the label on the pane's "Other …" breaker. One key
+   * for the three, because they are the same word about the same thing — and the word
+   * itself is a term ANSR asked for, so it is exactly the kind of string that gets
+   * reworded without a deploy.
+   *
+   * **Plural, because all three sites read it as one.** Cap 24 against the count cue,
+   * which is drawn inside a row's trailing chip.
+   */
+  askSubIndustryPlural: nonEmpty.max(24),
+  /**
    * The two strings a visitor only ever sees when something is WRONG, and they are
    * editable on the argument that ANSR's voice matters most at that moment.
    *
@@ -1147,8 +1584,19 @@ export const publicCopySchema = z.object({
    * never render — and a key an admin can edit that draws nothing is the one thing this
    * object is not allowed to hold. `ContextPanels` divides three cells as evenly as
    * four, which is why nothing else moved.
+   *
+   * **`pillSubIndustry` IS A FOURTH KEY AND IT IS NOT `pillCompany` RETURNING.** It
+   * labels a CONDITIONAL pill — the visitor answered a sub-industry or they did not —
+   * which is the shape the company pill had, and the two are still different cases. A
+   * company name was read by nothing: no figure, no peer, no ordering. A sub-industry is
+   * the PRIMARY ordering signal in `similarity.ts`, so it is the answer that most changes
+   * what the screen shows, and the row echoed everything except it. So the key draws on
+   * the industry's own argument rather than on the company's, and the `24` cap is the
+   * pills' shared one: "Sub-industry" is the product's word for it everywhere a visitor
+   * or an admin can read it, `businessTypeId` notwithstanding.
    */
   pillIndustry: nonEmpty.max(24),
+  pillSubIndustry: nonEmpty.max(24),
   pillHeadquarters: nonEmpty.max(24),
   pillRevenueBand: nonEmpty.max(24),
   /** Never drawn. The `<section>` would not be a `region` without it. */
@@ -1269,6 +1717,27 @@ export const publicCopySchema = z.object({
    * first card, which is the evidence the section exists to show.
    */
   peersNarrowNote: copyTemplate("peersNarrowNote"),
+  /**
+   * The line ABOVE the peer grid when the set is FULL but had to reach past the
+   * visitor's own answers to fill itself — a different line of business, a different
+   * size, or both. It is `peersNarrowNote`'s opposite number: the short note explains
+   * a set of three, this explains a set of five that could not be filled from the
+   * visitor's exact criteria, so the remaining slots went to the closest comparable
+   * companies a little further out.
+   *
+   * **Editable, and a PLAIN string — no slots at all.** It names neither axis nor
+   * industry, on purpose. It once carried an `{axis}` slot to say which of sub-industry
+   * or revenue band the set reached past, but a full set can widen on both at once and
+   * naming them piled up; and it named `{industry}`, which "the wider industry" says
+   * generically without the possessive-heavy interpolation the other templates need. So
+   * it is a fixed sentence: true whichever axis widened, scoped to the visitor's own
+   * industry without naming it, and unable to claim a reach that did not happen because
+   * it claims none. `broadenedLine` still fires only when a set actually broadened, on
+   * either signal, and `shortfallLine` still wins the tie — the line's TRIGGER is
+   * derived, only its wording is editable. No count — `peerCountLine` under the grid
+   * owns the numbers — and no em dash.
+   */
+  peersBroadenedNote: nonEmpty.max(150),
   largestTitle: copyTemplate("largestTitle"),
   mapTitle: copyTemplate("mapTitle"),
   /**
@@ -1321,6 +1790,81 @@ export const publicCopySchema = z.object({
    * second line rather than grow.
    */
   figureUnavailable: nonEmpty.max(24),
+  /**
+   * The role map's heading, and it is a KEY where `FUNCTIONS_TITLE` beside it is not.
+   *
+   * **The difference is what carries the scope claim.** The functions block's wording is
+   * the ONLY thing stopping eight tags being read as a breakdown of the five companies
+   * above them, so that string stays in code where it cannot be reworded into a
+   * falsehood. This block draws a basis note under the chart — `rolesBasisNote`, which
+   * `nonEmpty` guarantees cannot be emptied — so the scope is stated by a sentence
+   * whose job that is, and the heading is then the same category as `industryTitle`,
+   * `mapTitle` and `scaleTitle`: a name for what a reader is looking at.
+   *
+   * It still may not tie the roles to the peer grid, and a unit test pins that on the
+   * shipped value rather than on the schema: no possessive, and India named.
+   */
+  rolesTitle: nonEmpty.max(56),
+  /**
+   * The two band labels, which are the drawn form of the `ROLE_BANDS` enum.
+   *
+   * The slide says EMERGING and TRADITIONAL. "Established" ships instead, because
+   * "traditional" reads as a judgement about the work — a QA engineer's role is not
+   * old-fashioned — where the axis it labels is about how long the role has existed as a
+   * GCC hire. Editable precisely so ANSR can put the slide's own word back without a
+   * deploy, and the enum underneath does not move when they do.
+   *
+   * Capped short: each sits in a small-caps label above its own band, on one line.
+   */
+  rolesBandEmerging: nonEmpty.max(24),
+  rolesBandEstablished: nonEmpty.max(24),
+  /**
+   * The complexity axis: its name and its two ends, and there is deliberately nothing
+   * else.
+   *
+   * **No numeral is drawn on this axis at any width, and these three strings are the
+   * whole of what states it.** `role.complexity` is a position an admin sets rather than
+   * a measured score, so a tick or a value would be the chart claiming a precision the
+   * data does not have — the source slide carries exactly these three labels for exactly
+   * this reason. The two ends bracket the rail, trailing one end-aligned, which is the
+   * shape `RangeBenchmark` holds its own end labels in.
+   *
+   * Below `md` there is no rail to bracket, so the same three keys are composed into one
+   * line instead. One vocabulary, two drawings.
+   */
+  rolesAxisLabel: nonEmpty.max(32),
+  rolesAxisLow: nonEmpty.max(24),
+  rolesAxisHigh: nonEmpty.max(24),
+  /**
+   * What the bubble sizes mean, as one DRAWN line.
+   *
+   * **It was an `sr-only` framing for a four-ring key, and the key is gone at the project
+   * owner's instruction** — so this string is now the whole visible statement of the size
+   * encoding. **The renderer used to append the two ends of `roleMap.demandLevels` to it
+   * and no longer does, also at the project owner's request**, so the line is exactly what
+   * is typed here. The STEPS stay data because how many there are and what they are called
+   * is the scale ANSR supplies; this names what the scale measures, and must not name a
+   * step itself.
+   *
+   * 48 characters, because it sits under the family legend against the trailing edge and
+   * has to stay on one line at the plot's narrowest.
+   */
+  rolesDemandKey: nonEmpty.max(48),
+  /**
+   * What the role map was measured over, under the chart. `industryBasisNote`'s twin.
+   *
+   * **This is the one string on the block that keeps it honest, and it is the reason the
+   * heading above is allowed to be editable.** Every other section on this surface is
+   * drawn from the 1,834 companies; this one is not drawn from them at all. A reader who
+   * has just met five named peers, an industry count and a city map has no way to know
+   * that the block under them changes to a different source, so the block says so.
+   *
+   * **It names the SCOPE and never the uncertainty**, which is `industryBasisNote`'s own
+   * rule: the tool does not narrate its own integrity, so "drawn from ANSR's hiring
+   * research" and never "these positions are approximate". `nonEmpty` is the guarantee
+   * that matters — it can be reworded and cannot be emptied.
+   */
+  rolesBasisNote: nonEmpty.max(140),
   /* The terminating scale strip. Each label is a whole sentence's predicate. */
   scaleTitle: nonEmpty.max(60),
   scaleFortuneLabel: nonEmpty.max(120),
@@ -1388,6 +1932,26 @@ export const siteContentSchema = z.object({
   commonFunctions: z.array(nonEmpty.max(32)).min(1).max(12).default(() => [
     ...DEFAULT_COMMON_FUNCTIONS,
   ]),
+  /**
+   * The role map on the peer view, directly under the function tags.
+   *
+   * **Here rather than in code for the same reason `commonFunctions` is, and it clears
+   * the same test.** The block states no count, no share and no ordering of the
+   * companies above it — it is a picture of the India hiring market, so nothing in it can
+   * drift into a falsehood about the dataset. What it does claim is stated by
+   * `copy.rolesBasisNote`, which cannot be emptied.
+   *
+   * **It is the section on this surface an admin will most want to edit**, which is the
+   * positive reason as opposed to the permissive one: roles are the fastest-moving thing
+   * in this market. "Agentic Engineer" did not exist as a GCC hire two years ago, and a
+   * chart that needs a developer to add the next one is a chart that goes stale in
+   * public.
+   *
+   * Defaulted on the precedent every other addition here runs on — a required key turns a
+   * compatible addition into a broken read of every dataset written before it, including
+   * the one committed in `data/`.
+   */
+  roleMap: roleMapSchema.default(() => structuredClone(DEFAULT_ROLE_MAP)),
   /**
    * The customer strip. Defaulted, and capped at twenty-four.
    *
@@ -1492,6 +2056,166 @@ export const DEFAULT_COMMON_FUNCTIONS: readonly string[] = [
 ];
 
 /**
+ * The shipped role map: four demand steps, seven families, thirty-six roles.
+ *
+ * **Every number here was read off the supplied slide and nothing was interpolated.**
+ * `complexity` is the dot's own horizontal position on that slide, rescaled to the plot's
+ * 0–100 — so two roles the slide draws at the same x share a value, which is correct
+ * rather than a collision to break. `demand` is the slide's bubble RADIUS bucketed into
+ * the four steps its sizes actually separate into: one role is alone at the top
+ * ("Software Engineer", visibly twice the next), six sit in the next band, and the rest
+ * split between two. Nothing was averaged, ranked or smoothed, because the slide is the
+ * source and a derived number would be a figure ANSR never supplied.
+ *
+ * **The `band` split follows the slide's own two fields, including at the boundary.**
+ * "Data Annotator" and "Systems Engineer" have labels in the upper field and dots in the
+ * lower one; the DOT is what the chart positions, so both are `established`.
+ *
+ * Order within `roles` is by band and then by complexity, which is the order the chart
+ * draws and the order the phone reflow reads. It carries no claim of its own — the chart
+ * groups by family and positions by complexity, so this is a reading convenience and an
+ * admin may append anywhere.
+ */
+export const DEFAULT_ROLE_MAP: RoleMap = {
+  /**
+   * Four steps, weakest first. Plain ordinal words rather than a scale with a unit,
+   * because there is no unit: the slide states "bubble size = hiring demand" and no
+   * quantity anywhere, so these are the most a reader can honestly be told.
+   */
+  demandLevels: ["Low", "Moderate", "High", "Very high"],
+  /**
+   * The slide's seven colour keys, in its own legend order and in its own hues.
+   *
+   * **Each `tone` is the slide's colour for that family**, mapped onto the nearest
+   * `--ansr-role-*` ink — so the reconstruction keys red to AI / ML, teal to data, blue to
+   * cloud, slate to security, gold to application development, green to quality and
+   * purple to product, exactly as supplied. What moved is the saturation and lightness of
+   * each: the slide's gold and its light blue both measured under the 3:1 mark floor, so
+   * every hue was darkened until it cleared. See the token block for the ratios.
+   *
+   * `&` is kept in "Data Engineering & Analytics" and "Cloud & Platform" because the
+   * slide uses it and the strings are labels rather than prose; the search matcher folds
+   * `&` to "and" anyway, so an admin typing either finds the row.
+   */
+  families: [
+    { id: "ai-ml", name: "AI / ML", tone: 1 },
+    { id: "data-analytics", name: "Data Engineering & Analytics", tone: 2 },
+    { id: "cloud-platform", name: "Cloud & Platform", tone: 3 },
+    { id: "cybersecurity", name: "Cybersecurity", tone: 4 },
+    { id: "application-development", name: "Application Development", tone: 5 },
+    { id: "quality-engineering", name: "Quality Engineering", tone: 6 },
+    { id: "product-design", name: "Product & Design", tone: 7 },
+  ],
+  /**
+   * **EVERY `complexity`, `lane` AND `demand` HERE IS THE MACHINE-MEASURED VALUE OFF
+   * `Slide4.jpg`, WITH NO HAND CORRECTION LEFT IN THE TABLE.** All thirty-six discs are
+   * recovered by scanning coloured blobs: `complexity` is the disc's own centroid x as a
+   * percentage of the field's scanned width (x 59..1219), `lane` its centroid y as a
+   * percentage of the scanned height (y 81..556, which is the WHOLE canvas and not one
+   * band), `labelSide` is which side of it the author put the name on, and `demand` is its
+   * AREA-derived diameter's class. Nothing is averaged, ranked, smoothed or derived,
+   * because the slide is the source and a computed number would be a figure ANSR never
+   * supplied.
+   *
+   * **`demand` IS THE OPTIMAL FOUR-CLASS PARTITION OF THE MEASURED DIAMETERS, not a
+   * bucketing by eye — and the four classes it returns are the four this table has always
+   * held.** Exhaustive contiguous partition minimising within-class variance puts twenty
+   * discs at 18.3–23.3px, nine at 25.2–28.6, six at 30.7–35.6 and "Software Engineer"
+   * alone at 47.1. Every one of the thirty-six lands on the step stored here, so the
+   * assignments are confirmed rather than changed. What WAS wrong is the ramp the steps
+   * draw at: it took rounded cluster figures rather than the class MEANS, so every disc
+   * drew 1 to 3 percent small. See the `[data-role-step]` block in globals.css.
+   *
+   * **THE POSITIONS ARE THE MEASUREMENT'S OWN EXCEPT WHERE A LABEL WILL NOT LET THEM BE,
+   * AND FIVE OF THEM WILL NOT.** Measured against the render at 1440, every disc already
+   * sat within a mean of 3.2px of where the slide draws it on a 1070 by 440 field, so the
+   * placement was never the thing that was wrong. Two values were a unit off and are
+   * corrected — `security-engineer` 36→35 and `full-stack-developer` 25→26. Five are
+   * DELIBERATELY off the slide, and each one was tried at its measured value and reverted
+   * because `rolemap:check` named the collision it caused: `ai-ml-engineer` stays at 15
+   * rather than 13, where its label runs into "Agentic Engineer"'s disc by 5px;
+   * `full-stack-developer` stays at 91 rather than 90, where it meets "Application
+   * Developer"'s disc; `backend-engineer` 92 and `frontend-engineer` 96 stay two lanes
+   * further apart than the slide's 93 and 95, where their two labels overlap by 28px; and
+   * `data-architect` is the fifth, named on its own row below. The cause is one thing in all
+   * five: Moderat sets these names wider relative to the plot than the slide's face does, so
+   * a label needs vertical room the source did not have to give it.
+   *
+   * **The three discs on the SEAM need no nudge at all, and the one-canvas rewrite is what
+   * bought that** — "Systems Engineer" at 51, "Data Annotator" at 52 and "Integration
+   * Engineer" at 48 are the slide's own, each drawing part in one wash and part in the
+   * other exactly as the source does, where two separately positioned boxes could only clip
+   * a straddling disc to one of them.
+   *
+   * **SO A CHANGE HERE IS VERIFIED WITH `npm run rolemap:check` AND NEVER BY READING THE
+   * NUMBERS.** A value that matches the source is not a value that fits, and the four above
+   * are what that looks like.
+   *
+   * Listed by band and then by `lane`, so reading this table top to bottom is reading the
+   * field top to bottom. The order carries no claim — the chart positions every dot
+   * absolutely — so an admin may append anywhere.
+   */
+  roles: [
+    /* Emerging, down the band. */
+    { id: "genai-developer", name: "GenAI Developer", familyId: "ai-ml", band: "emerging", complexity: 83, lane: 5, labelSide: "trail", demand: 2 },
+    { id: "agentic-engineer", name: "Agentic Engineer", familyId: "ai-ml", band: "emerging", complexity: 86, lane: 10, labelSide: "trail", demand: 2 },
+    { id: "ai-ml-engineer", name: "AI / ML Engineer", familyId: "ai-ml", band: "emerging", complexity: 80, lane: 15, labelSide: "trail", demand: 3 },
+    { id: "cloud-engineer", name: "Cloud Engineer", familyId: "cloud-platform", band: "emerging", complexity: 62, lane: 19, labelSide: "trail", demand: 3 },
+    /**
+     * **The longest name in the set, at 86% of the axis, and it is the one label the plot's
+     * trailing bound WRAPS.** The slide wraps it in exactly this spot too, onto "Forward
+     * Deployed / Engineer (FDE)", so the two lines are the source's own reading rather than
+     * a fit correction — which is why the side and the lane are both the slide's.
+     * Every attempt to place it on the leading side instead collided with the four roles
+     * sharing its column; the bound in `.gcc-role-map__item` is what makes the wrap general.
+     */
+    { id: "forward-deployed-engineer", name: "Forward Deployed Engineer", familyId: "ai-ml", band: "emerging", complexity: 86, lane: 20, labelSide: "trail", demand: 1 },
+    /**
+     * **THE FIFTH DELIBERATE LANE, AND THE ONLY ONE MOVED FOR ASSOCIATION RATHER THAN FOR
+     * COLLISION — 20 on the slide, 22 here.** It shares its lane with "Forward Deployed
+     * Engineer" and sits under "AI / ML Engineer", so its own trail label ran to within
+     * 1.4px of that disc while its own is `--gcc-role-gap` away: the nearest dot to the name
+     * was not the name's dot, which is how a label comes to read as belonging to the wrong
+     * mark. Nothing collided, so the collision check passed it. Two lanes is ~9px and clears
+     * the last of the thirty-six; `lead` clears it too and was rejected, its label then
+     * running head-on at "Cloud Engineer"'s, which shares the line at lane 19.
+     */
+    { id: "data-architect", name: "Data Architect", familyId: "data-analytics", band: "emerging", complexity: 74, lane: 22, labelSide: "trail", demand: 1 },
+    { id: "platform-engineer", name: "Platform Engineer", familyId: "cloud-platform", band: "emerging", complexity: 83, lane: 27, labelSide: "trail", demand: 1 },
+    { id: "data-engineer", name: "Data Engineer", familyId: "data-analytics", band: "emerging", complexity: 60, lane: 29, labelSide: "trail", demand: 2 },
+    { id: "data-scientist", name: "Data Scientist", familyId: "ai-ml", band: "emerging", complexity: 77, lane: 32, labelSide: "trail", demand: 3 },
+    { id: "cybersecurity-architect", name: "Cybersecurity Architect", familyId: "cybersecurity", band: "emerging", complexity: 47, lane: 34, labelSide: "trail", demand: 2 },
+    { id: "security-engineer", name: "Security Engineer", familyId: "cybersecurity", band: "emerging", complexity: 31, lane: 35, labelSide: "trail", demand: 1 },
+    { id: "infrastructure-engineer", name: "Infrastructure Engineer", familyId: "cloud-platform", band: "emerging", complexity: 63, lane: 37, labelSide: "trail", demand: 1 },
+    { id: "site-reliability-engineer", name: "Site Reliability Engineer", familyId: "cloud-platform", band: "emerging", complexity: 44, lane: 42, labelSide: "trail", demand: 3 },
+    { id: "cloud-security-analyst", name: "Cloud Security Analyst", familyId: "cybersecurity", band: "emerging", complexity: 28, lane: 43, labelSide: "trail", demand: 1 },
+    { id: "systems-architect", name: "Systems Architect", familyId: "cloud-platform", band: "emerging", complexity: 79, lane: 45, labelSide: "lead", demand: 2 },
+    { id: "solution-architect", name: "Solution Architect", familyId: "application-development", band: "emerging", complexity: 92, lane: 46, labelSide: "lead", demand: 2 },
+    { id: "integration-engineer", name: "Integration Engineer", familyId: "cloud-platform", band: "emerging", complexity: 42, lane: 48, labelSide: "trail", demand: 1 },
+    /* Established, down the band. */
+    { id: "systems-engineer", name: "Systems Engineer", familyId: "cloud-platform", band: "established", complexity: 76, lane: 51, labelSide: "trail", demand: 1 },
+    { id: "data-annotator", name: "Data Annotator", familyId: "data-analytics", band: "established", complexity: 66, lane: 52, labelSide: "lead", demand: 1 },
+    { id: "devops-engineer", name: "DevOps Engineer", familyId: "cloud-platform", band: "established", complexity: 53, lane: 61, labelSide: "trail", demand: 1 },
+    { id: "software-engineer", name: "Software Engineer", familyId: "application-development", band: "established", complexity: 70, lane: 62, labelSide: "trail", demand: 4 },
+    { id: "iam-engineer", name: "IAM Engineer", familyId: "cybersecurity", band: "established", complexity: 12, lane: 66, labelSide: "trail", demand: 1 },
+    { id: "bi-analyst", name: "BI Analyst", familyId: "data-analytics", band: "established", complexity: 36, lane: 67, labelSide: "trail", demand: 1 },
+    { id: "product-designer", name: "Product Designer", familyId: "product-design", band: "established", complexity: 53, lane: 69, labelSide: "trail", demand: 1 },
+    { id: "product-manager", name: "Product Manager", familyId: "product-design", band: "established", complexity: 74, lane: 72, labelSide: "lead", demand: 2 },
+    { id: "servicenow-developer", name: "ServiceNow Developer", familyId: "application-development", band: "established", complexity: 15, lane: 72, labelSide: "trail", demand: 1 },
+    { id: "scrum-master", name: "Scrum Master / Agile", familyId: "product-design", band: "established", complexity: 42, lane: 76, labelSide: "trail", demand: 1 },
+    { id: "sdet", name: "SDET", familyId: "quality-engineering", band: "established", complexity: 23, lane: 77, labelSide: "lead", demand: 1 },
+    { id: "business-analyst", name: "Business Analyst", familyId: "product-design", band: "established", complexity: 29, lane: 79, labelSide: "trail", demand: 1 },
+    { id: "salesforce-engineer", name: "Salesforce Engineer", familyId: "application-development", band: "established", complexity: 64, lane: 81, labelSide: "lead", demand: 1 },
+    { id: "data-analyst", name: "Data Analyst", familyId: "data-analytics", band: "established", complexity: 20, lane: 83, labelSide: "trail", demand: 3 },
+    { id: "application-developer", name: "Application Developer", familyId: "application-development", band: "established", complexity: 32, lane: 86, labelSide: "trail", demand: 2 },
+    { id: "full-stack-developer", name: "Full-Stack Developer", familyId: "application-development", band: "established", complexity: 26, lane: 91, labelSide: "trail", demand: 2 },
+    { id: "qa-test-engineer", name: "QA / Test Engineer", familyId: "quality-engineering", band: "established", complexity: 10, lane: 92, labelSide: "trail", demand: 3 },
+    { id: "backend-engineer", name: "Backend Engineer", familyId: "application-development", band: "established", complexity: 60, lane: 92, labelSide: "lead", demand: 1 },
+    { id: "frontend-engineer", name: "Frontend Engineer", familyId: "application-development", band: "established", complexity: 41, lane: 96, labelSide: "trail", demand: 1 },
+  ],
+};
+
+/**
  * The twenty-two marks, with the ink bounds each was measured at.
  *
  * **Every one of these is produced by `npm run logo:crop`, and a hand-typed pair is a
@@ -1568,6 +2292,18 @@ export const DEFAULT_PUBLIC_COPY: PublicCopy = {
   askRevenueHint: "All figures in US dollars.",
   askHqPlaceholder: "Choose a country",
   askFilterPlaceholder: "Type to narrow the list",
+  /**
+   * **"Most common" leads and the second group holds EVERYTHING, which is what these two
+   * pairs of words now have to be true about.** The tiers overlap: the leading one is a
+   * shortcut into the same list, so "All industries" and "All countries" are literal
+   * rather than aspirational. A reword that narrows either — "Other industries", "The
+   * rest" — would describe the behaviour this pair replaced.
+   */
+  askGroupCommon: "Most common",
+  askGroupIndustriesAll: "All industries",
+  askGroupCountriesAll: "All countries",
+  askGroupRevenue: "Revenue bands",
+  askSubIndustryPlural: "sub-industries",
   askSubmitError:
     "Something went wrong reaching our data. Please try again in a moment.",
   askFieldRequired: "Choose one to continue.",
@@ -1580,6 +2316,7 @@ export const DEFAULT_PUBLIC_COPY: PublicCopy = {
   viewPeers: "Peer Landscape",
   viewFunctions: "Function Metrics",
   pillIndustry: "Industry",
+  pillSubIndustry: "Sub-industry",
   pillHeadquarters: "Headquarters",
   pillRevenueBand: "Revenue band (USD)",
   functionPanelLabel: "India market metrics by function",
@@ -1593,8 +2330,16 @@ export const DEFAULT_PUBLIC_COPY: PublicCopy = {
   editorSubmit: "Update my results",
   gridRowHeader: "Capability",
   industryTitle: "Inside India's GCC base",
-  industryBasisNote:
-    "Indicative counts, drawn from the GCCs ANSR tracks rather than every centre in India.",
+  /**
+   * **The contrast clause is gone at the project owner's request: it names the scope and
+   * stops.** It read "… drawn from the GCCs ANSR tracks rather than every centre in
+   * India", where the second half spent nine words telling a reader what the figures are
+   * NOT — which is the hedging register this field's own rule forbids, arriving by
+   * comparison instead of by the word "approximate". "The GCCs ANSR tracks" already says
+   * the counts are a tracked set rather than a census, so the clause was the same
+   * qualification twice with the second one apologising.
+   */
+  industryBasisNote: "Indicative counts, drawn from the GCCs ANSR tracks.",
   /* "GCCs", never "GCC's", which ANSR asked never to appear. */
   snapshotHeading: "Snapshot of {industry} GCCs in India",
   /**
@@ -1612,22 +2357,35 @@ export const DEFAULT_PUBLIC_COPY: PublicCopy = {
    */
   peersTitle: "GCC details of your closest peers",
   /**
-   * **Two clauses, one fact each, and no number in either.** The first answers the
-   * question a short list actually raises — is India thin in my industry? — and answers
-   * it no. The second says what did the narrowing, which is the visitor's own answer
-   * rather than a limit of the data, and it says plainly that few companies clear it.
-   * The count is under the grid, stated exactly once.
+   * **One sentence, one fact per clause, no number.** The first answers the question a
+   * short list actually raises — is India thin in my industry? — and answers it no. The
+   * second names what did the narrowing, which is the visitor's own answer rather than a
+   * limit of the data. The count is under the grid, stated exactly once.
    *
    * "well established" rather than "not short of companies": a sentence that opens on
    * what the market is NOT makes the reader hold the negative through the whole clause,
-   * and the finding here is positive. **"These are the closest" points FORWARD**, because
-   * the line is read before the cards now; it closed on "the closest comparisons above"
-   * while it was drawn beneath them, which the move made false. A comma before "but",
-   * never a dash: no em dash reaches a visitor.
+   * and the finding here is positive. **Collapsed to one comma-joined sentence and
+   * shortened**, because two sentences at 14px inside `max-w-measure` wrapped to a
+   * second line with the first half-empty, and "closely … the closest" said "close"
+   * twice. "so these are the nearest" points FORWARD — the line is read before the
+   * cards now; it closed on "the closest comparisons above" while it was drawn beneath
+   * them, which the move made false. Commas throughout, never a dash: no em dash
+   * reaches a visitor.
    */
   peersNarrowNote:
-    "{industry} is well established in India, but few of its GCCs " +
-    "closely match your sub-industry. These are the closest.",
+    "{industry} is well established in India, but few GCCs closely match " +
+    "your sub-industry, so these are the nearest.",
+  /**
+   * **Names the reach without apologising for it, and names neither axis nor industry.**
+   * The clause a visitor cares about is why the set is not an exact match: their own
+   * answers returned too few, so the tool reached a little past them to the closest
+   * comparable companies in the wider industry. "your selection" covers a widening on
+   * sub-industry, on revenue band, or on both; "the wider industry" scopes it to the
+   * industry they chose without naming it. No count, no em dash.
+   */
+  peersBroadenedNote:
+    "Few companies match your selection exactly, so these reach beyond it to the " +
+    "closest comparable companies in the wider industry.",
   largestTitle: "The largest {industry} GCCs in India",
   /* Not "Where …": the block's own heading would then open the way the lead used to. */
   mapTitle: "Cities where {industry} companies have set up",
@@ -1658,6 +2416,44 @@ export const DEFAULT_PUBLIC_COPY: PublicCopy = {
    */
   snapshotLeadingCityLabel: "the city where most of these GCCs are based",
   figureUnavailable: "Data unavailable",
+  /**
+   * **"India GCCs" is the load-bearing half, exactly as it is in `FUNCTIONS_TITLE`.**
+   * The block sits directly under five named companies, so a heading reading "Roles
+   * they hire" or "Roles your peers hire" would claim a per-company role record this
+   * dataset does not hold and never will. "hired into India GCCs" is a claim about the
+   * market, which is what the chart actually draws.
+   *
+   * **"Technology and product roles", not "Roles".** The shipped thirty-six are all
+   * engineering, data, security and product; a bare "Roles" would imply the finance,
+   * HR and procurement functions the tags above it list, none of which are here.
+   */
+  rolesTitle: "Technology and product roles hired into India GCCs",
+  rolesBandEmerging: "Emerging",
+  rolesBandEstablished: "Established",
+  rolesAxisLabel: "Job role complexity",
+  rolesAxisLow: "Lower",
+  rolesAxisHigh: "Higher",
+  /**
+   * Names the encoding the way the source slide does, and it is now the WHOLE line.
+   *
+   * The renderer used to append the scale's two ends to it; that went at the project
+   * owner's request, so this string is the entire demand key and a reword has to carry
+   * the direction itself if it wants one. It still must not name a STEP — `demandLevels`
+   * owns those words, and a step typed in here would be a second place to spell one.
+   */
+  rolesDemandKey: "Bubble size = Hiring Demand",
+  /**
+   * **No em dash and no hedge.** It names where the positions come from and stops; the
+   * sentence a reader must not find here is one apologising for them.
+   *
+   * **The "rather than from the companies above" clause is gone at the project owner's
+   * request**, on `industryBasisNote`'s own reasoning: naming the source is what the
+   * sentence is for, and a clause naming what the source is NOT reads as the block
+   * defending itself. The scope survives in "ANSR's own hiring research", which is
+   * already a different source from the peer grid.
+   */
+  rolesBasisNote:
+    "Indicative, drawn from ANSR's own hiring research across India GCCs.",
   scaleTitle: "The world's largest companies, in India",
   scaleFortuneLabel: "Fortune Global 500 companies run a GCC in India.",
   scaleForbesLabel: "Forbes Global 2000 companies run a GCC in India.",
@@ -1694,22 +2490,32 @@ export const DEFAULT_PUBLIC_COPY: PublicCopy = {
 export const DEFAULT_SITE_CONTENT: SiteContent = {
   hero: {
     /**
-     * **The product has a NAME now — Atlas — and the headline states what the tool does
-     * with it.** "ANSR GCC Intelligence" named a category; this names the product and
-     * the promise in one line.
+     * **The product's name, on its own field and on its own line.**
      *
-     * **The literal substrings "ANSR" and "ATLAS" are both load-bearing and must survive
-     * any rewording.** `withBrandMark` and `withProductMark` in `ask-hero.tsx` find them
-     * and swap each for its drawn wordmark, so a headline that spells either differently
-     * silently renders that half as plain type and loses a mark from the band.
+     * **The literal-substring rule is GONE with the single `title` field, and that is the
+     * whole point of the split.** `withProductMark` used to search the headline for
+     * `GCC ATLAS` as one two-word token and swap it for the drawn form — so a doubled
+     * space, a hyphen or a reword silently lost the name's own setting and looked
+     * intentional. The name is now the field, so there is nothing to match and nothing to
+     * spell wrong.
      *
-     * **No punctuation after the name, at the project owner's request.** It read
-     * "ANSR ATLAS: Benchmark against your peers" while the name was typed; with both
-     * halves now drawn, the colon was a typed character sitting against the trailing
-     * edge of an outlined mark. What it was doing — separating the name from the promise
-     * — the lockup now does on its own.
+     * **"ANSR" is not here and must not be.** The brand came off this band as TYPE at the
+     * project owner's instruction and is stated by `AnsrLockup`'s artwork above the
+     * headline; a name containing it would open the line with two names again.
+     *
+     * **No punctuation after it, at the project owner's request.** It read
+     * "ANSR ATLAS: Benchmark against your peers" while the headline was one string, and
+     * the colon was doing the job the line break now does on its own.
      */
-    title: "ANSR ATLAS Benchmark against your peers",
+    productName: DEFAULT_PRODUCT_NAME,
+    /**
+     * **The promise, sized to run A LITTLE LONGER than the name above it, at the project
+     * owner's request** — 104.5% of its ink, measured. See `HERO_TAGLINE_SIZE` in
+     * `ask-hero.tsx` for the ratio and how it was derived; the consequence for an admin is
+     * that a longer tagline does not get smaller, it wraps. Keep it to about this length and
+     * the masthead stays two lines.
+     */
+    tagline: "Benchmark against your peers",
     /**
      * **No em dash, at ANSR's request, and a colon for the reason the close's body takes
      * one.** What follows the break names the three kinds of data the sentence before it
@@ -1744,6 +2550,7 @@ export const DEFAULT_SITE_CONTENT: SiteContent = {
    * other's diff.
    */
   commonFunctions: [...DEFAULT_COMMON_FUNCTIONS],
+  roleMap: DEFAULT_ROLE_MAP,
   logos: [...DEFAULT_LOGOS],
   copy: DEFAULT_PUBLIC_COPY,
 };
@@ -1751,6 +2558,9 @@ export const DEFAULT_SITE_CONTENT: SiteContent = {
 export type HeroCopy = z.infer<typeof heroCopySchema>;
 export type ImpactStat = z.infer<typeof impactStatSchema>;
 export type CloseCopy = z.infer<typeof closeCopySchema>;
+export type RoleFamily = z.infer<typeof roleFamilySchema>;
+export type Role = z.infer<typeof roleSchema>;
+export type RoleMap = z.infer<typeof roleMapSchema>;
 export type CustomerLogo = z.infer<typeof customerLogoSchema>;
 export type PublicCopy = z.infer<typeof publicCopySchema>;
 export type LatLon = z.infer<typeof latLonSchema>;
@@ -1798,6 +2608,19 @@ export const datasetSchema = z
      * arguable.
      */
     peerOverrides: z.array(peerOverrideSchema).max(200).default([]),
+    /**
+     * Which sentence the peer grid carries, per combination of answers.
+     *
+     * Defaulted and capped on `peerOverrides`' own reasoning: it is a control surface, so
+     * hundreds of rows would mean the DEFAULT is wrong and should be changed in code
+     * instead. Same 200.
+     *
+     * **`.default([])` is what makes this a compatible addition and also what makes the
+     * draft restore blind to it**, which is why `STORAGE_KEY` moves with it — a draft
+     * written before this key parses with the gap filled by an empty list, so publishing
+     * one would silently delete every rule and report it as an ordinary edit.
+     */
+    peerNoteRules: z.array(peerNoteRuleSchema).max(200).default([]),
     /**
      * The Screen 2 catalogue. Defaulted rather than required, so a dataset
      * written before this key existed still reads and `DATASET_VERSION` does not
@@ -2144,6 +2967,7 @@ export type FteRange = z.infer<typeof fteRangeSchema>;
 export type Company = z.infer<typeof companySchema>;
 export type BusinessType = z.infer<typeof businessTypeSchema>;
 export type PeerOverride = z.infer<typeof peerOverrideSchema>;
+export type PeerNoteRule = z.infer<typeof peerNoteRuleSchema>;
 export type Taxonomy = z.infer<typeof taxonomySchema>;
 export type Dataset = z.infer<typeof datasetSchema>;
 

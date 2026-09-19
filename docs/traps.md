@@ -72,6 +72,13 @@ session. Read on demand, and add to it whenever something costs more than one at
   also require `transitionDuration > 0` or it flags several hundred innocent elements.
 - **`detect.mjs src` times out at 120s.** Pass the two or three component directories instead. And
   `npx eslint src/**` does not finish inside five minutes here — rely on `tsc` plus `next build`.
+- **`lucide-react` IN A SERVER-IMPORTED MODULE FAILS FOUR UNIT FILES AT COLLECTION, AND THE ERROR NAMES
+  THE LIBRARY RATHER THAN YOUR FILE.** `vitest.config.ts` resolves the `react-server` condition, so
+  `lucide-react/src/context.ts` reaching for `createContext` throws before any assertion runs —
+  `charts-data`, `peer-overlaps`, `public-copy` and `screen1` all go red with an error pointing into
+  `node_modules`, while `tsc` and the browser suite are perfectly happy. One `ChevronDown` in
+  `primitives.tsx` was enough. Client components (`screen-header.tsx` imports `Pencil`) are fine; anything
+  a server component or a unit test imports draws its own inline `<svg>` instead.
 
 ## Markup and CSS
 
@@ -81,6 +88,29 @@ session. Read on demand, and add to it whenever something costs more than one at
   which reads as a broken chart when the chart was drawing correctly. Read
   `style.getPropertyValue("--gcc-at")` instead. Any spec asserting a position is coupled to HOW the
   position is set, so moving a measurement into CSS means grepping the specs for the old property.
+
+- **TEXT-INK MEASUREMENTS TAKEN IN THE BROWSER ARE WRONG IN TWO SILENT WAYS, AND BOTH COST A PASS ON THE
+  HERO'S SPACING.** Canvas `measureText` before `document.fonts.ready` resolves describes the FALLBACK face,
+  not the webfont — the numbers look plausible, they are stable across reloads, and every constant derived
+  from them was 0.029em out. And measuring a paragraph's last-line ink with an all-capitals sample puts its
+  bottom a descender too high, which overstated one junction by 14px and sent the correction the wrong way.
+  So: `await document.fonts.ready` inside the page, put a descender in the sample for anything whose bottom
+  ink matters, and verify by measuring the INTERVAL the correction produces rather than the correction. A
+  calibration loop against a broken instrument converges confidently on the wrong answer.
+
+- **A MARK BESIDE TYPE GROWS THE LINE BOX, AND NEGATIVE BLOCK MARGINS DO NOT BUY IT BACK.** An inline
+  replaced box past the strut pushes every following line one for one — on the entry point that is the
+  headline's second line, the lead and the form card — and nothing in the component looks wrong, so the
+  symptom is spacing further down the page. The textbook fix is a symmetric negative block margin, since
+  CSS computes an inline replaced box's line height from its MARGIN box; measured in Chromium at 1440 and
+  390 it moves the image DOWN by the margin and reduces the contribution by nothing, so the line grows by
+  exactly the excess it was meant to absorb. What works is a `transform: scale()` on a box held at the
+  free ceiling, with the origin on the LEADING edge so the mark cannot reach back past the text block's
+  own leading edge, and the trailing margin widened by the overhang so the gap to the first letter is
+  unchanged. Measured on the entry point's headline, where the mark has since moved OFF the line entirely
+  and the mechanism went with it — git holds it under `AnsrSunMark` / `sunGeometry`. The free ceiling
+  depends on the heading's leading and the face's metrics, so re-measure by stepping the size and reading
+  the following paragraph's top, never by reading the mark.
 
 - **A LITERAL-TOKEN MATCH AGAINST ADMIN-EDITABLE COPY GOES SILENTLY NO-OP WHEN THE STORED STRING SPELLS
   THE TOKEN DIFFERENTLY.** `withCasedGccPlural` in `snapshot.tsx` exempts "GCCs" from the eyebrow's
@@ -204,6 +234,84 @@ session. Read on demand, and add to it whenever something costs more than one at
 
 ## Rendering and review
 
+- **MODERAT HAS NO SEMIBOLD, AND THE DEFAULT FAILURE IS SILENT AND UPWARD.** The family's real weights
+  stop at Medium 500 and resume at Bold 700. Declare only the real ones and a request for 600 does not
+  fall back to Medium — the CSS matching algorithm checks weights ABOVE the target first, so
+  `font-semibold` lands on Bold and stops being separable from `font-bold`. Nothing errors, and the
+  places it matters are the ones where weight is the only signal: `IndexTable`'s base column, the
+  anchor cell in `IndexLollipop`, two other emphasised chart rows. `layout.tsx` declares the Medium
+  file across `500 600` so the collapse goes the other way. **And a spec cannot catch it**:
+  `getComputedStyle(el).fontWeight` reports the DECLARED 600, not the face that drew it, so the browser
+  assertion passes either way.
+- **MODERAT'S DEFAULT FIGURES ARE SHORT — 0.640/0.651em against capitals at 0.700em** — so a string like
+  "50 FTEs" draws the number 8.6% smaller than the letters, which reads as a size bug in the markup and is
+  not one. The public surface therefore sets `font-variant-numeric: lining-nums`, whose figures are
+  0.700/0.710em and unslashed. Anything that opts out of that inherits the short figures again.
+- **`tabular-nums` IS A NO-OP ON THE PUBLIC SURFACE BECAUSE MODERAT'S TABULAR ZERO IS SLASHED, so it is
+  NEUTRALISED, and the class is still all over the markup.** The feature substitutes the family's whole
+  tabular set — the zero gains a slash and the `1` a footed stem — and all four tabular zero variants are
+  slashed, so there was no version to switch to. One rule in `globals.css` therefore turns
+  `font-variant-numeric` off under `.font-display`. Two consequences: reading the class and expecting
+  aligned digits is wrong on the public screens and right in admin, and deleting that rule puts the slash
+  back on every figure in the product. The default figures are PROPORTIONAL (`1` is 369 units against `0`
+  at 604), which is what the rule gives up. Decision and measurements: style lock.
+- **A GLYPH SUBSTITUTION IS INVISIBLE TO `getComputedStyle` AND TO `textContent`.** A slashed zero, a
+  footed `1` and `ss01`'s thin ampersand are all the same character; only a rasterised render shows which
+  one drew. Three probe traps go with that. **`ctx.measureText` reads `ctx.font` alone**, so an element's
+  `font-variant-numeric` never reaches the canvas and every variant reports one ink height. **A `style`
+  attribute built by string interpolation TRUNCATES at the first `"` inside a feature name** like
+  `"tnum" 1`, silently dropping the whole rule — and `white-space: pre` after it, which is how the broken
+  probe still looked plausible; use `el.style.setProperty` and read the computed value back, after the
+  node is in the document. And **a `file://` font URL will not load into a `setContent` page**, so a probe
+  built that way measures a serif fallback. Inject into the real page.
+- **A UI GLYPH MODERAT DOES NOT HAVE COMES BACK FROM THE OS, VERTICALLY WHEREVER THAT FONT PUT IT.**
+  `PanelAction`'s disclosure mark was `⌄` (U+2304), which is not in the family, so it fell through the
+  stack and drew high in its own em box — sitting visibly above the label's midline on a row already set
+  to `items-center`. No flex property can fix it: the BOX is centred and the ink inside it is not, and
+  `getComputedStyle` reports the declared family either way. Draw a UI mark as an inline `<svg>` whose
+  `viewBox` is centred on its own stroke; a box that is its ink lands where alignment says it should.
+- **MEASURING TEXT INK FROM A SCREENSHOT HAS THREE WAYS TO BE CONFIDENTLY WRONG, and two of them read
+  as a small error rather than as a broken instrument.** All three were hit in one session tuning
+  `ask-hero.tsx`. **A screenshot of a CONTAINER captures whatever paints over it** — the form card
+  overlaps the hero's foot, so rasterising the band finds a white plate and calls it ink, which put one
+  interval 50px out. **A clip to an element's own box TRUNCATES ink that hangs outside it** — with a
+  negative half-leading the descenders sit below the box, so the clip reported the error as nearly zero
+  and the correction as unnecessary. And **`el.style.visibility = "hidden"` does not take on the
+  entry point's `h1`**, so hiding neighbours to isolate one element silently measures both; isolate by
+  clip geometry instead. `scripts/measure-hero-ink.mjs` encodes all three fixes — run it rather than
+  rebuilding the instrument.
+- **THE DOM WILL NOT TELL YOU WHERE A LINE OF TEXT'S INK IS, AND TWO OF THE THREE OBVIOUS WAYS TO ASK IT
+  DISAGREE WITH EACH OTHER.** Cost three passes on `PanelAction`'s chevron, where the first derived
+  correction was 73% too far and would have pushed the mark as far below the letters as it began above
+  them. **`measureText(…).fontBoundingBoxAscent` is not reliable across probes** — it reported 1.00em
+  ascent / 0.20em descent for Moderat in one page and 0.90em / 0.25em in another, and only the second
+  agrees with the box the browser actually laid out. **An inline span's `getBoundingClientRect()` is its
+  LINE box, not its content area**, so deriving a baseline from its height and a half-leading is
+  arithmetic on the wrong number. What works, and what the fix is measured with: scan a canvas's own
+  alpha channel at a large size for the true ink ascent and descent, and get the baseline from a
+  zero-height `inline-block` strut inside the text — an element with no height sits ON the baseline, and
+  its `rect.top` is the one position nothing has to be inferred from.
+- **AND CANVAS IS WRONG ABOUT HORIZONTAL INK TOO, so a sidebearing has to come off the RENDER.**
+  `fillText` at a known origin reports Moderat's `G` with a 0.024em left sidebearing; the shipped `h1`
+  draws it 0.060em inside its own box, measured at three widths and stable to a thousandth of an em.
+  Whatever accounts for the gap, the page is the thing being corrected, so the page is what to scan.
+  Third instance in one pass of canvas metrics disagreeing with the pixels — treat the canvas as a
+  convenience for ink SHAPE and never as a source for a layout number.
+- **A BRIGHTNESS THRESHOLD ON THE LIVE HERO GRADIENT EATS THE LEFT EDGE OF A CURVE, and it does it
+  unevenly.** A threshold high enough to reject the dot map also rejects the faint first column of an
+  antialiased round letter, and a round letter loses more of that ramp than a flat stem — so the bias is
+  per-glyph and reads as a real rag. `scripts/measure-hero-ink.mjs` flattens the ground to `#000` and
+  hides `.gcc-hero-map` before scanning, which is what makes "any lift is ink" true. Do that in any new
+  probe rather than tuning the threshold.
+- **AN INHERITED `em` LETTER-SPACING IS AN ABSOLUTE LENGTH, so `tracking-display` on a parent
+  OVER-TRACKS every smaller child.** `-0.02em` resolves against the element it is DECLARED on and
+  inherits as the resulting pixels: declared on the entry point's 72px `h1`, it computes to -1.44px, and
+  the 28px tagline inside that heading drew the same -1.44px — which is -0.051em, two and a half times
+  the brand's display tracking. It cost the tagline 24.6px of width and broke a width match by 6 points
+  while every class in the markup looked correct. **Restate the tracking token on any child set at a
+  different size**; `ProductName` already does, which is why its own width measured exactly as predicted
+  and the sibling's did not. Nothing reports this — `getComputedStyle` shows the inherited pixel value as
+  if it had been asked for.
 - **`fullPage` screenshots time out on `Group 149.svg`** — 7.4MB, 5,531px tall. Inline it with
   `setContent` at a 1440×1383 viewport, then scroll a viewport at a time and take four shots. Reading
   the board is the only way to settle a card-chrome question; a description of it is not the board.
@@ -338,3 +446,36 @@ session. Read on demand, and add to it whenever something costs more than one at
 - **`getByLabel("Search")` reaches any control whose name CONTAINS it**, which is why the palette's
   trigger is "Find anything" and why the peer-override editor's candidate filter is "Find a company". A
   second search box on a page that already has one must not use the word.
+- **A HAND PLACEMENT IS TUNED TO ONE PLOT WIDTH, and the role map is the chart that proves it.** Its
+  bubbles carry percentage coordinates and their labels are pixels, so the two only agree at the width
+  the placement was measured at — 1070px, which is the plot at every viewport from 1280 up because the
+  result card is capped. At `lg` the plot is 814px, the same labels are 31% wider relative to the axis,
+  and seven pairs overlap. A width-specific placement is not something a dataset can express, so the
+  field draws from `xl` only and everything narrower reflows. **Never accept a band height, a label size
+  or a dot ramp on the role map without running `npm run rolemap:check` at 1280 AND 1440** against real
+  rendered geometry: 27.5rem ships because it is the slide's own aspect, and the 18rem before it came
+  from a sweep that measured line boxes. The same arithmetic killed a row PACKER before it — see the role
+  map's block in `project.md`.
+- **A CHART CAN BE FREE OF OVERLAP AND STILL BE READ WRONG, AND "ZERO COLLISIONS" IS WHAT HIDES IT.** A
+  label belongs to whichever mark is NEAREST it, so the question a collision check asks is not the
+  question a reader asks. The role map shipped at zero collisions with eleven of thirty-six labels sitting
+  closer to a foreign bubble than to their own — one at 1.4px against its own 8 — which read as clutter
+  and as "I cannot tell which bubble this is". `rolemap:check` now reports `binding=` beside
+  `collisions=` and both must be 0. The lever is the dot-to-label GAP rather than the placement, because
+  shortening it moves no mark: `--gcc-role-gap`, one value on `[data-role-step]` for the public field, the
+  chip flow and the admin canvas, which previously disagreed at 8px and 6px. **A preview that spaces a
+  label differently from the live field is worse than no preview** — it clears overlaps that still ship.
+- **A SCREENSHOT OF A PUBLIC BAND IS WASHED OUT UNLESS THE CONTEXT SETS `reducedMotion: "reduce"`.**
+  `.gcc-enter` staggers each zone by `--gcc-enter-index * duration-fast` and fills `both`, so a shot
+  taken before a late zone's keyframe finishes catches the whole band mid-opacity — every ink pale,
+  including near-black heading type. It looks exactly like a contrast bug and is not one; the CSS already
+  gates the animation on `prefers-reduced-motion`, so emulating it is the deterministic fix and waiting
+  longer is the flaky one. Playwright's element screenshot also composites the page, so the Next dev
+  overlay's dark badge shows up inside a clipped panel — check whether a stray mark is outside the
+  element before debugging the element.
+- **`data-tone` and `data-role-step` are UNSCOPED selectors in `globals.css`, deliberately.** They were
+  scoped to `.gcc-role-map` and `.gcc-role-legend`, and when the admin placement canvas became a third
+  surface drawing the same marks every bubble on it rendered at zero size with no colour —
+  `calc(var(--gcc-role-unit) * 1.75)` against an undefined variable is invalid, not zero, and fails
+  silently. A CSS custom property that a component contract depends on must be defined on every surface
+  that draws the mark, or the selector must not name an ancestor at all.

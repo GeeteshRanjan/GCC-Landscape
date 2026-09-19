@@ -70,21 +70,34 @@ Only two weights being licensed on the live site is the reason a section heading
 two visually different weights across the comp: some were set from a real Bold in Figma that
 the site itself cannot render.
 
-**Licensing is unresolved and is a question for ANSR, not a decision to make here.** Moderat
-is commercial. Their WordPress install serves the two `.woff` files publicly, which is not the
-same as a licence covering an embedded tool. Three paths, in order of preference:
+**Licensing is SETTLED: ANSR supplied the family, and the tool ships it.** The four faces the
+product uses are self-hosted through `next/font/local` in `layout.tsx`, converted from the
+supplied TTFs to woff2 with `fontTools` and otherwise untouched — nothing traced, nothing
+subset, nothing re-hinted. The Hanken Grotesk stand-in and the option list that chose it are
+gone; what is worth keeping from that list is one number, which is that **Hanken ran about 8%
+narrower than Moderat at the same size** — so anything sized to fit under the stand-in has 8%
+less room now, which is where to look first if a label wraps or a fixed box clips.
 
-1. Ask ANSR for the Moderat webfont licence — the tool is embedded in an ansr.com page, so
-   their existing licence may already cover the domain. Self-host under `public/fonts/`.
-2. **Hanken Grotesk** as the stand-in. Already loaded on ansr.com as its secondary family, on
-   Google Fonts, free to self-host, and a geometric grotesque of the same posture. It runs
-   about 8% narrower than Moderat at the same size, so display sizes want no adjustment but a
-   headline that fitted a line in the comp will fit with room to spare.
-3. Inter, the current `--ansr-font-sans`. Correct and legible, and visibly not this brand —
-   the tell is the double-storey `g` and the narrower caps.
+Measured off the supplied files rather than off the live site:
 
-Whichever wins, it goes in one place: a `--ansr-font-display` token beside `--ansr-font-sans`.
-This also closes the open `handoff.md` item about no web font loading at all today.
+| Metric | Value |
+| --- | --- |
+| unitsPerEm | 1000 |
+| Cap height | 0.700 em |
+| x-height | 0.500 em |
+| hhea ascent / descent | 1.000 / −0.200 em (content area 1.2 em) |
+| Ascender ink (`bdfhkl`) | 0.710 em |
+| Descender ink (`pygqj`) | 0.210 em |
+| Characters | 501, Latin + Latin Extended-A/B + punctuation |
+| Stem/cap, `I` ink | Light 0.099, Regular 0.130, Medium 0.150, Bold 0.189 |
+
+Two consequences of those metrics, both of which cost a pass to find:
+
+- **The content area is 1.2 em, so `--ansr-leading-display` (1.05) has a NEGATIVE half-leading**
+  and display ink hangs outside its own line box at both ends. Every ink-to-ink correction on
+  the entry point's hero had to be re-derived; see `ask-hero.tsx`.
+- **The family has no SemiBold.** 600 is served by the Medium file across `500 600`, because
+  the CSS matching algorithm would otherwise resolve it upward onto Bold.
 
 ## 2. Type scale, as measured
 

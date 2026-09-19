@@ -31,20 +31,35 @@ test.afterEach(async ({ page }) => {
   await discardEverything(page);
 });
 
-test("edits the hero copy and keeps it across a reload", async ({ page }) => {
+/**
+ * **THE HEADLINE IS TWO FIELDS, so this drives both** — `hero.productName` and
+ * `hero.tagline`, where it was a single `Title` holding both halves in one string. The
+ * split is the project owner's request and it also deletes the literal-substring match
+ * that used to find `GCC ATLAS` inside the one field and fail silently on a respelling.
+ *
+ * The labels are the locators, as they are for every control on both surfaces, so a
+ * renamed field fails here rather than on the live site.
+ */
+test("edits both halves of the hero headline and keeps them across a reload", async ({
+  page,
+}) => {
   await page.goto("/admin/entry-point");
 
   await expect(page.getByRole("heading", { name: "Site copy", level: 1 })).toBeVisible();
 
-  const title = page.getByLabel("Title");
-  await expect(title).toHaveValue("ANSR ATLAS Benchmark against your peers");
+  await expect(page.getByLabel("Product name")).toHaveValue("GCC ATLAS");
+  const tagline = page.getByLabel("Tagline");
+  await expect(tagline).toHaveValue("Benchmark against your peers");
 
-  await title.fill("India GCC Benchmarks");
+  await tagline.fill("Built on real India GCC data");
   await waitForDraftSaved(page);
 
   // The whole point of the draft: a month of edits has to survive a closed tab.
   await page.reload();
-  await expect(page.getByLabel("Title")).toHaveValue("India GCC Benchmarks");
+  await expect(page.getByLabel("Tagline")).toHaveValue("Built on real India GCC data");
+  // The half that was not touched has to come back unchanged, which is the assertion
+  // the single-field version could not make.
+  await expect(page.getByLabel("Product name")).toHaveValue("GCC ATLAS");
 });
 
 test("warns on an over-long headline rather than letting the publish fail", async ({
@@ -52,10 +67,16 @@ test("warns on an over-long headline rather than letting the publish fail", asyn
 }) => {
   await page.goto("/admin/entry-point");
 
-  // 60 is the schema's own bound, quoted by the form so the two cannot drift.
-  await page.getByLabel("Title").fill("x".repeat(61));
+  /**
+   * 56 is the schema's own bound on the tagline, quoted by the form so the two cannot
+   * drift. **It is an exported CONSTANT rather than a value read off the schema**, because
+   * the field is `.default()`-ed and a `ZodDefault` has no readable `maxLength` — so the
+   * number reaching this message is the same one the gate enforces only as long as both
+   * import it.
+   */
+  await page.getByLabel("Tagline").fill("x".repeat(57));
 
-  const error = page.getByText(/61 characters\. The limit is 60/);
+  const error = page.getByText(/57 characters\. The limit is 56/);
   await expect(error).toBeVisible();
   // Form and words, never colour alone — this palette carries no danger hue.
   await expect(
@@ -64,7 +85,7 @@ test("warns on an over-long headline rather than letting the publish fail", asyn
 
   // And an empty required field is called out too, since the public page has no
   // fallback for it.
-  await page.getByLabel("Title").fill("");
+  await page.getByLabel("Tagline").fill("");
   await expect(page.getByText(/Required — the public page has no fallback/)).toBeVisible();
 });
 
@@ -111,7 +132,7 @@ test("shows the entry point in the publish diff, with both sides of the copy", a
   page,
 }) => {
   await page.goto("/admin/entry-point");
-  await page.getByLabel("Title").fill("India GCC Benchmarks");
+  await page.getByLabel("Tagline").fill("Built on real India GCC data");
   await waitForDraftSaved(page);
 
   // The panel fetches the diff on arrival rather than behind a button, so there is
@@ -125,10 +146,15 @@ test("shows the entry point in the publish diff, with both sides of the copy", a
    * first thing all of them read. An edit here that the diff did not report would
    * be a headline changed on the live site with nothing in the review saying so.
    */
-  await expect(
-    page.getByText("ANSR ATLAS Benchmark against your peers"),
-  ).toBeVisible();
-  await expect(page.getByText("India GCC Benchmarks")).toBeVisible();
+  await expect(page.getByText("Benchmark against your peers")).toBeVisible();
+  await expect(page.getByText("Built on real India GCC data")).toBeVisible();
+  /**
+   * **The field is named by `HERO_FIELD_LABELS`, not by its key**, so the review says
+   * "Hero tagline" rather than "Hero tagline"'s slot name. Asserted because the same map
+   * feeds the text renderer, and a publish reviewed in one and approved in the other must
+   * not read as two different changes.
+   */
+  await expect(page.getByText("Hero tagline")).toBeVisible();
 });
 
 /**

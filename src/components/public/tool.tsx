@@ -615,6 +615,13 @@ export function GccLandscapeTool({
         <FunctionViewScreen
           view={functionView}
           input={phase.view.input}
+          /* The sub-industry by NAME, for the answer pill. It comes off the matched peer
+             view rather than being resolved on Screen 2, because the names live in the
+             dataset and the dataset does not cross to the browser — and because both
+             screens then draw one resolution rather than two. `phase.view` is always the
+             peer view the visitor arrived through: submitting always lands on peers, and a
+             correction made here keeps the phase. */
+          subIndustry={phase.view.industry.businessType?.name}
           onBack={backToPeers}
           onHome={backToAsk}
           editing={editing}

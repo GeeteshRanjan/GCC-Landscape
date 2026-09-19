@@ -910,12 +910,14 @@ function DistilledCard({
  * where it belongs. City pills take `Chip`'s own `inverse` ground, which is an outline
  * rather than a fill — there is no rung below teal-deep to fill with.
  *
- * **The known defect, and it is the owner's call rather than something to design round:**
- * the Fortune badge's `FORTUNE` wordmark is BLACK in Fortune's own artwork, so on teal-deep
- * it disappears and the badge reads as the red `500` alone. The fills are literal and may
- * not be recoloured except on the project owner's instruction, and putting a white pill
- * behind a trademark is chrome round someone else's mark. So it renders as-is here, and if
- * this is the treatment it needs either a recolour grant or the badge moved off the card.
+ * **The known defect, and it is the owner's call rather than something to design round.**
+ * The lockup's `FORTUNE` is knocked OUT of its plate and the box round `GLOBAL 500` is a
+ * rule with nothing inside it, so on teal-deep both fill with the ground behind them and
+ * `GLOBAL` goes black-on-dark; the red plate, rule and `500` are all that survive. The
+ * fills are literal and may not be recoloured except on
+ * the project owner's instruction, and putting a white pill behind a trademark is chrome
+ * round someone else's mark. So it renders as-is here, and if this is the treatment it
+ * needs either a recolour grant or the badge moved off the card.
  */
 function ReverseCard({
   peer,
@@ -998,11 +1000,13 @@ function ReverseCard({
  * with. The figure moves OFF teal-bright, because on a white plinth it would be 2.1:1;
  * this is the same measurement that keeps `--ansr-teal-bright` to dark grounds only.
  *
- * **G's one defect carries over unchanged and is not designed round:** the Fortune badge's
- * `FORTUNE` wordmark is black in Fortune's own artwork and disappears on teal-deep, leaving
- * the red `500`. The fills are literal and may only be recoloured on the project owner's
- * instruction. If this is the treatment, it needs a recolour grant, or the badge moves onto
- * the white plinth beside the figure — which is a real option here that G did not have.
+ * **G's one defect carries over:** the lockup's `FORTUNE` is knocked out of its plate and
+ * the box round `GLOBAL 500` is a bare rule, so on teal-deep both fill with the ground and
+ * `GLOBAL` goes black-on-dark — the red plate, rule and `500` are all that read. The fills
+ * are literal and may only be recoloured on the
+ * project owner's instruction. If this is the treatment, it needs a recolour grant, or the
+ * badge moves onto the white plinth beside the figure — which is a real option here that G
+ * did not have, and is now the cheaper of the two.
  */
 function PlateCard({
   peer,

@@ -21,6 +21,9 @@ import {
   DEFAULT_COMMON_FUNCTIONS,
   type Company,
   type Dataset,
+  type Role,
+  type RoleFamily,
+  type RoleMap,
   type Taxonomy,
 } from "./schema";
 import { z } from "zod";
@@ -245,9 +248,31 @@ export function industryOptions(dataset: Dataset): TieredOptions {
     ),
   ]);
   const common = byFrequency.filter((industry) => inTier.has(industry));
-  const others = byFrequency
-    .filter((industry) => !inTier.has(industry))
-    .sort((a, b) => a.localeCompare(b, "en"));
+  /**
+   * **`others` IS EVERY INDUSTRY, INCLUDING THE ONES ABOVE IT, at the project owner's
+   * request — the two tiers OVERLAP now and that is the change.** They used to partition
+   * the taxonomy: the leading tier held its six or so and the second held the complement,
+   * so the group labelled "All industries" was the one group that did not contain all of
+   * them.
+   *
+   * That is a findability failure and it is the specific one this product treats as the
+   * peer set's real problem. A visitor who has read the shortcut, not found their industry
+   * in it, and moved down to a group promising the full list has already been told twice
+   * that the list is complete; scanning it alphabetically and not finding Retail — because
+   * Retail was pinned into the tier they skipped — reads as the industry being absent. The
+   * fallback from "my row is not here" is the broad answer, which drops the primary
+   * ordering signal off the peer set.
+   *
+   * So the leading tier is now purely a SHORTCUT, which is what its own docblock always
+   * claimed it was: "the tier is a shortcut, not a permission". Nothing is reachable only
+   * through it and nothing is reachable only past it.
+   *
+   * **The cost is a duplicated row, and it is paid in `select-field.tsx` rather than
+   * here.** The same value now appears twice in one popup, so the row identity that used to
+   * be the value alone is scoped by group — otherwise two rows share one DOM id, the roving
+   * `aria-activedescendant` lights both, and React warns on the key. See `Row.rowId` there.
+   */
+  const others = [...byFrequency].sort((a, b) => a.localeCompare(b, "en"));
   return { common, others };
 }
 
@@ -265,9 +290,10 @@ export function industryOptions(dataset: Dataset): TieredOptions {
  * `optgroup`s, which is what makes it legible rather than looking like a list that
  * forgot to sort itself.
  *
- * The tiers are disjoint and together cover `HQ_COUNTRIES` plus anything in the
- * taxonomy that somehow is not in it — a country in the data must be selectable
- * even if this file's world list has not caught up with a new spelling.
+ * **The tiers OVERLAP: `others` is every country, the twelve above included.** They were
+ * disjoint, which made "All countries" the one group in the popup that did not contain all
+ * of them. See the note on `others` below — same change, same reasoning, as the industry
+ * list.
  */
 export function hqCountryOptions(dataset: Dataset): TieredOptions {
   const counts = new Map<string, number>();
@@ -283,20 +309,23 @@ export function hqCountryOptions(dataset: Dataset): TieredOptions {
   });
 
   const common = byFrequency.slice(0, COMMON_HQ_COUNTRIES);
-  const inCommon = new Set(common);
 
   /**
-   * The tail of the data's own countries, unioned with the rest of the world.
+   * **Every country a visitor may pick, INCLUDING the twelve in the tier above — the two
+   * groups overlap, at the project owner's request.** The union with `HQ_COUNTRIES` is
+   * unchanged and is what guarantees a country in the taxonomy is always selectable, even
+   * one this file's world list has not caught up with: a company can only be in the data if
+   * someone typed its country, and the form must not then refuse it.
    *
-   * The union is what guarantees a country in the taxonomy is always selectable,
-   * even one this file's world list has not caught up with — a company can only be
-   * in the data if someone typed its country, and the form must not then refuse it.
+   * What changed is the exclusion. The group is labelled "All countries" and now contains
+   * all of them, so a visitor headquartered in the United States finds it in the place the
+   * list says everything is — rather than having to know it was lifted into a shortcut
+   * twelve rows above. Same reasoning as the industry list, and the duplicated row is
+   * handled the same way in `select-field.tsx`.
    */
-  const others = [
-    ...new Set([...byFrequency.slice(COMMON_HQ_COUNTRIES), ...HQ_COUNTRIES]),
-  ]
-    .filter((country) => !inCommon.has(country))
-    .sort((a, b) => a.localeCompare(b, "en"));
+  const others = [...new Set([...byFrequency, ...HQ_COUNTRIES])].sort((a, b) =>
+    a.localeCompare(b, "en"),
+  );
 
   return { common, others };
 }
@@ -404,6 +433,54 @@ export function peerViewInputSchema(taxonomy: Taxonomy, businessTypeIds?: readon
  * layout. An admin editing this list is editing against that range.
  */
 export const COMMON_FUNCTIONS = DEFAULT_COMMON_FUNCTIONS;
+
+/* ==========================================================================
+   The role map's layout
+   ========================================================================== */
+
+export interface PlacedRole {
+  role: Role;
+  /** The family the dot belongs to, resolved so the renderer does no lookup. */
+  family: RoleFamily;
+}
+
+/**
+ * One band's roles, each paired with its own family and ordered down the field.
+ *
+ * **THERE IS NO PACKER HERE ANY MORE, and its removal is the fix rather than a
+ * simplification.** Every role now carries its own `lane`, so this only resolves the
+ * family and sorts; the field's shape is data.
+ *
+ * What was here was a greedy interval packer that assigned roles to shared rows from their
+ * complexity and an estimated label width. It produced a correct layout and a bad chart:
+ * uniform rows meant every leading-side label ended at the same x, so the field drew
+ * eight false vertical columns and read as a list of rows rather than as a scatter — and
+ * because a row has to be tall enough for the largest dot in it, the dots also had to stay
+ * small enough not to fill their rows. The slide interleaves its bubbles freely, which is
+ * what makes it legible at thirty-six labels, and no row assignment can reproduce that.
+ *
+ * Sorted by `lane` so the DOM reads top to bottom, which is what the reflow below `lg`
+ * renders directly and what a screen reader walks. Ties break on id, so the order is
+ * stable across renders.
+ */
+export function placeRoles(
+  roles: readonly Role[],
+  families: readonly RoleFamily[],
+): PlacedRole[] {
+  const byId = new Map(families.map((family) => [family.id, family]));
+  return roles
+    .flatMap((role) => {
+      const family = byId.get(role.familyId);
+      // Unreachable through the schema, which refuses an unknown `familyId`. Dropped
+      // rather than drawn under a made-up group name, because a dot in a family that
+      // does not exist is the one thing a reader could not be told about honestly.
+      return family ? [{ role, family } satisfies PlacedRole] : [];
+    })
+    .sort(
+      (a, b) =>
+        a.role.lane - b.role.lane || a.role.id.localeCompare(b.role.id),
+    );
+}
 
 /* ==========================================================================
    Blocks
@@ -853,6 +930,21 @@ export interface PeerView {
   industry: IndustryBlock;
   largest: LargestBlock;
   functions: readonly string[];
+  /**
+   * The role map, carried whole.
+   *
+   * **Nothing is derived, filtered or re-ordered on the way through, and that is what
+   * makes it safe to be here at all.** Every other block on this view model is a
+   * projection of the company data against the visitor's own answers; this one is the
+   * same for every visitor, because it is a picture of the India hiring market rather
+   * than of the 1,834 companies. A view model that narrowed it by industry would be
+   * claiming a per-industry role breakdown this dataset does not hold.
+   *
+   * So it is `dataset.siteContent.roleMap` unchanged, and the component does the
+   * grouping — which keeps the LAYOUT decision (lanes, bands, packing) in the file that
+   * can measure it.
+   */
+  roleMap: RoleMap;
   map: MapBlock;
   scale: ScaleBlock;
 }
@@ -1056,6 +1148,10 @@ export function buildPeerView(
     // the view model, and this crosses a serialization boundary on its way to the
     // client, so nothing downstream can hold a reference to the dataset's array.
     functions: dataset.siteContent.commonFunctions,
+    /* Passed through for the reason `functions` is: the field is deeply readonly on the
+       view model and this crosses a serialization boundary, so nothing downstream holds a
+       reference into the dataset. See `PeerView.roleMap`. */
+    roleMap: dataset.siteContent.roleMap,
     map: {
       industry: input.industry,
       cities,

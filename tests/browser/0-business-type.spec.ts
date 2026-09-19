@@ -1,5 +1,7 @@
 import { expect, test } from "@playwright/test";
 
+import { DEFAULT_PUBLIC_COPY as COPY } from "@/data/schema";
+
 import { choose, chooseSubIndustry } from "./helpers";
 
 /**
@@ -347,6 +349,23 @@ test("choosing it narrows the peer set to the same sub-industry", async ({
 
   await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
 
+  /**
+   * **The answer row echoes the sub-industry, which is the one answer it used to leave
+   * out.** The pill is conditional on a field the visitor may skip — both result screens'
+   * own specs assert its absence for an industry-only answer — and this is the present
+   * case. It matters more than the other three: the sub-industry is the primary ordering
+   * signal behind the five cards below, so a visitor who narrowed and then saw only
+   * "Retail" echoed had no way to tell whether the narrowing had been read.
+   *
+   * The LABEL is read off the copy key, being admin-editable. The VALUE is the business
+   * type's own name, which is dataset content and is what the trigger showed.
+   */
+  const profile = page.getByRole("group", { name: /Your profile/ });
+  await expect(profile.getByText(COPY.pillSubIndustry, { exact: true })).toBeVisible();
+  await expect(
+    profile.getByText("Apparel & Footwear Brand", { exact: true }),
+  ).toBeVisible();
+
   // The three-level split replaces the two-level one: the named peers, the rest of
   // the population they were drawn from, then the rest of the industry. That middle
   // segment is what turns a thin peer set into evidence.
@@ -424,20 +443,23 @@ test("calls out a set that reached past the visitor's answers, and only then", a
   const peers = page.locator("#peers");
   await expect(peers).toBeVisible();
   await expect(peers.getByRole("listitem")).toHaveCount(5);
-  // Both axes trip here, so the line names both. The regex tolerates the single-axis
-  // wording too, since which axes fire is a property of the data, not this test.
-  await expect(
-    peers.getByText(
-      /extend beyond your (sub-industry|revenue band).* to the closest comparable companies/i,
-    ),
-  ).toBeVisible();
+  /**
+   * **Read off the copy KEY, never typed** — the wording is `peersBroadenedNote`, an
+   * admin-editable field, and this spec is the reason that convention exists: it used
+   * to assert `/extend beyond your (sub-industry|revenue band)/`, which is the wording
+   * from before the line gave up naming its axis. A full set can widen on sub-industry
+   * AND revenue band at once, so naming both piled up; the sentence is fixed now and
+   * names neither, which is also why there is nothing per-axis left to tolerate here.
+   * The fixture publishes the shipped defaults, so the key resolves to what renders.
+   */
+  await expect(peers.getByText(COPY.peersBroadenedNote)).toBeVisible();
 
   // A well-populated sub-industry fills the set from itself and within band, so the
   // call-out is absent — the line appears only when required.
   await page.goto("/");
   await submit(page, { industry: "Retail", businessType: "Apparel & Footwear Brand" });
   await expect(page.locator("#peers").getByRole("listitem")).toHaveCount(5);
-  await expect(page.getByText(/extend beyond your/i)).toHaveCount(0);
+  await expect(page.getByText(COPY.peersBroadenedNote)).toHaveCount(0);
 });
 
 /**

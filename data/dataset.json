@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generatedAt": "2026-09-05T06:51:38.004Z",
+  "generatedAt": "2026-09-17T16:50:27.260Z",
   "source": "Consolidated_GCC_India_Database_2026_New.xlsx",
   "taxonomy": {
     "industries": [
@@ -42853,7 +42853,8 @@
   ],
   "siteContent": {
     "hero": {
-      "title": "ANSR ATLAS Benchmark against your peers",
+      "productName": "GCC ATLAS",
+      "tagline": "Benchmark against your peers",
       "lead": "See how the top companies in your industry run their India GCCs today: talent, cost and location data drawn from our research into 1,800+ centres."
     },
     "impactStats": [
@@ -42899,6 +42900,413 @@
       "Procurement & supply chain",
       "Legal, risk & compliance"
     ],
+    "roleMap": {
+      "demandLevels": [
+        "Low",
+        "Moderate",
+        "High",
+        "Very high"
+      ],
+      "families": [
+        {
+          "id": "ai-ml",
+          "name": "AI / ML",
+          "tone": 1
+        },
+        {
+          "id": "data-analytics",
+          "name": "Data Engineering & Analytics",
+          "tone": 2
+        },
+        {
+          "id": "cloud-platform",
+          "name": "Cloud & Platform",
+          "tone": 3
+        },
+        {
+          "id": "cybersecurity",
+          "name": "Cybersecurity",
+          "tone": 4
+        },
+        {
+          "id": "application-development",
+          "name": "Application Development",
+          "tone": 5
+        },
+        {
+          "id": "quality-engineering",
+          "name": "Quality Engineering",
+          "tone": 6
+        },
+        {
+          "id": "product-design",
+          "name": "Product & Design",
+          "tone": 7
+        }
+      ],
+      "roles": [
+        {
+          "id": "genai-developer",
+          "name": "GenAI Developer",
+          "familyId": "ai-ml",
+          "band": "emerging",
+          "complexity": 83,
+          "lane": 5,
+          "labelSide": "trail",
+          "demand": 2
+        },
+        {
+          "id": "agentic-engineer",
+          "name": "Agentic Engineer",
+          "familyId": "ai-ml",
+          "band": "emerging",
+          "complexity": 86,
+          "lane": 10,
+          "labelSide": "trail",
+          "demand": 2
+        },
+        {
+          "id": "ai-ml-engineer",
+          "name": "AI / ML Engineer",
+          "familyId": "ai-ml",
+          "band": "emerging",
+          "complexity": 80,
+          "lane": 15,
+          "labelSide": "trail",
+          "demand": 3
+        },
+        {
+          "id": "cloud-engineer",
+          "name": "Cloud Engineer",
+          "familyId": "cloud-platform",
+          "band": "emerging",
+          "complexity": 62,
+          "lane": 19,
+          "labelSide": "trail",
+          "demand": 3
+        },
+        {
+          "id": "forward-deployed-engineer",
+          "name": "Forward Deployed Engineer",
+          "familyId": "ai-ml",
+          "band": "emerging",
+          "complexity": 86,
+          "lane": 20,
+          "labelSide": "trail",
+          "demand": 1
+        },
+        {
+          "id": "data-architect",
+          "name": "Data Architect",
+          "familyId": "data-analytics",
+          "band": "emerging",
+          "complexity": 74,
+          "lane": 22,
+          "labelSide": "trail",
+          "demand": 1
+        },
+        {
+          "id": "platform-engineer",
+          "name": "Platform Engineer",
+          "familyId": "cloud-platform",
+          "band": "emerging",
+          "complexity": 83,
+          "lane": 27,
+          "labelSide": "trail",
+          "demand": 1
+        },
+        {
+          "id": "data-engineer",
+          "name": "Data Engineer",
+          "familyId": "data-analytics",
+          "band": "emerging",
+          "complexity": 60,
+          "lane": 29,
+          "labelSide": "trail",
+          "demand": 2
+        },
+        {
+          "id": "data-scientist",
+          "name": "Data Scientist",
+          "familyId": "ai-ml",
+          "band": "emerging",
+          "complexity": 77,
+          "lane": 32,
+          "labelSide": "trail",
+          "demand": 3
+        },
+        {
+          "id": "cybersecurity-architect",
+          "name": "Cybersecurity Architect",
+          "familyId": "cybersecurity",
+          "band": "emerging",
+          "complexity": 47,
+          "lane": 34,
+          "labelSide": "trail",
+          "demand": 2
+        },
+        {
+          "id": "security-engineer",
+          "name": "Security Engineer",
+          "familyId": "cybersecurity",
+          "band": "emerging",
+          "complexity": 31,
+          "lane": 35,
+          "labelSide": "trail",
+          "demand": 1
+        },
+        {
+          "id": "infrastructure-engineer",
+          "name": "Infrastructure Engineer",
+          "familyId": "cloud-platform",
+          "band": "emerging",
+          "complexity": 63,
+          "lane": 37,
+          "labelSide": "trail",
+          "demand": 1
+        },
+        {
+          "id": "site-reliability-engineer",
+          "name": "Site Reliability Engineer",
+          "familyId": "cloud-platform",
+          "band": "emerging",
+          "complexity": 44,
+          "lane": 42,
+          "labelSide": "trail",
+          "demand": 3
+        },
+        {
+          "id": "cloud-security-analyst",
+          "name": "Cloud Security Analyst",
+          "familyId": "cybersecurity",
+          "band": "emerging",
+          "complexity": 28,
+          "lane": 43,
+          "labelSide": "trail",
+          "demand": 1
+        },
+        {
+          "id": "systems-architect",
+          "name": "Systems Architect",
+          "familyId": "cloud-platform",
+          "band": "emerging",
+          "complexity": 79,
+          "lane": 45,
+          "labelSide": "lead",
+          "demand": 2
+        },
+        {
+          "id": "solution-architect",
+          "name": "Solution Architect",
+          "familyId": "application-development",
+          "band": "emerging",
+          "complexity": 92,
+          "lane": 46,
+          "labelSide": "lead",
+          "demand": 2
+        },
+        {
+          "id": "integration-engineer",
+          "name": "Integration Engineer",
+          "familyId": "cloud-platform",
+          "band": "emerging",
+          "complexity": 42,
+          "lane": 48,
+          "labelSide": "trail",
+          "demand": 1
+        },
+        {
+          "id": "systems-engineer",
+          "name": "Systems Engineer",
+          "familyId": "cloud-platform",
+          "band": "established",
+          "complexity": 76,
+          "lane": 51,
+          "labelSide": "trail",
+          "demand": 1
+        },
+        {
+          "id": "data-annotator",
+          "name": "Data Annotator",
+          "familyId": "data-analytics",
+          "band": "established",
+          "complexity": 66,
+          "lane": 52,
+          "labelSide": "lead",
+          "demand": 1
+        },
+        {
+          "id": "devops-engineer",
+          "name": "DevOps Engineer",
+          "familyId": "cloud-platform",
+          "band": "established",
+          "complexity": 53,
+          "lane": 61,
+          "labelSide": "trail",
+          "demand": 1
+        },
+        {
+          "id": "software-engineer",
+          "name": "Software Engineer",
+          "familyId": "application-development",
+          "band": "established",
+          "complexity": 70,
+          "lane": 62,
+          "labelSide": "trail",
+          "demand": 4
+        },
+        {
+          "id": "iam-engineer",
+          "name": "IAM Engineer",
+          "familyId": "cybersecurity",
+          "band": "established",
+          "complexity": 12,
+          "lane": 66,
+          "labelSide": "trail",
+          "demand": 1
+        },
+        {
+          "id": "bi-analyst",
+          "name": "BI Analyst",
+          "familyId": "data-analytics",
+          "band": "established",
+          "complexity": 36,
+          "lane": 67,
+          "labelSide": "trail",
+          "demand": 1
+        },
+        {
+          "id": "product-designer",
+          "name": "Product Designer",
+          "familyId": "product-design",
+          "band": "established",
+          "complexity": 53,
+          "lane": 69,
+          "labelSide": "trail",
+          "demand": 1
+        },
+        {
+          "id": "product-manager",
+          "name": "Product Manager",
+          "familyId": "product-design",
+          "band": "established",
+          "complexity": 74,
+          "lane": 72,
+          "labelSide": "lead",
+          "demand": 2
+        },
+        {
+          "id": "servicenow-developer",
+          "name": "ServiceNow Developer",
+          "familyId": "application-development",
+          "band": "established",
+          "complexity": 15,
+          "lane": 72,
+          "labelSide": "trail",
+          "demand": 1
+        },
+        {
+          "id": "scrum-master",
+          "name": "Scrum Master / Agile",
+          "familyId": "product-design",
+          "band": "established",
+          "complexity": 42,
+          "lane": 76,
+          "labelSide": "trail",
+          "demand": 1
+        },
+        {
+          "id": "sdet",
+          "name": "SDET",
+          "familyId": "quality-engineering",
+          "band": "established",
+          "complexity": 23,
+          "lane": 77,
+          "labelSide": "lead",
+          "demand": 1
+        },
+        {
+          "id": "business-analyst",
+          "name": "Business Analyst",
+          "familyId": "product-design",
+          "band": "established",
+          "complexity": 29,
+          "lane": 79,
+          "labelSide": "trail",
+          "demand": 1
+        },
+        {
+          "id": "salesforce-engineer",
+          "name": "Salesforce Engineer",
+          "familyId": "application-development",
+          "band": "established",
+          "complexity": 64,
+          "lane": 81,
+          "labelSide": "lead",
+          "demand": 1
+        },
+        {
+          "id": "data-analyst",
+          "name": "Data Analyst",
+          "familyId": "data-analytics",
+          "band": "established",
+          "complexity": 20,
+          "lane": 83,
+          "labelSide": "trail",
+          "demand": 3
+        },
+        {
+          "id": "application-developer",
+          "name": "Application Developer",
+          "familyId": "application-development",
+          "band": "established",
+          "complexity": 32,
+          "lane": 86,
+          "labelSide": "trail",
+          "demand": 2
+        },
+        {
+          "id": "full-stack-developer",
+          "name": "Full-Stack Developer",
+          "familyId": "application-development",
+          "band": "established",
+          "complexity": 26,
+          "lane": 91,
+          "labelSide": "trail",
+          "demand": 2
+        },
+        {
+          "id": "qa-test-engineer",
+          "name": "QA / Test Engineer",
+          "familyId": "quality-engineering",
+          "band": "established",
+          "complexity": 10,
+          "lane": 92,
+          "labelSide": "trail",
+          "demand": 3
+        },
+        {
+          "id": "backend-engineer",
+          "name": "Backend Engineer",
+          "familyId": "application-development",
+          "band": "established",
+          "complexity": 60,
+          "lane": 92,
+          "labelSide": "lead",
+          "demand": 1
+        },
+        {
+          "id": "frontend-engineer",
+          "name": "Frontend Engineer",
+          "familyId": "application-development",
+          "band": "established",
+          "complexity": 41,
+          "lane": 96,
+          "labelSide": "trail",
+          "demand": 1
+        }
+      ]
+    },
     "logos": [
       {
         "name": "Walmart",
@@ -43046,6 +43454,11 @@
       "askRevenueHint": "All figures in US dollars.",
       "askHqPlaceholder": "Choose a country",
       "askFilterPlaceholder": "Type to narrow the list",
+      "askGroupCommon": "Most common",
+      "askGroupIndustriesAll": "All industries",
+      "askGroupCountriesAll": "All countries",
+      "askGroupRevenue": "Revenue bands",
+      "askSubIndustryPlural": "sub-industries",
       "askSubmitError": "Something went wrong reaching our data. Please try again in a moment.",
       "askFieldRequired": "Choose one to continue.",
       "filterEmpty": "Nothing matches “{query}”.",
@@ -43056,6 +43469,7 @@
       "viewPeers": "Peer Landscape",
       "viewFunctions": "Function Metrics",
       "pillIndustry": "Industry",
+      "pillSubIndustry": "Sub-industry",
       "pillHeadquarters": "Headquarters",
       "pillRevenueBand": "Revenue band (USD)",
       "functionPanelLabel": "India market metrics by function",
@@ -43069,10 +43483,11 @@
       "editorSubmit": "Update my results",
       "gridRowHeader": "Capability",
       "industryTitle": "Inside India's GCC base",
-      "industryBasisNote": "Indicative counts, drawn from the GCCs ANSR tracks rather than every centre in India.",
+      "industryBasisNote": "Indicative counts, drawn from the GCCs ANSR tracks.",
       "snapshotHeading": "Snapshot of {industry} GCCs in India",
       "peersTitle": "GCC details of your closest peers",
-      "peersNarrowNote": "{industry} is well established in India, but few of its GCCs closely match your sub-industry. These are the closest.",
+      "peersNarrowNote": "{industry} is well established in India, but few GCCs closely match your sub-industry, so these are the nearest.",
+      "peersBroadenedNote": "Few companies match your selection exactly, so these reach beyond it to the closest comparable companies in the wider industry.",
       "largestTitle": "The largest {industry} GCCs in India",
       "mapTitle": "Cities where {industry} companies have set up",
       "cityScopeAll": "All cities",
@@ -43087,6 +43502,14 @@
       "snapshotCitiesLabel": "cities in India host GCCs from your industry",
       "snapshotLeadingCityLabel": "the city where most of these GCCs are based",
       "figureUnavailable": "Data unavailable",
+      "rolesTitle": "Technology and product roles hired into India GCCs",
+      "rolesBandEmerging": "Emerging",
+      "rolesBandEstablished": "Established",
+      "rolesAxisLabel": "Job role complexity",
+      "rolesAxisLow": "Lower",
+      "rolesAxisHigh": "Higher",
+      "rolesDemandKey": "Bubble size = Hiring Demand",
+      "rolesBasisNote": "Indicative, drawn from ANSR's own hiring research across India GCCs.",
       "scaleTitle": "The world's largest companies, in India",
       "scaleFortuneLabel": "Fortune Global 500 companies run a GCC in India.",
       "scaleForbesLabel": "Forbes Global 2000 companies run a GCC in India.",

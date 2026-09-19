@@ -15,6 +15,7 @@ import { CloseBackdrop, ClosingCta } from "@/components/public/closing-cta";
 import { usePublicCopy } from "@/components/public/copy-context";
 import { Block, formatRevenueBand, Panel, Zone } from "@/components/public/primitives";
 import {
+  answerFacts,
   ContextPanels,
   headerLines,
   HeaderFinding,
@@ -36,6 +37,7 @@ import {
   NationalScaleView,
 } from "./evidence";
 import { PeersZone, type PeersVariant } from "./peers-variants";
+import { RoleMapView } from "./role-map";
 import {
   FUNCTIONS_TITLE,
   largestTitle,
@@ -454,21 +456,27 @@ export function PeerViewAnswer({
    * `ContextPanels`. "Your company" shortened to "Company" in the same change: a pill
    * is sized to its own content, and the possessive was two thirds of the width of
    * the value it labelled.
+   *
+   * **THE SUB-INDUSTRY IS ECHOED NOW, and it was the one answer the row left out.** It is
+   * optional on the form, so the pill is conditional — the same shape the company pill had
+   * and deliberately not the same argument: a typed name was read by nothing, where a
+   * sub-industry is the primary ordering signal behind the five cards below it. A visitor
+   * who narrowed to one and then saw only their industry echoed had no way to tell whether
+   * the narrowing had been read at all.
+   *
+   * **Built by `answerFacts` rather than written out here**, because Screen 2 draws the
+   * same row from the same answers and two literals agreeing is luck. The band is
+   * formatted on the way in: the dropdown spells `<` out as "Under" and drops the `$`, so
+   * the raw stored string is not the answer the visitor picked, and the currency rides in
+   * the label because this pill has no hint to carry it. `formatRevenueBand` is the single
+   * definition, shared with the control and with Screen 2's identical row.
    */
-  const facts: ContextFact[] = [
-    { label: copy.pillIndustry, value: view.industry.industry },
-    { label: copy.pillHeadquarters, value: view.input.hqCountry },
-    /**
-     * **Formatted, not the raw stored band, and the LABEL is where the currency went.**
-     * The dropdown spells `<` out as "Under" and drops the `$` from every row, stating
-     * the currency once in its own hint — so echoing the raw string here would show the
-     * visitor a different answer from the one they picked. This pill has no hint to
-     * carry the unit, so it goes in the label: "(USD)" is one word against seven rows
-     * of repeated marks. `formatRevenueBand` is the single definition, shared with the
-     * control and with Screen 2's identical row.
-     */
-    { label: copy.pillRevenueBand, value: formatRevenueBand(view.input.revenueBand) },
-  ];
+  const facts: ContextFact[] = answerFacts(copy, {
+    industry: view.industry.industry,
+    subIndustry: view.industry.businessType?.name,
+    hqCountry: view.input.hqCountry,
+    revenueBand: formatRevenueBand(view.input.revenueBand),
+  });
 
   return (
     /**
@@ -670,9 +678,38 @@ export function PeerViewAnswer({
               </Enter>
             </Zone>
 
-            {/* ---- Zone 5: where, on the pale teal -------------------------------- */}
+            {/* ---- Zone 5: WHO they hire, on white --------------------------------
+                **Directly under the function tags, because it is the same claim one level
+                down.** The tags say which functions run from India GCCs; this says which
+                roles those functions hire, how complex each is and where the hiring
+                pressure sits. Reading them in the other order would put thirty-six roles
+                in front of somebody who has not been told what a GCC does yet.
+
+                **A `Panel` where the block above is a `Block`, and the border is earned
+                rather than inherited.** The tags draw no mark at all, so a card around
+                them would assert they are an object with properties. This draws
+                thirty-six positioned marks on a shared axis, and the card's own edges are
+                what the axis runs between — the same reason the containment chart and the
+                city map keep theirs.
+
+                **White, and the two zones below it flip with it.** The six zones
+                alternate strictly so every boundary is visible; inserting one after the
+                mint inverts the parity of everything under it, so the map moved to the
+                mint and the scale strip to white. Neither cares: the map draws a white
+                card of its own, and the scale strip is a dark card that floats on either
+                — its own note already records that it is the one zone whose ground the
+                card does not depend on. */}
             <Zone ground="surface">
               <Enter index={5}>
+                <Panel id="roles" title={copy.rolesTitle}>
+                  <RoleMapView roleMap={view.roleMap} />
+                </Panel>
+              </Enter>
+            </Zone>
+
+            {/* ---- Zone 6: where, on the mint ------------------------------------- */}
+            <Zone ground="tint">
+              <Enter index={6}>
                 {/* The section's heading is fixed, so the DERIVED finding is its lead.
                     `mapHeading` is exact where a fixed heading cannot be — "63% of the
                     Retail footprint in India is in Bengaluru" when one city dominates,
@@ -689,20 +726,21 @@ export function PeerViewAnswer({
               </Enter>
             </Zone>
 
-            {/* ---- Zone 6: national scale, and the card ends here ----------------
+            {/* ---- Zone 7: national scale, and the card ends here ----------------
                 An inverse CARD on a light zone rather than an inverse zone: a dark
                 block with its own corners, floating, is a harder stop than a dark band
                 that runs to the card's edge — and a hard stop is what the last thing in
-                the card wants. The ground under it is the mint rather than white now,
-                which the alternation decided; a dark card floats on either, and this is
-                the one zone whose own value the card does not depend on.
+                the card wants. The ground under it is white rather than the mint now,
+                which the alternation decided when the role map was inserted above; a dark
+                card floats on either, and this is the one zone whose own value the card
+                does not depend on.
 
                 **It no longer ends the card and has given its extra bottom padding
                 back.** The close is below it, and a zone that is not last takes the
                 zone rhythm's own padding — the override existed only so the card's
                 foot was not tight against the last thing in it. */}
-            <Zone ground="tint">
-              <Enter index={6}>
+            <Zone ground="surface">
+              <Enter index={7}>
                 <Panel
                   id="scale"
                   title={copy.scaleTitle}
@@ -721,7 +759,7 @@ export function PeerViewAnswer({
               </Enter>
             </Zone>
 
-            {/* ---- Zone 7: the close, and NOW the card ends here -----------------
+            {/* ---- Zone 8: the close, and NOW the card ends here -----------------
                 **Restored at the project owner's decision**, having been removed at
                 ANSR's request on the page-end instruction. The zone above is still the
                 terminating EVIDENCE and still reads as a hard stop for the argument;
@@ -739,7 +777,7 @@ export function PeerViewAnswer({
                 running to the card's edge is a surface. Two stops in a row would have
                 been the mistake; a stop then a surface is the shape. */}
             <Zone ground="inverse-soft" behind={<CloseBackdrop />}>
-              <Enter index={7}>
+              <Enter index={8}>
                 <ClosingCta
                   id="close"
                   href={ctaHref}

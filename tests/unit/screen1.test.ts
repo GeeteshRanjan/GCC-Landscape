@@ -185,16 +185,40 @@ describe("the industry dropdown's leading tier", () => {
   const smallest = byCount[byCount.length - 1]!;
   const largest = byCount[0]!;
 
+  /**
+   * **THE TWO TIERS OVERLAP, so `others` is no longer the complement of `common` and
+   * nothing here may assert that it is.** They partitioned the taxonomy until the project
+   * owner asked for the second group to hold everything: a group headed "All industries"
+   * that omitted the pinned ones was the one group in the popup its own heading
+   * contradicted, and a visitor who scans it without finding Retail reads that as the
+   * industry being absent. So `others` is every industry, alphabetically, and `common` is a
+   * shortcut into the same list.
+   *
+   * What is still worth pinning is everything that made the tier MEAN something — that
+   * membership is count plus the taxonomy's own pins, that a pin decides membership and
+   * never position, and that nothing appears twice WITHIN a tier. Those are asserted below
+   * and are what a regression in `industryOptions` would break.
+   */
+  it("holds every industry in the second group, the pinned ones included", () => {
+    const { common, others } = industryOptions(dataset);
+    // The whole taxonomy, in one group, alphabetically. This is the assertion the old
+    // complement-of-common shape could not make.
+    expect(others).toEqual(
+      [...dataset.taxonomy.industries].sort((a, b) => a.localeCompare(b, "en")),
+    );
+    // And the shortcut is a subset of it rather than a slice out of it.
+    for (const industry of common) expect(others, industry).toContain(industry);
+  });
+
   it("pins what the taxonomy pins, and nothing frequency would have found anyway", () => {
     expect(dataset.taxonomy.pinnedIndustries).toEqual([
       "Retail",
       "Consumer Packaged Goods",
     ]);
 
-    const { common, others } = industryOptions(dataset);
+    const { common } = industryOptions(dataset);
     for (const pinned of dataset.taxonomy.pinnedIndustries) {
       expect(common, pinned).toContain(pinned);
-      expect(others, pinned).not.toContain(pinned);
       // The reason pinning exists at all: neither reaches the tier on count. If one
       // ever does, its pin has stopped doing anything and can go.
       expect(onCount, pinned).not.toContain(pinned);
@@ -204,17 +228,16 @@ describe("the industry dropdown's leading tier", () => {
   it("takes the list from the taxonomy rather than from a value written down here", () => {
     // The smallest industry in the data. Nothing about frequency could put it in a
     // six-entry tier, so its presence there is only explicable by the pin.
-    const { common, others } = industryOptions(
+    const { common } = industryOptions(
       withTaxonomy({ pinnedIndustries: [smallest] }),
     );
     expect(common).toContain(smallest);
-    expect(others).not.toContain(smallest);
 
-    // And the pair the shipped dataset pins drops out, which is the half that a
-    // surviving constant would fail.
+    // And the pair the shipped dataset pins drops out of the TIER, which is the half
+    // that a surviving constant would fail. They stay in the full list, as everything
+    // does — which is why this reads `common` and not `others`.
     for (const unpinned of dataset.taxonomy.pinnedIndustries) {
       expect(common, unpinned).not.toContain(unpinned);
-      expect(others, unpinned).toContain(unpinned);
     }
   });
 
@@ -237,25 +260,34 @@ describe("the industry dropdown's leading tier", () => {
       withTaxonomy({ pinnedIndustries: [] }),
     );
     expect(common).toEqual(onCount);
+    // The full list does not move with the pins — it is every industry either way.
     expect(others).toEqual(
-      [...byCount.slice(COMMON_INDUSTRIES)].sort((a, b) => a.localeCompare(b, "en")),
+      [...dataset.taxonomy.industries].sort((a, b) => a.localeCompare(b, "en")),
     );
-    // Nothing is lost or duplicated by the split, whatever is pinned.
-    expect([...common, ...others].sort()).toEqual(
+    // Nothing is LOST by the split. It is no longer a partition, so the union is the
+    // taxonomy with the tier's own entries appearing in both groups.
+    expect([...new Set([...common, ...others])].sort()).toEqual(
       [...dataset.taxonomy.industries].sort(),
     );
   });
 
-  it("never lists an industry twice, however the pins overlap the count", () => {
-    // The case a concat would break: pinning something the count already put in the
-    // tier. It shows up as a duplicated option in a dropdown long after the person
-    // who pinned it has forgotten.
+  /**
+   * **A row may now be drawn twice ACROSS the two groups and must still never be drawn
+   * twice WITHIN one**, which is the half of the old guarantee that survives.
+   *
+   * The case a concat would break is unchanged: pinning something the count already put in
+   * the tier. It shows up as a duplicated option under one heading long after the person
+   * who pinned it has forgotten. The cross-group duplicate is deliberate and is handled by
+   * `select-field.tsx` scoping a first-pane row's id to its group, so the two copies do not
+   * share a DOM id or a React key.
+   */
+  it("never lists an industry twice within a tier, however the pins overlap the count", () => {
     const { common, others } = industryOptions(
       withTaxonomy({ pinnedIndustries: [largest, smallest] }),
     );
     expect(common.filter((industry) => industry === largest)).toHaveLength(1);
     expect(common).toEqual([...onCount, smallest]);
-    expect(others).not.toContain(largest);
+    expect(new Set(others).size).toBe(others.length);
   });
 });
 
@@ -671,10 +703,11 @@ describe("degenerate industries", () => {
     expect(largestLine(view)).not.toMatch(/s's\b/);
   });
 
-  it("flags an industry with nobody in the top revenue band", () => {
-    // Measured in docs/data-audit.md: three industries have no member in the
-    // highest band, so the panel walks down and the copy must not claim it found
-    // the top.
+  it("does not state the starting band for an industry with nobody in the top band", () => {
+    // The band-shortfall sentence was removed at ANSR's request: three industries
+    // walk down the revenue bands to fill the ranking, and the copy no longer
+    // narrates that walk. `belowTopBand` still drives nothing on the block, so the
+    // line for such an industry must be the plain ranking framing.
     const walked = dataset.taxonomy.industries.filter(
       (industry) => buildPeerView(dataset, input({ industry })).largest.belowTopBand,
     );
@@ -682,7 +715,8 @@ describe("degenerate industries", () => {
     for (const industry of walked) {
       const view = buildPeerView(dataset, input({ industry }));
       if (view.largest.repeatsPeers || view.largest.entries.length === 0) continue;
-      expect(largestLine(view)).toContain(view.largest.topBand!);
+      expect(largestLine(view)).not.toContain("top revenue band");
+      expect(largestLine(view)).not.toContain(view.largest.topBand!);
     }
   });
 
@@ -779,15 +813,16 @@ describe("copy", () => {
 
   /**
    * The broadened-set line: fires on a FULL set that reached past the visitor's own
-   * answers on EITHER axis, names exactly the axis that widened, and is mutually
-   * exclusive with the shortfall line.
+   * answers on EITHER axis, and is mutually exclusive with the shortfall line.
    *
-   * The properties that make it failproof are asserted directly: every fire names an
-   * axis that actually widened, it never fires alongside `shortfallLine`, and the axis
-   * phrase matches the signals. The wording is pinned to the non-negotiables — names the
-   * industry, no count, no em dash — rather than to the exact sentence.
+   * **It names NO axis and NO industry, deliberately.** A full set can widen on
+   * sub-industry AND revenue band at once, so the line speaks of the visitor's "selection"
+   * and "the wider industry" generically. The property asserted is the inverse of the old
+   * one: whichever signal fired, the rendered line mentions neither axis nor the industry
+   * by name — so it can never claim a reach that did not happen. The wording is pinned to
+   * the non-negotiables — no slot, no count, no em dash — not to the exact sentence.
    */
-  it("names a broadened set by the axis that widened, only on a full set", () => {
+  it("names a broadened set generically, only on a full set", () => {
     const broadened: PeerView[] = [];
     for (const industry of dataset.taxonomy.industries) {
       // Both paths: no sub-industry (band axis only), and each sub-industry (either).
@@ -813,14 +848,15 @@ describe("copy", () => {
     for (const view of broadened) {
       const line = broadenedLine(view)!;
       expect(line, view.industry.industry).not.toBeNull();
-      expect(line).toContain(view.industry.industry);
+      // No slot survives — the line names neither the industry nor an axis.
       expect(line).not.toContain("{");
       // No count, no em dash — the same discipline as the published shortfall branch.
       expect(line, view.industry.industry).not.toMatch(/\d/);
       expect(line, view.industry.industry).not.toContain("\u2014");
-      // The axis named matches the signals — never a reach that did not happen.
-      expect(line.includes("sub-industry")).toBe(view.peers.broadenedBusiness);
-      expect(line.includes("revenue band")).toBe(view.peers.broadenedBand);
+      // Names NO axis, whichever one widened — the generic frame cannot claim a reach it
+      // did not make because it claims none.
+      expect(line, view.industry.industry).not.toContain("sub-industry");
+      expect(line, view.industry.industry).not.toContain("revenue band");
       // Mutually exclusive with the shortfall line: the set is full, so that one is null.
       expect(view.peers.shortfall).toBe(0);
       expect(shortfallLine(view)).toBeNull();
@@ -828,8 +864,8 @@ describe("copy", () => {
   });
 
   it("never names the sub-industry axis when none was given", () => {
-    // No sub-industry: "beyond your sub-industry" is meaningless, so that axis must never
-    // fire — but the band axis still may, and the line then names the revenue band alone.
+    // No sub-industry: that signal must never fire. The line is generic and names no axis
+    // regardless, so it holds either way — but the signal itself must still be correct.
     for (const industry of dataset.taxonomy.industries) {
       const view = buildPeerView(dataset, input({ industry }));
       expect(view.peers.broadenedBusiness, industry).toBe(false);

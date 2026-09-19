@@ -69,6 +69,7 @@ function dataset(overrides: Partial<Dataset> = {}): Dataset {
     ],
     businessTypes: [],
     peerOverrides: [],
+    peerNoteRules: [],
     metrics: [],
     siteContent: DEFAULT_SITE_CONTENT,
     ...overrides,

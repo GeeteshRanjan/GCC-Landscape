@@ -11,6 +11,7 @@ import {
 import {
   DATASET_VERSION,
   DEFAULT_COMMON_FUNCTIONS,
+  DEFAULT_ROLE_MAP,
   DEFAULT_LOGOS,
   DEFAULT_PUBLIC_COPY,
   type BusinessType,
@@ -65,6 +66,7 @@ function dataset(overrides: Partial<Dataset> = {}): Dataset {
     companies: [company()],
     businessTypes: [],
     peerOverrides: [],
+    peerNoteRules: [],
     metrics: [],
     siteContent: DEFAULT_SITE_CONTENT,
     ...overrides,
@@ -83,7 +85,15 @@ describe("diffDatasets — site content", () => {
   const content = (
     overrides: Partial<Dataset["siteContent"]> = {},
   ): Dataset["siteContent"] => ({
-    hero: { title: "ANSR GCC Intelligence", lead: "Evaluate your opportunity." },
+    /* Three fields since the headline split into the product's name and the promise
+       under it. Both new keys are defaulted in the schema and REQUIRED on the parsed
+       type, so a fixture omitting one is a compile error rather than an `undefined`
+       reaching the diff — the same guarantee `close` gets below. */
+    hero: {
+      productName: "GCC ATLAS",
+      tagline: "Benchmark against your peers",
+      lead: "Evaluate your opportunity.",
+    },
     impactStats: [
       { id: "hired", value: "225K+", label: "Professionals hired" },
       { id: "centers", value: "210+", label: "Centres established" },
@@ -104,28 +114,68 @@ describe("diffDatasets — site content", () => {
     // defaulted in the schema, required on the parsed type. The shipped values are
     // reused rather than restated so a copy change does not have to be typed twice.
     commonFunctions: [...DEFAULT_COMMON_FUNCTIONS],
+    // Deep-cloned rather than spread, because it is an object holding two arrays: a
+    // shallow copy would let one fixture's edit reach another's baseline.
+    roleMap: structuredClone(DEFAULT_ROLE_MAP),
     logos: [...DEFAULT_LOGOS],
     copy: DEFAULT_PUBLIC_COPY,
     ...overrides,
   });
 
   it("reports a hero edit with both sides of it", () => {
+    const hero = (tagline: string) => ({
+      productName: "GCC ATLAS",
+      tagline,
+      lead: "Same.",
+    });
     const diff = diffDatasets(
-      dataset({ siteContent: content({ hero: { title: "New title", lead: "Same." } }) }),
-      dataset({ siteContent: content({ hero: { title: "Old title", lead: "Same." } }) }),
+      dataset({ siteContent: content({ hero: hero("New promise") }) }),
+      dataset({ siteContent: content({ hero: hero("Old promise") }) }),
     );
     expect(diff.counts.siteContent).toBe(1);
     expect(diff.isEmpty).toBe(false);
     // Both sides, because a reviewer approving a headline has to read it rather
     // than be told a field moved.
     expect(diff.siteContent.hero).toEqual([
-      { field: "title", before: "Old title", after: "New title" },
+      { field: "tagline", before: "Old promise", after: "New promise" },
     ]);
+  });
+
+  /**
+   * **The headline's THIRD field has to be reported too, and that is the assertion worth
+   * having rather than an extra case.** `HERO_FIELDS` is a hand-maintained list, so a field
+   * left off it publishes unreported — on the one category whose whole reason to exist is
+   * that it changes what every visitor reads. `productName` is the newest and so the most
+   * likely to be missed.
+   */
+  it("reports every field of the hero, the product name included", () => {
+    const diff = diffDatasets(
+      dataset({
+        siteContent: content({
+          hero: { productName: "GCC MAP", tagline: "Next to nobody", lead: "Third." },
+        }),
+      }),
+      dataset({
+        siteContent: content({
+          hero: { productName: "GCC ATLAS", tagline: "Benchmark", lead: "Fourth." },
+        }),
+      }),
+    );
+    expect(diff.siteContent.hero.map((change) => change.field)).toEqual([
+      "productName",
+      "tagline",
+      "lead",
+    ]);
+    expect(diff.counts.siteContent).toBe(3);
   });
 
   it("counts the entry point separately from companies and metrics", () => {
     const diff = diffDatasets(
-      dataset({ siteContent: content({ hero: { title: "A", lead: "B" } }) }),
+      dataset({
+        siteContent: content({
+          hero: { productName: "GCC ATLAS", tagline: "A", lead: "B" },
+        }),
+      }),
       dataset({ siteContent: content() }),
     );
     // Separate for the same reason metrics are, one step sharper: folded into
@@ -213,9 +263,14 @@ describe("diffDatasets — site content", () => {
    * `PUBLIC_COPY_LABELS` and not from the schema would drop out of the diff while still
    * publishing, which is this test's own failure mode in reverse.
    */
-  it("catches a change in every one of the sixty-seven copy strings", () => {
+  it("catches a change in every one of the copy strings", () => {
     const keys = Object.keys(DEFAULT_PUBLIC_COPY) as Array<keyof PublicCopy>;
-    expect(keys).toHaveLength(67);
+    /* 74 with the dropdowns' five — four tier headings and the word the industry popup
+       uses for its second level. The count is pinned in `public-copy.test.ts` with the
+       reasoning for every step; what this test is for is that each key REACHES the diff,
+       and the length is here only so a key added to the schema without a label in
+       `PUBLIC_COPY_LABELS` fails on the number rather than being quietly skipped. */
+    expect(keys).toHaveLength(82);
 
     for (const field of keys) {
       const copy: PublicCopy = { ...DEFAULT_PUBLIC_COPY, [field]: "Edited" };

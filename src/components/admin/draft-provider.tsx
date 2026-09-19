@@ -23,6 +23,7 @@ import type {
   Metric,
   PeerOverride,
   PublicCopy,
+  RoleMap,
   TaxonomyListKey,
 } from "@/data/schema";
 import { slugify, uniqueSlug } from "@/data/normalize";
@@ -125,8 +126,44 @@ import { slugify, uniqueSlug } from "@/data/normalize";
  * report it as an ordinary edit. A pinned set is invisible on the public screen by
  * design, so nobody would notice it go. Belt and braces, on the reasoning already
  * recorded for the five defaulted keys.
+ *
+ * **v12 is `copy.peersBroadenedNote`, one key added, on v8's reasoning exactly** — the
+ * merge is per-KEY, so a v11 draft is short by one, parses, has the gap filled with the
+ * shipped sentence and publishes it as an approved edit. The bump is the only instrument
+ * for a copy-shape change, at any size.
+ *
+ * **v13 is `copy.pillSubIndustry`, one key added, on v12's reasoning exactly** — the
+ * fourth answer pill's label. Same mechanism, same instrument: a v12 draft is short by one
+ * string, the merge fills it with the shipped value, and publishing would report a string
+ * the admin never approved as an ordinary edit.
+ *
+ * **v14 IS THE HERO HEADLINE SPLITTING INTO TWO FIELDS, AND IT IS THE SHARPEST CASE SO
+ * FAR.** `hero.title` is gone; `hero.productName` and `hero.tagline` replace it and both
+ * are `.default()`-ed so a committed dataset written before them still reads. Both halves
+ * of that are dangerous to a stale draft. Zod STRIPS the unrecognised `title`, so a v13
+ * draft parses without complaint — and then the two new fields come back as the SHIPPED
+ * defaults, so publishing it would silently revert any headline edit the admin had made
+ * and report it as an ordinary change. No shape check can see that on its own, because
+ * after the parse the keys are present and non-empty. The bump is the instrument, and the
+ * two keys take a line in the check below as well.
+ *
+ * Four dropdown group labels and the industry child label were published as copy keys in
+ * the same pass; they need no separate version for v8's reason, the bump already being
+ * the only instrument available.
+ *
+ * **v15 IS `siteContent.roleMap`, a whole new COLLECTION, which is v11's case exactly** —
+ * and like v11 it takes a line in the shape check below as well, because the key is
+ * `.default()`-ed in the schema. A v14 draft parses on the way out with the gap filled
+ * from the shipped map, so publishing one would silently revert every role, family and
+ * colour an admin had edited and report it as an ordinary change. It is worse than v11's
+ * case in one respect: pinned peer sets are invisible on the public screen by design,
+ * where this is a whole section of the peer view, so the revert would be visible to
+ * visitors and still not to the reviewer.
+ *
+ * Eight copy keys were published in the same pass and need no version of their own, for
+ * v8's reason: the bump is already the only instrument available.
  */
-const STORAGE_KEY = "gcc-admin-draft-v11";
+const STORAGE_KEY = "gcc-admin-draft-v15";
 const AUTOSAVE_DEBOUNCE_MS = 800;
 
 /** Everything the admin can edit. Metadata is server-owned. */
@@ -235,6 +272,12 @@ interface DraftContextValue {
    * computes the next list and hands it over.
    */
   setCommonFunctions: (values: string[]) => void;
+  /**
+   * The role map, replaced whole. One call rather than one per collection, because the
+   * schema's cross-references span all three parts — see the mutator for the full
+   * argument.
+   */
+  setRoleMap: (next: RoleMap) => void;
   addLogo: () => void;
   updateLogo: (index: number, patch: Partial<CustomerLogo>) => void;
   removeLogo: (index: number) => void;
@@ -307,6 +350,13 @@ export type RevertTarget =
   | { kind: "closeField"; field: keyof CloseCopy }
   | { kind: "copyField"; field: keyof PublicCopy }
   | { kind: "commonFunctions" }
+  /**
+   * Reverted as the WHOLE MAP rather than per family or per role, on the same argument the
+   * mutator is a single call on: the three parts reference each other, so putting one
+   * family back while leaving four roles pointing at the family that replaced it is a
+   * draft the gate refuses. The grain has to be the entity, as it is for a metric.
+   */
+  | { kind: "roleMap" }
   | { kind: "logos" }
   | { kind: "impactStats" };
 
@@ -434,6 +484,17 @@ function revertEditable(
         siteContent: {
           ...current.siteContent,
           commonFunctions: [...base.siteContent.commonFunctions],
+        },
+      };
+    case "roleMap":
+      /* A deep copy, unlike the three collections around it: this is an object holding
+         two arrays, so a spread would hand the draft the baseline's own arrays and the
+         next edit would mutate what the dirty check compares against. */
+      return {
+        ...current,
+        siteContent: {
+          ...current.siteContent,
+          roleMap: structuredClone(base.siteContent.roleMap),
         },
       };
     case "logos":
@@ -588,6 +649,14 @@ export function DraftProvider({
       !stored.editable.siteContent.commonFunctions ||
       !stored.editable.siteContent.logos ||
       !stored.editable.siteContent.copy ||
+      // The role map, on `peerOverrides`' argument and one step sharper: the key is
+      // defaulted, so a v14 draft parses with the whole shipped map filled in — and
+      // publishing it would revert every role, family and colour under "an ordinary
+      // edit". Three keys are checked rather than the object, because the object is what
+      // the default supplies and the sub-keys are what an older draft cannot have.
+      !stored.editable.siteContent.roleMap?.families ||
+      !stored.editable.siteContent.roleMap?.roles ||
+      !stored.editable.siteContent.roleMap?.demandLevels ||
       // The close's two per-screen CTA links, checked on the same argument as the five
       // above and with one difference that matters: BLANK IS A LEGAL VALUE for these, so
       // truthiness is the wrong test — `!""` would throw away every draft in which an
@@ -599,7 +668,14 @@ export function DraftProvider({
       // the way out with an empty list and would publish every pinned peer set away.
       // Invisible on the public screen by design, which is what makes the check worth
       // having on top of the version bump.
-      !stored.editable.peerOverrides
+      !stored.editable.peerOverrides ||
+      // The headline's two halves, which REPLACED a single `hero.title`. Both are
+      // defaulted, so a v13 draft parses with the shipped wording filled in — and since
+      // zod strips the stale `title` silently, publishing one would revert the admin's own
+      // headline and report it as an ordinary edit. The version bump catches this; the
+      // check is here because the failure is invisible on both sides of the diff.
+      typeof stored.editable.siteContent.hero?.productName !== "string" ||
+      typeof stored.editable.siteContent.hero?.tagline !== "string"
     ) {
       window.localStorage.removeItem(STORAGE_KEY);
       return;
@@ -712,6 +788,10 @@ export function DraftProvider({
       companies: editable.companies,
       businessTypes: editable.businessTypes,
       peerOverrides: editable.peerOverrides,
+      /* From the BASELINE, not from the draft: this collection is not in `EditableDataset`
+         yet, so there is no draft copy of it to diverge. Carried through so `draft` is a
+         complete `Dataset`; making it editable is the rest of that feature's wiring. */
+      peerNoteRules: currentBaseline.peerNoteRules,
       metrics: editable.metrics,
       siteContent: editable.siteContent,
     }),
@@ -1060,6 +1140,29 @@ export function DraftProvider({
     applyEdit((current) => ({
       ...current,
       siteContent: { ...current.siteContent, commonFunctions: values },
+    }));
+  }, [applyEdit]);
+
+  /**
+   * The role map, patched as a WHOLE OBJECT rather than through a mutator per collection.
+   *
+   * **One seam, because every rule this data has spans its three parts.** A role names a
+   * family and a demand step; the schema refuses an unknown `familyId`, a `demand` past
+   * the end of the scale and two families in one colour. So removing a family and
+   * reassigning its roles, or shortening the scale and re-rating what pointed past it,
+   * have to land as ONE edit — with three mutators the draft would sit in a state the
+   * publish gate refuses, and the editor would be showing an error about a change it made
+   * itself. This is the same argument `replaceMetric` and `replacePeerOverride` are single
+   * whole-entity calls on.
+   *
+   * The editor computes the next map and hands it over, exactly as `setCommonFunctions`
+   * takes a finished list — and nothing is trimmed or de-duplicated here, because every
+   * cleanup that belongs to a finished map is wrong while one is being typed.
+   */
+  const setRoleMap = useCallback((next: RoleMap) => {
+    applyEdit((current) => ({
+      ...current,
+      siteContent: { ...current.siteContent, roleMap: next },
     }));
   }, [applyEdit]);
 
@@ -1491,6 +1594,7 @@ export function DraftProvider({
       moveImpactStat,
       updatePublicCopy,
       setCommonFunctions,
+      setRoleMap,
       addLogo,
       updateLogo,
       removeLogo,
@@ -1527,6 +1631,7 @@ export function DraftProvider({
       moveImpactStat,
       updatePublicCopy,
       setCommonFunctions,
+      setRoleMap,
       addLogo,
       updateLogo,
       removeLogo,

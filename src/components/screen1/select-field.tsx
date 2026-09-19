@@ -282,6 +282,18 @@ function HighlightedLabel({
  * the parent row over in the first pane — two rows, one value. Roving on `value`
  * would give them one identity and one DOM id; roving on `rowId` keeps them
  * distinct while `value` stays the thing that gets committed.
+ *
+ * **THAT SEPARATION NOW CARRIES A SECOND CASE, AND IT IS THE ONE THAT GENERALISES: a
+ * value can appear in TWO GROUPS of the first pane.** The leading tier and the full list
+ * used to partition their taxonomy, so a value was in exactly one group; they overlap now,
+ * because a group labelled "All industries" that omitted the pinned ones was the reason a
+ * visitor who could not find their own row took the broad answer. So a first-pane `rowId`
+ * is scoped by its GROUP — see `paneA` — and three things depend on it: `rowDomId` derives
+ * a DOM id from it, so two rows sharing one would put a duplicate id in the document and
+ * make `aria-activedescendant` ambiguous; roving would light both copies at once; and React
+ * would warn on the duplicate key and reuse the wrong node. `value` is untouched, so what
+ * gets committed and what `aria-selected` reads are both unchanged — both copies of a row
+ * ARE selected when that value is the answer, which is correct rather than merely tolerable.
  */
 type Row =
   | { kind: "heading"; rowId: string; label: string }
@@ -405,6 +417,21 @@ export function SelectField({
   const [activeRowId, setActiveRowId] = useState<string | null>(null);
   /** The industry whose sub-industries are showing in the second pane. */
   const [branch, setBranch] = useState<string | null>(null);
+  /**
+   * WHICH ROW opened that pane, as a `rowId`.
+   *
+   * **Separate from `branch` because a value can now be drawn on more than one row**, the
+   * leading tier and the full list having been made to overlap. Two things break if the
+   * open state is keyed on the value: both copies report `aria-expanded="true"` and both
+   * claim the pane with `aria-owns`, which is one subtree with two owners; and
+   * `leaveBranch` put the value back into `setActiveRowId`, where it used to be the same
+   * string as the row's id and now matches no row at all — so Escape from the pane silently
+   * dropped the keyboard.
+   *
+   * The pane belongs to the row that opened it. The other copy draws collapsed, which is
+   * honest: pressing it would open the same pane from there.
+   */
+  const [branchRowId, setBranchRowId] = useState<string | null>(null);
 
   const listId = useId();
   const groupId = useId();
@@ -436,15 +463,24 @@ export function SelectField({
     // rebuilding either on every character is work with a visible cost on a phone.
     const haystacks = new Map<string, string>();
     let nested = false;
-    let count = 0;
+    /**
+     * **Counted by DISTINCT VALUE, not by drawn row, and the difference is the whole
+     * reason this is a `Set`.** The leading tier and the full list overlap now, so every
+     * industry and every one of the twelve leading countries is drawn twice — an
+     * increment per row would report 48 industries and 213 countries, and that number is
+     * read out as the filter's accessible name ("Filter 24 options"). Announcing double
+     * the truth to the one visitor who cannot see the list is the failure worth avoiding;
+     * it would also nudge `showFilter` for any list sitting just under the threshold.
+     */
+    const counted = new Set<string>();
     for (const group of groups) {
       for (const option of group.options) {
         map.set(option.value, { label: option.label, children: option.children });
         haystacks.set(option.value, searchHaystack(option.label, option.terms));
-        count += 1;
+        counted.add(option.value);
         for (const child of option.children ?? []) {
           nested = true;
-          count += 1;
+          counted.add(child.value);
           map.set(child.value, {
             label: child.label,
             parentLabel: option.label,
@@ -454,7 +490,7 @@ export function SelectField({
         }
       }
     }
-    return { map, haystacks, nested, count };
+    return { map, haystacks, nested, count: counted.size };
   }, [groups]);
 
   const showFilter = index.count > FILTER_THRESHOLD;
@@ -494,7 +530,12 @@ export function SelectField({
 
         body.push({
           kind: "option",
-          rowId: option.value,
+          /* **Scoped by group, because a value may now appear in more than one.** The
+             leading tier and the full list overlap — see `Row` — so `option.value` alone
+             is no longer a unique row identity, and `rowId` is what the DOM id, the roving
+             focus and the React key are all derived from. The `value` is unchanged and is
+             still what gets committed. */
+          rowId: `${group.label}:${option.value}`,
           value: option.value,
           label: option.label,
           branching: children.length > 0,
@@ -750,11 +791,16 @@ export function SelectField({
       commit(row);
       return;
     }
-    if (branch === row.value) {
+    // **The ROW's own pane, not the value's.** Pressing a branching row whose pane is
+    // already open commits the broad answer — that is the documented second press. Keyed on
+    // the value it would also fire on the OTHER copy of the same industry in the second
+    // group, which is drawn collapsed: a first press on a collapsed row has to open it.
+    if (row.rowId === branchRowId) {
       commit(row);
       return;
     }
     setBranch(row.value);
+    setBranchRowId(row.rowId);
     // Commit the industry now rather than on the way out. The trigger updates, so
     // the answer visibly took, and any of the four exits leaves it standing.
     onChange(row.value, undefined);
@@ -810,6 +856,7 @@ export function SelectField({
     const current = latest.current.value;
     const meta = current ? index.map.get(current) : undefined;
     setBranch(null);
+    setBranchRowId(null);
     // A sub-industry has no row in the first list, so the keyboard goes to the
     // industry that owns it.
     const target = meta?.parent ?? current;
@@ -883,8 +930,11 @@ export function SelectField({
 
   /** Leaves the branch pane: the parent row keeps the keyboard, the pane closes. */
   function leaveBranch() {
-    const parent = branch;
+    // The ROW that opened the pane, not the value it commits — see `branchRowId`. It was
+    // `branch` here, which worked only while a first-pane row's id WAS its value.
+    const parent = branchRowId;
     setBranch(null);
+    setBranchRowId(null);
     setActiveRowId(parent);
   }
 
@@ -912,8 +962,12 @@ export function SelectField({
       case "ArrowRight": {
         if (inPaneB || !activeRow?.branching) break;
         event.preventDefault();
-        if (branch === activeRow.value) setActiveRowId(paneBOptions[0]?.rowId ?? null);
-        else activate(activeRow);
+        // The row, not the value: the other copy of this industry in the second group is
+        // collapsed, so Right on it has to open the pane rather than step into one the
+        // visitor cannot see from here.
+        if (activeRow.rowId === branchRowId) {
+          setActiveRowId(paneBOptions[0]?.rowId ?? null);
+        } else activate(activeRow);
         break;
       }
       case "ArrowLeft":
@@ -950,7 +1004,9 @@ export function SelectField({
   function renderRow(row: Extract<Row, { kind: "option" }>) {
     const isSelected = row.value === value && (row.whole ? !selected?.parent : true);
     const isActive = row.rowId === activeRowId;
-    const isOpenBranch = row.branching && branch === row.value;
+    // Keyed on the ROW and not on the value: the same industry is drawn in both groups
+    // now, and one pane cannot have two owners. See `branchRowId`.
+    const isOpenBranch = row.branching && row.rowId === branchRowId;
     /** In the cascade pane rather than the first list. Both of its rows qualify. */
     const inPane = row.whole || row.parent !== undefined;
 

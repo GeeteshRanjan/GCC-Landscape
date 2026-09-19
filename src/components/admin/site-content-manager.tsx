@@ -10,8 +10,12 @@ import {
   useDeepLinkQuery,
   type AdminSearchState,
 } from "@/components/admin/search-box";
+import { AdminField } from "@/components/admin/controls";
+import { RoleMapCanvas } from "@/components/admin/role-map-canvas";
 import { Button } from "@/components/ui/button";
 import { PUBLIC_COPY_LABELS } from "@/data/diff";
+import { uniqueSlug } from "@/data/normalize";
+import { cn } from "@/lib/utils";
 /* The gate's own bound and predicate for a CTA link, imported rather than restated for
    the reason every other cap on this page is read off the schema: a form that states a
    different rule than the publish endpoint is a form that lies. `closeCopySchema` refines
@@ -25,14 +29,23 @@ import {
   copyFieldMax,
   customerLogoSchema,
   heroCopySchema,
+  HERO_PRODUCT_NAME_MAX,
+  HERO_TAGLINE_MAX,
   impactStatSchema,
   isCopyTemplate,
+  roleFamilySchema,
+  roleSchema,
+  ROLE_TONES,
   siteContentSchema,
   type CloseCopy,
   type CustomerLogo,
   type HeroCopy,
   type ImpactStat,
   type PublicCopy,
+  type Role,
+  type RoleBand,
+  type RoleFamily,
+  type RoleMap,
 } from "@/data/schema";
 
 /**
@@ -66,8 +79,13 @@ import {
 
 /** The bounds come off the schema, so the hint cannot drift from the gate. */
 const MAX = {
-  title: heroCopySchema.shape.title.maxLength ?? 60,
-  lead: heroCopySchema.shape.lead.maxLength ?? 240,
+  /* **The headline's two caps are imported constants, not introspected.** Both fields are
+     `.default()`-ed so an older dataset reads, and a `ZodDefault` has no readable
+     `maxLength` — so `?? 60` would have become the real bound and drifted from the gate the
+     moment either changed. `lead` is a plain string and still reads off the schema. */
+  productName: HERO_PRODUCT_NAME_MAX,
+  tagline: HERO_TAGLINE_MAX,
+  lead: heroCopySchema.shape.lead.maxLength ?? 180,
   value: impactStatSchema.shape.value.maxLength ?? 16,
   label: impactStatSchema.shape.label.maxLength ?? 64,
   closeBody: closeCopySchema.shape.body.maxLength ?? 140,
@@ -75,6 +93,12 @@ const MAX = {
   functionItem:
     siteContentSchema.shape.commonFunctions.unwrap().element.maxLength ?? 32,
   logoName: customerLogoSchema.shape.name.maxLength ?? 40,
+  roleName: roleSchema.shape.name.maxLength ?? 40,
+  roleFamilyName: roleFamilySchema.shape.name.maxLength ?? 36,
+  /* `roleMapSchema` is a `ZodEffects` because of its `superRefine`, so the element cannot
+     be reached through `.shape` the way the others can. Read off the element schema
+     directly, which is the same object the gate validates with. */
+  roleDemandLevel: 20,
 } as const;
 
 const MAX_STATS = 6;
@@ -89,6 +113,27 @@ const MAX_STATS = 6;
 const MAX_FUNCTIONS = 12;
 /** Mirrors the schema's own cap on `siteContent.logos`, and must move with it. */
 const MAX_LOGOS = 24;
+/** Mirrors `roleMapSchema`'s own caps. A zod array's length is not introspectable. */
+const MAX_ROLES = 60;
+const MIN_DEMAND_LEVELS = 3;
+const MAX_DEMAND_LEVELS = 5;
+
+/**
+ * The two band words as an admin reads them, and they are NOT the published copy keys.
+ *
+ * `copy.rolesBandEmerging` and `copy.rolesBandEstablished` are what a visitor sees and are
+ * edited in the copy groups below; these name the two values of the `band` enum in a form
+ * control. Keeping them separate is deliberate: an admin who renames the visitor-facing
+ * word to "Traditional" must still be able to find the field, and a select whose options
+ * change under them as they edit a different section is a form that moves while being used.
+ */
+const BAND_OPTIONS = ["Emerging", "Established"] as const;
+
+/** Which side of its bubble a name sits on, in words rather than in the enum's. */
+const SIDE_LABELS: Record<"lead" | "trail", string> = {
+  trail: "After the bubble",
+  lead: "Before the bubble",
+};
 
 /**
  * The marks that are actually served from `public/logos/`.
@@ -171,13 +216,14 @@ export function SiteContentManager() {
     moveImpactStat,
     updatePublicCopy,
     setCommonFunctions,
+    setRoleMap,
     addLogo,
     updateLogo,
     removeLogo,
     moveLogo,
   } = useDraft();
 
-  const { hero, impactStats, close, commonFunctions, logos, copy } =
+  const { hero, impactStats, close, commonFunctions, roleMap, logos, copy } =
     draft.siteContent;
   const search = useAdminSearch();
   // Arriving from the universal search. No `open`: every field on this page writes
@@ -209,8 +255,9 @@ export function SiteContentManager() {
 
   const sections = {
     hero: show(
-      "hero title supporting line headline",
-      hero.title,
+      "hero title tagline product name supporting line headline",
+      hero.productName,
+      hero.tagline,
       hero.lead,
     ),
     close: show(
@@ -229,6 +276,16 @@ export function SiteContentManager() {
       impactStats.map((stat) => stat.label),
     ),
     functions: show("function list common functions tags", commonFunctions),
+    /* Searched by the words an admin arrives with, which for this section is a role name
+       nine times out of ten — "move Data Scientist" — so every role name, group name and
+       demand step is in the haystack alongside the section's own vocabulary. "bubble",
+       "colour" and "chart" are here because that is what people call it. */
+    roleMap: show(
+      "role map bubbles chart roles job complexity hiring demand colour groups legend emerging established",
+      roleMap.roles.map((role) => role.name),
+      roleMap.families.map((family) => family.name),
+      roleMap.demandLevels,
+    ),
     logos: show(
       "customer logo strip",
       logos.map((logo) => logo.name),
@@ -306,6 +363,13 @@ export function SiteContentManager() {
 
       {sections.functions ? (
         <FunctionsEditor values={commonFunctions} onChange={setCommonFunctions} />
+      ) : null}
+
+      {/* Directly after the function tags, because that is the order the two blocks appear
+          in on the peer landscape — the tags say which functions run from India GCCs and
+          the map says which roles those functions hire. */}
+      {sections.roleMap ? (
+        <RoleMapEditor map={roleMap} onChange={setRoleMap} />
       ) : null}
 
       {sections.logos ? (
@@ -416,22 +480,37 @@ function HeroEditor({
       title="Hero"
       description={
         <p>
-          Two elements, and there is no third — no eyebrow, no button, no proof line.
-          The title is the product label and the page&rsquo;s only <code>h1</code>.
+          Three elements, and there is no fourth — no eyebrow, no button, no proof
+          line. The product name and the tagline are the two halves of the
+          page&rsquo;s only <code>h1</code>; the supporting line sits under both.
+          ANSR&rsquo;s own logo is drawn above them and is not editable here.
         </p>
       }
     >
       <div className="flex flex-col gap-5 px-5 py-5">
+        {/* **The headline is TWO fields, and it used to be one.** A single free-text
+            title was searched for the literal `GCC ATLAS` and re-set the match in the
+            product's own styling — which failed silently on any respelling and looked
+            deliberate when it did. Splitting it is what the project owner asked for and
+            it deletes that class of bug: the name is the field, so it cannot be spelled
+            wrong, and the two halves can be sized independently. */}
         <TextField
-          label="Title"
-          hint={`Sets bold at up to 80px, centred. Keep it to about ${MAX.title} characters — past that it takes a third line on a desktop screen and pushes the form below the fold. "ANSR" is set in the brand orange automatically; keep it as the first word, because the orange is only legible against the top of the hero gradient.`}
-          value={hero.title}
-          error={lengthError(hero.title, MAX.title)}
-          onChange={(value) => onChange({ title: value })}
+          label="Product name"
+          hint={`The first line of the headline, at up to ${MAX.productName} characters. It is drawn on one line and never wraps, so a longer name runs off the band rather than breaking. Do not put "ANSR" in it — the brand is stated by the logo above, and a name containing it opens the line with two names.`}
+          value={hero.productName}
+          error={lengthError(hero.productName, MAX.productName)}
+          onChange={(value) => onChange({ productName: value })}
+        />
+        <TextField
+          label="Tagline"
+          hint={`The second line, at up to ${MAX.tagline} characters. It is sized to draw a little wider than the product name above it, so a longer tagline wraps to two lines rather than shrinking. Keep it to about the shipped length and the headline stays two lines.`}
+          value={hero.tagline}
+          error={lengthError(hero.tagline, MAX.tagline)}
+          onChange={(value) => onChange({ tagline: value })}
         />
         <TextField
           label="Supporting line"
-          hint={`One sentence under the title, at up to ${MAX.lead} characters. Write the company count the way it should read — it is text, not a total, so it does not have to match the ${new Intl.NumberFormat("en-US").format(1834)} companies in the data exactly.`}
+          hint={`One sentence under the headline, at up to ${MAX.lead} characters. Write the company count the way it should read — it is text, not a total, so it does not have to match the ${new Intl.NumberFormat("en-US").format(1834)} companies in the data exactly.`}
           value={hero.lead}
           error={lengthError(hero.lead, MAX.lead)}
           onChange={(value) => onChange({ lead: value })}
@@ -881,6 +960,666 @@ function FunctionsEditor({
   );
 }
 
+/* ==========================================================================
+   The role map
+   ========================================================================== */
+
+/**
+ * The role map's two editors, sharing one draft mutator.
+ *
+ * **Two `AdminSection`s and ONE `onChange`, because the schema's rules span both.** A role
+ * names a family and a demand step, and the gate refuses an unknown `familyId`, a `demand`
+ * past the end of the scale and two families in one colour. So both editors compute a whole
+ * next map and hand it over — with a mutator each, deleting a family and reassigning its
+ * roles would leave the draft in a state the publish gate rejects and the form would be
+ * showing an error about a change it had just made itself.
+ *
+ * **Sections rather than one, because an admin comes here for one of two jobs.** Renaming a
+ * group or recolouring the legend is a five-second edit on seven rows; moving a bubble is a
+ * different task on thirty-six. A single section would have put the seven inside the
+ * thirty-six.
+ */
+function RoleMapEditor({
+  map,
+  onChange,
+}: {
+  map: RoleMap;
+  onChange: (next: RoleMap) => void;
+}) {
+  return (
+    <>
+      <RoleFamilyEditor map={map} onChange={onChange} />
+      <RoleListEditor map={map} onChange={onChange} />
+      <RoleDemandEditor map={map} onChange={onChange} />
+    </>
+  );
+}
+
+/** A new family starts on the lowest colour nothing else is using. */
+function freeTone(map: RoleMap): number {
+  const taken = new Set(map.families.map((family) => family.tone));
+  for (let tone = 1; tone <= ROLE_TONES; tone += 1) {
+    if (!taken.has(tone)) return tone;
+  }
+  return 1;
+}
+
+/**
+ * The colour a `tone` draws, as a swatch.
+ *
+ * Reads the CSS variable rather than restating a value, so the admin preview cannot drift
+ * from what the public screen paints and `tokens.css` stays the only place a colour is
+ * named. It is the one place in admin that draws a public ink, and that is the point: an
+ * admin choosing between twelve colours has to see them.
+ */
+function ToneSwatch({ tone, size = "md" }: { tone: number; size?: "sm" | "md" }) {
+  return (
+    <span
+      aria-hidden="true"
+      className={cn(
+        "inline-block shrink-0 rounded-full",
+        size === "sm" ? "size-2.5" : "size-4",
+      )}
+      style={{ backgroundColor: `var(--ansr-role-${tone})` }}
+    />
+  );
+}
+
+/**
+ * The families: their names, their colours, and their order in the legend.
+ *
+ * **The colour is a picker over twelve named inks and not a field, because an admin may not
+ * type a hex.** `tokens.css` is the single source of truth for what this product draws, and
+ * twelve is how many categorical inks it defines — see `ROLE_TONES`. A colour already spoken
+ * for is offered as disabled rather than hidden, so the picker shows the whole palette and
+ * says why a slot is unavailable.
+ *
+ * **The first EIGHT are the source slide's own and the last four are not, and the description
+ * says which.** An admin adding a ninth group is leaving the graphic ANSR supplied, which is
+ * a thing worth knowing at the moment of doing it and is invisible from the swatch.
+ */
+function RoleFamilyEditor({
+  map,
+  onChange,
+}: {
+  map: RoleMap;
+  onChange: (next: RoleMap) => void;
+}) {
+  const usage = new Map<string, number>();
+  for (const role of map.roles) {
+    usage.set(role.familyId, (usage.get(role.familyId) ?? 0) + 1);
+  }
+
+  function move(index: number, delta: number) {
+    const families = [...map.families];
+    const target = index + delta;
+    if (target < 0 || target >= families.length) return;
+    const [moved] = families.splice(index, 1);
+    families.splice(target, 0, moved as RoleFamily);
+    onChange({ ...map, families });
+  }
+
+  return (
+    <AdminSection
+      id="role-families"
+      title="Role groups"
+      description={
+        <>
+          <p>
+            The groups on the role map, and the colour each one&rsquo;s bubbles are drawn
+            in. This order is the order the legend reads, left to right; it does not move
+            any bubble, because a group&rsquo;s colour is stored on the group rather than
+            taken from its position. Colours come from a fixed set of twelve &mdash; each
+            one is measured to stay legible at the smallest bubble size and to be
+            distinguishable from the other eleven, so they are chosen rather than typed.
+          </p>
+          <p>
+            The first eight are the colours of the slide this chart reproduces. The last
+            four are additions, so a ninth group needs no code change &mdash; but a legend
+            is something a reader holds in their head, and seven is what the source uses.
+            Adding groups past that works; it reads harder.
+          </p>
+        </>
+      }
+    >
+      <div className="divide-y divide-border-subtle">
+        {map.families.map((family, index) => {
+          const which = family.name.trim() || `group ${index + 1}`;
+          const inUse = usage.get(family.id) ?? 0;
+          return (
+            <div
+              key={family.id}
+              className="flex flex-col gap-4 px-5 py-4 sm:flex-row sm:items-start"
+            >
+              <div className="grid flex-1 gap-4 sm:grid-cols-2">
+                <TextField
+                  label={`Group ${index + 1}`}
+                  max={MAX.roleFamilyName}
+                  value={family.name}
+                  error={lengthError(family.name, MAX.roleFamilyName)}
+                  onChange={(name) =>
+                    onChange({
+                      ...map,
+                      families: map.families.map((held) =>
+                        held.id === family.id ? { ...held, name } : held,
+                      ),
+                    })
+                  }
+                />
+                <AdminField
+                  label={`Colour for ${which}`}
+                  hint="Eight fixed inks. One group each."
+                >
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    {Array.from({ length: ROLE_TONES }, (_, i) => i + 1).map((tone) => {
+                      const takenBy = map.families.find(
+                        (other) => other.tone === tone && other.id !== family.id,
+                      );
+                      const chosen = family.tone === tone;
+                      return (
+                        <button
+                          key={tone}
+                          type="button"
+                          disabled={Boolean(takenBy)}
+                          aria-pressed={chosen}
+                          /* The name carries the group AND the conflict, because a swatch
+                             has no text of its own and "colour 5" means nothing to
+                             somebody who cannot see it. */
+                          title={
+                            takenBy
+                              ? `Colour ${tone} — already used by ${takenBy.name || "another group"}`
+                              : `Colour ${tone}`
+                          }
+                          onClick={() =>
+                            onChange({
+                              ...map,
+                              families: map.families.map((held) =>
+                                held.id === family.id ? { ...held, tone } : held,
+                              ),
+                            })
+                          }
+                          className={cn(
+                            "inline-flex size-8 items-center justify-center rounded-md border",
+                            chosen
+                              ? "border-accent-teal bg-surface-subtle"
+                              : "border-transparent",
+                            takenBy ? "cursor-not-allowed opacity-30" : "hover:bg-surface-subtle",
+                          )}
+                        >
+                          <ToneSwatch tone={tone} />
+                          <span className="sr-only">
+                            {chosen ? `Colour ${tone}, selected` : `Use colour ${tone}`}
+                            {takenBy ? `, already used by ${takenBy.name}` : ""}
+                            {` for ${which}`}
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </AdminField>
+              </div>
+
+              <div className="flex shrink-0 items-center gap-2 sm:pt-6">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={index === 0}
+                  onClick={() => move(index, -1)}
+                >
+                  <span aria-hidden="true">↑</span>
+                  <span className="sr-only">Move {which} up</span>
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={index === map.families.length - 1}
+                  onClick={() => move(index, 1)}
+                >
+                  <span aria-hidden="true">↓</span>
+                  <span className="sr-only">Move {which} down</span>
+                </Button>
+                {/* **Refused here rather than at the gate, which is the taxonomy rule.**
+                    The schema can only say a reference is broken; this can say which four
+                    roles are using it, which is the difference between an error and an
+                    instruction. Widening or silently dropping the roles would be worse —
+                    see `removeBusinessType`. */}
+                <button
+                  type="button"
+                  disabled={inUse > 0 || map.families.length <= 1}
+                  title={
+                    inUse > 0
+                      ? `${inUse} ${inUse === 1 ? "role uses" : "roles use"} this group. Move them first.`
+                      : undefined
+                  }
+                  onClick={() =>
+                    onChange({
+                      ...map,
+                      families: map.families.filter((held) => held.id !== family.id),
+                    })
+                  }
+                  className="ansr-destructive inline-flex h-8 items-center px-3 text-sm disabled:opacity-50"
+                >
+                  Remove
+                  <span className="sr-only"> {which}</span>
+                </button>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      <div className="border-t border-border-subtle px-5 py-4">
+        <Button
+          variant="outline"
+          size="sm"
+          disabled={map.families.length >= ROLE_TONES}
+          onClick={() =>
+            onChange({
+              ...map,
+              families: [
+                ...map.families,
+                {
+                  id: uniqueSlug(
+                    "group",
+                    new Set(map.families.map((family) => family.id)),
+                  ),
+                  name: "",
+                  tone: freeTone(map),
+                },
+              ],
+            })
+          }
+        >
+          Add a group
+        </Button>
+        {map.families.length >= ROLE_TONES ? (
+          <p className="mt-2 text-xs text-text-muted">
+            Twelve is the maximum, because there are twelve colours. Past that two groups
+            would share one, which is the one thing a colour-coded legend cannot survive.
+          </p>
+        ) : null}
+      </div>
+    </AdminSection>
+  );
+}
+
+/**
+ * The bubbles themselves.
+ *
+ * **Every row is a placement, and the two position fields are the thing to explain rather
+ * than hide.** `complexity` is the one real axis and is never shown to a visitor as a
+ * number; `lane` is free room with no meaning at all, and exists so two labels do not
+ * collide. An admin who does not know that will read them as scores, so the description
+ * says it before the first field does.
+ */
+function RoleListEditor({
+  map,
+  onChange,
+}: {
+  map: RoleMap;
+  onChange: (next: RoleMap) => void;
+}) {
+  const bandLabels: Record<RoleBand, string> = {
+    emerging: BAND_OPTIONS[0],
+    established: BAND_OPTIONS[1],
+  };
+  const bandOf = (label: string): RoleBand =>
+    label === BAND_OPTIONS[0] ? "emerging" : "established";
+
+  const patch = (id: string, next: Partial<Omit<Role, "id">>) =>
+    onChange({
+      ...map,
+      roles: map.roles.map((role) => (role.id === id ? { ...role, ...next } : role)),
+    });
+
+  return (
+    <AdminSection
+      id="role-map-roles"
+      title="Roles on the map"
+      description={
+        <>
+          <p>
+            One row per bubble. <strong>Group</strong> decides its colour,{" "}
+            <strong>band</strong> which of the two fields it sits in, and{" "}
+            <strong>demand</strong> how big it is drawn.
+          </p>
+          <p>
+            The two position numbers are placement and nothing else.{" "}
+            <strong>Complexity</strong> is where it sits left to right on the one real axis
+            &mdash; the axis is drawn with &ldquo;Lower&rdquo; and &ldquo;Higher&rdquo; at
+            its ends and no numbers anywhere, so this figure is never shown to a visitor
+            and is not a score. <strong>Height</strong> is where it sits top to bottom, and
+            carries no meaning at all: it is there so two names do not overlap, exactly as
+            you would nudge a label in a slide. <strong>Name side</strong> puts the name
+            after the bubble or before it, for the same reason.
+          </p>
+          <p>
+            The map is drawn as a field on wide screens only; narrower ones read the same
+            roles as a list grouped by colour, where neither position matters. So a
+            placement is worth getting right, and nothing breaks if it is not.
+          </p>
+        </>
+      }
+    >
+      {map.roles.length === 0 ? (
+        <p className="px-5 py-10 text-center text-sm text-text-muted">
+          No roles. The role map is hidden on the public page until there is at least one.
+        </p>
+      ) : (
+        <div className="divide-y divide-border-subtle">
+          {/* The canvas leads and the table follows, because placing is the job and typing a
+              coordinate is the fallback — see `RoleMapCanvas`. Both write the same fields
+              through the same mutator, so neither can get ahead of the other. */}
+          <RoleMapCanvas map={map} bandLabels={bandLabels} onChange={onChange} />
+          {map.roles.map((role, index) => {
+            const family = map.families.find((held) => held.id === role.familyId);
+            const which = role.name.trim() || `role ${index + 1}`;
+            return (
+              <div
+                key={role.id}
+                className="flex flex-col gap-4 px-5 py-4 sm:flex-row sm:items-start"
+              >
+                <div className="grid flex-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                  <TextField
+                    className="sm:col-span-2 lg:col-span-1"
+                    label={`Role ${index + 1}`}
+                    hint="Drawn beside its own bubble."
+                    max={MAX.roleName}
+                    value={role.name}
+                    error={lengthError(role.name, MAX.roleName)}
+                    onChange={(name) => patch(role.id, { name })}
+                  />
+                  <SelectField
+                    label={`Group ${index + 1}`}
+                    hint={
+                      family
+                        ? `Drawn in colour ${family.tone}.`
+                        : "This group no longer exists."
+                    }
+                    value={family?.name ?? ""}
+                    options={map.families.map((held) => held.name)}
+                    error={family ? undefined : "Choose a group that exists."}
+                    onChange={(name) => {
+                      const next = map.families.find((held) => held.name === name);
+                      if (next) patch(role.id, { familyId: next.id });
+                    }}
+                  />
+                  <SelectField
+                    label={`Band ${index + 1}`}
+                    hint="Which of the two fields."
+                    value={bandLabels[role.band]}
+                    options={BAND_OPTIONS}
+                    onChange={(label) => patch(role.id, { band: bandOf(label) })}
+                  />
+                  <SelectField
+                    label={`Demand ${index + 1}`}
+                    hint="Bubble size. Weakest first."
+                    value={map.demandLevels[role.demand - 1] ?? ""}
+                    options={[...map.demandLevels]}
+                    error={
+                      role.demand <= map.demandLevels.length
+                        ? undefined
+                        : "Past the end of the demand scale."
+                    }
+                    onChange={(level) => {
+                      const step = map.demandLevels.indexOf(level);
+                      if (step >= 0) patch(role.id, { demand: step + 1 });
+                    }}
+                  />
+                  <TextField
+                    label={`Complexity ${index + 1}`}
+                    hint="0 to 100, left to right. Never shown."
+                    inputMode="numeric"
+                    value={String(role.complexity)}
+                    error={positionError("complexity", role.complexity)}
+                    onChange={(text) =>
+                      patch(role.id, { complexity: toPosition(text) })
+                    }
+                  />
+                  <TextField
+                    label={`Height ${index + 1}`}
+                    hint="0 to 100, top to bottom. No meaning."
+                    inputMode="numeric"
+                    value={String(role.lane)}
+                    error={positionError("lane", role.lane)}
+                    onChange={(text) => patch(role.id, { lane: toPosition(text) })}
+                  />
+                  <SelectField
+                    label={`Name side ${index + 1}`}
+                    hint="Which side of the bubble."
+                    value={SIDE_LABELS[role.labelSide]}
+                    options={[SIDE_LABELS.trail, SIDE_LABELS.lead]}
+                    onChange={(label) =>
+                      patch(role.id, {
+                        labelSide: label === SIDE_LABELS.lead ? "lead" : "trail",
+                      })
+                    }
+                  />
+                </div>
+
+                <div className="flex shrink-0 items-center gap-2 sm:pt-6">
+                  <button
+                    type="button"
+                    onClick={() =>
+                      onChange({
+                        ...map,
+                        roles: map.roles.filter((held) => held.id !== role.id),
+                      })
+                    }
+                    className="ansr-destructive inline-flex h-8 items-center px-3 text-sm"
+                  >
+                    Remove
+                    <span className="sr-only"> {which}</span>
+                  </button>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      <div className="border-t border-border-subtle px-5 py-4">
+        <Button
+          variant="outline"
+          size="sm"
+          disabled={map.roles.length >= MAX_ROLES || map.families.length === 0}
+          onClick={() =>
+            onChange({
+              ...map,
+              /* Appended, and seeded mid-field rather than at 0,0 — a new bubble in the
+                 corner reads as broken, and the middle is where an admin can see it before
+                 deciding where it belongs. The first group and the weakest demand step are
+                 the two safe defaults: both exist by construction. */
+              roles: [
+                ...map.roles,
+                {
+                  id: uniqueSlug("role", new Set(map.roles.map((role) => role.id))),
+                  name: "",
+                  familyId: map.families[0]?.id ?? "",
+                  band: "emerging",
+                  complexity: 50,
+                  lane: 50,
+                  labelSide: "trail",
+                  demand: 1,
+                },
+              ],
+            })
+          }
+        >
+          Add a role
+        </Button>
+        {map.roles.length >= MAX_ROLES ? (
+          <p className="mt-2 text-xs text-text-muted">
+            Sixty is the maximum. The field is sparse by construction and a name beside
+            every bubble is what makes it legible, so a longer list is a chart that has
+            stopped being readable rather than one that shows more.
+          </p>
+        ) : null}
+      </div>
+    </AdminSection>
+  );
+}
+
+/**
+ * The demand scale.
+ *
+ * **Its own section, and the warning is the reason.** `role.demand` is a step INTO this
+ * list, so reordering it re-rates every role on the map at once and renaming a step renames
+ * it everywhere. That is the change here with the largest effect and the least visible
+ * trace, which is why the publish diff reports this list with both sides spelled out.
+ */
+function RoleDemandEditor({
+  map,
+  onChange,
+}: {
+  map: RoleMap;
+  onChange: (next: RoleMap) => void;
+}) {
+  const perStep = new Map<number, number>();
+  for (const role of map.roles) {
+    perStep.set(role.demand, (perStep.get(role.demand) ?? 0) + 1);
+  }
+
+  function move(index: number, delta: number) {
+    const demandLevels = [...map.demandLevels];
+    const target = index + delta;
+    if (target < 0 || target >= demandLevels.length) return;
+    const [moved] = demandLevels.splice(index, 1);
+    demandLevels.splice(target, 0, moved as string);
+    onChange({ ...map, demandLevels });
+  }
+
+  return (
+    <AdminSection
+      id="role-demand"
+      title="Hiring demand scale"
+      description={
+        <>
+          <p>
+            The words under the bubble-size key, weakest first. A bubble&rsquo;s size is its
+            step on this scale, and these are the only statement of what a size means &mdash;
+            the map states no figure for demand anywhere, because the source does not hold
+            one.
+          </p>
+          <p>
+            <strong>Reordering this list re-rates every role.</strong> Each role stores which
+            step it is on, not which word, so moving &ldquo;High&rdquo; above
+            &ldquo;Moderate&rdquo; swaps the size of every bubble on both. Renaming a step is
+            safe and changes only the key.
+          </p>
+        </>
+      }
+    >
+      <div className="divide-y divide-border-subtle">
+        {map.demandLevels.map((level, index) => {
+          const which = level.trim() || `step ${index + 1}`;
+          const used = perStep.get(index + 1) ?? 0;
+          return (
+            <div
+              key={index}
+              className="flex flex-col gap-4 px-5 py-4 sm:flex-row sm:items-start"
+            >
+              <TextField
+                className="flex-1"
+                label={`Step ${index + 1}${index === 0 ? " (smallest bubble)" : index === map.demandLevels.length - 1 ? " (largest bubble)" : ""}`}
+                hint={`${used} ${used === 1 ? "role is" : "roles are"} on this step.`}
+                max={MAX.roleDemandLevel}
+                value={level}
+                error={lengthError(level, MAX.roleDemandLevel)}
+                onChange={(text) =>
+                  onChange({
+                    ...map,
+                    demandLevels: map.demandLevels.map((held, i) =>
+                      i === index ? text : held,
+                    ),
+                  })
+                }
+              />
+              <div className="flex shrink-0 items-center gap-2 sm:pt-6">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={index === 0}
+                  onClick={() => move(index, -1)}
+                >
+                  <span aria-hidden="true">↑</span>
+                  <span className="sr-only">Move {which} up</span>
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={index === map.demandLevels.length - 1}
+                  onClick={() => move(index, 1)}
+                >
+                  <span aria-hidden="true">↓</span>
+                  <span className="sr-only">Move {which} down</span>
+                </Button>
+                {/* Three is the floor the schema sets: below it an ordinal scale is a
+                    boolean. Removing the LAST step would also orphan every role on it, so
+                    the button says how many that is rather than letting the gate say it. */}
+                <button
+                  type="button"
+                  disabled={map.demandLevels.length <= MIN_DEMAND_LEVELS || used > 0}
+                  title={
+                    used > 0
+                      ? `${used} ${used === 1 ? "role is" : "roles are"} on this step. Move them first.`
+                      : undefined
+                  }
+                  onClick={() =>
+                    onChange({
+                      ...map,
+                      demandLevels: map.demandLevels.filter((_, i) => i !== index),
+                    })
+                  }
+                  className="ansr-destructive inline-flex h-8 items-center px-3 text-sm disabled:opacity-50"
+                >
+                  Remove
+                  <span className="sr-only"> {which}</span>
+                </button>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      <div className="border-t border-border-subtle px-5 py-4">
+        <Button
+          variant="outline"
+          size="sm"
+          disabled={map.demandLevels.length >= MAX_DEMAND_LEVELS}
+          onClick={() =>
+            onChange({ ...map, demandLevels: [...map.demandLevels, ""] })
+          }
+        >
+          Add a step
+        </Button>
+        {map.demandLevels.length >= MAX_DEMAND_LEVELS ? (
+          <p className="mt-2 text-xs text-text-muted">
+            Five is the maximum. Past that two neighbouring bubble sizes stop being
+            distinguishable, so the extra step would be drawn but not readable.
+          </p>
+        ) : null}
+      </div>
+    </AdminSection>
+  );
+}
+
+/** A position as a whole number in range, on `toDimension`'s argument about `NaN`. */
+function toPosition(text: string): number {
+  const parsed = Number.parseInt(text.trim(), 10);
+  if (!Number.isFinite(parsed)) return 0;
+  return Math.min(100, Math.max(0, parsed));
+}
+
+/** The schema's own bound and message, per position field. */
+function positionError(
+  field: "complexity" | "lane",
+  value: number,
+): string | undefined {
+  const parsed = roleSchema.shape[field].safeParse(value);
+  return parsed.success ? undefined : parsed.error.issues[0]?.message;
+}
+
 /**
  * The customer strip on the entry point.
  *
@@ -1160,6 +1899,29 @@ const COPY_GROUPS: readonly CopyGroupConfig[] = [
         key: "askFilterPlaceholder",
         hint: "The filter above long option lists.",
       },
+      /* The dropdowns' own four group headings and the word the industry list uses for
+         its second level — the last visitor-facing strings on the form that were not
+         editable. */
+      {
+        key: "askGroupCommon",
+        hint: "Heads the leading tier in BOTH the industry and the headquarters lists. It is a shortcut into the same list, not a separate set \u2014 everything in it also appears in the group below.",
+      },
+      {
+        key: "askGroupIndustriesAll",
+        hint: "Heads the industry list's second group, which holds every industry including the ones in the tier above. Keep it saying \u201call\u201d \u2014 it is literally all of them.",
+      },
+      {
+        key: "askGroupCountriesAll",
+        hint: "The same, for headquarters: every country, including the twelve in the tier above.",
+      },
+      {
+        key: "askGroupRevenue",
+        hint: "The revenue list has ONE group, and a single group is drawn without its heading \u2014 so this is not visible today. It is here so the four group names are edited together, and it appears if that list ever gains a second tier.",
+      },
+      {
+        key: "askSubIndustryPlural",
+        hint: "Plural. Drawn as the count on an industry row (\u201c31 sub-industries\u201d), on the second pane's close control, and on that pane's \u201cOther \u2026\u201d divider.",
+      },
       {
         key: "askSubmitError",
         hint: "Shown only when the server cannot be reached. The pending label on the button is not editable \u2014 its width is measured against the submit label.",
@@ -1203,7 +1965,11 @@ const COPY_GROUPS: readonly CopyGroupConfig[] = [
       { key: "viewFunctions" },
       {
         key: "pillIndustry",
-        hint: "The three answer pills, drawn on BOTH result screens from these three keys. Below md they are read out but not drawn.",
+        hint: "The answer pills, drawn on BOTH result screens from these keys. Below md they are read out but not drawn.",
+      },
+      {
+        key: "pillSubIndustry",
+        hint: "Drawn only where the visitor narrowed to a sub-industry, which is optional on the form.",
       },
       { key: "pillHeadquarters" },
       {
@@ -1216,7 +1982,7 @@ const COPY_GROUPS: readonly CopyGroupConfig[] = [
       },
       {
         key: "homeTitle",
-        hint: "The tooltip on the ANSR ATLAS lockup, which is the way back to the start.",
+        hint: "The tooltip on the ANSR GCC ATLAS lockup, which is the way back to the start.",
       },
       {
         key: "pillGroupLabel",
@@ -1251,6 +2017,10 @@ const COPY_GROUPS: readonly CopyGroupConfig[] = [
       {
         key: "peersTitle",
         hint: "The heading over the comparison cards. Do not write \u201cclosest to yours\u201d \u2014 it presumes the visitor already runs a centre in India.",
+      },
+      {
+        key: "peersBroadenedNote",
+        hint: "Drawn ABOVE the peer cards when a FULL set had to reach past the visitor's exact answers to fill itself \u2014 on sub-industry, revenue band, or both. Speak of \u201cyour selection\u201d and \u201cthe wider industry\u201d generically rather than naming an axis or the industry, and state no count.",
       },
       {
         key: "peersNarrowNote",

@@ -161,14 +161,52 @@ test.describe("the ask", () => {
   }) => {
     await page.goto("/");
 
-    await expect(page.locator("h1#ask-title")).toHaveText(
-      "ANSR ATLAS Benchmark against your peers",
-    );
-    // "ANSR" is set in the action orange, which is only legible against the top of
-    // the gradient — 4.27:1 falling to 2.95:1 by 45% down the band. It is the
-    // leading token, so it is always on the headline's first line and therefore
-    // always legal; a highlight that drifted onto the second line would not be.
-    await expect(page.locator("h1#ask-title .text-action")).toHaveText("ANSR");
+    /**
+     * **THE HEADLINE IS TWO ELEMENTS INSIDE ONE `h1`, so this asserts the halves and the
+     * NAME rather than `toHaveText`.** It read `toHaveText("GCC ATLAS Benchmark against
+     * your peers")` while the headline was one editable string; the product's name and the
+     * promise are two fields now and each is drawn as its own block, so `textContent` runs
+     * them together with no separator — JSX strips the whitespace between two elements when
+     * it contains a newline. That is the same trap the drawn wordmarks recorded: only the
+     * accessible NAME computation inserts the space, because both halves are block-level.
+     *
+     * So the reading a visitor gets is asserted through the role, and each half is asserted
+     * on its own — which is also what makes a field going missing name the field.
+     */
+    await expect(
+      page.getByRole("heading", { level: 1, name: "GCC ATLAS Benchmark against your peers" }),
+    ).toBeVisible();
+    const heroHeading = page.locator("h1#ask-title");
+    await expect(heroHeading).toContainText("GCC ATLAS");
+    await expect(heroHeading).toContainText("Benchmark against your peers");
+    /**
+     * **THE HEADLINE IS ONE INK — nothing in it carries the action orange — and the
+     * band's one accent is ANSR's radial mark instead.** This asserted the opposite for a
+     * pass: `GCC` took `md:text-action`, gated on width because the dot map's dots cost up
+     * to 1.77 of ratio at phone widths. The colour came off at the project owner's
+     * instruction and the gates went with it, so what is pinned here is the ABSENCE, which
+     * is what a removed treatment gets — the measurements survive beside `withProductMark`,
+     * where they are the cost of restoring it.
+     *
+     * Both spellings are counted: the gated class that shipped and a bare `text-action`,
+     * which is the shape a re-introduction would most likely take.
+     */
+    await expect(page.locator("h1#ask-title .md\\:text-action")).toHaveCount(0);
+    await expect(page.locator("h1#ask-title .text-action")).toHaveCount(0);
+
+    /**
+     * **The brand is on this band as ANSR's own lockup, ABOVE the headline and outside it.**
+     * It sat inline before `GCC ATLAS` for two passes and came off the line at the project
+     * owner's instruction, so both halves are asserted: one image named ANSR on the band, and
+     * nothing inside the `h1`, which is what keeps the heading's accessible name the title
+     * alone rather than "ANSR" plus the title.
+     *
+     * What is still off this band is the ANSR WORDMARK AS TYPE — that is what `BRAND` /
+     * `withBrandMark` were — so the sentence says `GCC ATLAS` and the artwork says whose tool
+     * it is.
+     */
+    await expect(page.getByRole("img", { name: "ANSR" })).toBeVisible();
+    await expect(page.locator("h1#ask-title img")).toHaveCount(0);
 
     /**
      * The company count is asserted as "1,800+" and asserted NOT to be the exact
@@ -264,6 +302,142 @@ test.describe("the ask", () => {
     // No eyebrow above the headline: the product label IS the headline, so a
     // kicker would have been the same words twice.
     expect(await page.locator("h1#ask-title ~ *, h1#ask-title").count()).toBe(2);
+  });
+
+  /**
+   * **THE TAGLINE DRAWS A LITTLE LONGER THAN THE PRODUCT NAME, at the project owner's
+   * request, and it is asserted by GEOMETRY because nothing else can see it.**
+   *
+   * The ratio is a single measured `em` fraction on the tagline — `HERO_TAGLINE_SIZE` in
+   * `ask-hero.tsx`, 0.42em of the `h1`, which lands its ink at 104.5% of the name's in the
+   * shipped Moderat Medium. No class name, computed style or string states the RESULT, so a
+   * change that broke it would leave every other assertion on this band green: a reworded
+   * tagline, a different display face, a weight change on either half, or a size step on the
+   * `h1` alone all move the ratio silently. This is the only check that would fail.
+   *
+   * **The bounds are loose on purpose.** What was asked for is "a bit longer", so the
+   * assertion is the DIRECTION plus a ceiling that would catch the tagline running away;
+   * pinning 1.045 would fail on a rewording that is still correct. The precise figure is
+   * measured by rasterising, which a spec cannot do — a box width is the advance and
+   * includes the trailing letter-spacing, so it reads about a point and a half under the ink.
+   *
+   * **Checked from `md` up and deliberately NOT on a phone.** Below about a 43px name the
+   * fraction resolves level with the 16px Light lead, so an 18px floor takes over and the
+   * tagline runs 118% — further past the name, in the same direction, so the phone overshoots
+   * the brief rather than contradicting it. Asserting the desktop ratio at 390 would pin the
+   * number the floor exists to give up.
+   *
+   * The two halves are the `h1`'s only element children, in the order they are drawn, and
+   * both are `w-fit` precisely so their boxes report their own rendered width rather than
+   * the heading's.
+   */
+  test("the tagline is drawn a little longer than the product name", async ({
+    page,
+  }) => {
+    for (const width of [1440, 768]) {
+      await page.setViewportSize({ width, height: 900 });
+      await page.goto("/");
+
+      const halves = page.locator("h1#ask-title > span");
+      await expect(halves).toHaveCount(2);
+      const name = await halves.nth(0).boundingBox();
+      const tagline = await halves.nth(1).boundingBox();
+      if (!name || !tagline) throw new Error("the hero headline's two halves moved");
+
+      // Both on one line, which is what the comparison means at all.
+      expect(name.width).toBeGreaterThan(0);
+      const share = tagline.width / name.width;
+      // Longer than the name, which is the direction asked for.
+      expect(share).toBeGreaterThan(1);
+      // And not so much longer that it stops reading as the same object.
+      expect(share).toBeLessThan(1.15);
+
+      // The tagline is still the smaller type, which is how the width was bought.
+      expect(tagline.height).toBeLessThan(name.height);
+    }
+  });
+
+  /**
+   * **BOTH HALVES OF THE HEADLINE HANG LEFT OF THE `h1`'S BOX, because each carries its own
+   * left sidebearing as a negative margin — and that is the mechanism the reported defect
+   * needed.**
+   *
+   * The ANSR lockup's artwork is flush with its box at every width, so the box edge IS the
+   * column's optical edge. Type is not: measured on the shipped render, the name's ink sat
+   * 0.060em inside its box and the tagline's 0.0756em inside its own. Because a sidebearing
+   * scales with the type, the name's was 4.4px at 72px against the tagline's 2.1px at 28px —
+   * so the headline sat 2.3px inside the line everything else held, which reads from the page
+   * as the tagline poking out to the left. `HERO_NAME_OPTICAL` and `HERO_TAGLINE_OPTICAL`
+   * pull each back by its own amount.
+   *
+   * **The ink edge itself is not reachable from a spec**, so what is pinned here is the
+   * property that produces it and the ORDER that makes the correction necessary at all: both
+   * halves start left of the heading's box, and the name starts furthest left because its
+   * sidebearing is the larger absolute distance. Drop either correction and this fails; swap
+   * them and it fails. The pixel figures are verified by rasterising on a flat ground — see
+   * the constants.
+   */
+  test("the headline's two halves each hang left of the heading by their own sidebearing", async ({
+    page,
+  }) => {
+    for (const width of [1440, 768, 390]) {
+      await page.setViewportSize({ width, height: 900 });
+      await page.goto("/");
+
+      const heading = page.locator("h1#ask-title");
+      const halves = heading.locator("> span");
+      const headingBox = await heading.boundingBox();
+      const name = await halves.nth(0).boundingBox();
+      const tagline = await halves.nth(1).boundingBox();
+      if (!headingBox || !name || !tagline) throw new Error("the hero headline moved");
+
+      // Each is pulled out of the heading's own box, never padded into it.
+      expect(name.x).toBeLessThan(headingBox.x);
+      expect(tagline.x).toBeLessThan(headingBox.x);
+      // The name's correction is the larger one, which is why the rag was visible.
+      expect(name.x).toBeLessThan(tagline.x);
+    }
+  });
+
+  /**
+   * **The ANSR lockup takes the headline's own leading edge, and that is the property worth
+   * pinning rather than its size.**
+   *
+   * That edge is shared with the form card below — both derive it from `max-w-card`, which
+   * `project.md` records as a composition token rather than a width — so a lockup off it by a
+   * few pixels puts three leading edges within a hundred pixels of each other, which is the
+   * exact register that reads as unfinished and which the whole container decision exists to
+   * fix. It is a real risk here because the lockup is a sibling of the copy column rather than
+   * a child of it, so it takes the outdent from a wrapper and not from the column.
+   *
+   * Two more things come free: it is SMALLER than the headline it introduces, and it is not
+   * inside the `h1`. Checked at 390 as well as the desktop composition, because the outdent
+   * and the sizes both step.
+   */
+  test("the ANSR lockup lines up with the headline and stays out of it", async ({
+    page,
+  }) => {
+    for (const width of [1440, 390]) {
+      await page.setViewportSize({ width, height: 900 });
+      await page.goto("/");
+
+      const lockup = page.getByRole("img", { name: "ANSR" }).first();
+      const heading = page.locator("h1#ask-title");
+      const logoBox = await lockup.boundingBox();
+      const titleBox = await heading.boundingBox();
+      if (!logoBox || !titleBox) throw new Error("hero markup moved");
+
+      // One leading edge for the lockup and the headline. A pixel of tolerance, since
+      // both are laid out from the same box rather than the same declaration.
+      expect(Math.abs(logoBox.x - titleBox.x)).toBeLessThanOrEqual(1);
+
+      // It introduces the headline rather than competing with it.
+      expect(logoBox.height).toBeLessThan(titleBox.height);
+
+      // And it is not part of the heading, which is what keeps the `h1`'s accessible name
+      // the title alone.
+      await expect(heading.locator("img")).toHaveCount(0);
+    }
   });
 });
 
@@ -443,14 +617,23 @@ test.describe("the answer", () => {
      * who scroll.
      */
     /**
-     * **"ANSR ATLAS", where this read "ANSR GCC Intelligence".** The lockup names the
-     * product now rather than a category, matching the entry point's own headline. The
-     * name is still computed — `alt="ANSR"` on the drawn lockup plus the typed word — so
-     * this assertion is also what catches the mark being dropped from the heading.
+     * **"ANSR GCC ATLAS", where this read "ANSR GCC Intelligence" and then "ANSR ATLAS".**
+     * The lockup names the product rather than a category, matching the entry point's own
+     * headline.
+     *
+     * **The name is TYPE now, so only the first word is computed from a mark** — `alt="ANSR"`
+     * on the lockup image, then `GCC ATLAS` as real text in `ProductName`. It caught more
+     * than that while both halves were drawn: each carried a visually hidden word, and the
+     * pair was joined only by name-from-content's whitespace at the element boundary, so
+     * wrapping them in a container broke the heading's name while the lockup still looked
+     * right. That failure mode is gone with the marks — the space is a character again.
+     *
+     * What it still catches is the `alt` being dropped, the name being respelt, and the
+     * Extended face being applied to a run that is not the product's name.
      */
     const heading = page.getByRole("heading", {
       level: 1,
-      name: "ANSR ATLAS",
+      name: "ANSR GCC ATLAS",
     });
     await expect(heading).toBeVisible();
     /**
@@ -1371,11 +1554,13 @@ test.describe("the answer", () => {
    * press, and each panel's accessible name says what pressing it does rather than
    * just naming the field.
    *
-   * **There are THREE pills now.** The fourth was the company name, conditional on a
-   * field most visitors left blank; the question is gone, so the row is the three answers
-   * the matching reads and one control.
+   * **THREE pills for an industry-only answer, four where a sub-industry was given.** The
+   * old fourth was the company name, conditional on a field most visitors left blank, and
+   * it went with the question. The new fourth is the sub-industry, conditional on a field
+   * the matching actually reads — this answer names none, so three is the count here. The
+   * four-pill case is in `0-business-type.spec.ts`, which is where the cascade is driven.
    */
-  test("shows the profile as three quiet pills with one way back", async ({
+  test("shows the profile as quiet pills with one way back", async ({
     page,
   }) => {
     await page.goto("/");
@@ -1410,6 +1595,15 @@ test.describe("the answer", () => {
     await expect(profile.getByText("Industry")).toBeVisible();
     await expect(profile.getByText("Above 20 Bn")).toBeVisible();
     await expect(profile.getByText(/^Company/)).toHaveCount(0);
+    /**
+     * **And no sub-industry pill, because this answer names none.** The pill is
+     * conditional on the one optional field the form still has, so an unconditional one
+     * would draw a label over an empty value — the tool echoing an answer the visitor
+     * never gave. Read off the KEY, since the label is editable and still exists.
+     */
+    await expect(
+      profile.getByText(COPY.pillSubIndustry, { exact: true }),
+    ).toHaveCount(0);
     // And no affordance survives on the answers themselves.
     await expect(profile.getByText("Edit profile")).toHaveCount(0);
     /**
@@ -1447,7 +1641,7 @@ test.describe("the answer", () => {
     await expect(
       page.getByRole("button", { name: "Update my results" }),
     ).toHaveCount(0);
-    // Three pills, no empty fourth, no stub — and still one control.
+    // Three pills for this answer, no empty fourth, no stub — and still one control.
     await page.goto("/");
     await ask(page, { industry: "BFSI", revenueBand: "Above $20 Bn" });
     const anon = page.getByRole("group", { name: /Your profile/ });
@@ -1491,8 +1685,8 @@ test.describe("the answer", () => {
      * instruction in the document outline of both result screens.
      */
     const lockup = page
-      .getByRole("heading", { level: 1, name: "ANSR ATLAS" })
-      .getByRole("button", { name: "ANSR ATLAS" });
+      .getByRole("heading", { level: 1, name: "ANSR GCC ATLAS" })
+      .getByRole("button", { name: "ANSR GCC ATLAS" });
     await expect(lockup).toBeVisible();
     await lockup.click();
     await expect(page.locator("h1#ask-title")).toBeVisible();
@@ -1625,50 +1819,74 @@ test.describe("the answer", () => {
   });
 
   /**
-   * The hub pulse is the second continuous motion in the project, and it inherits
-   * the marquee's hard requirement: opt-in inside `no-preference`, because
-   * tokens.css clamps animation duration globally under `reduce` and a 1ms clamp on
-   * an infinite loop flickers rather than stops.
+   * **THE HUB PULSE IS GONE at the project owner's instruction, and the test that covered
+   * it is replaced by one asserting its absence rather than deleted.**
    *
-   * The halo's resting `opacity: 0` is the other half. Without an animation the ring
-   * must be invisible rather than sitting at a visible radius, or three city dots
-   * gain a permanent second circle that reads as a different kind of mark.
+   * Three leading hubs carried an expanding accent ring for two cycles on arrival. It
+   * satisfied every rule this project puts on motion — the ring carried no value, so no
+   * figure moved; it ran on three marks rather than the field; it stopped rather than
+   * looping — and it was still emphasis by RANK, drawn in motion, on the one graphic whose
+   * whole claim is a comparison of dot areas.
+   *
+   * There is no element to inspect any more, so the assertion is on the class and on the
+   * keyframes: a `.gcc-map-pulse` node is the component putting the rings back, and a
+   * declared `gcc-map-pulse` animation anywhere on the field is the CSS half returning on
+   * its own. Instead of it, hovering names the city — see the readout test below.
    */
-  test("pulses the leading hubs, and does not under reduced motion", async ({
+  test("draws no pulsing ring on any hub", async ({ page }) => {
+    await page.goto("/");
+    await ask(page, { industry: "BFSI", revenueBand: "Above $20 Bn" });
+    await expect(band(page, "map")).toBeVisible();
+    await expect(page.locator(".gcc-map-pulse")).toHaveCount(0);
+    // And nothing else on the map animates in its place. Read off the marks themselves,
+    // because the defect this replaces was a mark that moved.
+    const animated = await page
+      .locator("#map svg circle")
+      .evaluateAll((nodes) =>
+        nodes.filter((node) => getComputedStyle(node).animationName !== "none").length,
+      );
+    expect(animated).toBe(0);
+  });
+
+  /**
+   * The hovered city's readout, which is what the `<title>` tooltip became.
+   *
+   * A `<title>` inside an SVG shape is an OS tooltip: about a second behind the pointer,
+   * in browser chrome, positioned at the cursor. That delay is what was reported, and it
+   * is not tunable from here. `CityReadout` draws the same city and figure immediately, at
+   * the dot, and it is reachable from the NAME as well as the mark — the name being the
+   * easier target and the thing a reader is actually looking at.
+   *
+   * It is not a figure kept behind a hover, which this project forbids: every count is in
+   * the ranked list beside the map, and above `sm` on the labels too.
+   */
+  test("names the hovered city immediately, with no browser tooltip", async ({
     page,
-    browser,
   }) => {
     await page.goto("/");
     await ask(page, { industry: "BFSI", revenueBand: "Above $20 Bn" });
-    const halos = page.locator(".gcc-map-pulse");
-    await expect(halos).toHaveCount(3);
-    expect(
-      await halos.first().evaluate((el) => getComputedStyle(el).animationName),
-    ).toBe("gcc-map-pulse");
-    /**
-     * **And it STOPS.** It ran `infinite`, which is the one place the project's
-     * motion read as decoration rather than as meaning: nothing about the map
-     * changes once the screen has arrived, so a pulse that never ends announces an
-     * event that is not happening — and a reader comparing two halo areas is doing
-     * it on a graphic that keeps moving under them. Two cycles, then still, which
-     * puts it on the enter animations' footing rather than the marquee's.
-     */
-    expect(
-      await halos
-        .first()
-        .evaluate((el) => getComputedStyle(el).animationIterationCount),
-    ).toBe("2");
+    const map = band(page, "map");
+    await expect(map).toBeVisible();
 
-    const context = await browser.newContext({ reducedMotion: "reduce" });
-    const still = await context.newPage();
-    await still.goto("/");
-    await ask(still, { industry: "BFSI", revenueBand: "Above $20 Bn" });
-    const resting = still.locator(".gcc-map-pulse").first();
-    expect(
-      await resting.evaluate((el) => getComputedStyle(el).animationName),
-    ).toBe("none");
-    expect(await resting.evaluate((el) => getComputedStyle(el).opacity)).toBe("0");
-    await context.close();
+    // No `<title>` anywhere on the field. Its presence is the slow tooltip returning, and
+    // it would sit on top of the readout rather than instead of it.
+    await expect(map.locator("svg title")).toHaveCount(0);
+
+    const readout = map.locator(".gcc-map-tip-plate");
+    await expect(readout).toHaveCount(0);
+
+    // Hovering the NAME is the path that matters: the labels are the reachable half.
+    const label = map.locator("[data-map-labels='wide'] text").first();
+    const city = ((await label.textContent()) ?? "").trim();
+    expect(city.length).toBeGreaterThan(0);
+    await label.hover();
+    await expect(readout).toHaveCount(1);
+    // No transition and no delay, so the plate is already at full opacity on the first
+    // check rather than arriving over a few frames.
+    expect(await readout.evaluate((el) => getComputedStyle(el).opacity)).toBe("1");
+
+    await page.mouse.move(0, 0);
+    await expect(readout).toHaveCount(0);
   });
 
   test("reflows the answer at 320px with no horizontal scrolling", async ({

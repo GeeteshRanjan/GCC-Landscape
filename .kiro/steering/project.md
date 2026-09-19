@@ -46,9 +46,12 @@ need to without it, so there was nothing left to consume it. Four consequences h
 the `gccStatus` case and the two must not be reasoned about together**: `gccStatus` is unasked and still
 RENDERED, supplied as a constant, so its field is load-bearing; a name had no renderer left. **`peersTitle`
 is a FLAT published key again** — see below — and `askCompanyLabel`, `pillCompany` and `peersTitleFallback`
-were deleted rather than left editable and undrawn, which took the copy block from 70 keys to 67 and the
-draft `STORAGE_KEY` to v10. **The pill row is THREE pills on both result screens**, and the parity is
-asserted on each. And **`isVisitorsOwn` in `peers.ts` no longer fires for a visitor**: it keyed on the
+were deleted rather than left editable and undrawn, which took the copy block from 70 keys to 67 — it is 69 now, the broadened-set note and the sub-industry pill's label having been published since — and the
+draft `STORAGE_KEY` to v10. **The pill row is THREE pills for an industry-only answer and FOUR where a
+sub-industry was given**, the same on both result screens, and the parity is
+asserted on each. **`pillSubIndustry` is not `pillCompany` returning**: both label a conditional pill, but a
+typed name was read by nothing where a sub-industry is the primary ordering signal, so the row was echoing
+every answer except the one that most changed the screen. And **`isVisitorsOwn` in `peers.ts` no longer fires for a visitor**: it keyed on the
 name, so a visitor's own company can now appear in its own peer set. The guard is unchanged, still keyed on
 `VisitorInput.companyName`, and is asserted through `matchPeers` in the unit suite — restoring the exclusion
 means asking for a name again, which is a product decision and not a bug fix.
@@ -223,8 +226,25 @@ tier regardless of count, because ANSR expects enquiries out of proportion to da
 entries still sort by count inside the tier, so the list decides MEMBERSHIP and never position, and a
 reorder of it is deliberately not reported by the diff. **A parallel list of names rather than a flag on a
 restructured `industries`**: that list is a `string[]` companies, business types and the public dropdowns
-all key on by value, so the schema checks the copy referentially instead. Keep the set short. Industry leads with the largest by count, HQ with the twelve largest, then alphabetical, as two
-groups. **`revenueBands` is never tiered or sorted** — its order is the matching contract.
+all key on by value, so the schema checks the copy referentially instead. Keep the set short.
+
+**THE TWO TIERS OVERLAP: the leading one is a SHORTCUT and the second group holds EVERY option, at the
+project owner's request.** Industry leads with the largest by count plus the pins, HQ with the twelve
+largest; the second group is then the whole list, alphabetically. They used to partition, which made "All
+industries" the one group in the popup its own heading contradicted — and a visitor who scans it without
+finding Retail, because Retail was pinned into the tier they skipped, reads that as the industry being
+absent, which is the findability failure the peer set actually suffers from. Three things pay for the
+duplicated row and all three are in `select-field.tsx`: a first-pane `rowId` is scoped by its GROUP, because
+a DOM id, a React key and the roving `aria-activedescendant` are all derived from it; `branchRowId` tracks
+WHICH row opened the cascade, since one pane cannot have two `aria-owns` owners and the collapsed copy must
+open rather than commit; and the option count is by DISTINCT VALUE, because that number is the filter's
+accessible name. **`revenueBands` is never tiered or sorted** — its order is the matching contract.
+
+**The four dropdown group headings and the industry popup's word for its second level are PUBLISHED KEYS** —
+`askGroupCommon` (one key, both controls), `askGroupIndustriesAll`, `askGroupCountriesAll`, `askGroupRevenue`
+and `askSubIndustryPlural`. `askGroupRevenue` is the one editable string that draws nothing today and the one
+deliberate exception to the rule that killed `snapshotShareLabel`: a single-group popup draws no tier heading,
+so the key has a consumer whose current contents do not need it, where that one had no consumer at all.
 
 **A company NAME is corrected in the same one place, by the same kind of table.**
 `COMPANY_NAME_FIXES` / `canonicalCompanyName` in `normalize.ts`, applied in `readRows` beside the
@@ -321,8 +341,10 @@ card's top row.**
 - **NOTHING IS DRAWN IN THE BAR:** no orange rule, no teal edge, no radius, no divider between the
   cells, **no glyph on either cell**. Three signals over `aria-selected`: the fill, the ink from muted to
   heading teal, and the weight.
-- Labels are **"Peer Landscape"** and **"Function Metrics"**, and they live in `screen-header.tsx` rather
-  than either screen's `copy.ts`.
+- Labels are **"Peer Landscape"** and **"Function Metrics"**, and they are PUBLISHED KEYS —
+  `copy.viewPeers` and `copy.viewFunctions`, capped at 24 — read by `viewLabels` in `screen-header.tsx`.
+  They are editable and they belong to the surface, which is why they sit there rather than in either
+  screen's `copy.ts`; a spec naming either one reads the key.
 - Real ARIA tabs, roving tabindex, **manual activation** — arrow moves focus, Enter or Space activates,
   because activating swaps the entire screen. `aria-controls` on the selected tab alone. **Not sticky.**
 - **The band's ONE ornament is the entry point's dotted world map, at EVERY width, and it is the only
@@ -351,34 +373,65 @@ card's top row.**
   figure — the snapshot's four, the summary row's, a card's primary value — each of which is the thing its
   neighbours were sized against in the first place.
 
-**The band carries three things:** `ANSR ATLAS` as the `h1`, the finding as a non-heading
+**The band carries three things:** `ANSR GCC ATLAS` as the `h1`, the finding as a non-heading
 display line, and the visitor's three answers as pills with one "Edit answers" button.
 
 **The `h1` is the FULL LOCKUP — mark and wordmark — AND IT IS THE WAY HOME.** `ansr-logo-on-dark.svg`,
 used literally, sized off the WORDMARK's cap height rather than the artboard (letters occupy 37.9 of the
-file's 91 units, so 1.7em matches the display face's cap height). **The second half reads `ATLAS`, at
-ANSR's request** — "GCC Intelligence" named a category directly above a finding line that describes the
-screen, so the `h1` and the sentence under it did one job twice and neither was the product's name. Caps,
-matching the entry point's headline, because a title-case word beside all-caps drawn letters reads as a
-caption on the mark. No typed period.
+file's 91 units, so 1.7em matches the display face's cap height). **The second half reads `GCC ATLAS`, the product's own
+name** — it was "GCC Intelligence", which named a category directly above a finding line that describes
+the screen, so the `h1` and the sentence under it did one job twice and neither was the product's name;
+it was then `ATLAS` alone for a pass. Caps, matching the entry point's headline, because a title-case
+word beside all-caps drawn letters reads as a caption on the mark. No typed period.
 
-**AND IT IS DRAWN, NOT TYPED — `AtlasWordmark` is the one piece of that markup, with two consumers.**
-A supplied outline, the plate and the REGISTERED MARK removed and `fill="currentColor"` applied, and
-nothing traced or refitted. Four things hold it together. **It is sized off the ANSR MARK BESIDE IT rather
-than off the type, and the two sites therefore draw it at two sizes** — the numbers are measured by
-rasterising and scanning ink, never read off path coordinates, because a traced outline's control points
-sit outside its ink and both marks' S overshoots the cap line. Its caps are the box's 0.95125 fraction, so
-the component's own `0.749em` puts them at 0.712em, matching the entry point's wordmark; **the result
-screens step it to `0.717em` and the gap to a word space (`ms-[0.25em]`), at the call site**, because there
-the brand half is the FULL lockup — ATLAS is the wider and heavier run and reads as the larger of the two
-beside a circular mark that dwarfs the letters, so cap parity is the wrong target and the entry point's own
-0.9641 ratio is the right one. Both numbers are `em` so they hold across the 24/30px step. Rejected
-alternatives, including growing the lockup instead: style lock. **The `viewBox` is a crop and the contours keep the supplied
-coordinates**, so what ships stays comparable to what was supplied. **The box is vertically SYMMETRIC
-about the cap band**, which is what makes `items-center` land it on the lockup, and it is a FRAGMENT rather
-than a wrapping span, because a span's own strut re-positions the mark inside the centred item. And the
-accessible name is unchanged — the image's `alt` plus a visually hidden word, so both halves are drawn and
-the `h1` still computes "ANSR ATLAS". **`ProductIdentity.onHome` wraps the lockup in a button and both screens pass it**: it is the only
+**THE TWO HALVES SHARE A CAP HEIGHT BY CONSTRUCTION AND A CAP POSITION ONLY BY CORRECTION, AND THE SECOND
+HALF OF THAT IS A MEASURED LIFT ON THE TYPE.** `items-center` aligns BOXES: the artboard is symmetric about
+the wordmark's cap band, so centring the IMAGE centres its caps, while a line box is not, so centring the
+TYPE drops its caps by `(ascent − descent − cap) / 2` of the face. Measured, the typed name sat exactly
+1.00px low at every width with its cap HEIGHT already identical to the wordmark's — which is what reads as
+the name being short or sitting low, and is why the image's own `1.7em` is not the thing to change. Three
+things hold together. **The lift is the MEASURED value and not the geometric one** — vertical glyph origins
+snap to whole pixels, so the arithmetic's 0.05em overshoots by half a pixel at 30px and any request between
+roughly 0.5px and 1.4px draws the one pixel wanted. **It goes on the TYPE, never the image**: the image's
+box tells the truth about its ink and the line box does not, so the correction belongs to the half that is
+lying, and lifting the name moves ink inside a box the 1.7em image already sizes, where nudging the image
+down would push the mark past the heading's foot into the gap above the finding. And it is
+`position: relative` rather than a transform, so the heading takes no compositing layer. `npm run
+lockup:measure` is the instrument; re-measure on any change to the face, the lockup file or the heading's
+size, and read `dCapH` as the image's height and the other three as the lift.
+
+**AND IT IS DRAWN, NOT TYPED — THE PRODUCT NAME IS TWO SUPPLIED OUTLINES AND `ProductWordmark` IS THE
+ONE PIECE OF THAT MARKUP, with two consumers.** `GccWordmark` and `AtlasWordmark` each own their own
+contours and nothing else; the lockup owns the relationship. Both files arrived as a plate with the letters
+knocked out of it, and both had the plate, the REGISTERED MARK and the file's own fill removed for
+`currentColor` — nothing traced, refitted or hand-authored, which mattered most for `GCC`, since `G` and
+`C` exist in no other asset we hold and drawing them was the refused alternative. **The `viewBox` is a
+crop and the contours keep the supplied coordinates**, so what ships stays comparable to what was
+supplied — `GccWordmark` therefore KEEPS the file's own `transform`, a Y flip being inexpressible as a
+`viewBox` and the alternative being to rewrite 2,969 characters of path data by hand. Six things hold it
+together. **BOTH HALVES TAKE ONE HEIGHT, AND THAT IS A RESULT RATHER THAN A CONVENIENCE** — each box is
+cropped symmetric about its OWN cap band, and that band is 0.9503 of the box for GCC against 0.9500 for
+ATLAS, so one height lands their caps within 0.04%, which is 0.01px at 30px. So there is no per-half
+correction factor to keep in step, and `items-center` and the baseline shift land identically on both.
+**THE WORD SPACE INSIDE THE NAME IS THE HEADLINE'S OWN**, 0.355 of the box: the entry point already sets
+0.266em of ink-to-ink space between the ANSR wordmark and ATLAS at a 0.749em box, and 0.266/0.749 is
+0.355 — so `ANSR GCC ATLAS` reads at one word space throughout. It is stated as a FRACTION of the height
+and never a fixed `em`, because the result screens draw the lockup 4.3% smaller. Every number is measured
+by rasterising and scanning ink, never read off path coordinates, because a traced outline's control
+points sit outside its ink and the letters setting the extremes are round and overshoot. **The lockup is
+sized off the ANSR MARK BESIDE IT rather than off the type, so the two sites draw it at two sizes** — the
+default `0.749em` puts ATLAS's caps at 0.712em, matching the entry point's wordmark, and **the result
+screens step it to `em={0.717}` with the gap to the ANSR lockup a word space (`leadClassName="ms-[0.25em]"`)**,
+because there the brand half is the FULL lockup and ATLAS reads as the larger of the two beside a circular
+mark that dwarfs the letters. Both are `em` so they hold across the 24/30px step. Rejected alternatives,
+including growing the lockup instead, and the rendered word-space candidates: style lock. **`ProductWordmark`
+IS A FRAGMENT, not a wrapping span**, because a span's own strut re-positions the marks inside the centred
+item. And **THE ACCESSIBLE NAME IS ONE HIDDEN NODE ON THE LOCKUP, not a word per mark** — two adjacent
+marks with no text node between them give a `textContent` of "GCCATLAS", so the drawn lockup was right
+while `toHaveText` read one word; only the NAME computation inserts that space. A literal `{" "}` is
+`impact-band.tsx`'s fix and is unavailable here, a bare text node becoming an anonymous flex ITEM and
+drawing the word space twice. So both halves take `label={null}` and the `h1` computes "ANSR GCC ATLAS"
+from the image's `alt` plus that one node. **`ProductIdentity.onHome` wraps the lockup in a button and both screens pass it**: it is the only
 route to the entry point now that "Edit answers" is a disclosure, so its accessible name stays the product
 name and the destination goes in `title` — an `aria-label` there is read into the `h1`'s own name by
 name-from-content and would put an instruction in the outline.
@@ -397,9 +450,15 @@ target is expanded off-screen by `.gcc-context-edit::after`, 7px top and bottom,
 does nothing while feeling like a miss. **`.gcc-hit-44` is that expansion generalised, BLOCK-ONLY for the
 same reason, and the answer editor's own Close pill is its other consumer** — the caller supplies
 `position: relative` and a 30–32px control, so it cannot be dropped on anything and be assumed correct.
-Industry, headquarters, revenue band. **THREE pills, and the fourth was the company name** — it was
-conditional on the one field a visitor could leave blank, and it went with the question; `pillCompany` was
-deleted rather than left as a label for a pill that can never render.
+Industry, sub-industry, headquarters, revenue band. **FOUR pills where a sub-industry was given and THREE
+where it was not, and the conditional one is `pillSubIndustry` rather than the deleted `pillCompany`** — the
+sub-industry is the primary ordering signal behind the cards, so the row echoed every answer except the one
+that most changed the screen. It sits second, after the industry it narrows, because the pills are in the
+order the form asks and the sub-industry is a level inside the industry control. **`answerFacts` in
+`screen-header.tsx` builds the row for BOTH screens** — they were two hand-maintained literals, which is a
+parity requirement met by luck, and the fourth member is what made that visible. **Screen 2 takes the
+sub-industry's NAME as a prop from `tool.tsx`**, off the matched peer view: it holds only `businessTypeId`
+and the names never cross to the browser, so one resolution feeds both rows.
 **BELOW `md` THE PILLS ARE READ BUT NOT DRAWN, at the project owner's instruction, so the row draws the
 button alone.** The pills wrapped to three lines at 390 to restate what the visitor chose thirty seconds
 earlier, on the one band they meet before any evidence. The markup is identical at every width and the
@@ -431,10 +490,13 @@ contract, no new field, and no free-text input on either surface.
 
 ## Screen 1 — Peer Landscape
 
-**A compact teal context area, then SIX ZONES of alternating ground, each holding one or two cards.**
-The grounds STRICTLY ALTERNATE white and mint so all five boundaries are visible. `--ansr-surface-pale`
-is ~2% off white and **may only ever neighbour the mint**; the sequence is pale, mint, white, mint,
-white, mint.
+**A compact teal context area, then SEVEN ZONES of alternating ground, each holding one or two cards.**
+The grounds STRICTLY ALTERNATE white and mint so every boundary is visible; the sequence is white,
+mint, white, mint, white, mint, white, then the close on the exempt `inverse-soft`. **Inserting a zone
+inverts the parity of everything under it** — the role map's arrival is what moved the city map to the
+mint and the scale strip to white. `--ansr-surface-pale` is ~2% off white and **may only ever neighbour
+the mint**; it is on no zone today, and its measured 1.019 against white is why it failed as the role
+map's band fill.
 
 **A BORDER IS EARNED.** A block that draws a MARK keeps its `Panel`, because a chart's marks are
 measured against the card's own edges. A grid of its own cards takes a `Block`, since wrapping five
@@ -444,7 +506,7 @@ Four panels, not eleven. Hierarchy is `weight="lead"` on the primary block's hea
 objects is pressable. **ONE EXCEPTION, at the project owner's instruction: the Fortune badge pops to
 1.6 on hover**, via `.gcc-badge-pop` in `globals.css`, so it applies at both of `FortuneBadge`'s
 placements. Transform only, so no row can grow; gated on `hover: hover` and on `no-preference`, both on
-`.gcc-lift`'s reasoning. It is for LEGIBILITY, not affordance — at 16px the mark reads as a red `500` —
+`.gcc-lift`'s reasoning. It is for LEGIBILITY, not affordance — at 16px only the `500` resolves —
 so there is no tap or focus variant and none may be added. **A COMPANY MARK POPS TOO, at 1.12 via
 `.gcc-mark-pop`**, set in `CompanyMark` so both placements share one scale. **The two ratios differ
 because a ratio is not a distance**: 1.6 on a 112px logo adds 34px a side and leaves the card, and 1.2
@@ -467,8 +529,9 @@ or an estimate. The SECTION HEADING carries the industry (`snapshotHeading`) and
 **Never "GCC's".** **THE HEADING IS DRAWN `uppercase` AND THE PLURAL `s` IS EXEMPT FROM IT** —
 `withCasedGccPlural` in `snapshot.tsx` returns the token to `normal-case`, because a full-caps transform
 makes the s a fourth initial and the eyebrow reads "GCCS", which is the same corruption as "GCC's" arriving
-from the presentation rather than the copy. Still a literal token on `withBrandMark`'s argument, the heading
-being admin-editable and there being no position to slice at. **The match is CASE-INSENSITIVE and the output
+from the presentation rather than the copy. Still a literal token rather than a slice, the heading being
+admin-editable and there being no position to slice at — it is the last consumer of that argument, the hero's
+own `withProductMark` having been deleted when the headline became two fields. **The match is CASE-INSENSITIVE and the output
 is always the canonical `GCCs`, and both halves are load-bearing**: it matched literally while the published
 heading said "GCCS", so the exemption was a silent no-op and the eyebrow drew the corruption the mechanism
 exists to prevent. So the drawn line and the accessible name now agree on the house spelling whatever an
@@ -683,7 +746,8 @@ because the two sites that draw it — the comparison card and the largest-centr
 same fact about the same kind of company and must not drift. **16px, set by the CAP HEIGHT of the name
 beside it and never by the artwork**: 40px sized off the badge's own wordmark and 24px matched to the
 `sm` chip's box were both rejected as too big. **The cost is that `FORTUNE` and `GLOBAL` stop resolving
-below about 20px and the badge reads as a red `500` mark** — accepted, and it is why `alt` carries the
+below about 20px and the badge reads as a stacked block with only the `500` legible** — accepted, and it
+is why `alt` carries the
 index name here while the company mark two elements above it takes `alt=""`. On the ranking row the
 wrapper takes `self-center`, because an image's baseline is its bottom edge and the row is
 `items-baseline`. **THE TWO BLOCKS NOW DIFFER ON THE UNIVERSAL CASE, and the difference is the whole
@@ -694,11 +758,15 @@ the banned shape was that it was an accent CHIP repeated five times and then res
 with the chip now Fortune's own 16px badge and that line gone, suppressing it would leave the universal
 case stating the membership nowhere. **On the ranking row the badge shares ONE flex item with the overlap
 marker, so the two wrap together** — below `md` the badge otherwise broke onto a line of its own at the
-leading edge, where a bare red `500` reads as a stray graphic rather than as that company's
+leading edge, where a bare stacked mark reads as a stray graphic rather than as that company's
 accreditation. The asset is a VECTOR supplied by the project owner,
-cropped from its empty 2000×2000 artboard to the lockup's own bounds, 0.96:1. **Nothing is ever TRACED**
+cropped from its empty 1254×1254 artboard to the lockup's own bounds, 1.984:1, with the bounds measured
+by `npm run logo:crop` and never read off the path data. **Nothing is ever TRACED**
 — the outlines and the supplied file's own transform are carried over verbatim, because the numerals are
-Fortune's artwork and tracing them would be hand-authoring a trademark.
+Fortune's artwork and tracing them would be hand-authoring a trademark. **A REPLACEMENT LOCKUP IS
+REPLACED IN PLACE, and the RATIO is what moves**: the height is fixed and the width free, so a swap
+changes the mark's footprint on the name's line and the `<img>`'s own `width`/`height` have to move with
+the new `viewBox` or the mark letterboxes inside its own box.
 **A public spec asserts the peers band's only NAMED image is this badge**, which is the narrowed form of
 the old blanket "no named image" count.
 
@@ -717,12 +785,15 @@ banned scroll logic: it reads nothing and reports nothing, and writes once in re
 
 **2. The industry count, as three OVERLAPPING layers on one z-stack** — national base, industry inside
 it, and inside that either the visitor's sub-industry or the comparison set. **Always three layers.**
-Layers step down from a shared top edge so each label owns an exposed band. **A LEADING CORNER IS ROUNDED
-ONLY WHERE IT BELONGS TO THE STACK RATHER THAN TO A LAYER INSIDE IT** — every bar shares the leading and
-bottom edges, so their bottom-leading corners coincide and round into one, while the stepped TOP edges put
-an inner layer's top-leading corner mid-stack where a curve cuts a notch showing the fill behind. So
-`--back` keeps that corner and every other layer squares it, flush to the shared zero, which is the axis
-rather than the end of a mark. **The block closes on `copy.industryBasisNote`**, 12px muted, in `CardMeta`'s
+Layers step down from a shared top edge so each label owns an exposed band. **A CORNER IS ROUNDED ONLY
+WHERE IT BELONGS TO THE STACK RATHER THAN TO A LAYER INSIDE IT, AND THAT IS NOW TWO OF THEM.** Every bar
+shares the leading and bottom edges, so their bottom-leading corners coincide and round into one; the
+stepped TOP edges put an inner layer's top-leading corner mid-stack, and the shared bottom edge puts its
+bottom-TRAILING corner mid-stack, and at both a curve cuts a notch showing the parent's fill behind. So
+`--back` keeps both and every other layer squares both, flush to the shared zero on one end — which is the
+axis rather than the end of a mark — and flush into the parent's fill on the other, where a curve would also
+shorten the mark on the one edge lengths are compared along. Each inner layer therefore keeps exactly one
+radius, its own top-trailing corner. The marker takes the bar rule verbatim, both squares included. **The block closes on `copy.industryBasisNote`**, 12px muted, in `CardMeta`'s
 treatment: the outermost layer is every GCC in the dataset, so the one figure a reader can take for a
 national total states what it was counted over. **It names the SCOPE and never the uncertainty** — the tool
 does not narrate its own integrity, so "indicative, drawn from the GCCs ANSR tracks" and never "figures are
@@ -796,6 +867,239 @@ decides the layout. The section heading carries the basis: "Common functions run
 from the India GCCs" is a claim about India GCCs at large and cannot be read as one about the companies
 above it. **"Common" is the word doing that**, so a reword has to keep it, and no possessive may tie the
 list to the grid — asserted.
+
+**5. THE ROLE MAP — which roles India GCCs hire, as ONE 2D field in two washes.** Reconstructed from a
+supplied slide, on white, directly under the function tags because it is the same claim one
+level down: the tags say which functions run from India GCCs, this says which roles those
+functions hire. A `Panel` where the tags are a `Block` — it draws thirty-six positioned
+marks on a shared axis and the card's own edges are what the axis runs between. Inserting it
+inverted the alternation below: the map moved to the mint and the scale strip to white.
+
+**BOTH COORDINATES ARE DATA AND ONLY ONE OF THEM MEANS ANYTHING.** `complexity` is the one
+real axis; `lane` is free room, and the chart draws nothing from it — no gridline, no scale,
+no label. **A row PACKER was built first and is the thing not to go back to**: assigning
+roles to shared rows from their complexity and an estimated label width produced eight
+uniform rows per band in which every leading-side label ended at the same x, which drew
+false vertical columns, read as a list rather than a field, and capped the dots at whatever
+fitted a row. The slide interleaves by hand; no row assignment reproduces it. `labelSide` is
+stored for the same reason — a threshold rule is wrong exactly where the author made a
+judgement. `placeRoles` in `screen1.ts` only resolves the family and sorts by lane.
+
+**THE FIELD DRAWS FROM `xl` ONLY, BECAUSE THE PLACEMENT IS HAND-MADE FOR ONE ASPECT.** A
+label's width is in pixels and the placement is in percentages, so the two agree only at the
+width they were tuned at — the plot is 1070px at every viewport from 1280 up, because the
+card is capped, and 814px at `lg`, where the same labels are 31% wider relative to the axis
+and seven pairs overlap. Below `xl` it reflows to chips grouped by family, in complexity
+order, on the capability grid's own argument. **ONE DOM TREE serves both**: band → family
+group → role, the group is `display: contents` from `xl` up so every role positions against
+the field, and the group's label takes the `sr-only` treatment there rather than
+`display: none`. Two trees would put thirty-six names in the accessibility tree twice.
+
+**ONE CANVAS FOR BOTH BANDS, AND `lane` IS A PERCENTAGE OF ALL OF IT, at ANSR's instruction.**
+The divide is a hard colour stop inside one positioned field, never a boundary between two
+boxes, and the reason is the source: the slide puts THREE discs ACROSS it — Integration
+Engineer above, Systems Engineer and Data Annotator below — which is a reading about roles that
+sit between the two registers. Two boxes made that inexpressible, so those three were nudged
+off the join; with one canvas they draw where the slide draws them. **A band is a real box
+below `lg` and `display: contents` above it**: in the reflow it carries its own wash and
+padding, on the canvas the gradient paints both halves and its label is pinned at
+`--gcc-band-at` — 0 or the seam. Nothing may decide the seam twice; it is `--gcc-role-seam` in
+`.gcc-role-map`, measured at 50.2% off the slide.
+
+**THE CANVAS IS 27.5rem, WHICH IS THE SLIDE'S OWN ASPECT, AND THAT IS WHAT FIXED THE
+PLACEMENT.** 440px against the 1070px plot is 0.411 where the slide's field is 0.410, so with
+the ramp already fitted to the slide's diameters the whole field is a uniform 0.923 scale of
+the graphic. **It shipped as two 18rem bands, 31% taller than the slide's halves** — and
+because `lane` is a percentage, a taller box stretches every vertical interval and nothing
+else, which is exactly what read as a sparse vertical scatter. **That 18rem came from a sweep
+that measured LINE BOXES and dot bounding boxes, which is the trap**: a 12px label is ~1.0em of
+ink in a 1.2em content area, and two circles' boxes overlap long before the circles do. Measure
+circle-to-circle and circle-to-ink-box — `npm run rolemap:check`, which also holds the
+`LANES`/`SIDES` overrides for trying a placement before writing it — and never accept a height,
+a ramp, a label size or a lane on this chart without running it at 1280 AND 1440.
+
+**A LABEL IS BOUND TO ITS DOT BY PROXIMITY, SO THE INSTRUMENT ASKS TWO QUESTIONS AND A CLEAN
+COLLISION COUNT ANSWERS NEITHER OF THEM ALONE.** `collisions` is overlap; `bindings` is whether
+each label's own dot is the NEAREST dot to it. The field shipped at zero collisions with ELEVEN
+of thirty-six labels nearer a foreign dot than their own — "Data Architect" 1.4px from
+"AI / ML Engineer" against its own 8 — which is the whole of what read as cluttered. Three
+things hold. **`--gcc-role-gap` is 4px and is ONE value for every mark on all three surfaces**,
+declared on `[data-role-step]` beside the size ramp so the public field, the chip flow and the
+admin canvas cannot disagree — the canvas drew 6px against the field's 8, which is a lie in the
+one instrument an admin fixes overlaps with. **The gap is the lever and not the placement**,
+because tightening it shortens every own-distance and moves no dot: 8px leaves eleven bound
+wrong, 5px six, 4px one. And **`bindings` asserts the margin at ZERO and the headroom is
+REPORTED rather than asserted** — eight labels ship at ~0.9px of margin against competitors that
+are all off their own line, and there is no move that widens them short of deviating further
+from the slide, so a comfort threshold would be a check that has to be ignored.
+
+**THE PLOT'S EDGES ARE HARD BOUNDS AND A LABEL THAT CANNOT FIT INSIDE ONE WRAPS.** Each item
+takes a `max-inline-size` of the room on its own side, so no name can leave the card. **A
+leading item is anchored by `inset-inline-end`, not by a `-100%` translate**: an absolutely
+positioned box offered `inset-inline-start: 86%` lays out in the 14% to its right, so with
+`nowrap` gone every leading label wrapped against the side it does not use. Exactly one label
+wraps today — "Forward Deployed Engineer", the longest name, at 86% of the axis — which is what
+the slide does in the same spot, and it is what let its lane go back to the slide's own after
+every leading-side placement collided with the four roles sharing its column.
+
+**THE TWO WASHES DIFFER IN HUE, at ANSR's request.** Emerging takes `--ansr-surface-warm` (the
+one warm ground in the system, `orange-100`, added for this) and established keeps
+`surface-tint`; nothing is drawn on the seam, two hues meeting being already an edge. One
+shared tint read as one field with its label repeated. **The luminance step is deliberately
+SMALL — 1.105:1, against 1.271 for either field on white — because hue carries the split and a
+second strong step would read as one band emphasised.** **No INLINE padding, ever** — the
+plot's width IS the axis, so insetting the field would narrow it under a placement measured
+against the full width; the band label carries its own inset instead, and only on the canvas,
+where it is absolutely positioned inside a wash nothing else touches. **The band label is an
+EYEBROW in its OWN FIELD'S HUE** — `accent-warm` at 5.68:1 on the warm field, the heading teal
+at 7.72:1 on the mint — and the filled pill it replaces is gone at ANSR's request: on a surface
+where nothing is pressable, the one thing that looked pressable was a label.
+
+**HUE IS THE ROLE FAMILY, AT THE PROJECT OWNER'S INSTRUCTION, AND IT IS THE ONE CATEGORICAL
+PALETTE IN THIS PRODUCT.** `--ansr-role-1..12` in `tokens.css`; read that block before
+touching them. **THE FIRST EIGHT ARE THE SLIDE'S OWN AND THE LAST FOUR ARE NOT, so that an
+admin can add a ninth group with a publish rather than a deploy** — each of the four clears 3:1
+on the darker wash, which three of the slide's own do not, and the worst pair in the twelve is
+still the `teal`/`slate` pair that already shipped, so the ceiling rose without making anything
+harder to tell apart. **`ROLE_TONES` IS ONE NUMBER IN THREE FILES — the schema's cap, the token
+count and the `[data-tone]` rules — AND `tests/unit/role-tones.test.ts` IS WHAT BINDS THEM**,
+because every slot past the last rule takes the same `var()` fallback and draws in the heading
+teal with nothing reporting it. That test also re-checks the two bars the four were chosen by,
+and holds the three instructed sub-floor inks as a named exception so a silent darkening cannot
+pass as a fix. **Twelve is what the code can honour, not a recommendation** — the slide uses
+seven and the admin hint says so. This OVERRULES the ordinal-teal rule for this chart only and is not a
+precedent — a second chart wanting them is a second decision. Two things make it safe: `tone`
+is STORED on the
+family rather than taken from its position, so tidying the legend cannot repaint the field,
+and the schema refuses two families sharing one; and **the colour is never the only reading**
+— `FamilyLegend` names every family in text beside its own swatch, and each dot carries its
+family in its accessible name. They do NOT separate in greyscale and that is accepted
+rather than overlooked. `[data-tone]` and `[data-role-step]` are UNSCOPED selectors, because
+three surfaces draw these marks and a selector listing ancestors silently rendered the whole
+admin canvas at zero size.
+
+**THE INKS ARE THE SLIDE'S OWN, UNCHANGED, AT ANSR'S EXPLICIT AND TWICE-REPEATED INSTRUCTION —
+AND THREE OF THE SEVEN SIT UNDER THE 3:1 MARK FLOOR.** Blue at 2.21, gold at 1.73 and green at
+2.53 on the established field. That is a real deviation from this project's own rule, it is on
+the blocked list for ANSR to see, and it is recorded rather than softened. Two earlier passes
+darkened them — first all seven, then only the three that failed — and both were read as dirty,
+correctly: darkening costs chroma as well as lightness, and the three it moves are the three
+anybody looks at. **What pays for it is the same thing that licensed a categorical palette at
+all and it has to stay true**: the legend names every family in text, every dot carries its
+family and its demand level in its own accessible name, and nothing is encoded by hue alone.
+Draw a family the legend does not name, or a dot whose name omits it, and the floor binds
+again. Each value is sampled from the CORE of that family's largest disc in `Slide4.jpg`, never
+from a blob mean — an edge pixel is half the pale field.
+
+**THE KEY IS ITS OWN TIER UNDER ONE HAIRLINE: the family legend TRAILING, the two muted lines
+beside it LEADING, at ANSR's request.** The axis ends the chart, the hairline closes it, and
+everything below it is apparatus. This has been three shapes and the reading order has survived
+all three — colour key first because it decodes seven marks, the muted lines after because they
+qualify rather than decode — so the legend is always FIRST in the DOM and `flex-row-reverse` is
+what puts it on the trailing edge. **THE TWO NOTES ARE PINNED TO THE LEGEND'S FIRST AND LAST
+ROWS**: `rolesDemandKey` sits on the line of the legend's opening entry and `rolesBasisNote` on
+the line of its last one, at ANSR's request. The mechanism is `justify-between` in a STRETCHED
+flex column, so nothing measures the legend and nothing hardcodes a row count — but it holds
+only while all four boxes are 12px on one leading and neither note wraps, and a second line on
+either makes the column taller than the legend and spreads the legend's own rows. **So the row
+is gated on `xl`, where the FIELD starts too**: at 1024 the notes column is left ~307px and the
+basis sentence's ~360px of ink wraps, measured. Below `xl` the tier is one column in the same
+order. **The legend is `w-fit` columns, THREE of them from `sm` and one shape at every width it draws at,
+the count at ANSR's request**, so each swatch sits at one offset in its own column. The step down to
+two at `sm` is gone: two columns are sized by a longer name, so the shortest entry carried 96px of
+empty cell against 53 at three, and three fit the narrowest host it draws in (438 against 502 at 640)
+the whole time. **EACH COLUMN IS `max-content` OF ITS OWN MEMBERS AND
+NOT `1fr`, WHICH IS WHERE THE CAPABILITY GRID KEY'S DEVICE STOPS APPLYING** — four ordinal words of
+similar length have little leftover, where seven family names run 53px to 167, so an equal column
+gave "AI / ML" 114px of empty cell and row one drew a 146px gap beside a 32px one. **The column gap
+was equal throughout; a reader sees the cell's leftover PLUS the gap**, which is how an equal grid
+draws unequal space. What remains is ~53px after the shortest name and no arrangement removes it
+while the swatches stay aligned.
+**ALL FOUR BOXES IN THE TIER ARE ONE TREATMENT — 12px in `--ansr-text-muted` — AND THE SWATCH IS A
+STEP UNDER THE TYPE**, at ANSR's request: at the type's own 12px, seven saturated discs read as a heavy
+block opposite two faint lines, which is what "the key is too big" meant, the type having always been
+the notes' own size. The type may not come down — 12px is the caption floor — and the swatches may not
+be greyed, being the legend's whole subject. Three is
+~600px of the field against four at ~810, and it costs the slide's own 4-and-3: seven families
+over three columns leaves one entry alone on the last row. The columns are an alignment device
+and never a claim that the families group, which is what makes the count ANSR's to pick.
+**Below `sm` it stays a WRAPPING ROW**, the one shape that cannot overflow. `rolesDemandKey`
+reads **"Bubble size = Hiring Demand"**, the slide's own equation rather than a sentence, at
+ANSR's request. **The axis carries NO hairline of its own**: the field now ends on a solid
+tinted edge.
+
+**DOT AREA IS A NAMED ORDINAL DEMAND STEP, AND BOTH THE FOUR-RING KEY AND THE SCALE'S TWO ENDS
+ARE GONE at the project owner's instruction.** The slide states no figure at all, which is the
+banned shape; a step on a short scale fixes that without inventing a number ANSR has not
+supplied. `DemandNote` is now `copy.rolesDemandKey` and nothing else — the line naming the
+ENCODING, with no step in it — because "Low → Very high" appended to it read as a legend that
+had been cut off rather than as a range, next to a legend naming seven things in full. **What
+that gives up is on a sighted reader only, and the record matters**: two bubbles can still be
+ordered against each other and the direction of the scale is no longer stated. **Every dot
+carries its own level word in its accessible name, which is what keeps this honest and is more
+than the drawn key ever supplied** — so `demandLevels` is still read, still admin-editable, and
+still the only place a step is spelled.
+
+**THE RAMP IS THE MEASURED CLUSTER MEANS AND THE STEPS ARE THE OPTIMAL FOUR-CLASS PARTITION,
+BOTH BY MACHINE.** Every one of the thirty-six discs in `Slide4.jpg` is recovered by scanning
+coloured blobs and measuring AREA, inside a field whose bounds are scanned the same way —
+1160 by 475. The diameters partition at the breaks that minimise within-class variance into
+**21.22px over twenty discs, 26.60 over nine, 34.16 over six and one disc alone at 47.11**,
+which scaled by this field's own 1070/1160 is the ramp's 1.224 / 1.533 / 1.969 / 2.716
+multiples of `--gcc-role-unit`; the spread is 2.22. **A CLASS'S MEAN IS WHAT THE RAMP TAKES,
+and two passes have now got that wrong in the same direction** — the first read the discs by
+eye, the second took rounded cluster figures off a histogram (20.4 / 26.0 / 33.1 / 46.6), each
+a point or two under its class's real mean, so every disc on the field drew 1 to 3 percent
+small and the shortfall grew with the step. Measured disc by disc against the slide, mean
+diameter error was 1.24px and signed almost entirely negative, which reads as the marks being
+small for their labels rather than as any one bubble being wrong. **Every step ASSIGNMENT is
+confirmed by the partition** — all thirty-six land where they were stored. **The POSITIONS are
+the slide's own within a mean of 3.2px, so placement has never been the problem, and FIVE lanes
+are still nudged off it** because Moderat's labels need vertical room the source did not: which
+five, and what each one causes at its measured value, are on `DEFAULT_ROLE_MAP.roles` —
+`data-architect` is the only one moved for BINDING rather than for a collision.
+**The key drew its dots one step DOWN for a pass**, making its top step the size of the field's
+second; one shared attribute is what stops that recurring.
+
+**`copy.rolesBasisNote` IS WHAT LICENSES THE EDITABLE HEADING.** This is the only section on
+the surface not drawn from the 1,834 companies, and a reader who has just met five named
+peers has no way to know the source changed under them. It names the SCOPE and never the
+uncertainty, and `nonEmpty` is the guarantee — it can be reworded and cannot be emptied. The
+heading is then the same category as `mapTitle`; it still may not tie the roles to the peer
+grid, pinned by a unit test rather than by the schema.
+
+**ADMIN GETS A PLACEMENT CANVAS, NOT JUST NUMBER FIELDS** — `role-map-canvas.tsx`. Drag a
+bubble, arrows nudge 1 and Shift 5, `[`/`]` set the band and `S` flips the label side; a live
+region announces every move, because the visual feedback is a 7px disc moving four pixels.
+**IT IS ONE CANVAS AT THE PUBLIC SIZE, not two fields at the public aspect, and both halves of
+that are load-bearing.** One canvas because the public chart is one — there is no second rect
+to drop into, so **dragging no longer sets the band** and `[`/`]` plus the table are how that is
+edited. At the public SIZE because a label is a fixed number of pixels: in a 1350px preview
+every name is 21% narrower relative to the axis than it will be live, so an admin could clear
+an overlap that still ships. `--gcc-role-plot` caps it at the measured 1070; a narrower window
+shrinks below that, which is pessimistic rather than optimistic. **The pin takes the PUBLIC
+geometry, including both wrap bounds** — it used to centre the whole button on the stored point,
+which shifts every label inward by half its own width and drew false overlaps. Same washes,
+same seam, same eyebrows, same inks, same five sizes, same label side, same `text-xs` — because
+the overlap an admin is there to fix is between LABELS, and a preview that abstracts them away
+cannot answer the only question being asked. **The draft is written on
+DROP, not per `pointermove`**: `applyEdit` marks the draft unsaved and the autosave
+serialises ~700KB, so a drag would write on every frame. The numeric table stays below as the
+precise fallback and both write the same fields through `setRoleMap`.
+
+**`setRoleMap` REPLACES THE WHOLE OBJECT and there is deliberately no mutator per
+collection.** Every rule this data has spans its three parts — a role names a family and a
+demand step, the schema refuses an unknown `familyId`, a `demand` past the scale and two
+families in one colour — so removing a family and reassigning its roles has to land as one
+edit or the draft sits in a state the gate refuses while the form shows an error about its
+own change. `RevertTarget` is `{kind:"roleMap"}` for the same reason, and reverts through
+`structuredClone` because a spread would hand the draft the baseline's own arrays.
+
+**`ROLE_FIELDS` carries all six editable fields including `lane` and `labelSide`.** They were
+omitted for a pass, which meant somebody fixes an overlap, publishes, and the review says
+nothing changed. `demandLevels` is reported with BOTH SIDES in full because `role.demand`
+indexes into it: reordering it re-rates every bubble and moves no other line in the diff.
+The role ORDER is deliberately not reported — it reaches no reader.
 
 **`PeerCard.sizeShare` is the single definition of a headcount-midpoint ratio** — honest as a bar's
 length, never as a published figure, always against the largest member of the set that card came back in.
@@ -1079,9 +1383,10 @@ screen and a spec asserts their absence. Accepted by the project owner.
 `src/components/public/charts.tsx` is the vocabulary both screens draw with. **There is no charting
 library under it, and that is the reason rather than a preference about dependencies.**
 
-**Every mark carries its figure in text beside it, and nothing is behind a hover.** A tooltip puts the
-number one pointer-hover away, which on a phone is nowhere. Every mark is therefore `aria-hidden`: a mark
-is a second reading of a figure already present.
+**Every mark carries its figure in text beside it, and no figure is only behind a hover.** A tooltip puts
+the number one pointer-hover away, which on a phone is nowhere. Every mark is therefore `aria-hidden`: a mark
+is a second reading of a figure already present. **The density map's hover readout is not an exception and
+must not become one** — what it draws is already in the ranked list and on the map's own labels; see there.
 
 **Two scoped exceptions, and neither generalises.** The capability grid inverts it — the rating word is
 `sr-only` and the segments carry it on screen, licensed because the four ordinal words are present in
@@ -1201,8 +1506,20 @@ rendering one — the room a label needs is what picks its side of the country. 
 measured ceiling: the panel's `overflow: hidden` is the clip, so the room a label has is that padding plus
 the panel's own 16px and nothing more, and widening the gutter shrinks the frame the type is a share of.
 Two layers, one layout function, both `aria-hidden`; the layer is named by `data-map-labels`, because
-`svg text` means both. **The one ambient animation is a halo BEHIND the leading
-hubs, never the dot** — a dot's radius is the figure, so animating it animates the claim.
+`svg text` means both. **NOTHING ON THIS GRAPHIC ANIMATES, at the project owner's instruction, and the hub
+pulse is deleted rather than reduced** — `.gcc-map-pulse`, its keyframes and the component's `PULSED` /
+`PULSE_CYCLES` are gone, and a spec asserts no mark on the field declares an animation. It broke no motion
+rule: the ring carried no value, ran on three marks and stopped after two cycles. It was still emphasis by
+RANK, drawn in motion, on the one graphic whose whole claim is a comparison of dot areas — the same argument
+that took `emphasis` off the ranked list's leading row.
+
+**WHAT HOVER DOES INSTEAD IS IMMEDIATE, AND THE `<title>` IS GONE BECAUSE IT WAS SLOW.** A `<title>` inside
+a shape is an OS tooltip: about a second behind the pointer, in browser chrome, at the cursor. `CityReadout`
+draws the city and its count at the DOT with no transition, reachable from the NAME as well as the mark —
+the name being the larger target and the thing a reader is actually looking at — and the hovered city's
+LEADER darkens to the text ink, which is what stops the plate being a restatement of a label that already
+carries the figure. Nothing is lost to assistive technology: the `<svg>` is a `role="img"` with its own
+`aria-label`, so its descendants were never in the accessibility tree.
 
 **A CITY THE SOURCE ABBREVIATES IS EXPANDED WHERE THE SPREADSHEET IS READ, on `canonicalIndustry`'s own
 argument.** `CITY_ALIASES` / `canonicalCity` in `normalize.ts`, applied inside `parseCities` and BEFORE its
@@ -1245,24 +1562,72 @@ retired palette and the reasoning behind every rule below: `docs/design-referenc
 - **`text-accent` is the ORANGE** (shadcn contract variable). The brand heading teal is `text-accent-teal`.
 - **Body copy is the display face at Light 300**, the brand's single biggest typographic tell. One filled
   primary action per screen. Body copy capped at `max-w-measure`.
+- **THE DISPLAY FACE IS MODERAT, THE BRAND'S OWN, AND IT HAS NO SEMIBOLD.** Four woff2 faces under
+  `src/app/fonts/`, converted from ANSR's supplied TTFs and self-hosted by `next/font/local`; the Hanken
+  Grotesk stand-in is gone. **The Medium file is declared across `500 600`**, because the family's real
+  weights stop at Medium 500 and resume at Bold 700 — and left undeclared, CSS matching resolves 600
+  UPWARD onto Bold, which would make `font-semibold` and `font-bold` one ink where `IndexTable` marks its
+  base column with weight alone. So `font-medium` and `font-semibold` draw the same face today and the
+  token stays 600 rather than folding into `medium`. **Its content area is 1.2em against
+  `--ansr-leading-display` at 1.05, so display ink hangs OUTSIDE its own line box at both ends** — every
+  ink-to-ink correction is a property of the face and is re-measured on a face change, never scaled:
+  `ask-hero.tsx`'s three moved by three unrelated factors and one nearly tripled. Moderat runs ~8% wider
+  than the stand-in, so a fixed box or a capped label that fitted before is where to look first.
+- **FIGURES TAKE MODERAT'S LINING SET, so `tabular-nums` is NEUTRALISED on the public surface** — one
+  rule in `globals.css`, scoped to `.font-display`, at ANSR's request. All four of the family's tabular
+  zeros are slashed and its tabular `1` is footed, and there is no unslashed tabular variant to switch to;
+  the only plain zero is the default one. The classes STAY in the markup as intent and admin keeps real
+  tabular figures. What is given up is measured: the default figures are PROPORTIONAL (`1` is 369 units
+  against `0` at 604), which is affordable only because nothing here is a true numeric column.
+  **AND THE VALUE IS `lining-nums`, NEVER `normal`: Moderat's DEFAULT figures are SHORT.** The default `5`
+  reaches 0.640em and the default `0` 0.651em against capitals at 0.700em, so every string mixing digits
+  with capitals drew the number 8.6% shorter than the letters beside it — "50 FTEs" is where it read worst.
+  `lnum` substitutes the lining set at 0.700/0.710em, the capitals' own height, and raises `$` and `%` to
+  their `.case` variants; those glyphs are unslashed, so cap-height figures cost nothing. Applied to the
+  SURFACE, because mixed figure heights across one product is worse than either height chosen throughout.
+- **A SCALE LETTER IS NOT A DIGIT: EVERY figure in the product sets its unit UNDER its numeral**, at
+  ANSR's request — `K`, `M`, `B`, `%`, a spelled word unit and a trailing `+` alike, sharing the numeral's
+  baseline and taking `tracking-normal`, which `tracking-display` is fitted to digits for. Four renderers
+  do it: `summary-figures.tsx`'s `Unit`, `snapshot.tsx`, `impact-band.tsx` and **`FigureUnit` in
+  `charts.tsx`, which is the one every chart routes through** — thirteen call sites, so a new chart
+  inherits it. **The split is `figureParts`, imported and never reimplemented**, which keeps one closed
+  alphabet in one place; a figure that does not end in it comes back whole, so a grouped count, a bare
+  index and a signed delta are untouched. **TWO scale steps where the scale allows it and ONE where it
+  does not** — two steps under a 14px row figure is off the bottom of the scale, so a dense row takes the
+  single step it has. The step is the CALLER's class, not derived, so it sits beside the numeral's own
+  size classes.
+- **`ss01` IS A THIN PUNCTUATION SET, NOT A PLAIN ONE, and it is deliberately unused.** The font names it
+  "Thin Symbols & Accents". It halves the en dash, thins the brackets, `%` and `+`, and swaps the
+  ampersand for a MORE decorative form across all 24 industry names — and it does not touch the comma,
+  which has no meaningful alternate in the family. Reasoning and measurements: style lock.
 - **Brand motifs and textures are adapted, never pasted** — `scripts/brand_asset.py`, and note `recolor
   --map` takes one comma-separated string, not a repeated flag. **Logos are the only literal-use
-  exception**, and there are five: `ansr-wordmark.tsx` in the ask hero, `atlas-wordmark.tsx` in the ask
-  hero and both result screens' `h1` (the product's own name, supplied as an outline by the project owner
-  and the only home those contours have — the file it came from is a root SVG and therefore gitignored),
+  exception**, and there are five placements: `product-wordmark.tsx` — which is
+  `gcc-wordmark.tsx` plus `atlas-wordmark.tsx` and the one word space between them — in the ask hero and
+  both result screens' `h1` (the product's own name, supplied as two outlines by the project owner and the
+  only home those contours have; each came from a root SVG and root SVGs are gitignored, so a copy of each
+  is kept under `assets/brand/logo/`),
   the inline lockup in
-  `impact-band.tsx`, `ProductIdentity`, and the FULL lockup on the scale curve's ANSR rail caption
+  `impact-band.tsx`, `ProductIdentity`, `AnsrLockup` above the ask hero's headline
+  (`ansr-logo-on-dark.svg`), and the FULL lockup on the scale curve's ANSR rail caption
   (`public/brand/ansr-logo.svg`, the light-ground file, whose wordmark is `currentColor` and therefore
-  near-black inside an `<img>`). Activate the `ansr-brand-assets` skill before touching anything under
-  `assets/brand/`.
+  near-black inside an `<img>` — which is why the hero takes the on-dark file instead). Activate the
+  `ansr-brand-assets` skill before touching anything under `assets/brand/`.
 - **A THIRD-PARTY accreditation mark is a second literal-use case and takes no brand rule at all** —
   the Fortune Global 500 badge, `public/badges/`, whose red is Fortune's and is deliberately outside
   the token system at the project owner's instruction. It lives inside the ASSET FILE, never in CSS,
   so the no-raw-hex rule is not bent to admit it — `.svg` is not in `brand_lint.py`'s `SCAN_EXT`. The
   fills are literal and never `currentColor`, so no surface can tint it. Never re-drawn, never
-  tokenised, and recoloured only on the project owner's own instruction: `GLOBAL` and the `500` are
-  Fortune's red and `FORTUNE` is black, applied as a fill on groups the supplied outlines already
-  separate.
+  tokenised, and recoloured only on the project owner's own instruction. **THE SUPPLIED LOCKUP IS
+  MONOCHROME AND THE SHIPPED ONE IS RED ON THREE OF ITS OWN PATHS, at the project owner's instruction** —
+  the plate behind `FORTUNE`, the rule box around `GLOBAL 500`, and the `500`; `GLOBAL` stays black. It is
+  a FILL on a partition of the supplied paths and nothing was moved, split or re-cut for it, and the two
+  small paths after the plate are the ISLANDS inside its `O` and `R`, so they take the plate's fill rather
+  than the letters'. **A recolour needs the owner's word EACH time**: this has been red, then monochrome
+  after a revert, and is red again, so neither state is one the file may drift into on its own.
+  **The badge needs a LIGHT ground** — `FORTUNE` is knocked out of its plate and the box around
+  `GLOBAL 500` is a rule with nothing inside it — and inverting the fills to
+  put it on a dark one is a trademark alteration rather than a styling decision.
 - **SVGs at the repo ROOT are gitignored** (`/*.svg`, root-anchored). If a root SVG seems ignored, it is.
 
 ## Invariants
@@ -1408,7 +1773,7 @@ Screen 1 sends five peers and a few counts.
 
 **Four editable collections, one file.** Companies, `peerOverrides`, metrics, and `siteContent` — the entry point's hero
 copy, ANSR's impact figures, the result screens' CLOSE, the peer view's `commonFunctions` tags, the
-entry point's `logos`, and `copy`, the 67 static visitor-facing strings — all live in `dataset.json`. A second file would mean a second write
+entry point's `logos`, and `copy`, the 82 static visitor-facing strings — all live in `dataset.json`. A second file would mean a second write
 target, a second diff, a second cache and a publish that could half-succeed. `metrics` is **defaulted to
 `[]` rather than required**, so a dataset written before it existed still reads — the fs store refuses an
 unrecognised version, so bumping `DATASET_VERSION` would have turned a compatible addition into a broken
@@ -1416,7 +1781,7 @@ read.
 
 **THE LINE BETWEEN AN EDITABLE STRING AND A CODE ONE IS WHETHER IT STATES A CLAIM ABOUT THE DATASET.**
 A heading, a label or an attribution names what a reader is looking at and asserts nothing about it, so it
-is `siteContent.copy` — 61 flat keys and 6 templates, each capped at a render limit measured on the real layout, grouped by
+is `siteContent.copy` — 76 flat keys and 6 templates, each capped at a render limit measured on the real layout, grouped by
 screen in the editor. A sentence that states a count, a share or an ordering has to move when the thing it
 describes moves, so it stays a function in `copy.ts`: `peerCountLine`, `shortfallLine`, `largestLine`,
 `industrySentence`, `largestOverlapLine` and their siblings are derived and have no fixed wording to edit.
@@ -1444,7 +1809,17 @@ would still validate and then draw `{company}` as literal text over the primary 
 to v11 — with a line in the shape check as well**, because the key is `.default([])`-ed: a v10 draft parses
 with the gap filled by an empty list, so publishing one would DELETE every pinned peer set and report it as
 an ordinary edit, and a pinned set is invisible on the public screen by design.
-`draft-provider.tsx` is at v11.
+`draft-provider.tsx` is at v15 — **v15 is `siteContent.roleMap`, a whole new COLLECTION, which is v11's
+case and one step sharper: the key is `.default()`-ed, so a v14 draft parses with the whole shipped map
+filled in and publishing it would revert every role, family and colour under "an ordinary edit" — and
+unlike a pinned peer set that revert is visible to visitors and still not to the reviewer. Three sub-keys
+take a line in the shape check. Eight copy keys published in the same pass need no version of their own.
+v12 added `peersBroadenedNote` and v13 `pillSubIndustry`, one key each, on
+the same reasoning. **v14 is the SHARPEST case and it is a REPLACEMENT rather than an addition**: `hero.title`
+became `hero.productName` plus `hero.tagline`, so zod strips the stale key without complaint AND fills the two
+new ones from their defaults — publishing a v13 draft would have silently reverted the admin's own headline
+and reported it as an ordinary edit. Both keys take a line in the shape check as well; the five new copy keys
+published in the same pass need no version of their own.
 
 **A STRING THAT NAMES ITS SCOPE RATHER THAN ASSERTING ANYTHING IS A TEMPLATE, NOT A REASON TO STAY IN
 CODE.** `copyTemplate` in `schema.ts` builds a field that MUST contain its declared `{slot}`s, and the
@@ -1556,17 +1931,102 @@ answered, so it gets its own diff and leads the preview. Its default is real con
 dataset written before it a broken read. **The hero's company count is deliberately "1,800+" and not 1,834** — editable text, not
 `companies.length`; `data:verify` cannot check it and a spec asserts the exact figure is absent.
 
-**THE HERO TITLE MUST CONTAIN THE LITERAL SUBSTRINGS `ANSR` AND `ATLAS`, and nothing enforces either.**
-`withBrandMark` and `withProductMark` in `ask-hero.tsx` find them and swap each for its drawn wordmark, so
-a headline spelling either any other way renders that half as plain type — silently, and it looks
-deliberate. Both are matched as LITERAL TOKENS rather than sliced by position, because the title is
-admin-editable free text and the alternative is a copy field per half. **The product mark is found in
-the REMAINDER after the brand mark**, so the two substitutions cannot overlap or reorder. **The run up to
-the first SPACE after `ATLAS` is held in a nowrap span with the mark**: an inline SVG is an atomic inline
-and the line breaker takes an opportunity beside one, which put the title's colon alone at the head of the
-second line. Only the ANSR mark takes the orange, and only where it leads — the contrast bound below. It
-is the product's own name now, "ANSR ATLAS Benchmark against your peers", which sets to three lines at the
-display size and is what the 60-character cap is measured against. **No punctuation after the name, at the
+**THE HEADLINE IS TWO FIELDS — `hero.productName` AND `hero.tagline` — AND `withProductMark` IS DELETED
+WITH THE SINGLE `title` IT SEARCHED.** It was one admin-editable string scanned for the literal `GCC ATLAS`
+as one two-word token, so a doubled space, a hyphen or a reword lost the name's own setting silently and
+looked deliberate; nothing enforced it and nothing could, the field being free text. The split is the
+project owner's request and it removes the class of bug: the name IS the field. Both are `.default()`-ed, so
+a dataset written before them still reads, and both are in `HERO_FIELDS`. Five consequences hold together.
+**THE TAGLINE IS SIZED TO RUN A LITTLE LONGER THAN THE NAME** — `HERO_TAGLINE_SIZE`, one measured `em`
+fraction of the `h1` rather than three px steps, at 104.5% of the name's INK (a box width is the advance and
+reads a point and a half under it) with an 18px floor below `md` where the fraction would sit level with the
+Light lead; the ratio is a property of the WEIGHT as well as the face, so the tagline may not be set Light
+without re-deriving it. **BOTH HALVES CARRY THEIR OWN LEFT SIDEBEARING AS A NEGATIVE MARGIN**
+(`HERO_NAME_OPTICAL`, `HERO_TAGLINE_OPTICAL`) — the ANSR lockup's artwork is flush with its box, so the box
+edge is the column's optical edge, and a sidebearing scaling with the type put the 72px name 4.4px inside a
+line everything else held to 1.4px. **The LEAD is deliberately not corrected: a paragraph's optical edge is
+its BOX**, since only its first line begins with a letter anyone chose. **`tracking-display` is RESTATED on the tagline** — an inherited
+`em` letter-spacing is an absolute LENGTH, so the `h1`'s -1.44px was drawing as -0.051em at 28px and cost
+6 points of the match. **Both halves are `block w-fit`**, which is what makes the width match assertable in
+a browser spec rather than only visible. **The manual `<br>` and the `text-balance` / `text-pretty` split on
+the `h1` are gone** — the name owns its line by construction now, and only the tagline has a rag to control.
+And **the `h1`'s accessible name is computed, not its `textContent`**: two adjacent block spans run together
+as "GCC ATLASBenchmark…", so a spec asserts the ROLE's name and each half separately. `PRODUCT_NAME` in
+`product-name.tsx` is `DEFAULT_PRODUCT_NAME` re-exported from `schema.ts`, and `ProductName`'s `name` prop
+is what the entry point passes the admin's value through; the result screens take the default.
+
+**THE ANSR WORDMARK IS OFF THIS BAND AS TYPE AND `BRAND` / `withBrandMark` ARE DELETED rather than left
+unused — but ANSR'S OWN LOCKUP SITS ABOVE THE HEADLINE, at the project owner's instruction, and the two are
+not the same decision.** The wordmark set the brand's NAME inside the headline's sentence, so the line
+opened with two names and the product's read as the second half of the company's; a lockup above the
+sentence is not in it. So the headline still reads "GCC ATLAS" over "Benchmark against your peers" — two
+fields now, capped at 16 and 56 — and `ansr-wordmark.tsx` still has no live consumer, kept for the
+reasons its own docblock gives. `AnsrLockup` in `ask-hero.tsx` is the placement.
+
+**THE MARK IS NOT ON THE HEADLINE'S LINE, and `AnsrSunMark` IS DELETED WITH EVERYTHING THAT EXISTED TO
+KEEP IT THERE.** The radial mark led `GCC ATLAS` inline at the letters' own scale for two passes, which
+made every question about it a question about the line box: it had to be centred on the letters' ink, held
+under the strut's measured 0.861em ascent, and scaled by a transform past that ceiling so the second line
+would not move. Off the line none of that applies — the lockup is an ordinary block in the band's vertical
+rhythm, its size is free of the headline's, and the `h1` is type again, so its accessible name is the title
+alone. `sunGeometry`, `SUN_EM`, `SUN_LINE_EM` and `public/brand/ansr-mark.svg` all went with it; git holds
+the measurements, and `docs/traps.md` keeps the one finding that outlives them — an inline mark grows the
+line box and negative block margins do not buy it back.
+
+**IT IS `ansr-logo-on-dark.svg` AND NOT `ansr-logo.svg`, WHICH IS A CORRECTION RATHER THAN A CHOICE.** The
+light-ground file's wordmark is `currentColor`, which inside an `<img>` resolves against the image's own
+document and draws near-black — invisible on this gradient. The on-dark file is the brand's own dark-ground
+lockup, mark in the action orange and wordmark in white, used LITERALLY and served from `public/brand/`, so
+the band states the brand with ARTWORK exactly where the type may not state it.
+
+**THE LOCKUP IS SIZED BY ITS WORDMARK'S LETTERS AGAINST THE LEAD'S TYPE, NEVER BY ITS ARTBOARD.** The
+artboard is 253 x 91 with the letters occupying 37.9 of those 91 units, so a 32px lockup draws the brand's
+name at 13.3px — smaller than the 20px lead under it, which is how ANSR ended up the smallest type on the
+band. **Sizing to the lead's CAP HEIGHT was the error, because a cap height is not a type size**; the rule
+is the letters at or just above the lead's own size, which is 44px of lockup on a phone and 56px from `md`.
+
+**EVERY VERTICAL INTERVAL ON THIS BAND IS DECLARED INK TO INK, AND EACH JUNCTION CARRIES ITS OWN
+CORRECTION.** A line box is not the ink in it: the headline's capitals sit 0.162em below the top of theirs
+at `leading-display`, so a declared 20px under the lockup DREW 31.7px, and the lead's capitals sit 0.387em
+of ITS size below its own, so a declared 24px between them drew 29.3px. That is what read as an awkward gap.
+Two consequences were visible: the intervals came out in the wrong ORDER, more air under the title than
+above it while the code said the opposite; and each error scaled with a DIFFERENT font size, so the two gaps
+drifted apart as the viewport changed. `HERO_TRIM_CAP`, `HERO_PAD_BASELINE` and `HERO_TRIM_LEAD_CAP` in
+`ask-hero.tsx` are the corrections, each `em` of the element it sits on so it holds at every step.
+**ONE OF THE THREE ADDS SPACE RATHER THAN REMOVING IT, AND THE SIGN IS THE INTERESTING PART**:
+`leading-display` is 1.05 against a face whose ascent and descent sum to more, so the half-leading is
+negative and the headline's descender ink hangs 0.033em BELOW its own box. A fourth trim in the obvious
+direction is how that junction ends up 5px tight. **THE COPY COLUMN THEREFORE CARRIES NO `gap`**: each
+interval is one declaration on one element beside the correction that fixes it, and a `gap` would be a
+second invisible term in every one of those sums. Verify by measuring that each interval draws its declared
+value at 1440 and 390 — never by reading the constants.
+
+**LAYOUT: the lockup takes the headline's LEADING EDGE and the band's shoulder is optical too.** It sits
+inside the same `max-w-card` box and the same outdent wrapper as the copy, so its leading edge is the
+headline's — and the form card's — at every width, and a spec asserts that at 1440 and 390 rather than
+asserting a size. It is a SIBLING of the copy column rather than a child, so the space under it is its own
+margin. The band's `pt` is `HERO_SHOULDER` and measures to the first INK rather than to a line box, which is
+what makes it comparable to the intervals below it. **The composition is `masthead`, chosen by the project
+owner from five built at `/variants/logo`, and the harness is DELETED** — the four rejected relationships
+are in the style lock. **The four numbers are separate constants rather than a layout object**, because the
+shoulder belongs to the band, the height to the mark and the two gaps to the junctions between elements; one
+object made them look like one knob, which is what a chooser needs and shipped code should not have.
+
+**THE WHOLE PRODUCT NAME IS WHITE AND THE BAND'S ONE ORANGE IS THE LOCKUP'S MARK, at the project owner's
+instruction.** `GCC` took `--ansr-action` from `md` up for one pass; the colour is gone, nothing on this
+surface passes `ProductWordmark`'s `leadClassName` any more, and a spec asserts BOTH `text-action` and
+`md:text-action` are absent from the `h1`. So the accent moved off the type entirely, onto a logo, where no
+contrast gate applies. **The two gates it was under are kept as the COST of restoring it, not as live
+rules**: the orange fell from 4.27:1 at the top of the band to 2.95:1 by 45% down, so only a name on the
+FIRST line could carry it; and the dot map's dots cost 1.77 of ratio at 320, 1.11 at 390 and exactly 0.00
+from 640, so it measured 2.33:1 on a phone. **The map did not move and must not**: its phone opacity is
+0.58 against a 0.66 ceiling measured for the white body floor, so carrying orange there means roughly
+halving it. White over the same dots is 11.4:1, which is why one white name is legal everywhere the gates
+were not.
+
+**The run up to the first SPACE after the name is held in a nowrap span with the mark**: an inline SVG is
+an atomic inline and the line breaker takes an opportunity beside one, which put a trailing colon alone at
+the head of the second line. **No punctuation after the name, at the
 project owner's request** — the colon that was there while the name was typed became a typed character
 against the trailing edge of an outlined mark, and the lockup separates the name from the promise on its
 own. So the nowrap span usually holds nothing, which is the mechanism doing its job rather than a case to
@@ -1574,7 +2034,7 @@ delete: the wrapping rule is a property of an atomic inline, not of one title's 
 THE PRODUCT NAME OWNS ITS OWN LINE, and that `<br>` is the composition's one manual break** — after the
 mark's nowrap span, `lg:hidden`, and emitted only where the title continues past the name. Desktop already
 breaks there at 72px so `display: none` leaves it untouched; from about 400px `text-balance` did not, and
-"ANSR ATLAS Benchmark" on one line reads the product's name as the first two words of a sentence. That is a
+"ANSR GCC ATLAS Benchmark" on one line reads the product's name as the first two words of a sentence. That is a
 naming failure rather than a ragging one, so it may not be left to a cap or to the balancer — both move
 with the font size and the string. **The `h1` takes `text-pretty` below `lg` and `text-balance` from it,
 and the pair goes with the break**: the balancer does not reach across a forced break, so it left a
@@ -1693,9 +2153,14 @@ the line names whichever fired — "beyond your sub-industry", "beyond your reve
 never a reach that did not happen. **The band axis does not need a sub-industry**: a visitor thin at their
 own size trips it alone. **Both signals require `shortfall === 0`, so the line is mutually exclusive with
 `shortfallLine` by construction** — that one wins the tie, and the caller renders
-`shortfallLine(view) ?? broadenedLine(view)`. **It stays a DERIVED function, not an editable key**: it
-asserts which axis the result reached on, the same category as the other `shortfallLine` branches, and an
-override sets both signals so it cannot fire on a hand-picked set.
+`shortfallLine(view) ?? broadenedLine(view, copy)`. **THE WORDING IS EDITABLE — `copy.peersBroadenedNote`,
+a PLAIN string with NO slots — AND IT NAMES NEITHER AXIS NOR INDUSTRY.** It once carried an `{axis}` slot
+to say which axis widened, but a full set can widen on sub-industry AND revenue band at once and naming both
+piled up; it also named `{industry}`, where "the wider industry" scopes it generically. So it is a fixed
+sentence: true whichever axis fired, scoped to the visitor's own industry without naming it, and unable to
+claim a reach that did not happen because it names none. No count, no em dash. What stays DERIVED is the
+TRIGGER — the line fires only on a real widening, and an override sets both signals so it cannot fire on a
+hand-picked set. `broadenedLine` returns `copy.peersBroadenedNote` unchanged.
 
 **The old three-rung band ladder survives as `matchPeersByBandLadder`, as the test oracle.** With no
 sub-industry the scored engine reproduces it company-for-company, asserted in `similarity.test.ts` and as
@@ -1815,27 +2280,27 @@ What lives where. Never a file listing — the tree is supplied each session.
 
 | Path | Responsibility |
 | --- | --- |
-| `src/app/` | App Router. `layout.tsx` self-hosts the display face via `next/font` and exposes it as `--gcc-font-display-loaded`, which `tokens.css` reads — the generated family name is hashed, so naming the face literally would fall through to the sans stack and lose Light 300. **`font-display` is set ONCE, on the public root in `tool.tsx`**, never per surface. `body` stays on `--ansr-font-sans` so admin keeps Inter. `page.tsx` is the only public route, serves both screens, and is `force-dynamic`. `actions.ts` is the public surface's single server action — one seam, so there is one place to check the dataset does not cross. Screen 2 needs none: its payload does not depend on the visitor. `globals.css` is the Tailwind theme aliased onto brand tokens; it restates no values and clears Tailwind's palette. **`--ansr-gradient-teal` and `--ansr-gradient-orange` are `background` SHORTHAND values, not images** — a colour is not a valid `<image>`, so aliasing them into `--background-image-*` emits an invalid `background-image` that paints nothing silently while still generating a class that looks correct. Both go through `.gcc-ground-gradient`; only `--ansr-gradient-conic` stays aliased. |
+| `src/app/` | App Router. `layout.tsx` self-hosts MODERAT via `next/font/local` from `fonts/` — four faces, Light 300 / Regular 400 / Medium `500 600` / Bold 700 — and exposes it as `--gcc-font-display-loaded`, which `tokens.css` reads; the generated family name is hashed, so naming the face literally would fall through to the sans stack and lose Light 300. The woff2 files are COMMITTED, deliberately: the deploy builds from this repo and `next/font/local` fails the build on a missing file, while the 41-TTF library they are converted from stays ignored. **`font-display` is set ONCE, on the public root in `tool.tsx`**, never per surface. `body` stays on `--ansr-font-sans` so admin keeps Inter. `page.tsx` is the only public route, serves both screens, and is `force-dynamic`. `actions.ts` is the public surface's single server action — one seam, so there is one place to check the dataset does not cross. Screen 2 needs none: its payload does not depend on the visitor. `globals.css` is the Tailwind theme aliased onto brand tokens; it restates no values and clears Tailwind's palette. **`--ansr-gradient-teal` and `--ansr-gradient-orange` are `background` SHORTHAND values, not images** — a colour is not a valid `<image>`, so aliasing them into `--background-image-*` emits an invalid `background-image` that paints nothing silently while still generating a class that looks correct. Both go through `.gcc-ground-gradient`; only `--ansr-gradient-conic` stays aliased. |
 | `src/data/` | The whole data layer, and the only place that knows the dataset shape. `schema.ts` (zod contract), `normalize.ts` (cleaning primitives, shared by importer and admin upload so one format never gets two parsers), `derive.ts`, `peers.ts` (scored engine + Screen 1 counts + the ladder oracle + `rankCandidates`, the one ranking the admin's override editor draws, and `matchPeerOverride`, the one precedence rule), `similarity.ts` (IDF weighting, band steps, `SIMILARITY_FLOOR`, `capCustomTagWeights`), `search.ts` + `search-terms.ts` (the matcher and its vocabulary — the two modules in here a CLIENT component imports, which is why neither may ever take `server-only` and why they hold no dataset; `search.ts` now serves the ADMIN filters as well as the visitor's dropdown, and `searchableText` is the variadic haystack builder that made that possible without a second matcher), `business-tags.ts`, `business-type-catalogue.ts`, `company-mark.ts` (the resolver) + `company-marks.ts` (`COMPANY_MARKS`, the committed tier's one table), `diff.ts` (one computation, two renderers), `metrics.ts` (`publicMetric`, the gate), `metric-catalogue.ts`, `store.ts` + `store/{fs,github}-store.ts`, `publish-store.ts` (selects the write target, refuses to guess), `dataset.ts` (cached read, mtime+size invalidation, `server-only` — which is what makes "never ship the dataset" a build error). `screen1.ts` is Screen 1's view model; two fields carry their own justification — `industry.averageHeadcount` is a mean of FTE BAND MIDPOINTS, industry-level, rounded coarser than the narrowest band, and never renderable without a method line; `scale.asOf` is the dataset's `generatedAt`, the only date here that is a machine fact, and `dataset.source` is deliberately not carried across. `screen2.ts` is Screen 2's view model and holds `figureParts`, `layoutArea`, `metricWidth`, `packWidths`, `breakdownDisplay`, `gridDisplay`, `breakdownScale`, `selfLabelling`, `journeyLegs`; it imports the gate rather than `dataset.metrics`, so there is no path around it, and resolves every metric to pre-formatted figures with no nullable value left in the type. `geo.ts` (city coordinates, `MAP_FRAME`), `india-outline.ts` and `dot-world-map.ts` (both GENERATED, never hand-edited), `countries.ts`. |
 | `src/app/admin/` | Seven routes, and the NAV groups them the way the product is: *Public screens* (Site copy, Function metrics), *Data* (Companies, Taxonomy, Sub-industries, Pinned peer sets), *Release* (Publish). **"Pinned peer sets" is filed under *Data* rather than under *Public screens*, and the filing is a judgement**: it decides what a visitor is shown, which argues for the first group, but it is a decision about which companies are comparable — the same kind as tagging a sub-industry, and unusable without the company table beside it. **The labels use the product's own vocabulary and the ROUTES never move** — `/admin/business-types` reads "Sub-industries" because that is the word a visitor sees, while the route, the dataset key and the component keep their names. The nav is `role="group"` rather than a list, because `listitem` is counted page-wide by a spec where it means an impact figure. `page-header.tsx` holds `AdminPageHeader` and `AdminSection`, the two idioms every page is built from — they were hand-rolled at fifteen call sites, which is how the pages drifted to two different outer gaps and three heading densities. `login/` sits outside the `(authed)` route group; the group's layout is the guard and hosts the draft provider. A route group rather than middleware — middleware would be a second runtime to keep Node-only for no gain. |
 | `src/app/api/admin/` | Login, logout, diff preview, publish. Each **re-checks the session itself** — a layout cannot guard a route handler, and a route that forgot would be silently public. |
 | `src/lib/admin/` | `password.ts` (scrypt), `session.ts` (signed cookie, `server-only`), `rate-limit.ts` (two budgets), `totp.ts` (RFC 6238 on `node:crypto`, no dependency), `guard.ts` (redirect for pages, bare 401 for APIs), `publish.ts` (validate → read → diff, shared by preview and commit), `constants.ts` (exists because `server-only` throws under `tsx`). |
-| `src/components/admin/` | Client-side admin UI. **`sections.ts` is the one home for what the admin is MADE OF, by name** — the seven tabs with a summary and search terms each, and the four taxonomy list titles. The nav renders it, the universal search indexes it and the taxonomy editor titles its lists from it, so a renamed tab cannot stay reachable under its old name; it holds no JSX, because the shell loads on every page and the index must not have to import an editor to learn what its lists are called. **`search-index.ts` + `global-search.tsx` are the UNIVERSAL search: an index and a palette, split so the half that fails silently is testable.** The index is every editable thing in the draft plus the seven pages; the palette is a ⌘K dialog in the shell. Rules: **it is a way IN and never a second editor**, so a result navigates and nothing is edited there; results are **capped per KIND, not overall**, so an ambiguous query cannot bury five kinds under 1,834 companies; the jump is carried by the **URL** (`?find=` seeds the target page's own filter, `?open=` opens one row's editor) because admin owns its URL, which makes it bookmarkable and the back button an undo; **`?open=` may only be set for the surfaces that read it** — four now, asserted, because the other three have nothing to open and the result would quietly under-deliver; and `peer-override` is the one KIND whose collection is legitimately empty, so the coverage test asserts one entry per row for it rather than at least one; a page entry's `terms` name the PAGE and never the fields on it, since every field is indexed on its own and pages sort first; and the index is built on **first open**, not on mount. **The trigger is "Find anything" and must never contain the word "Search"**: the company table's field is labelled `Search` and Playwright's `getByLabel` matches on substring, so a globally-present control naming it breaks four specs. **`search-box.tsx` is the ONE search control and the one filter hook, on all six editing surfaces, and it wraps the PUBLIC matcher rather than an `includes`** — so `&`, accents and punctuation fold, a second word narrows instead of matching nothing, and a one-letter query answers immediately. It decides the CONTROL and never what is searchable: each page builds its own haystack, because only the page knows which of its fields an admin would type. Companies keeps its own markup and gained memoised haystacks, one per row per draft rather than per keystroke. Two rules the pages share: a section with no match is HIDDEN and the count says how many are, since a page that silently loses two thirds of itself reads as broken; and **a filtered list may not be REORDERED** — taxonomy's arrows swap with the row above in the FULL list, which a filter is not showing. `draft-provider.tsx` autosaves locally and pins the baseline it started from; its `STORAGE_KEY` is versioned and **must be bumped whenever the editable shape changes**, because restoring a draft missing a key produces a schema error the admin cannot fix from the UI — and `tests/browser/helpers.ts` owns `DRAFT_STORAGE_KEY` and must move with it. **A DEFAULTED key is the quieter and worse case, and the restore guard is what catches it**: a draft written before one still parses on the way out, so publishing it would silently RESET that collection to the shipped values and report it as an ordinary edit. So the restore checks the keys it is about to trust by shape and drops a draft that predates them. `site-content-manager.tsx` is the one editor with no local form state and no Save button — nothing in it has a cross-field rule, so there is no second copy of the truth. **`controls.tsx` is the shared control vocabulary the HAND-ROLLED forms use** — `ADMIN_CONTROL`, `AdminField`, `AdminCount`, `AdminEmpty`, `AdminChip`, `AdminRows` — extracted because three surfaces had grown three control heights, two border tokens and a visible focus ring on only one of them; it is beside `fields.tsx` rather than inside it because that module owns whole labelled fields bound to the draft, and these are the recipes a form composing its own layout needs. **`AdminField` puts the hint in `aria-describedby` and NEVER inside the `<label>`**, which is what it was extracted to fix: the obvious shape folds the hint into the control's accessible NAME, so a select called "Industry" was really called "Industry" plus a sentence — read out before every option, and on a form holding both Industry and Sub-industry it made a name lookup for either one ambiguous. It clones its single child to inject the ids, so the call sites stay plain JSX. `peer-override-manager.tsx` is the pinned-peer-set editor. Plus the app shell, company table and editor, taxonomy editor, metric catalogue and editor, publish view. |
-| `src/components/public/` | What both screens use. `tool.tsx` owns the phase machine — ask, Peer View, Function View — as component state, and moves focus to the new phase's landmark on every transition. **On the result screens that landmark is the tab panel, not the `h1`**, which is identical on both. **The focus move is an effect keyed on the phase, never a call beside `setPhase`** — the `requestAnimationFrame` version assumed React commits before the next frame, and when it did not the ref was null and the only announcement was silently dropped; it passed locally and failed on the deployed build. The effect must skip its first run. **It always takes `preventScroll`, and `tool.tsx` states the position itself**: the visitor's own offset between the two views, document top for anything involving the ask. The offset is read on the press and written back after the commit, because `preventScroll` alone still dropped to 0 when a ~2,900px document was replaced by a ~1,650px one. None of this is the banned scroll logic and every write is inert in the embed. `primitives.tsx` holds `Section`, `Stat`, chip, fact-list and provenance shapes, the number formatters, `Panel` (bordered card, radius `none`, no shadow, `PanelTone` = `plain | inverse | sealed`, plus `chip` and `headingLevel`), `Block` (same landmark contract, no container, `weight="lead"`) and `Zone` (the alternating full-bleed grounds; each screen owns its own SEQUENCE — plus `inverse-soft`, the one ground EXEMPT from the alternation, and `behind`, a full-bleed layer under the padded container, both of which exist for the close). `screen-header.tsx` owns the whole result SURFACE: `ResultSurface` (ornamented band + floating card, taking the tab bar and the panel as separate props because their order is not a caller's decision, plus a `footer` for the caption under the card), `ProductIdentity`, `HeaderFinding`, `ContextPanels`, `ViewTabs`. `charts.tsx` is the shared vocabulary, including `Containment`, `RangeBenchmark`, `MilestoneTrack`, `IndexSpread`, `IndexTable`, `BarTone`, and the five renderers with no live caller. `closing-cta.tsx` is the shared close — `ClosingCta`, `PrimaryCta`, `CloseBackdrop`, the `TILES` field and the one `CLOSE_COPY`; both result screens render it, and neither decides anything about the backdrop or supplies a word of the copy. `atlas-wordmark.tsx` is the product name drawn — supplied outlines, cropped `viewBox`, `currentColor`, sized off the ANSR lockup's cap height, and the one home those contours have; it is here rather than beside `ansr-wordmark.tsx` because both result screens' `h1` and the entry point's headline draw it. `answer-editor.tsx` is the in-place answer editor both result screens mount in `ResultSurface`'s `editor` slot — `AnswerEditor`, `AnswerEditing` and `ANSWER_EDITOR_ID`; it wraps the entry point's own `InputPanel` rather than rebuilding the form, holds no open state (each screen does) and owns none of the request (the tool does). This folder exists because Screen 2 wanted most of `screen1/primitives.tsx`. |
-| `src/components/screen1/` | The public Peer View. `peer-view.tsx` (ask and answer states), `ask-hero.tsx` (the one band using the brand's real display ground, which **admits white ink only** — every muted token measures under 3:1 on it), `customer-logos.tsx`, `impact-band.tsx`, `ansr-wordmark.tsx` (drawn lockup, sized off cap height, word carried in `sr-only` so the accessible name is unchanged), `dotted-world-map.tsx` (layout only — two `<path>` elements over generated geometry; all ink, opacity, radius and edge fade in `.gcc-hero-map` and `.gcc-header-map`, so the two placements cannot diverge), `input-panel.tsx` (four controls over five fields, all four of them dropdowns and no free-text input since the company name went, its own field primitives because a public form and a dense internal tool want different densities; `AskOptions` bundles the four option lists because the form is mounted in two places now, and `submitLabel` is the one thing the answer editor's copy of it changes), `select-field.tsx` (the widget all four use, and the one place an option carrying children turns the popup into a tree; `.gcc-select-*` in globals.css carries both shapes and the measured room table), `evidence.tsx` (comparison grid, containment layers, largest-centres chart, function tags, scale strip; `CityCells` has two consumers, and `JumpToClose` is the count line's arrow), `city-map.tsx`, `snapshot.tsx`, `fortune-badge.tsx` (`FortuneBadge`, the one place the badge's size is decided), `copy.ts` (**every DERIVED visitor-facing sentence, and the reasoning behind every wording** — the static strings are `siteContent.copy` now and each constant here reads its key, so there is one shipped value per string), `use-frame-height.ts`. **Both ranked TABLES are gone, and with them the focusable horizontal scroller.** |
+| `src/components/admin/` | Client-side admin UI. **`sections.ts` is the one home for what the admin is MADE OF, by name** — the seven tabs with a summary and search terms each, and the four taxonomy list titles. The nav renders it, the universal search indexes it and the taxonomy editor titles its lists from it, so a renamed tab cannot stay reachable under its old name; it holds no JSX, because the shell loads on every page and the index must not have to import an editor to learn what its lists are called. **`search-index.ts` + `global-search.tsx` are the UNIVERSAL search: an index and a palette, split so the half that fails silently is testable.** The index is every editable thing in the draft plus the seven pages; the palette is a ⌘K dialog in the shell. Rules: **it is a way IN and never a second editor**, so a result navigates and nothing is edited there; results are **capped per KIND, not overall**, so an ambiguous query cannot bury five kinds under 1,834 companies; the jump is carried by the **URL** (`?find=` seeds the target page's own filter, `?open=` opens one row's editor) because admin owns its URL, which makes it bookmarkable and the back button an undo; **`?open=` may only be set for the surfaces that read it** — four now, asserted, because the other three have nothing to open and the result would quietly under-deliver; and `peer-override` is the one KIND whose collection is legitimately empty, so the coverage test asserts one entry per row for it rather than at least one; a page entry's `terms` name the PAGE and never the fields on it, since every field is indexed on its own and pages sort first; and the index is built on **first open**, not on mount. **The trigger is "Find anything" and must never contain the word "Search"**: the company table's field is labelled `Search` and Playwright's `getByLabel` matches on substring, so a globally-present control naming it breaks four specs. **`search-box.tsx` is the ONE search control and the one filter hook, on all six editing surfaces, and it wraps the PUBLIC matcher rather than an `includes`** — so `&`, accents and punctuation fold, a second word narrows instead of matching nothing, and a one-letter query answers immediately. It decides the CONTROL and never what is searchable: each page builds its own haystack, because only the page knows which of its fields an admin would type. Companies keeps its own markup and gained memoised haystacks, one per row per draft rather than per keystroke. Two rules the pages share: a section with no match is HIDDEN and the count says how many are, since a page that silently loses two thirds of itself reads as broken; and **a filtered list may not be REORDERED** — taxonomy's arrows swap with the row above in the FULL list, which a filter is not showing. `draft-provider.tsx` autosaves locally and pins the baseline it started from; its `STORAGE_KEY` is versioned and **must be bumped whenever the editable shape changes**, because restoring a draft missing a key produces a schema error the admin cannot fix from the UI — and `tests/browser/helpers.ts` owns `DRAFT_STORAGE_KEY` and must move with it. **A DEFAULTED key is the quieter and worse case, and the restore guard is what catches it**: a draft written before one still parses on the way out, so publishing it would silently RESET that collection to the shipped values and report it as an ordinary edit. So the restore checks the keys it is about to trust by shape and drops a draft that predates them. `site-content-manager.tsx` is the one editor with no local form state and no Save button — nothing in it has a cross-field rule, so there is no second copy of the truth. **`controls.tsx` is the shared control vocabulary the HAND-ROLLED forms use** — `ADMIN_CONTROL`, `AdminField`, `AdminCount`, `AdminEmpty`, `AdminChip`, `AdminRows` — extracted because three surfaces had grown three control heights, two border tokens and a visible focus ring on only one of them; it is beside `fields.tsx` rather than inside it because that module owns whole labelled fields bound to the draft, and these are the recipes a form composing its own layout needs. **`AdminField` puts the hint in `aria-describedby` and NEVER inside the `<label>`**, which is what it was extracted to fix: the obvious shape folds the hint into the control's accessible NAME, so a select called "Industry" was really called "Industry" plus a sentence — read out before every option, and on a form holding both Industry and Sub-industry it made a name lookup for either one ambiguous. It clones its single child to inject the ids, so the call sites stay plain JSX. `peer-override-manager.tsx` is the pinned-peer-set editor. `role-map-canvas.tsx` is the role map's drag-to-place editor — the one canvas in admin, a faithful preview at the public aspect, writing on drop rather than per pointer move. Plus the app shell, company table and editor, taxonomy editor, metric catalogue and editor, publish view. |
+| `src/components/public/` | What both screens use. `tool.tsx` owns the phase machine — ask, Peer View, Function View — as component state, and moves focus to the new phase's landmark on every transition. **On the result screens that landmark is the tab panel, not the `h1`**, which is identical on both. **The focus move is an effect keyed on the phase, never a call beside `setPhase`** — the `requestAnimationFrame` version assumed React commits before the next frame, and when it did not the ref was null and the only announcement was silently dropped; it passed locally and failed on the deployed build. The effect must skip its first run. **It always takes `preventScroll`, and `tool.tsx` states the position itself**: the visitor's own offset between the two views, document top for anything involving the ask. The offset is read on the press and written back after the commit, because `preventScroll` alone still dropped to 0 when a ~2,900px document was replaced by a ~1,650px one. None of this is the banned scroll logic and every write is inert in the embed. `primitives.tsx` holds `Section`, `Stat`, chip, fact-list and provenance shapes, the number formatters, `Panel` (bordered card, radius `none`, no shadow, `PanelTone` = `plain | inverse | sealed`, plus `chip` and `headingLevel`), `Block` (same landmark contract, no container, `weight="lead"`) and `Zone` (the alternating full-bleed grounds; each screen owns its own SEQUENCE — plus `inverse-soft`, the one ground EXEMPT from the alternation, and `behind`, a full-bleed layer under the padded container, both of which exist for the close). `screen-header.tsx` owns the whole result SURFACE: `ResultSurface` (ornamented band + floating card, taking the tab bar and the panel as separate props because their order is not a caller's decision, plus a `footer` for the caption under the card), `ProductIdentity`, `HeaderFinding`, `ContextPanels`, `ViewTabs`. `charts.tsx` is the shared vocabulary, including `Containment`, `RangeBenchmark`, `MilestoneTrack`, `IndexSpread`, `IndexTable`, `BarTone`, and the five renderers with no live caller. `closing-cta.tsx` is the shared close — `ClosingCta`, `PrimaryCta`, `CloseBackdrop`, the `TILES` field and the one `CLOSE_COPY`; both result screens render it, and neither decides anything about the backdrop or supplies a word of the copy. `product-wordmark.tsx` is the product name drawn — `ProductWordmark`, `PRODUCT_NAME`, `PRODUCT_MARK_EM` — and the one home for the shared height, the word space between the halves and the spelling of the name; `gcc-wordmark.tsx` and `atlas-wordmark.tsx` hold one half's contours each and decide nothing else. All three are supplied outlines, cropped `viewBox`, `currentColor`, sized off the ANSR lockup's cap height, and the only home those contours have. They are here rather than beside `ansr-wordmark.tsx` because both result screens' `h1` and the entry point's headline draw them; `leadClassName` is what lets the headline paint `GCC` alone in the action orange. `answer-editor.tsx` is the in-place answer editor both result screens mount in `ResultSurface`'s `editor` slot — `AnswerEditor`, `AnswerEditing` and `ANSWER_EDITOR_ID`; it wraps the entry point's own `InputPanel` rather than rebuilding the form, holds no open state (each screen does) and owns none of the request (the tool does). This folder exists because Screen 2 wanted most of `screen1/primitives.tsx`. |
+| `src/components/screen1/` | The public Peer View. `peer-view.tsx` (ask and answer states), `ask-hero.tsx` (the one band using the brand's real display ground, which **admits white ink only** — every muted token measures under 3:1 on it), `customer-logos.tsx`, `impact-band.tsx`, `ansr-wordmark.tsx` (the wordmark-only mark, **NO live consumer** since ANSR left the headline — kept as the one home for `ANSR Name.svg`'s contours and for the cap-height measurement three other components cite), `dotted-world-map.tsx` (layout only — two `<path>` elements over generated geometry; all ink, opacity, radius and edge fade in `.gcc-hero-map` and `.gcc-header-map`, so the two placements cannot diverge), `input-panel.tsx` (four controls over five fields, all four of them dropdowns and no free-text input since the company name went, its own field primitives because a public form and a dense internal tool want different densities; `AskOptions` bundles the four option lists because the form is mounted in two places now, and `submitLabel` is the one thing the answer editor's copy of it changes), `select-field.tsx` (the widget all four use, and the one place an option carrying children turns the popup into a tree; `.gcc-select-*` in globals.css carries both shapes and the measured room table), `evidence.tsx` (comparison grid, containment layers, largest-centres chart, function tags, scale strip; `CityCells` has two consumers, and `JumpToClose` is the count line's arrow), `city-map.tsx`, `snapshot.tsx`, `fortune-badge.tsx` (`FortuneBadge`, the one place the badge's size is decided), `role-map.tsx` (the role map: `RoleMapView`, `FamilyLegend`, `ComplexityAxis`, `DemandNote` — layout only, all geometry in `.gcc-role-map` and the placement in the data), `copy.ts` (**every DERIVED visitor-facing sentence, and the reasoning behind every wording** — the static strings are `siteContent.copy` now and each constant here reads its key, so there is one shipped value per string), `use-frame-height.ts`. **Both ranked TABLES are gone, and with them the focusable horizontal scroller.** |
 | `src/components/screen2/` | The public Function View. `function-view.tsx` (screen + four tabs, on the Radix Tabs primitive rather than the registry wrapper — 44px triggers, no `transition-all`, no shadow; cuts the already-packed card list where widths change). `metric-card.tsx` is layout only — selects no chart and does no arithmetic; owns the shape-only placeholder (static, hatched, uniform, so it reads as sealed rather than loading), `CardMeta`, and the capability grid's row glyphs keyed by LABEL, the single place this screen reads an admin-editable string, guarded all-or-nothing. `summary-figures.tsx` (`SummaryFigures` + `scalarCells`), `zones.tsx` (`TabZones`), `graduate-card.tsx` (`GraduateOutput`) and `milestone-card.tsx` (`ScaleMilestones` + `ANSR_MONTHS`) — both drawn by operations AND HR, here rather than in either file because two views of one shared metric must not be two pieces of markup, and because the ANSR rail's supplied figures must have one home, `hr-view.tsx`, `ops-view.tsx`, `fin-view.tsx` (the three composed tabs; `OpsPanel` has no gated metric and owns `summaryCells`, which selects rather than computes; `FinPanel` refuses most of its own reference and owns the tier spread and location grid). `copy.ts` holds `FIGURES_HEADING`, `SOURCE_LINE`, `VELOCITY_HEADING` (one heading shared by two tabs, a constant rather than the same words typed twice), `heldHeading`, `indexedNote`, `METRIC_NOTES`, each composition's own strings, and six sentences exported, unit-tested and rendered nowhere. |
 | `src/components/ui/` | shadcn/ui, unmodified from the registry. On-brand because `globals.css` maps the contract variables onto brand tokens. |
 | `data/` | `dataset.json`, pretty-printed on purpose — a reviewable diff is the reason there is no database. `verify-baseline.json`, updated only by `data:verify -- --accept`. Both tracked. |
 | `public/logos/` | The customer strip's marks, twenty-two. It is also where a committed PEER mark would point, one file per trademark and never two, but `COMPANY_MARKS` is empty so nothing else reads this directory today. Eighteen are real vectors; four arrived as a base64 raster inside an SVG `<pattern>` and are re-encoded to PNG at 2x display height. **Check a new logo's bytes, not its extension.** Each file's `viewBox` is its own INK bounds, measured by rasterising and scanning alpha — an artboard is routinely padding (Hudson's Bay was 578x444 around 446x297) and `getBBox` ignores strokes and filters. Contours are carried over verbatim; nothing is traced. `companies/` is the subdirectory for a mark whose company is not in the strip, and the strip's `src` pattern excludes it. |
-| `public/badges/` | Third-party accreditation marks, and neither `public/logos/` nor `public/brand/` is the right home for one — the first is companies' own marks, the second is ANSR's own adapted motifs. One file: `fortune-global-500.svg`, a VECTOR supplied by the project owner, with the artboard cropped to the lockup's own bounds and no outline redrawn. The 111×120 raster it replaced is deleted, not parked — two copies of one trademark is how the two placements start drawing different marks. |
+| `public/badges/` | Third-party accreditation marks, and neither `public/logos/` nor `public/brand/` is the right home for one — the first is companies' own marks, the second is ANSR's own adapted motifs. One file: `fortune-global-500.svg`, a VECTOR supplied by the project owner, monochrome as supplied and shipping with red on the plate, the rule box and the `500`, with the artboard cropped to the lockup's own bounds by `logo:crop` and no outline redrawn. **A new lockup REPLACES it in place** — the 111×120 raster and the two vectors before it are deleted, not parked, because two copies of one trademark is how the two placements start drawing different marks. |
 | `assets/brand/` | Brand source of truth; `tokens.css` is authoritative. |
 | `public/brand/` | Motifs already adapted for a placement, served as static files. Derived output — each reproducible from `assets/brand/` with a `brand_asset.py` command recorded beside its use. |
 | `.tastemaker/` | `style-lock.md` — **both public screens' visual decisions and the reasoning behind them**, including every rejected alternative. Restates no token values; `docs/design-reference.md` and `tokens.css` outrank it. |
-| `.impeccable/` | Untracked working directory of a skill that is no longer installed. `critique/` holds one dated snapshot, kept as a local artifact. |
+| `.impeccable/` | Untracked working directory of the `impeccable` skill, which IS installed under `.kiro/skills/`. `critique/` holds the dated `/impeccable critique` snapshots; `/impeccable polish` reads the newest one for its priorities, so they are working state rather than artifacts. |
 | `tests/unit/` | Vitest, node environment, no jsdom. Pure and server-side logic. `vitest.config.ts` resolves the `react-server` condition, which is how these import a `server-only` module at all. |
 | `tests/browser/` | Playwright against a real `next build && next start`, on its own dataset copy. Covers what a unit test structurally cannot: draft lifecycle, autosave, restore after reload, stale-baseline conflict, focus behaviour. **Serial, one worker** — the server holds the rate limiter and dataset cache in memory. **The whole suite is single-tenant and TWO CONCURRENT RUNS CANNOT COEXIST**: one port 3210, one fixture copy, one `test-results/`, and `next build` writes the `.next/` a dev server may be holding. A second run started midway through the first fails the first with `page.goto` timeouts and `ENOENT` on trace artifacts, which reads as a product bug and is not one. Reads, `tsc`, `npm run test` and `brand:lint` are safe in parallel; `test:browser` and `build` are not. Numbered specs run in reading order; `6-lockout.spec.ts` exhausts the limiter and must stay last. The `public` project runs first, before the publish spec rewrites the fixture. **Each project's `testMatch` is narrow, so a spec numbered outside all of them silently never runs.** `helpers.ts` owns `DRAFT_STORAGE_KEY`, `choose()`, `chooseSubIndustry()`, and `band()` / `expectBand()`. **A public spec must never locate a band by its heading text** — twenty did, and a copy pass broke all twenty. The id is the contract; `expectBand` accepts either `aria-labelledby` or `aria-label`, and what must not pass is a band with neither. Peer landscape ids: `snapshot`, `peers`, `industry`, `largest`, `functions`, `map`, `scale`. Screen 2: `function-metrics`, plus `hr-velocity`, `hr-analysis`, `hr-held`, `ops-velocity`, `ops-supporting` — prefixed by function because two composed tabs draw the same section under the same heading. `0-search.spec.ts` drives the dropdown FILTER, and it takes a fresh load per industry — from `md` the cascade pane sits beside the list so both are clickable, but below `md` the second one is behind a drill-in. |
-| `scripts/` | Run by hand, never at request time. Python: `brand_lint.py`, `brand_asset.py`, `brand_status_analysis.py`, `inspect_xlsx.py`, `build_dot_map.py`, `build_india_outline.py`. Node: `crop-logo.mjs` (`npm run logo:crop`), which crops a supplied logo to its own ink bounds and prints the pair to record — node rather than python because it needs a real rasteriser, and playwright is already a dev dependency. TypeScript via `tsx`: `import-seed.ts`, `verify-data.ts`, `admin-hash.ts` (mints the env values from a TTY prompt so the password never lands in shell history), `business-type-map.ts` (601 sub-industry mappings + 568 per-company decisions, keyed `industry||name` because company names are not unique even case-insensitively), `check-business-tags.ts`, `check-company-types.ts`, and the two analysis scripts `sweep-floor.ts` (worthless if its self-check does not say SOUND) and `proto-industry-tag.ts`. Rerun them rather than re-deriving their numbers. |
-| `.kiro/` | `steering/` — always-in-context rules, three files. `hooks/` — `brand-guard` (PostFileSave → `brand_lint.py`) and `handoff-refresh` (Stop → rewrite the handoff). `settings/` — MCP config, permission-guarded against agent writes. `skills/` — one skill, `ansr-brand-assets`, which is ours; **untracked**, and `skill-sources.json` pins the 135 removed third-party packs for restoration. |
+| `scripts/` | Run by hand, never at request time. Python: `brand_lint.py`, `brand_asset.py`, `brand_status_analysis.py`, `inspect_xlsx.py`, `build_dot_map.py`, `build_india_outline.py`. Node: `crop-logo.mjs` (`npm run logo:crop`), which crops a supplied logo to its own ink bounds and prints the pair to record — node rather than python because it needs a real rasteriser, and playwright is already a dev dependency; and `measure-hero-ink.mjs`, which reports the entry point hero's three intervals INK TO INK against a running server — the one instrument the leading trims in `ask-hero.tsx` may be checked with, and the three ways of getting it wrong are in `docs/traps.md`; `measure-result-lockup.mjs` (`npm run lockup:measure`), the same instrument for the result screens' `h1`, where a supplied lockup IMAGE and the typed product name have to share one cap band — it is what the lift beside that call is re-measured with; `measure-wordmark.mjs` (`npm run wordmark:measure`), where the product name's face and tracking come from; and `check-role-map.mjs` (`npm run rolemap:check`), the role map's geometry instrument, which asks TWO questions — `collisions` measures circle-to-circle and circle-to-ink-box rather than box-to-box, the box reading being what put that field's canvas 31% taller than the source slide for two passes, and `bindings` asks whether each label's own dot is the nearest one to it, which is what a clean collision count says nothing about — and which carries `LANES`/`SIDES` env overrides for trying a placement before writing it to the dataset. TypeScript via `tsx`: `import-seed.ts`, `verify-data.ts`, `admin-hash.ts` (mints the env values from a TTY prompt so the password never lands in shell history), `business-type-map.ts` (601 sub-industry mappings + 568 per-company decisions, keyed `industry||name` because company names are not unique even case-insensitively), `check-business-tags.ts`, `check-company-types.ts`, and the two analysis scripts `sweep-floor.ts` (worthless if its self-check does not say SOUND) and `proto-industry-tag.ts`. Rerun them rather than re-deriving their numbers. |
+| `.kiro/` | `steering/` — always-in-context rules, three files. `hooks/` — `brand-guard` (PostFileSave → `brand_lint.py`) and `handoff-refresh` (Stop → rewrite the handoff). `settings/` — MCP config, permission-guarded against agent writes. `skills/` — thirteen, all **untracked**: `ansr-brand-assets` is ours, the rest are third-party (`impeccable`, `variant`, `interface-review`, `break`, `explain-interface` and the seven `better-*` packs). `skill-sources.json` pins the removed packs for restoration. `impeccable` keeps its own state in `.impeccable/` and its scripts expect `node .kiro/skills/impeccable/scripts/…`. |
 | `docs/` | Reference, read on demand. Not steering. `brief.md` (read it, not the image), `data-audit.md`, `business-types.md`, `design-reference.md`, `ansrx-visual-language.md`, `traps.md`, `copy-audit.md` + `copy-audit-charts.md` (what each visitor-facing string was judged to be, and why). |
 
 ## Document protocol

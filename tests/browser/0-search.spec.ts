@@ -32,6 +32,35 @@ function panel(page: import("@playwright/test").Page) {
   return page.getByRole("tree");
 }
 
+/**
+ * One row in the FIRST pane, by name.
+ *
+ * **`.first()` is load-bearing: the two tiers OVERLAP, so a leading-tier industry is
+ * drawn twice.** The leading group is a shortcut — the largest by count plus the pins —
+ * and the second group is the whole list alphabetically, which is what stops a visitor
+ * who scans "All industries" without finding Retail reading that as Retail being absent.
+ * So `getByRole("treeitem", { name })` is a strict-mode violation for exactly the
+ * industries a visitor is most likely to pick, and only for those: `Education` and
+ * `Wholesale` resolve once, `BFSI` and `Software & Internet` twice. Taking the first is
+ * what `helpers.ts` does for the same reason, and it is the row a visitor meets first.
+ *
+ * The rows are genuinely distinct elements — a first-pane `rowId` is scoped by its
+ * GROUP, because a DOM id, a React key and the roving `aria-activedescendant` are all
+ * derived from it — so this picks a real row rather than papering over a duplicate id.
+ */
+function industryRow(page: import("@playwright/test").Page, name: string) {
+  return page.getByRole("treeitem", { name, exact: true }).first();
+}
+
+/**
+ * One row in a flat listbox, by name. `.first()` for `industryRow`'s reason — the
+ * headquarters field tiers the twelve largest above every country, so `UK` and `USA`
+ * are each drawn twice. The revenue control is never tiered and needs no help.
+ */
+function optionRow(page: import("@playwright/test").Page, name: string) {
+  return page.getByRole("option", { name, exact: true }).first();
+}
+
 async function openIndustryAndFilter(
   page: import("@playwright/test").Page,
   query: string,
@@ -54,10 +83,8 @@ test.describe("finding a sub-industry by the words a visitor uses", () => {
     page,
   }) => {
     await openIndustryAndFilter(page, "payments");
-    await expect(
-      page.getByRole("treeitem", { name: "Software & Internet", exact: true }),
-    ).toBeVisible();
-    await expect(page.getByRole("treeitem", { name: "BFSI", exact: true })).toBeVisible();
+    await expect(industryRow(page, "Software & Internet")).toBeVisible();
+    await expect(industryRow(page, "BFSI")).toBeVisible();
     // And it still narrows. Twenty-four industries down to a handful is the point.
     expect(await page.getByRole("treeitem").count()).toBeLessThan(8);
   });
@@ -81,7 +108,7 @@ test.describe("finding a sub-industry by the words a visitor uses", () => {
   ] as const) {
     test(`\`fintech\` reaches ${subIndustry}`, async ({ page }) => {
       await openIndustryAndFilter(page, "fintech");
-      await page.getByRole("treeitem", { name: industry, exact: true }).click();
+      await industryRow(page, industry).click();
       await expect(page.getByRole("treeitem", { name: subIndustry })).toBeVisible();
     });
   }
@@ -102,7 +129,7 @@ test.describe("finding a sub-industry by the words a visitor uses", () => {
   for (const [query, industry, subIndustry] of ACRONYMS) {
     test(`\`${query}\` reaches ${subIndustry}`, async ({ page }) => {
       await openIndustryAndFilter(page, query);
-      const parent = page.getByRole("treeitem", { name: industry, exact: true });
+      const parent = industryRow(page, industry);
       await expect(parent).toBeVisible();
       await parent.click();
       await expect(page.getByRole("treeitem", { name: subIndustry })).toBeVisible();
@@ -119,9 +146,7 @@ test.describe("finding a sub-industry by the words a visitor uses", () => {
     const broad = await page.getByRole("treeitem").count();
     await page.getByLabel(/^Filter/).fill("payment gateway");
     expect(await page.getByRole("treeitem").count()).toBeLessThanOrEqual(broad);
-    await expect(
-      page.getByRole("treeitem", { name: "Software & Internet", exact: true }),
-    ).toBeVisible();
+    await expect(industryRow(page, "Software & Internet")).toBeVisible();
   });
 
   /**
@@ -130,10 +155,7 @@ test.describe("finding a sub-industry by the words a visitor uses", () => {
    */
   test("`and` and `&` are the same query", async ({ page }) => {
     await openIndustryAndFilter(page, "research and development");
-    const parent = page.getByRole("treeitem", {
-      name: "Healthcare & Lifescience",
-      exact: true,
-    });
+    const parent = industryRow(page, "Healthcare & Lifescience");
     await expect(parent).toBeVisible();
     await parent.click();
     await expect(
@@ -149,7 +171,7 @@ test.describe("finding a sub-industry by the words a visitor uses", () => {
    */
   test("a search term never becomes part of a row's name", async ({ page }) => {
     await openIndustryAndFilter(page, "fintech");
-    const parent = page.getByRole("treeitem", { name: "BFSI", exact: true });
+    const parent = industryRow(page, "BFSI");
     await expect(parent).toBeVisible();
     await parent.click();
     // Named EXACTLY its label, with no trace of the term that found it. The only row
@@ -168,7 +190,7 @@ test.describe("finding a sub-industry by the words a visitor uses", () => {
     await page.goto("/");
     await page.getByLabel("Headquarters").click();
     await page.getByLabel(/^Filter/).fill("england");
-    await expect(page.getByRole("option", { name: "UK", exact: true })).toBeVisible();
+    await expect(optionRow(page, "UK")).toBeVisible();
   });
 
   /** A query nothing matches still says so, rather than showing an empty box. */
@@ -222,7 +244,7 @@ test.describe("the sub-industry pane hoists matches and keeps the rest", () => {
     page,
   }) => {
     await openIndustryAndFilter(page, "fintech");
-    await page.getByRole("treeitem", { name: "BFSI", exact: true }).click();
+    await industryRow(page, "BFSI").click();
 
     // Both hits, and a sibling that does NOT match — previously hidden entirely.
     await expect(
@@ -252,7 +274,7 @@ test.describe("the sub-industry pane hoists matches and keeps the rest", () => {
    */
   test("draws no breaker when every sub-industry matches", async ({ page }) => {
     await openIndustryAndFilter(page, "education");
-    await page.getByRole("treeitem", { name: "Education", exact: true }).click();
+    await industryRow(page, "Education").click();
     await expect(
       page.getByRole("treeitem", { name: "All of Education", exact: true }),
     ).toBeVisible();
@@ -269,7 +291,7 @@ test.describe("the sub-industry pane hoists matches and keeps the rest", () => {
     page,
   }) => {
     await openIndustryAndFilter(page, "wholesale");
-    await page.getByRole("treeitem", { name: "Wholesale", exact: true }).click();
+    await industryRow(page, "Wholesale").click();
     const rows = await paneRows(page, "Wholesale");
     // `All of Wholesale` plus both children.
     expect(rows).toHaveLength(3);
@@ -282,7 +304,7 @@ test.describe("the sub-industry pane hoists matches and keeps the rest", () => {
   test("carries no breaker when not filtering", async ({ page }) => {
     await page.goto("/");
     await page.getByLabel("Industry").click();
-    await page.getByRole("treeitem", { name: "BFSI", exact: true }).click();
+    await industryRow(page, "BFSI").click();
     const rows = await paneRows(page, "BFSI");
     expect(rows).toHaveLength(16);
     await expect(page.getByText("Other sub-industries")).toHaveCount(0);
@@ -294,7 +316,7 @@ test.describe("the sub-industry pane hoists matches and keeps the rest", () => {
    */
   test("the keyboard steps over the breaker", async ({ page }) => {
     await openIndustryAndFilter(page, "fintech");
-    await page.getByRole("treeitem", { name: "BFSI", exact: true }).click();
+    await industryRow(page, "BFSI").click();
 
     const rows = await paneRows(page, "BFSI");
     const firstOther = rows.indexOf("Retail & Commercial Banking");
@@ -349,9 +371,7 @@ test.describe("the sub-industry pane hoists matches and keeps the rest", () => {
    */
   test("draws no mark on a row matched only by a search term", async ({ page }) => {
     await openIndustryAndFilter(page, "fintech");
-    await page
-      .getByRole("treeitem", { name: "Software & Internet", exact: true })
-      .click();
+    await industryRow(page, "Software & Internet").click();
     const row = page.getByRole("treeitem", {
       name: "Payments & Financial Infrastructure",
       exact: true,
@@ -388,7 +408,7 @@ test("finding the sub-industry changes which companies are shown", async ({ page
     await page.goto("/");
     await page.getByLabel("Industry").click();
     await page.getByLabel(/^Filter/).fill("payment gateway");
-    await page.getByRole("treeitem", { name: "Software & Internet", exact: true }).click();
+    await industryRow(page, "Software & Internet").click();
     await page
       .getByRole("treeitem", {
         name: withSubIndustry
@@ -402,7 +422,7 @@ test("finding the sub-industry changes which companies are shown", async ({ page
     await page.getByRole("option", { name: "1 Bn – 5 Bn", exact: true }).click();
     await page.getByLabel("Headquarters").click();
     await page.getByLabel(/^Filter/).fill("USA");
-    await page.getByRole("option", { name: "USA", exact: true }).click();
+    await optionRow(page, "USA").click();
 
     await page.getByRole("button", { name: "Build my GCC Landscape" }).click();
     const peers = page.locator("#peers");

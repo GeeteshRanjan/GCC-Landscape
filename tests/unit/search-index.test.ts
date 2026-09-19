@@ -172,14 +172,23 @@ describe("what is indexed", () => {
         label,
       ).toBe(true);
     }
-    const { impactStats, commonFunctions, logos } = dataset.siteContent;
-    // Six for the hero's two, the close's two strings and its two per-screen CTA links,
-    // plus one per figure, tag and logo, plus the 28 keys. The links are counted here
-    // rather than exempted because an unset one is the entry an admin most needs to find.
+    const { impactStats, commonFunctions, roleMap, logos } = dataset.siteContent;
+    // **Seven for the hero's THREE, the close's two strings and its two per-screen CTA
+    // links** — the headline split into a product name and a tagline, so the hero
+    // contributes three entries and not two. It has to: an admin searching for the tagline
+    // must land on the field that holds it, and a single entry would send them to a control
+    // whose value does not contain what they typed. Plus one per figure, tag and logo, plus
+    // one per copy key. The links are counted here rather than exempted because an unset
+    // one is the entry an admin most needs to find.
+    // Plus one per role and one per role group. Roles are indexed individually because a
+    // role name is what an admin arrives with — "move Data Scientist" is not answerable by
+    // a section-level entry.
     expect(copyEntries.length).toBe(
-      6 +
+      7 +
         impactStats.length +
         commonFunctions.length +
+        roleMap.roles.length +
+        roleMap.families.length +
         logos.length +
         Object.keys(PUBLIC_COPY_LABELS).length,
     );

@@ -104,6 +104,11 @@
   --color-surface-sunken: var(--ansr-surface-sunken);
   --color-surface-tint: var(--ansr-surface-tint);
   --color-surface-pale: var(--ansr-surface-pale);
+  /* The one WARM ground — `bg-surface-warm`. One consumer: the role map's
+     emerging field, which has to read as a different register from the
+     established one beside it rather than as a lighter step of it. See the
+     token for why hue rather than lightness carries that. */
+  --color-surface-warm: var(--ansr-surface-warm);
   --color-surface-deep: var(--ansr-surface-deep);
   --color-surface-inverse: var(--ansr-surface-inverse);
   --color-surface-inverse-soft: var(--ansr-surface-inverse-soft);
@@ -361,6 +366,57 @@
    -------------------------------------------------------------------------- */
 .gcc-ground-hero {
   background: var(--ansr-gradient-hero);
+}
+
+/* --------------------------------------------------------------------------
+   Figures on the public surface: Moderat's LINING set, never its tabular one
+
+   **`tabular-nums` is neutralised here because Moderat's tabular zero is SLASHED,
+   at ANSR's request, and there is no unslashed one to switch to.** The family holds
+   four tabular zeros — `zero.tf`, `zero.tosf` and both of their `ss01` alternates —
+   and every one is a three-contour glyph, which is to say every one carries the
+   slash. It is the conventional reason a tabular set exists, and it is not this
+   product's voice: a slash through every zero in "800K", "19,700–19,800" and "1,250"
+   reads as a terminal rather than as a benchmark. The feature also swaps the `1` for
+   a footed stem, so it was changing two glyphs to buy one thing.
+
+   **One rule rather than ~100 deletions, and the classes stay in the markup as
+   INTENT.** Several of those call sites carry a docblock explaining which column the
+   figures were meant to align in; deleting the class would delete the reasoning with
+   it, and this is a decision ANSR can reverse in one line. What is given up is real
+   and was measured: Moderat's default figures are PROPORTIONAL — `1` is 369 units
+   against `0` at 604 — so a stacked pair of figures is now very slightly ragged. It
+   is affordable because nothing here is a true numeric column: the index tables are
+   `table-fixed` and CENTRED, the ranked rows put one figure in an auto-sized trailing
+   column, and every display figure is alone in its own cell.
+
+   **Scoped to `.font-display`, which is the public root and nothing else.** Admin is
+   on `--ansr-font-sans` and keeps real tabular figures, where a dense table of its
+   own genuinely does align digits.
+
+   **AND THE VALUE IS `lining-nums` RATHER THAN `normal`, because MODERAT'S DEFAULT
+   FIGURES ARE SHORT — that is a second decision and it fixes a visible mismatch, at
+   ANSR's request.** Measured on the supplied files: the default `5` reaches 0.640em
+   and the default `0` 0.651em, against capitals at 0.700em. So every string mixing
+   digits with capitals drew the number 8.6% shorter than the letters beside it —
+   "50 FTEs" on the scale-milestone card is where it reads worst, and "100+ FTEs",
+   "10+ years" and "$2.5B+" carry the same defect. `lnum` substitutes the family's
+   LINING set at 0.700em for `5` and 0.710em for `0`, which is the capitals' own
+   height to within their overshoot, and it raises `$` and `%` to their `.case`
+   variants for the same reason. Those figures are also 2-contour glyphs, so this
+   buys cap-height numerals WITHOUT bringing the slash back — the slash is the
+   tabular set's, not the lining set's.
+
+   Applied to the surface rather than per figure: mixed figure heights across one
+   product is worse than either height chosen consistently, and this tool is figures
+   throughout. The three `.font-display` selectors are one value in three places
+   only because Tailwind's `.tabular-nums` sets the property on the element itself,
+   which plain inheritance cannot reach.
+   -------------------------------------------------------------------------- */
+.font-display,
+.font-display.tabular-nums,
+.font-display .tabular-nums {
+  font-variant-numeric: lining-nums;
 }
 
 /* --------------------------------------------------------------------------
@@ -920,70 +976,21 @@
 }
 
 /* ==========================================================================
-   The density map's hub pulse
+   THE DENSITY MAP HAS NO HUB PULSE, at the project owner's instruction.
 
-   The second continuous motion in the project, and it inherits every constraint
-   the marquee established: not scroll-driven, nothing fixed or sticky, opt-in
-   inside `no-preference` because a 1ms duration clamp on an infinite loop
-   flickers rather than stops.
+   Three leading hubs carried an expanding accent ring for two cycles on arrival.
+   It obeyed every rule the project asks of motion — the halo carried no value, so
+   nothing measurable moved; it ran on three marks rather than the field; it
+   stopped rather than looping — and it was still the loudest thing on a card whose
+   subject is a set of dot AREAS being compared. A ring expanding out of three of
+   twenty-two dots is emphasis by rank, drawn in motion, on the one graphic where
+   size is the claim.
 
-   **What moves is a halo, never a mark.** A city dot's radius IS the figure — it
-   is how many GCCs are in that city — so animating the dot animates the claim,
-   and a mark that grows and shrinks is a number that grows and shrinks. The halo
-   is a separate ring carrying no value: it starts at the dot's own radius, expands
-   out of it and fades, so nothing measurable ever moves. That is the whole reason
-   this is a ring behind the dot rather than the obvious `r` animation.
-
-   **Two things keep it from becoming a notification.** It runs on three hubs, not
-   the whole field, offset by a third of the cycle each so they take turns rather
-   than breathe together. And it fades to nothing rather than pulsing between two
-   visible states — the resting appearance of this graphic is a still map, and the
-   motion is something that passes over it.
-
-   `opacity: 0` at rest is load-bearing, not a default. Under `reduce` no
-   animation is declared at all, so the ring never becomes visible — where a
-   visible resting ring would draw a permanent second circle around three dots and
-   read as a different kind of mark.
+   `.gcc-map-pulse`, its `@keyframes` and the component's `PULSED` /
+   `PULSE_CYCLES` are deleted rather than parked, and `--ansr-duration-pulse` is
+   now carried only by the customer strip. Restoring it means restoring all three;
+   git holds them.
    ========================================================================== */
-.gcc-map-pulse {
-  fill: none;
-  stroke: var(--ansr-accent);
-  opacity: 0;
-  /* Set per hub by the component, so the stagger is data rather than three
-     hand-written delays. */
-  --gcc-pulse-index: 0;
-  /* A transform on an SVG shape resolves against the user-space origin, which is
-     the top-left of the viewBox — so a plain `scale()` would throw the ring across
-     the map. `fill-box` makes the shape's own bounding box the reference, and the
-     ring then grows out of its own centre.
-
-     `will-change` because this repeats forever: without it the ring is
-     re-rasterised on the main thread every frame, which is measurable on a phone
-     for a graphic nobody is looking at. */
-  transform-box: fill-box;
-  transform-origin: center;
-  will-change: transform, opacity;
-}
-
-@media (prefers-reduced-motion: no-preference) {
-  .gcc-map-pulse {
-    /* **Two cycles, not `infinite`.** This was the one place the project's motion
-       read as decoration rather than as meaning: nothing about the map changes
-       after the screen arrives, so a pulse that never stops announces an event
-       that is not happening — and a reader comparing two dot areas is doing it on
-       a graphic that keeps moving under them. Two cycles is long enough to say
-       which three are the leading hubs and then get out of the way, which puts it
-       on the same footing as the enter animations rather than on the marquee's.
-
-       The count comes from the component (`PULSE_CYCLES`) so the number lives in
-       one place, beside the reasoning for it. */
-    animation: gcc-map-pulse var(--ansr-duration-pulse) var(--ansr-ease-exit)
-      var(--gcc-pulse-cycles, 2);
-    animation-delay: calc(
-      var(--gcc-pulse-index) * var(--ansr-duration-pulse) / 3
-    );
-  }
-}
 
 /* --------------------------------------------------------------------------
    The hub halo — the mark itself, not the pulse above it
@@ -1073,23 +1080,42 @@
   stroke: var(--ansr-motif-ink);
 }
 
-@keyframes gcc-map-pulse {
-  from {
-    opacity: 0.45;
-    transform: scale(1);
-  }
-  /* Held at nothing for the back half of the cycle. The expansion is the event;
-     the rest of the period is the gap between events, and without it three halos
-     at 3.2s are almost never all quiet at once. */
-  60%,
-  to {
-    opacity: 0;
-    /* 1.9, measured rather than picked. At the top of the scale the leading city's
-       dot is already ~6% of the field's width, so a halo at 2.4 reached from
-       Bengaluru to Hyderabad and read as a region rather than as a pulse on a
-       point. */
-    transform: scale(1.9);
-  }
+/* --------------------------------------------------------------------------
+   The hovered city's readout
+
+   **The native `<title>` is what this replaces, and the reason is latency alone.**
+   A `<title>` inside a shape is a browser tooltip: it appears about a second after
+   the pointer settles, in the OS chrome, at the pointer rather than at the mark. On
+   a card where the figure is already in the list beside it, a second of waiting is
+   long enough to read as nothing happening.
+
+   It is not a new place to keep a figure, and the no-tooltip rule in project.md is
+   intact: every count is in the ranked list and, above `sm`, on the map's own
+   labels. This draws the same number the label already draws, at the dot, so a
+   reader following a leader line does not have to travel back to the list.
+
+   Drawn as SVG so it scales with the projection and cannot be clipped by the
+   panel's own `overflow: hidden` differently from the marks it annotates. No
+   transition: the whole point is that it is immediate.
+   -------------------------------------------------------------------------- */
+.gcc-map-tip-plate {
+  fill: var(--ansr-surface);
+  stroke: var(--ansr-border-strong);
+}
+
+.gcc-map-tip-label {
+  fill: var(--ansr-text);
+}
+
+.gcc-map-tip-figure {
+  fill: var(--ansr-text-muted);
+}
+
+/* The hit target over each city: bigger than the mark, so a small dot is still
+   reachable, and invisible so it adds no ink to the field. */
+.gcc-map-hit {
+  fill: transparent;
+  cursor: default;
 }
 
 /* --------------------------------------------------------------------------
@@ -2523,7 +2549,7 @@ select.gcc-field {
    pressable, so nothing rises on hover — including this badge, which opens nothing.
    What the pop is for is legibility rather than affordance: at 16px, set by the cap
    height of the name beside it, `FORTUNE` and `GLOBAL` stop resolving and the mark
-   reads as a red `500`. Hovering restores it.
+   reads as a stacked block with only the `500` legible. Hovering restores it.
 
    **1.6, so 16px reaches 25.6px.** 1.25 was tried and read as not clearly visible,
    which is right at this size: a quarter of 16px is 4px of growth on a mark whose
@@ -2704,11 +2730,23 @@ select.gcc-field {
      aligned to. Squaring it runs each inner layer flush into the shared zero, which is
      also what that edge means: it is the axis, not the end of a mark.
 
-     So the silhouette keeps both of its own leading corners — the top one from
-     `--back`, the bottom one from whichever layer draws on top — and nothing inside it
-     curves against a fill. */
+     **The bottom-TRAILING corner is square on every layer but the outermost too, at the
+     project owner's request, and it is the same defect on the other end of the same
+     edge.** Every bar stands on the shared bottom edge, so an inner layer's
+     bottom-trailing corner sits in the MIDDLE of the stack — the parent layer's paler
+     fill runs on past it — and a curve there cuts the same notch the top-leading corner
+     did, with the fill behind showing through the arc. Two inner layers, two notches,
+     both on the edge a reader is comparing lengths against, which is the one place a
+     rounded corner also shortens the mark it is drawn on.
+
+     So the silhouette keeps all three of its own outer corners — the top-leading from
+     `--back`, the bottom-leading and the bottom-trailing from the outermost layer — and
+     nothing inside it curves against a fill. Each inner layer keeps exactly one radius,
+     its own top-trailing corner, which is the only corner it has that is genuinely the
+     end of its own mark against the card rather than against a sibling. */
   border-radius: var(--ansr-radius-md);
   border-start-start-radius: 0;
+  border-end-end-radius: 0;
   /* **Depth, not just a colour change.** Two adjacent ramp steps at the widths real
      figures produce are a 1.2:1 difference, so the layering was carried entirely by
      hue and read as one flat block with a lighter patch. A shallow shadow makes each
@@ -2726,10 +2764,14 @@ select.gcc-field {
    have silently given every bar the shadow back. */
 .gcc-containment__bar--back {
   box-shadow: none;
-  /* The one top-leading corner that is the STACK's own outline rather than an internal
-     step, so it takes the radius back. Nothing is drawn behind it for a curve to expose
-     — the card's fill is, which is what makes it read as the chart's corner. */
+  /* The two corners that are the STACK's own outline rather than an internal step, so
+     both take the radius back. Nothing is drawn behind either for a curve to expose —
+     the card's fill is, which is what makes them read as the chart's corners. The
+     top-leading is the stack's opening corner; the bottom-trailing is the only one in
+     the chart that sits at the trailing end of the widest mark, so it is the one place
+     that edge meets the card rather than a sibling's fill. */
   border-start-start-radius: var(--ansr-radius-md);
+  border-end-end-radius: var(--ansr-radius-md);
 }
 
 /* **A position marker, not an extent**, for a level that is a selection rather than a
@@ -2741,9 +2783,10 @@ select.gcc-field {
    **Rounded like every bar, at ANSR's request.** The marker read as the one hard-cut
    mark in a chart whose other layers curve their edges, so it looked like a different
    kind of object rather than the innermost layer. It takes the bar rule verbatim,
-   including the square top-leading corner every inner layer now has — so at its ~8px
-   width it reads as a small tick that stands on the shared axis, and because it is the
-   layer drawn on top its bottom-leading corner is the stack's own. */
+   including both square corners every inner layer now has — top-leading and
+   bottom-trailing — so at its ~8px width it reads as a small tick that stands on the
+   shared axis, and because it is the layer drawn on top its bottom-leading corner is the
+   stack's own. */
 .gcc-containment__bar--marker {
   inline-size: min(var(--ansr-space-2), var(--gcc-extent));
 }
@@ -3786,6 +3829,661 @@ select.gcc-field {
    ANSR's request: a rail drawn differently from the rail it is being compared with reads
    as a different kind of chart, which defeats the comparison. Every track is this one
    class, and the caption above it is what says which is which. See `MilestoneTrack`. */
+
+/* --------------------------------------------------------------------------
+   Screen 1 — the role map's 2D field
+
+   `RoleMap` in `components/screen1/role-map.tsx`. One field per band: every role is a
+   dot at its own `complexity` across and its own `lane` down, with its name on the side
+   the data says.
+
+   **BOTH COORDINATES COME FROM THE DATA, AND ONLY ONE OF THEM MEANS ANYTHING.**
+   `complexity` is the axis; `lane` is free room, and the field draws nothing from it — no
+   gridline, no scale, no label — because there is no quantity in it. It is stored rather
+   than computed for a reason worth keeping written down: a greedy packer assigning roles
+   to shared ROWS was built first, and it produced eight uniform rows per band in which
+   every leading-side label ended at the same x. That drew false vertical columns, read as
+   a list rather than a field, and capped the dots at whatever fitted a row. The slide
+   interleaves its bubbles by hand, which is what makes thirty-six labels legible, and no
+   row assignment reproduces it. So the placement is data.
+
+   **THE FIELD IS DRAWN FROM `xl` ONLY, AND THAT IS BECAUSE THE PLACEMENT IS HAND-MADE
+   FOR ONE ASPECT RATIO.** A label's width is in pixels and the placement is in
+   percentages, so the two only agree at the width the placement was tuned at — measured,
+   the plot is 1070px at every viewport from 1280 up, because the result card is capped;
+   at `lg` it is 814px, where the same labels are 31% wider relative to the axis and seven
+   pairs of them overlap. There is no way to have one placement serve both, and a
+   width-specific placement is not something a dataset can express.
+
+   So the field renders at exactly one plot width and is therefore always correct, and
+   every narrower viewport gets the grouped chip reflow. That is the capability grid's own
+   answer to the same problem — a horizontal scroller is how that grid came to hide India
+   by default — and it is the breakpoint Screen 2's card grid stops having columns at, on
+   the project's own line that a tablet is a one-column reading of these screens.
+
+   **Every offset is expressed against the PLOT.** `--gcc-at` is a percentage of its
+   width and `--gcc-lane` of its height, so the placement holds at every width the field
+   is drawn at without a single number in this file knowing the viewport.
+   -------------------------------------------------------------------------- */
+.gcc-role-map {
+  /**
+   * The dot ramp's unit. Every size below is a multiple of it, so the whole ramp steps
+   * with one value and the proportions between the steps cannot drift.
+   *
+   * 8px below `lg`, where the block is a chip flow and the dot sits in a line of 12px
+   * text; 16px from `lg`, where it is a mark on a field. The SPREAD is the same at both
+   * and it is the slide's own, measured — see the `[data-role-step]` block.
+   */
+  --gcc-role-unit: 0.5rem;
+
+  /**
+   * **THE SEAM: where the emerging wash ends and the established one begins, as a
+   * percentage of the CANVAS.**
+   *
+   * The slide's field runs y 81..556 and its own divide is at 319.5, which is 50.2% of
+   * it. Named rather than written 50% because it is a measurement off the source and
+   * because three things read it: the gradient's two stops, the established band's label
+   * offset, and anyone deciding which half a lane is in.
+   */
+  --gcc-role-seam: 50.2%;
+
+  /* Below `lg` the block is two washes stacked, each a column of family groups. The whole
+     layout is here rather than half of it in a `className`, because the `lg` override has
+     to undo it and two files deciding one display value is how a field ends up half
+     positioned. No `gap`: the two washes MEET, which is the band split's only separator. */
+  display: flex;
+  flex-direction: column;
+}
+
+/**
+ * One band, below `lg`: its own wash, its label, then its roles as family groups.
+ *
+ * The wash is here rather than on a `className` because at `lg` this box stops existing —
+ * `display: contents` — and the CANVAS paints both halves as one gradient instead. Two
+ * files deciding that would be two files deciding whether the seam is a box boundary.
+ */
+.gcc-role-map__band {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ansr-space-3);
+  padding-block: var(--ansr-space-4);
+}
+
+.gcc-role-map__band[data-band="emerging"] {
+  background-color: var(--ansr-surface-warm);
+  /* Where this band's own label sits once the canvas takes over. 0 and the seam, so the
+     value inherits through `display: contents` to the label and nothing computes it twice. */
+  --gcc-band-at: 0%;
+}
+
+.gcc-role-map__band[data-band="established"] {
+  background-color: var(--ansr-surface-tint);
+  --gcc-band-at: var(--gcc-role-seam);
+}
+
+/* In the flow the band's label takes NO inset: it is the heading of a column whose family
+   headings all start at the wash's own leading edge, so 16px of padding on this one read as
+   a misalignment rather than as breathing room. The inset it was asked for belongs to the
+   CANVAS, where the label is absolutely positioned inside a wash nothing else touches — see
+   the `lg` rule. */
+
+/* --- Below `lg`: the reflow, which is the DEFAULT ------------------------------
+   Mobile-first because the flow is what the markup already is — a band holding family
+   groups holding roles. The field is an override that takes the groups out of the flow;
+   writing it the other way round would mean undoing absolute positioning at the width
+   that needs the least CSS. */
+
+/* One group per family: its label, then its roles as a wrapping run. */
+.gcc-role-map__group {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--ansr-space-1) var(--ansr-space-3);
+}
+
+.gcc-role-map__item {
+  display: flex;
+  align-items: center;
+  /* The one binding distance, shared with the admin canvas — see `--gcc-role-gap`. */
+  gap: var(--gcc-role-gap);
+  /* One line at both widths: a wrapped name would overlap whatever the author placed
+     below it, and the hand placement assumes one line. */
+  white-space: nowrap;
+}
+
+/* The label sits after the dot in the DOM at both widths. Below `lg` that is also the
+   drawn order, because a chip flow has no room to put half its names on the left. */
+.gcc-role-map__item[data-side="lead"] {
+  flex-direction: row;
+}
+
+/* --- From `xl`: the 2D field -------------------------------------------------- */
+@media (min-width: 80rem) {
+  .gcc-role-map {
+    /* The ramp steps up with the composition: on the field the dot is a mark with its
+       label beside it, not an item in a row of text. Every size follows from this. */
+    --gcc-role-unit: 1rem;
+    /**
+     * **ONE CANVAS FOR BOTH BANDS, AND `lane` IS A PERCENTAGE OF ALL OF IT.**
+     *
+     * The bands were two separately positioned boxes with `lane` scoped to each, which
+     * made a disc on the divide impossible to express: it had to belong to one box, so it
+     * was clipped to that box's own 0..100. The slide puts THREE discs across its divide —
+     * Integration Engineer above it, Systems Engineer and Data Annotator below — and that
+     * is the reading it is making, that those roles sit between the two registers. So the
+     * divide is a colour stop inside one field rather than a boundary between two fields,
+     * and a lane near 50 draws exactly where the slide draws it.
+     *
+     * **A fixed height rather than one derived from the role count, because the placement
+     * is absolute and nothing is in flow to hold the box open.** One value, because the
+     * field draws at one plot width.
+     *
+     * **27.5rem IS THE SLIDE'S OWN ASPECT AND THAT IS THE POINT: 440px against the 1070px
+     * plot is 0.411, where the slide's whole field is 475 over 1159, or 0.410.** With the
+     * dot ramp already fitted to the slide's measured diameters, this makes the field a
+     * uniform 0.923 scale of the graphic being reproduced — so a disc's size relative to
+     * the field, and the vertical gap between two lanes relative to the horizontal gap
+     * between two complexities, both match rather than only one of them.
+     *
+     * **It shipped as two 18rem bands, 31% taller than the slide's halves, and that was
+     * the whole of why the placement read wrong.** `lane` is a percentage, so a taller box
+     * stretches every vertical interval while the horizontal ones and the discs stay put:
+     * the field read as a sparse vertical scatter where the slide reads as a compact
+     * horizontal one.
+     *
+     * **That 18rem came from a sweep that measured LINE BOXES, which is why it was 31%
+     * out.** A 12px label is about 1.0em of ink inside a 1.2em content area, so box-to-box
+     * collision detection fires wherever two marks are merely within each other's empty
+     * leading. Measured as real geometry instead — circle against circle, circle against
+     * ink box — this height carries no collision at the measured dot sizes, and FOUR lanes
+     * are nudged off the slide's own to keep it that way, because Moderat sets these labels
+     * wider relative to the plot than the slide's face does. Which four, and the collision
+     * each one causes at its measured value, are named on `DEFAULT_ROLE_MAP.roles`.
+     * `scripts/check-role-map.mjs` is what a placement is accepted against, at 1280 AND
+     * 1440. The figures are in the style lock.
+     */
+    --gcc-role-field: 27.5rem;
+
+    position: relative;
+    display: block;
+    height: var(--gcc-role-field);
+    /**
+     * The two washes as ONE ground with a hard stop on the seam.
+     *
+     * A gradient rather than two boxes because the boxes are what made a straddling disc
+     * inexpressible. Hard stop rather than a blend: the split is categorical, and a
+     * gradient that ramps between them would read as a third thing happening in the
+     * middle — which is precisely where the three shared discs sit.
+     */
+    background: linear-gradient(
+      to bottom,
+      var(--ansr-surface-warm) 0 var(--gcc-role-seam),
+      var(--ansr-surface-tint) var(--gcc-role-seam) 100%
+    );
+  }
+
+  /**
+   * The band stops being a BOX here, which is what lets a disc cross the seam.
+   *
+   * `display: contents` leaves its roles positioning against the canvas, and its own wash
+   * and padding stop applying — the canvas paints both halves instead. Its
+   * `--gcc-band-at` still inherits through, which is what the label below reads.
+   */
+  .gcc-role-map__band {
+    display: contents;
+  }
+
+  /**
+   * The band's label, pinned inside its own half of the canvas.
+   *
+   * `top` is the band's own `--gcc-band-at` — 0 or the seam — plus a step of block
+   * padding, so the two labels sit the same distance inside their own washes and neither
+   * is flush to an edge. The inline inset is the same step the flow layout uses.
+   */
+  .gcc-role-map__band-label {
+    position: absolute;
+    inset-inline-start: var(--ansr-space-5);
+    top: var(--gcc-band-at);
+    margin-block-start: var(--ansr-space-3);
+  }
+
+  /**
+   * `display: contents` is what lets one DOM tree be two drawings.
+   *
+   * The group stops being a box, so every role positions against the FIELD rather than
+   * against its own family — which is what makes the markup group by family for the
+   * reflow while the field places each dot absolutely.
+   */
+  .gcc-role-map__group {
+    display: contents;
+  }
+
+  /**
+   * The family HEADING is read but not drawn here, and this is the `sr-only` treatment
+   * rather than `display: none` for `.gcc-context-pill`'s reason: nothing may leave the
+   * reading order. On the field the family is carried by the dot's own hue and named in
+   * the legend under the axis, so the heading would be a third statement of it.
+   */
+  .gcc-role-map__group-label {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+    border-width: 0;
+  }
+
+  /**
+   * One dot at one point.
+   *
+   * **The offset is half the DOT and not half a fixed cell, which is what makes a label
+   * hug its own mark.** A constant cell sized to the largest dot put an 8px dot 20px from
+   * its own name while a 40px dot touched it, so the field read as two different charts
+   * depending on demand. Half of `--gcc-role-dot` is the same correction for every step.
+   *
+   * `translateY(-50%)` centres the item on its lane, so `--gcc-lane` addresses the dot's
+   * CENTRE — which is what the slide's coordinates were read as.
+   *
+   * Physical rather than logical for `.gcc-milestones`' reason: there is no logical
+   * translate, and the public screens are English-only.
+   */
+  .gcc-role-map__item {
+    position: absolute;
+    inset-inline-start: var(--gcc-at);
+    top: var(--gcc-lane);
+    transform: translate(calc(var(--gcc-role-dot) / -2), -50%);
+    /**
+     * **THE PLOT'S TRAILING EDGE IS A HARD BOUND, AND A LABEL THAT CANNOT FIT INSIDE IT
+     * WRAPS RATHER THAN OVERFLOWING.** The room left to a trailing item is everything from
+     * its own dot's centre to the end of the canvas, which is what this expresses — the
+     * `100%` is the canvas and the half-dot is the transform read back.
+     *
+     * It is here because the alternative was a lane deviation. "Forward Deployed Engineer"
+     * is the longest name in the set and sits at 86% of the axis, where one line runs 17px
+     * past the card; the slide wraps it onto two lines in exactly that spot, and every
+     * attempt to place it on the leading side instead collided with the four roles that
+     * share its column. So the bound is general and the wrap is the slide's own.
+     *
+     * `white-space: normal` is the other half: the shared rule below `lg` keeps `nowrap`,
+     * because a chip flow has no bound to wrap against.
+     */
+    max-inline-size: calc(100% - var(--gcc-at) + (var(--gcc-role-dot) / 2));
+    white-space: normal;
+  }
+
+  /**
+   * Past the flip point the label sits on the LEADING side, so it stays inside the plot.
+   *
+   * `row-reverse` draws the dot last and leaves the DOM order alone — dot then label —
+   * which matters because the dot is `aria-hidden` and the label is the content:
+   * reversing the paint order must not reverse the reading order.
+   *
+   * **IT IS ANCHORED BY ITS TRAILING EDGE, NOT BY A `-100%` TRANSLATE, and that is what
+   * makes the wrap bound above correct on this side.** An absolutely positioned box with
+   * `inset-inline-start: 86%` is offered 14% of the canvas to lay out in, whatever it is
+   * later translated by — so with `nowrap` gone, every leading label wrapped against the
+   * room on its RIGHT, which is the side it does not use. `inset-inline-end` offers it the
+   * room on its own side instead, and the translate is then half a dot rather than a whole
+   * width. The dot still lands centred on `--gcc-at` from the other direction.
+   *
+   * `text-align: end` keeps a wrapped line ragged on the side away from the dot, so the
+   * label still reads as hanging off its mark.
+   */
+  .gcc-role-map__item[data-side="lead"] {
+    flex-direction: row-reverse;
+    inset-inline-start: auto;
+    inset-inline-end: calc(100% - var(--gcc-at));
+    transform: translate(calc(var(--gcc-role-dot) / 2), -50%);
+    max-inline-size: calc(var(--gcc-at) + (var(--gcc-role-dot) / 2));
+    text-align: end;
+  }
+}
+
+/**
+ * The five sizes a demand step can draw, as multiples of the ramp's unit.
+ *
+ * **Multiples rather than literal sizes, so the unit is the only knob** — it changes at
+ * `lg`, and with literal values that meant two sets of five to keep in step.
+ *
+ * **THE FOUR STEPS THE SHIPPED SCALE USES ARE THE MEASURED CLUSTER MEANS, and the ramp is
+ * fitted to them rather than chosen.** Every one of the slide's thirty-six discs is
+ * recovered by scanning coloured blobs in `Slide4.jpg` and measuring AREA, in a field
+ * whose own bounds are scanned the same way — x 59..1219, y 81..556, so 1160 by 475. The
+ * diameters partition into four contiguous classes at the breaks that minimise within-class
+ * variance, which is the same four this project has always drawn: **21.22px over twenty
+ * discs, 26.60 over nine, 34.16 over six, and one disc alone at 47.11.** Scaled by this
+ * field's own 1070/1160 that is 19.6 / 24.5 / 31.5 / 43.5, which at a 16px unit is the
+ * ramp below, with the fifth extrapolated on the same growth.
+ *
+ * **THE MEANS ARE WHAT THE RAMP TAKES, AND THE EARLIER PASS TOOK ROUNDED CLUSTER FIGURES
+ * READ OFF A HISTOGRAM INSTEAD — every step drew SMALL.** It ran 1.175 / 1.50 / 1.90 /
+ * 2.70 against cluster figures of 20.4 / 26.0 / 33.1 / 46.6, each of them a point or two
+ * under its class's real mean, so the whole field was 1 to 3 percent short of the graphic
+ * and the error compounded with the step: the twenty step-1 discs drew 0.8px small and the
+ * six step-3 discs 1.1px. Measured disc by disc against the slide, mean diameter error was
+ * 1.24px and SIGNED almost entirely negative, which is what reads as the marks being too
+ * small for their labels rather than as any one bubble being wrong.
+ *
+ * **The spread is 2.22 and not the 3.1 an even earlier ramp shipped with.** Those steps ran
+ * 0.875 / 1.25 / 1.75 / 2.75 on a claim that the slide's largest disc is 3.7 times its
+ * smallest; measured, it is 2.57 across the extremes and 2.22 across the class means.
+ *
+ * **The step IS the slot, capped at five by the schema, so nothing is normalised.** A
+ * three-level scale draws the first three sizes rather than stretching across all five —
+ * the honest direction, because stretching would make two adjacent steps on a short scale
+ * look further apart than two on a long one, which is a difference in the drawing that
+ * says nothing about the data.
+ *
+ * **These are NOT scoped to the field, and that is the fix for a real bug.** The key drew
+ * its dots one step down, so on a four-level scale the key's "Very high" was exactly the
+ * size of the field's "High" — a key misreporting the thing it decodes. One set of rules
+ * on a shared attribute is what stops the two drifting again.
+ */
+/**
+ * **THE DISTANCE FROM A DOT TO ITS OWN NAME, AND IT IS ONE VALUE FOR EVERY MARK ON EVERY
+ * SURFACE — declared on the same shared attribute the size ramp is, for the same reason.**
+ *
+ * **It is 4px because BINDING IS BY PROXIMITY AND THIS FIELD IS DENSE.** A label belongs to
+ * whichever dot is nearest it, and at the 8px this shipped with, eleven of the thirty-six
+ * labels had a FOREIGN dot nearer to their ink than their own — "Data Architect" at 1.4px
+ * against its own 8, so the name read as belonging to "AI / ML Engineer". Nothing overlapped;
+ * `rolemap:check` reported zero collisions at both widths, because overlap is a different
+ * question from association. Tightening the gap is the lever rather than moving the dots,
+ * since it shortens every own-distance and leaves every foreign one where the slide put it:
+ * 8px leaves eleven labels bound wrong, 6px nine, 5px six, and 4px leaves one, which is
+ * `data-architect`'s own lane. Below 4 the ratio stops improving and the name starts touching
+ * its mark. **So the instrument now asserts the binding margin as well as the collisions, and
+ * a change to this value is re-measured with it.**
+ *
+ * **In the chip flow below `lg` it is the same 4px and the same argument arrives by a
+ * different route**: a group's own column gap is 12px, so a dot-to-name gap of 8 inside a
+ * chip was two thirds of the distance BETWEEN chips, and the run read as evenly spaced text
+ * rather than as chips. 4 against 12 is the ratio that groups them.
+ *
+ * **DECLARED ON `:root` SO NO CONSUMER HAS TO BE NAMED, because the surfaces that draw this
+ * relationship keep arriving.** The public field, the chip flow, the ADMIN CANVAS and the
+ * family legend all bind one mark to one name, and they do not share an ancestor or an
+ * attribute — the legend's entry carries neither `data-tone` nor `data-role-step`, those being
+ * on the swatch inside it. It sat on `[data-role-step]` for one pass, which is a selector that
+ * has to be edited every time a fourth surface appears, and the canvas drawing `gap-1.5`
+ * against the field's 8px is what that costs: a fidelity bug in the one instrument an admin
+ * fixes overlaps with.
+ */
+:root { --gcc-role-gap: var(--ansr-space-1); }
+
+[data-role-step="1"] { --gcc-role-dot: calc(var(--gcc-role-unit) * 1.224); }
+[data-role-step="2"] { --gcc-role-dot: calc(var(--gcc-role-unit) * 1.533); }
+[data-role-step="3"] { --gcc-role-dot: calc(var(--gcc-role-unit) * 1.969); }
+[data-role-step="4"] { --gcc-role-dot: calc(var(--gcc-role-unit) * 2.716); }
+[data-role-step="5"] { --gcc-role-dot: calc(var(--gcc-role-unit) * 3.749); }
+
+.gcc-role-map__dot {
+  border-radius: var(--ansr-radius-pill);
+  background-color: var(--gcc-role-ink, var(--ansr-accent));
+  flex: none;
+  inline-size: var(--gcc-role-dot);
+  block-size: var(--gcc-role-dot);
+}
+
+/**
+ * The twelve inks, selected by the family's stored `tone`.
+ *
+ * One rule per slot rather than an inline style per dot, so `tokens.css` stays the only
+ * place a colour is named and `brand_lint` can see every one of them.
+ *
+ * **THERE MUST BE EXACTLY `ROLE_TONES` OF THESE, AND A UNIT TEST IS WHAT SAYS SO.** The
+ * count here, the count of `--ansr-role-*` in `tokens.css` and the schema's own cap are three
+ * numbers that have to agree, and nothing but a comment used to hold them together. Raise the
+ * cap alone and every slot past the last rule resolves `--gcc-role-ink` to nothing and takes
+ * the `var()` fallback — measured, `--ansr-accent`, the heading teal. Two things are wrong
+ * with that and the second is the worse one: the ink is not a categorical one at all, it is
+ * the colour headings and figures are set in across the whole surface; and EVERY slot past
+ * the cap takes the SAME fallback, so two extra families would be identical to each other
+ * with nothing reporting it. `tests/unit/role-tones.test.ts` parses both files and asserts
+ * all three counts.
+ *
+ * **UNSCOPED, like `[data-role-step]` beside it, and that is a fix rather than looseness.**
+ * They were scoped to `.gcc-role-map` and `.gcc-role-legend`, which silently rendered every
+ * bubble on the ADMIN canvas at zero size and no colour — a third surface draws these marks
+ * now, and a selector listing its ancestors is a selector that has to be edited every time
+ * one is added. `data-tone` and `data-role-step` are used by nothing else in the codebase,
+ * so the pairing of attribute to variable is the contract and the ancestor was never part
+ * of it.
+ */
+[data-tone="1"] { --gcc-role-ink: var(--ansr-role-1); }
+[data-tone="2"] { --gcc-role-ink: var(--ansr-role-2); }
+[data-tone="3"] { --gcc-role-ink: var(--ansr-role-3); }
+[data-tone="4"] { --gcc-role-ink: var(--ansr-role-4); }
+[data-tone="5"] { --gcc-role-ink: var(--ansr-role-5); }
+[data-tone="6"] { --gcc-role-ink: var(--ansr-role-6); }
+[data-tone="7"] { --gcc-role-ink: var(--ansr-role-7); }
+[data-tone="8"] { --gcc-role-ink: var(--ansr-role-8); }
+/* The headroom slots. Not the slide's inks — see the block in `tokens.css`. */
+[data-tone="9"] { --gcc-role-ink: var(--ansr-role-9); }
+[data-tone="10"] { --gcc-role-ink: var(--ansr-role-10); }
+[data-tone="11"] { --gcc-role-ink: var(--ansr-role-11); }
+[data-tone="12"] { --gcc-role-ink: var(--ansr-role-12); }
+
+/**
+ * A legend swatch: the field's own disc, at the smallest size the space scale has.
+ *
+ * **It was `--ansr-space-3`, which is the TYPE's own size, and that is what read as the key
+ * being too big.** Seven saturated discs each as tall as the 12px label beside them put more
+ * ink in the key than the two muted notes across from it carry between them — so the tier
+ * read as one heavy block and two faint lines, where all four boxes are in fact the same
+ * 12px in the same `--ansr-text-muted`. The TYPE is already the notes' own treatment and is
+ * the caption floor, so the swatch is the only thing here that can come down: at
+ * `--ansr-space-2` it sits like a bullet against its name rather than matching its cap
+ * height. Same disc, same ink, same `data-tone` rule — nothing about the encoding moves.
+ */
+.gcc-role-legend__dot {
+  border-radius: var(--ansr-radius-pill);
+  background-color: var(--gcc-role-ink, var(--ansr-accent));
+  inline-size: var(--ansr-space-2);
+  block-size: var(--ansr-space-2);
+  flex: none;
+}
+
+/**
+ * One entry: its swatch and its name, on the FIELD's own binding distance.
+ *
+ * A key entry is the same relationship a field label is — one mark bound to one name — and
+ * the entries are 32px apart, so `--gcc-role-gap` against that column gap is what makes each
+ * pair read as one object. It was 6px, which beside an 8px disc is most of the disc again.
+ */
+.gcc-role-legend__entry {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--gcc-role-gap);
+}
+
+/**
+ * The ramp's unit, for every surface that draws a role bubble outside a public field.
+ *
+ * The demand note no longer draws dots, but the ADMIN canvas does — and it is not inside
+ * `.gcc-role-map`, so without this every bubble there computed `calc(var(--gcc-role-unit) *
+ * 1.75)` against an undefined variable and rendered at zero. The canvas takes the public
+ * field's `xl` value flat, because it previews that composition at that aspect whatever the
+ * admin window is doing.
+ */
+.gcc-role-canvas {
+  --gcc-role-unit: 1rem;
+}
+
+.gcc-role-key {
+  --gcc-role-unit: 0.5rem;
+}
+
+@media (min-width: 80rem) {
+  .gcc-role-key {
+    --gcc-role-unit: 1rem;
+  }
+}
+
+/* The key's cell is the LARGEST dot the ramp draws, so four dots of different sizes sit
+   on one baseline instead of stepping down the line. */
+.gcc-role-map__key-cell {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  inline-size: calc(var(--gcc-role-unit) * 3.75);
+  block-size: calc(var(--gcc-role-unit) * 3.75);
+}
+
+/* --------------------------------------------------------------------------
+   ADMIN — the role map's placement canvas
+
+   `role-map-canvas.tsx`. Two fields at the public composition's own aspect, with every
+   bubble draggable. Admin-only, and here rather than in the component for the reason every
+   other geometry block is: a `repeating-linear-gradient` of token colours is not something
+   a `className` can express.
+
+   **The grid is a 10% rule in both directions, and it is an ALIGNMENT AID rather than a
+   scale.** `lane` carries no quantity, so a labelled gridline would be inventing one; what
+   an admin needs is to see that two bubbles share a row or a column, which is what an
+   unlabelled lattice gives them. Drawn at `--ansr-border` on the field's own tint, so it
+   sits under the marks rather than competing with them.
+   -------------------------------------------------------------------------- */
+.gcc-role-canvas {
+  position: relative;
+  /**
+   * **CAPPED AT THE PUBLIC PLOT'S OWN WIDTH, which is what makes the preview 1:1 rather
+   * than merely the same shape.** The aspect alone is not enough: a label is a fixed number
+   * of pixels, so in a 1350px-wide preview every name is 21% narrower relative to the axis
+   * than it will be live — an admin could clear an overlap here and still ship one. At the
+   * public width the two are the same drawing. 66.875rem is 1070px, the measured plot inside
+   * the result card at `xl` and up, where the card is capped; a narrower admin window still
+   * shrinks below this, and then the preview is pessimistic rather than optimistic, which is
+   * the right direction to be wrong in.
+   */
+  --gcc-role-plot: 66.875rem;
+  max-inline-size: var(--gcc-role-plot);
+  /**
+   * ONE canvas with the public field's own two washes and its own seam, because the public
+   * chart is one canvas now — an admin dragging a bubble onto the divide has to see the
+   * divide it is landing on. The two lattices paint OVER the seam gradient: layer order is
+   * front to back, so the ground goes last.
+   */
+  --gcc-role-seam: 50.2%;
+  background-image:
+    repeating-linear-gradient(
+      to right,
+      var(--ansr-border) 0 1px,
+      transparent 1px 10%
+    ),
+    repeating-linear-gradient(
+      to bottom,
+      var(--ansr-border) 0 1px,
+      transparent 1px 10%
+    ),
+    linear-gradient(
+      to bottom,
+      var(--ansr-surface-warm) 0 var(--gcc-role-seam),
+      var(--ansr-surface-tint) var(--gcc-role-seam) 100%
+    );
+  /* The last line of each axis lands on the far edge, which a repeating gradient cannot
+     reach — so the box carries its own. */
+  border: 1px solid var(--ansr-border);
+  touch-action: none;
+}
+
+/* Each half's label, pinned inside its own wash exactly as the public field pins it. */
+.gcc-role-canvas__band-label {
+  position: absolute;
+  inset-inline-start: var(--ansr-space-3);
+  top: var(--gcc-band-at);
+  margin-block-start: var(--ansr-space-2);
+}
+
+/**
+ * One draggable bubble, on the PUBLIC field's own geometry.
+ *
+ * **It used to be `translate(-50%, -50%)` on the whole button, and that was a real fidelity
+ * bug rather than a simplification.** The public field centres the DOT on the stored point
+ * and lets the label hang off it; centring the whole item instead shifts every label inward
+ * by half its own width, which is different per role — so the preview drew "Data Architect"
+ * and "Forward Deployed Engineer" on top of each other where the public field draws them
+ * clear, and would have had an admin fixing overlaps that do not exist while missing ones
+ * that do. So the rules below are the public ones, including both wrap bounds.
+ */
+.gcc-role-canvas__pin {
+  position: absolute;
+  inset-inline-start: var(--gcc-at);
+  top: var(--gcc-lane);
+  transform: translate(calc(var(--gcc-role-dot) / -2), -50%);
+  max-inline-size: calc(100% - var(--gcc-at) + (var(--gcc-role-dot) / 2));
+  display: flex;
+  align-items: center;
+  /* A 24px target on the BLOCK axis, because a `data-role-step="1"` bubble is 19px of ink
+     and a drag handle wants a little more. Inline is not floored: the label is already wider
+     than any target, and a minimum there would push the label off its own dot. The public
+     field has no floor at all — nothing there is pressable. */
+  min-block-size: var(--ansr-space-6);
+  border-radius: var(--ansr-radius-pill);
+  cursor: grab;
+}
+
+/**
+ * The dot and the name inside a pin, on the PUBLIC field's own binding distance.
+ *
+ * **It was `gap-1.5` in the component while the field drew `--ansr-space-2`, and that is the
+ * class of bug this preview exists to prevent.** The overlap an admin comes here to fix is
+ * between labels, so a canvas that spaces a name differently from the live field is an
+ * instrument that lies — by a different amount for every role, since the gap shifts the whole
+ * label. `--gcc-role-gap` is inherited from `[data-role-step]` on the pin itself, so there is
+ * one declaration for three surfaces and no ancestor named anywhere.
+ */
+.gcc-role-canvas__pin-row {
+  display: flex;
+  align-items: center;
+  gap: var(--gcc-role-gap);
+}
+
+/* The leading side, anchored by its trailing edge exactly as the public field is — see the
+   `.gcc-role-map__item[data-side="lead"]` rule for why the anchor rather than the translate
+   is what makes the wrap bound work on this side. */
+.gcc-role-canvas__pin[data-side="lead"] {
+  inset-inline-start: auto;
+  inset-inline-end: calc(100% - var(--gcc-at));
+  transform: translate(calc(var(--gcc-role-dot) / 2), -50%);
+  max-inline-size: calc(var(--gcc-at) + (var(--gcc-role-dot) / 2));
+  text-align: end;
+}
+
+.gcc-role-canvas__pin[data-dragging="true"] {
+  cursor: grabbing;
+  /* Above its neighbours while moving, so the one being placed is never behind one that
+     is not. */
+  z-index: 2;
+}
+
+/* The selected bubble keeps a ring so a keyboard user can see which one the arrows move.
+   Form, not colour: it is a ring plus the readout naming it, on the status-by-form rule. */
+.gcc-role-canvas__pin[aria-pressed="true"] {
+  outline: 2px solid var(--ansr-focus);
+  outline-offset: 2px;
+  z-index: 1;
+}
+
+/**
+ * The demand key's dots are RINGS, not discs, and that is a fix rather than a flourish.
+ *
+ * Filled, they took `--ansr-accent` — the heading teal, within a few RGB values of
+ * `--ansr-role-2` — so four teal discs under a legend whose second entry is a teal disc
+ * read as a fifth family rather than as a scale. A ring belongs to no family, which is the
+ * point: this key decodes SIZE, and the one thing it must not do is imply a colour.
+ *
+ * 1.5px rather than a scale step because the smallest ring is 14px, where 2px of stroke
+ * starts closing the middle and the ring becomes a disc again.
+ */
+.gcc-role-map__key-cell .gcc-role-map__dot {
+  background-color: transparent;
+  border: 1.5px solid var(--ansr-text-muted);
+}
 
 /* --------------------------------------------------------------------------
    Screen 2 — a two-point index on one rail

@@ -195,9 +195,25 @@ outlined glyph widths match its advance widths to within 1%.
 - The live site licenses only Light and Regular `.woff`, so its 500/600/700 rules are
   browser-synthesised faux bold. Do not replicate that — specify real weights, load real files.
 
-Moderat is commercial and its licence for an embedded tool is unresolved, so `--ansr-font-display`
-resolves to **Hanken Grotesk**, which ansr.com already loads as its second family and which is free to
-self-host. Put Moderat at the front of that token once the licence is confirmed; nothing else changes.
+**Moderat is now on the page.** ANSR supplied the family and `--ansr-font-display` resolves to it,
+self-hosted through `next/font/local` in `layout.tsx` from four woff2 files converted out of the
+supplied TTFs. The Hanken Grotesk stand-in is gone. Measured: unitsPerEm 1000, cap height 0.700 em,
+hhea ascent 1.0 em, descent 0.21 em, descender ink 0.21 em, 501 characters, ~40 KB per weight as woff2.
+
+- **There is no SemiBold in this family** — Thin 100, Light 300, Regular 400, Medium 500, Bold 700,
+  Black 900 — so `--ansr-weight-semibold` (600) is drawn by the Medium file, declared `500 600`. Left
+  undeclared, CSS matching resolves 600 upward onto Bold and `font-semibold` stops being separable from
+  `font-bold`, which `IndexTable` depends on.
+- **Anything measured ink-to-ink against the old face has to be re-measured, not scaled.** The hero's
+  three leading corrections moved by three different factors and one nearly tripled; the reasoning is
+  in `ask-hero.tsx`.
+- **Figures take the DEFAULT set, so `tabular-nums` is neutralised on the public surface.** All four of
+  the family's tabular zeros are slashed and its tabular `1` is footed; the only plain zero is the
+  default one, which is proportional (`1` 369 units against `0` 604). One rule in `globals.css`.
+- **`ss01` is "Thin Symbols & Accents" and is deliberately unused** — it halves the en dash, thins the
+  brackets and `%`, swaps the ampersand for a more decorative form, and does not change the comma, which
+  has no meaningful alternate. `ss02` is "Alternate a/g/y", also unused.
+
 `--ansr-font-sans` stays Inter for UI and admin. Full measurement — type scale, grid, band system,
 motif parameters — is in `docs/ansrx-visual-language.md`.
 

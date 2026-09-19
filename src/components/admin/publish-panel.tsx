@@ -8,6 +8,9 @@ import { AdminPageHeader, AdminSection } from "@/components/admin/page-header";
 import { Button } from "@/components/ui/button";
 import {
   CLOSE_FIELD_LABELS,
+  HERO_FIELD_LABELS,
+  ROLE_FAMILY_FIELD_LABELS,
+  ROLE_FIELD_LABELS,
   METRIC_FIELD_LABELS,
   PUBLIC_COPY_LABELS,
   TAXONOMY_LABELS,
@@ -413,13 +416,13 @@ function DiffView({
               <li key={change.field} className="flex items-start gap-3 px-5 py-3 text-sm">
                 <div className="min-w-0 flex-1">
                   <p className="text-xs uppercase tracking-caps text-text-muted">
-                    Hero {change.field}
+                    Hero {HERO_FIELD_LABELS[change.field]}
                   </p>
                   <p className="mt-1 text-text-muted line-through">{change.before}</p>
                   <p className="mt-0.5 text-text">{change.after}</p>
                 </div>
                 <RemoveButton
-                  label={`Remove this change to the hero ${change.field}`}
+                  label={`Remove this change to the hero ${HERO_FIELD_LABELS[change.field]}`}
                   onClick={() => onRevert({ kind: "heroField", field: change.field })}
                 />
               </li>
@@ -507,6 +510,140 @@ function DiffView({
                 />
               </li>
             ) : null}
+            {/* The role map. **Reverted as the WHOLE map from every row**, because its three
+                parts reference each other — putting one group back while four roles point at
+                the group that replaced it is a draft the gate refuses. Same grain as a
+                metric, and `RevertTarget` records the argument. */}
+            {diff.siteContent.roleMap.demandLevels ? (
+              <li className="flex items-start gap-3 px-5 py-3 text-sm">
+                <div className="min-w-0 flex-1">
+                  <p className="font-medium text-text">Hiring demand scale</p>
+                  {/* Both sides in full, because a role stores its STEP on this scale: a
+                      reorder here re-rates every bubble on the map and moves no other line
+                      in this diff. It is the change with the largest effect and the least
+                      trace. */}
+                  <p className="mt-1.5 text-text-muted">
+                    <span className="line-through">
+                      {diff.siteContent.roleMap.demandLevels.before.join(" · ")}
+                    </span>
+                    <span className="mx-2">→</span>
+                    <span className="text-text">
+                      {diff.siteContent.roleMap.demandLevels.after.join(" · ")}
+                    </span>
+                  </p>
+                </div>
+                <RemoveButton
+                  label="Undo all changes to the role map"
+                  onClick={() => onRevert({ kind: "roleMap" })}
+                />
+              </li>
+            ) : null}
+            {diff.siteContent.roleMap.families.added.map((family) => (
+              <li
+                key={`rfam-add-${family.id}`}
+                className="flex items-center gap-3 px-5 py-2.5 text-sm text-text"
+              >
+                <span className="min-w-0 flex-1">Role group added: {family.name}</span>
+                <RemoveButton
+                  label="Undo all changes to the role map"
+                  onClick={() => onRevert({ kind: "roleMap" })}
+                />
+              </li>
+            ))}
+            {diff.siteContent.roleMap.families.removed.map((family) => (
+              <li
+                key={`rfam-del-${family.id}`}
+                className="flex items-center gap-3 px-5 py-2.5 text-sm text-text"
+              >
+                <span className="min-w-0 flex-1">Role group removed: {family.name}</span>
+                <RemoveButton
+                  label="Undo all changes to the role map"
+                  onClick={() => onRevert({ kind: "roleMap" })}
+                />
+              </li>
+            ))}
+            {diff.siteContent.roleMap.families.changed.map((family) => (
+              <li key={`rfam-${family.id}`} className="flex items-start gap-3 px-5 py-3 text-sm">
+                <div className="min-w-0 flex-1">
+                  <p className="font-medium text-text">{family.name}</p>
+                  <ul className="mt-1.5 flex flex-col gap-1">
+                    {family.changes.map((change) => (
+                      <li key={change.field} className="flex flex-wrap gap-x-2">
+                        <span className="text-text-muted">
+                          {ROLE_FAMILY_FIELD_LABELS[change.field]}
+                        </span>
+                        <span className="text-text-muted line-through">{change.before}</span>
+                        <span className="text-text-muted">→</span>
+                        <span className="text-text">{change.after}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+                <RemoveButton
+                  label="Undo all changes to the role map"
+                  onClick={() => onRevert({ kind: "roleMap" })}
+                />
+              </li>
+            ))}
+            {diff.siteContent.roleMap.families.reordered ? (
+              <li className="flex items-center gap-3 px-5 py-2.5 text-sm text-text">
+                <span className="min-w-0 flex-1">
+                  Role groups reordered. The legend reads in this order; no bubble moves,
+                  because a group&rsquo;s colour is stored on the group.
+                </span>
+                <RemoveButton
+                  label="Undo all changes to the role map"
+                  onClick={() => onRevert({ kind: "roleMap" })}
+                />
+              </li>
+            ) : null}
+            {diff.siteContent.roleMap.roles.added.map((role) => (
+              <li
+                key={`role-add-${role.id}`}
+                className="flex items-center gap-3 px-5 py-2.5 text-sm text-text"
+              >
+                <span className="min-w-0 flex-1">Role added: {role.name}</span>
+                <RemoveButton
+                  label="Undo all changes to the role map"
+                  onClick={() => onRevert({ kind: "roleMap" })}
+                />
+              </li>
+            ))}
+            {diff.siteContent.roleMap.roles.removed.map((role) => (
+              <li
+                key={`role-del-${role.id}`}
+                className="flex items-center gap-3 px-5 py-2.5 text-sm text-text"
+              >
+                <span className="min-w-0 flex-1">Role removed: {role.name}</span>
+                <RemoveButton
+                  label="Undo all changes to the role map"
+                  onClick={() => onRevert({ kind: "roleMap" })}
+                />
+              </li>
+            ))}
+            {diff.siteContent.roleMap.roles.changed.map((role) => (
+              <li key={`role-${role.id}`} className="flex items-start gap-3 px-5 py-3 text-sm">
+                <div className="min-w-0 flex-1">
+                  <p className="font-medium text-text">{role.name}</p>
+                  <ul className="mt-1.5 flex flex-col gap-1">
+                    {role.changes.map((change) => (
+                      <li key={change.field} className="flex flex-wrap gap-x-2">
+                        <span className="text-text-muted">
+                          {ROLE_FIELD_LABELS[change.field]}
+                        </span>
+                        <span className="text-text-muted line-through">{change.before}</span>
+                        <span className="text-text-muted">→</span>
+                        <span className="text-text">{change.after}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+                <RemoveButton
+                  label="Undo all changes to the role map"
+                  onClick={() => onRevert({ kind: "roleMap" })}
+                />
+              </li>
+            ))}
             {diff.siteContent.logos.changed.map((logo) => (
               <li key={`logo-${logo.src}`} className="flex items-start gap-3 px-5 py-3 text-sm">
                 <div className="min-w-0 flex-1">

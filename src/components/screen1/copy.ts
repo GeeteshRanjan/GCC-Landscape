@@ -545,29 +545,29 @@ export function shortfallLine(
  * two signals are independent: a visitor who named no sub-industry can still trip the
  * band axis, which is why `broadenedBand` does not depend on `broadenedBusiness`.
  *
- * **Derived, not editable, and mutually exclusive with `shortfallLine`.** It asserts a
- * property of the matching RESULT (which axis the set reached on), the same category as
- * the other `shortfallLine` branches — a scope label would be editable, a claim about
- * what the engine did is not. Both signals require `shortfall === 0`, so this returns
- * null exactly when `shortfallLine` returns a sentence; the caller renders
- * `shortfallLine(view) ?? broadenedLine(view)` and never both.
+ * **Editable copy, mutually exclusive with `shortfallLine`, and it names neither axis
+ * nor industry.** The wording is `copy.peersBroadenedNote`, a plain string ANSR can
+ * reword. It used to say which axis the set reached past — sub-industry, revenue band,
+ * or both — but a full set can widen on both at once, and naming them piled up; it also
+ * named the industry, where "the wider industry" scopes it generically. So it holds a
+ * fixed sentence: true whichever axis widened, and it can never name a reach that did
+ * not happen because it names none. What stays DERIVED is the TRIGGER — this fires only
+ * on a real widening. Both signals require `shortfall === 0`, so this returns null
+ * exactly when `shortfallLine` returns a sentence; the caller renders
+ * `shortfallLine(view) ?? broadenedLine(view, copy)` and never both.
  *
  * The register matches the shortfall line: no count, no apology, no per-company tag.
  * "Closest comparable companies" is the frame that keeps a widened set from reading as a
  * padded one — invariant 3's own word, "defensibly comparable", said to the visitor.
  */
-export function broadenedLine(view: PeerView): string | null {
+export function broadenedLine(
+  view: PeerView,
+  copy: PublicCopy = DEFAULT_PUBLIC_COPY,
+): string | null {
   const { broadenedBusiness, broadenedBand } = view.peers;
   if (!broadenedBusiness && !broadenedBand) return null;
 
-  const axis =
-    broadenedBusiness && broadenedBand
-      ? "sub-industry and revenue band"
-      : broadenedBusiness
-        ? "sub-industry"
-        : "revenue band";
-
-  return `These extend beyond your ${axis} to the closest comparable companies in ${view.industry.industry}.`;
+  return copy.peersBroadenedNote;
 }
 
 /* The industry card's heading used to be DERIVED — "All of X in India, in one view"
@@ -718,7 +718,7 @@ export function industrySentence(view: PeerView): string {
 
 /** The largest-in-industry panel's framing, including its two degraded shapes. */
 export function largestLine(view: PeerView): string {
-  const { topBand, belowTopBand, repeatsPeers, entries } = view.largest;
+  const { repeatsPeers, entries } = view.largest;
   const industry = view.industry.industry;
 
   if (entries.length === 0) {
@@ -734,13 +734,6 @@ export function largestLine(view: PeerView): string {
      * same way `mapHeading` is.
      */
     return `At the current depth of ${industry} in India, the largest centres are the ones already named above.`;
-  }
-  if (belowTopBand && topBand) {
-    // The first sentence is gone: the band's own heading now says "The largest
-    // {industry} centres in India" verbatim, and this line renders directly under it.
-    // What is left is the only part the heading cannot carry — that the ranking had
-    // to walk down the revenue bands to find members at all.
-    return `No ${industry} company in India sits in the top revenue band yet, so this ranking starts at ${topBand}.`;
   }
   return `The largest ${industry} centres in India, ranked by the size of the centre itself.`;
 }

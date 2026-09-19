@@ -2,7 +2,7 @@
 
 import { Pencil } from "lucide-react";
 
-import { AtlasWordmark } from "@/components/public/atlas-wordmark";
+import { ProductName } from "@/components/public/product-name";
 import { usePublicCopy } from "@/components/public/copy-context";
 import { DottedWorldMap } from "@/components/screen1/dotted-world-map";
 import { DEFAULT_PUBLIC_COPY, type PublicCopy } from "@/data/schema";
@@ -359,32 +359,32 @@ export function HeaderFinding({ children }: { children: React.ReactNode }) {
 }
 
 /**
- * `ANSR ATLAS` — the product lockup, and the `h1` of both result screens.
+ * `ANSR GCC ATLAS` — the product lockup, and the `h1` of both result screens.
  *
  * **"ATLAS", where this read "GCC Intelligence", at ANSR's request.** The old wording
  * named a CATEGORY, and it named it in three words directly above a finding line that
  * also describes what the screen is about — so the `h1` and the sentence under it were
  * doing the same job and neither was the product's name. Atlas is the name, it is already
- * the entry point's own headline (`siteContent.hero.title` opens "ANSR ATLAS"), and the
+ * the entry point's own headline (`siteContent.hero.title` opens "ANSR GCC ATLAS"), and the
  * two surfaces now say the same thing about what a visitor is in.
  *
  * Set in CAPS, matching the headline rather than the sentence case the old phrase used:
- * the wordmark beside it is all-caps drawn letters, so a title-case word next to it read
- * as a caption appended to the mark rather than as the second half of a lockup.
+ * the brand half beside it is an all-caps lockup, so a title-case word next to it read as
+ * a caption appended to the mark rather than as the second half of a lockup.
  *
- * **BOTH HALVES ARE DRAWN NOW — see `AtlasWordmark`.** The name was typed for a pass,
- * which put a font beside artwork inside one lockup and made the two halves answer to
- * different things: the drawn half is fixed and the typed half moves with whatever face
- * is loaded, so the day Moderat replaces the stand-in the lockup changes shape. The
- * substitution keeps the composition — the drawn name occupies the cap band the typed
- * word occupied — and the heading's accessible name is unchanged, the mark being out of
- * the accessibility tree with the word carried beside it.
+ * **THE NAME IS TYPE AGAIN — see `ProductName`.** It was typed, then two supplied SVG
+ * outlines for several passes, and it is type once more at the project owner's
+ * instruction, set in Moderat Extended. The argument the drawn version was built on was
+ * that a font beside artwork makes the two halves of one lockup answer to different
+ * things; what settled it the other way is that the brand's own face now ships, so the
+ * typed half answers to an asset in this repo rather than to whatever the browser had.
  *
- * **The product name takes an optical step DOWN here, and the gap is a word space. Both
- * are this site's numbers rather than `AtlasWordmark`'s defaults** — see the note beside
- * the mark. The short version: on this band the brand half is the full lockup, so ATLAS
- * sits beside a circular mark rather than beside type, and at mathematical cap parity it
- * reads as the larger of the two.
+ * **The product name no longer takes a size of its own, and that is the substantive
+ * change here rather than a tidy-up.** The drawn version needed one because an SVG has no
+ * type size; every Moderat face shares a cap height of 700 per 1000 upem, so the name
+ * inherits the heading's size and its caps land where the surrounding display type's do.
+ * The gap to the lockup is still this site's, and still a word space — see the note beside
+ * the call.
  *
  * **It is a CONTROL now — see `onHome`.**
  *
@@ -410,9 +410,11 @@ export function HeaderFinding({ children }: { children: React.ReactNode }) {
  * beside it. The mark then runs about half an em above the caps and half below the
  * baseline, which is what a mark is supposed to do in a lockup.
  *
- * `items-center` rather than `items-baseline`: the wordmark's own vertical centre
- * sits within half a unit of the artboard's, so centring the lockup against the
- * line aligns the name with the type beside it without a baseline shift to tune.
+ * `items-center` rather than `items-baseline`: an image's baseline is its bottom
+ * edge, so a baseline row would hang the whole artboard off the line. **What
+ * centring does NOT do on its own is align the two halves' ink** — the artboard is
+ * symmetric about the wordmark's cap band while a line box is not, so the typed name
+ * needs one measured lift. It is beside the call, with the measurements.
  *
  * **The weight is still measured off the mark rather than chosen.** The wordmark's
  * stem is 0.137 of its cap height, which is the display face's Medium 500, and its
@@ -458,7 +460,7 @@ export function ProductIdentity({
       {/* The lockup carries the heading's first word. `alt="ANSR"` rather than an
           empty alt with an `sr-only` node beside it: this is a real image with real
           text in it, so the accessible name belongs on the element, and the heading
-          computes to "ANSR ATLAS" — the product's name, unchanged in meaning from
+          computes to "ANSR GCC ATLAS" — the product's name, unchanged in meaning from
           the version that typed the word. */}
       {/* eslint-disable-next-line @next/next/no-img-element -- a fixed-ratio SVG
           lockup, which the optimiser cannot improve on. */}
@@ -472,43 +474,74 @@ export function ProductIdentity({
         // is the reason this is not `h-[1em]`.
         className="h-[1.7em] w-auto shrink-0"
       />
-      {/* **The product name is DRAWN here too, so the `h1` is two marks and no type.**
-          It was the typed word, which meant half the lockup was a font and half was
-          artwork — and the half that was a font changes with the face, so the two
-          would have drifted the moment Moderat replaced the stand-in. The mark is out
-          of the accessibility tree and carries the word beside it, so the heading's
-          name is unchanged. It is a flex item itself rather than a span around one —
-          see `AtlasWordmark`, where the wrapper is what put it 1.1px off the lockup.
+      {/* **The product name is TYPE here, so the `h1` is one image and one word pair.**
+          It was two supplied SVG outlines for several passes and is type now, at the
+          project owner's instruction — see `ProductName`, which records why the normal
+          widths could not set it and why the artwork is not a reachable target.
 
-          **BOTH NUMBERS BELOW ARE THIS SITE'S, NOT THE COMPONENT'S DEFAULTS, and the
-          reason is that the ANSR half is a different object here than on the entry
-          point.** There the brand half is the wordmark alone in a 72px headline; here
-          it is the FULL lockup, so the same letters sit beside a circular mark two and
-          a half times their cap height. `AtlasWordmark`'s own size sets its caps to
-          the lockup's, measured, and at that size the two agree to 0.7% — which is
-          0.14px at 30px and therefore not what anyone is seeing. What they are seeing
-          is that ATLAS is the wider and heavier run of the two (its stem is 0.1417 of
-          its cap height against the wordmark's 0.137) and that the wordmark reads
-          reduced beside a mark that dwarfs it. So the product name takes an optical
-          step DOWN, and the step is not invented: the entry point's headline, which
-          the project owner reads as correct, draws ATLAS at 0.9641 of the ANSR caps
-          beside it. `0.717em` of box is that same ratio here — 0.682em of caps against
-          the lockup wordmark's 0.708em. Re-measure both marks' ink, never their path
-          coordinates, before changing either: `.impeccable` holds no probe, so the
-          method is the one `logo:crop` uses — rasterise and scan alpha, windowed in x
-          to the flat-topped letters, because the S overshoots the cap line and the
-          baseline by different amounts in both marks.
+          **THE SIZE PROP IS GONE, AND THAT IS THE POINT RATHER THAN A SIMPLIFICATION.**
+          The drawn version needed one: an SVG has no type size, so its height had to be
+          stated, and because the two halves were cropped to their own ink that height
+          was a measured fraction of the line rather than the line itself — 0.749em on
+          the entry point, stepped to 0.717em here because the brand half is the FULL
+          lockup and the name read as the larger of the two beside a circular mark. As
+          type the name simply inherits the heading's size, and the whole comparison
+          resolves itself: every Moderat face, Extended included, has a cap height of
+          700 per 1000 upem, so the name's caps land at 0.7em exactly as the surrounding
+          display type does. The lockup IMAGE keeps its own `1.7em`, which is what puts
+          its wordmark's caps on 0.71em — so the two halves match by construction now
+          instead of by a number somebody has to re-measure.
 
-          **The gap is a WORD SPACE, which is what separates the two halves on the
-          entry point.** It was `ms-3`: 12px, which is 0.4em at this heading's size
-          against the 0.266em of ink-to-ink space the headline sets, so the name sat
-          half again as far from the mark here as there. The display face's space
-          advance is 0.26em and the lockup's artboard carries 0.0095em of its own
-          trailing clearance past the registered symbol, so 0.25em of margin lands the
-          visible gap on the headline's. In `em` rather than a spacing step for the
-          reason every other number in this lockup is: the gap has to hold its
-          proportion across the 24/30px step, and a fixed 12px does not. */}
-      <AtlasWordmark className="ms-[0.25em] h-[0.717em]" />
+          **The gap to the ANSR lockup is still a WORD SPACE and still this site's to
+          set.** It was `ms-3`: 12px, which is 0.4em at this heading's size against the
+          0.266em of ink-to-ink space the entry point's headline sets, so the name sat
+          half again as far from the mark here as there. The display face's space advance
+          is 0.26em and the lockup's artboard carries 0.0095em of its own trailing
+          clearance past the registered symbol, so 0.25em of margin lands the visible gap
+          on the headline's. In `em` rather than a spacing step because the gap has to
+          hold its proportion across the 24/30px step, and a fixed 12px does not.
+
+          **The `sr-only` accessible-name workaround is gone too.** Two adjacent marks
+          with no text node between them gave a `textContent` of "GCCATLAS", so the drawn
+          lockup was correct while `toHaveText` read one word, and the fix was to state
+          the whole name once in a hidden node and pass `label={null}` to both halves.
+          Type has real text content, so the `h1` computes and reads "ANSR GCC ATLAS"
+          from the image's `alt` plus the word pair, with nothing hidden anywhere. */}
+      {/* **THE NAME IS LIFTED 0.04em, BECAUSE `items-center` ALIGNS BOXES WHERE A READER
+          ALIGNS INK.** The lockup's artboard is symmetric about its wordmark's cap band —
+          the letters run 0.2911 to 0.7044 of the 91 units, so their centre sits within a
+          quarter of a unit of the artboard's own — which means centring the IMAGE puts its
+          CAPS on the line's centre. A line of type does not behave that way: Moderat's
+          content area is ascent 1.0 plus descent 0.2, so its cap band's centre sits
+          (1.0 - 0.2 - 0.7) / 2 below its box's, and centring the box drops the caps.
+          Measured before the correction, the typed name's cap top, baseline and cap
+          midline all sat exactly 1.00px BELOW the lockup's, at every width — one half of
+          one lockup a pixel low against the other, which is what reads as the name sitting
+          short or low. Cap HEIGHTS were already identical, 21.25px against 21.25 at 30px
+          and 17.00 against 17.00 at 24px, so the 1.7em above is right and was never the
+          defect.
+
+          **It is the MEASURED 0.04em and not the geometric 0.05em, because vertical glyph
+          origins snap to whole pixels.** The arithmetic asks for 1.5px of lift at 30px
+          where the ink can only move 1 or 2, so it overshoots by half a pixel — measured.
+          Any request between roughly 0.5px and 1.4px produces the one pixel actually
+          wanted, and 0.04em is inside that band at both sizes this heading takes. Verified
+          at 1440, 1024, 768, 640, 390 and 320: cap top, baseline and midline all land
+          within a quarter pixel, which is the raster's own quantum.
+
+          **The correction goes on the TYPE rather than the image, and the direction is the
+          argument.** The image's box tells the truth about where its ink is; the line box
+          lies about where its caps are, so the correction belongs to the half that is
+          lying — the same reasoning as `ask-hero.tsx`'s three leading trims. It is also the
+          half with room: the heading's height comes from the 1.7em image, so lifting the
+          name moves ink inside a box that has 15px of air and changes nothing about the
+          band's rhythm, where nudging the image DOWN would push the mark's ink past the
+          heading's own foot and into the gap above the finding.
+
+          `position: relative` rather than a transform, so this heading gets no compositing
+          layer of its own and the name stays rasterised as type. Re-measure on any change
+          to the face, to the lockup file, or to this heading's size. */}
+      <ProductName leadClassName="ms-[0.25em]" className="relative top-[-0.04em]" />
     </>
   );
 
@@ -550,7 +583,7 @@ export function ProductIdentity({
           /**
            * **The accessible name is the product's name and nothing else, which is
            * deliberate.** An `aria-label` here would be read by name-from-content when
-           * the `h1` computes its own name — so "ANSR ATLAS, back to the form" would
+           * the `h1` computes its own name — so "ANSR GCC ATLAS, back to the form" would
            * become the heading of both result screens, and the outline would carry an
            * instruction. `title` says where it goes to a pointer user without touching
            * either name; the pattern itself is what says it to everyone else.
@@ -629,6 +662,49 @@ function ContextPill({ label, value }: { label: string; value: string }) {
 export interface ContextFact {
   label: string;
   value: string;
+}
+
+/**
+ * The visitor's answers, as one list, built HERE rather than twice.
+ *
+ * **Both result screens read the same answers back, so there is one function that turns
+ * them into pills.** The two screens held a literal array each — the same three keys in
+ * the same order, maintained by hand — and `project.md` requires the rows read
+ * identically, which two literals can only do by luck. A fourth pill was what made the
+ * cost visible: adding it meant editing two files and hoping.
+ *
+ * **The sub-industry pill draws only where the visitor gave one**, which is the one
+ * conditional member of the row. That is deliberately the shape the company pill had, and
+ * the two are not the same case: a name was consumed by nothing, where a sub-industry is
+ * the primary ordering signal behind the peer set — the answer that most changes what the
+ * screen shows, and the only one the row did not echo.
+ *
+ * It sits second, immediately after the industry it narrows, because the pills are in the
+ * order the form asks its questions and the sub-industry is a level inside the industry
+ * control rather than a field of its own.
+ *
+ * The band is `formatRevenueBand`'d by the caller for the reason the dropdown is: the
+ * stored string is the matching key and is not what the visitor was shown.
+ */
+export function answerFacts(
+  copy: PublicCopy,
+  answers: {
+    industry: string;
+    /** The sub-industry's NAME, not its `businessTypeId`. Absent where none was given. */
+    subIndustry?: string;
+    hqCountry: string;
+    /** Already formatted for display. */
+    revenueBand: string;
+  },
+): ContextFact[] {
+  return [
+    { label: copy.pillIndustry, value: answers.industry },
+    ...(answers.subIndustry === undefined
+      ? []
+      : [{ label: copy.pillSubIndustry, value: answers.subIndustry }]),
+    { label: copy.pillHeadquarters, value: answers.hqCountry },
+    { label: copy.pillRevenueBand, value: answers.revenueBand },
+  ];
 }
 
 /**

@@ -173,6 +173,20 @@
      has to separate from white without competing with the tinted evidence
      bands. Takes every ink white does — see the ramp note on `teal-50`. */
   --ansr-surface-pale:       var(--ansr-teal-50);
+  /* The one WARM ground, and it exists for exactly one job: the role map's two
+     fields have to read as two registers, and every other ground in this system
+     is a step on the teal ramp — so two of them side by side differ only in
+     lightness, which is the difference a reader takes for "one of these is
+     emphasised" rather than "these are two groups". Hue is the signal that says
+     two groups, which is why the slide uses a warm field and a cool one.
+     1.15:1 against white, 1.105:1 against `surface-tint` beside it — the
+     luminance step is deliberately small, because the hue is doing the work and
+     a second strong step would make the pair read as a ranking. Every ink the
+     tinted ground takes is legal here and 0.35 better: text 18.26:1, muted
+     7.47:1, accent-warm 5.68:1, and the weakest role ink 3.37:1.
+     NOT a general-purpose ground and not a status colour. Anything else wanting
+     to separate from white uses `surface-pale` or `surface-tint`. */
+  --ansr-surface-warm:       var(--ansr-orange-100);
   /* The deepest ground, for the entry point's impact band only. One consumer,
      deliberately — see the ramp note on `teal-950` for why this is not a
      second general-purpose dark. */
@@ -266,6 +280,101 @@
                                                         badges, never a button  */
   --ansr-feedback-critical:  var(--ansr-black);      /* errors: 21:1, always
                                                         paired with icon + text */
+
+  /* ---- Categorical ink — the ONE set, and the one chart allowed it ------
+
+     The role map's families, at the project owner's instruction. This is the
+     only categorical palette in the system and it exists against a standing
+     rule: colour inside a chart is otherwise ordinal only, on the teal ramp,
+     and a distinction that must survive greyscale is carried by form. Read
+     that rule as still in force everywhere else — a second chart wanting
+     these is a second decision, not a precedent.
+
+     WHY IT IS TOKENS AND NOT INLINE VALUES. The source slide keys seven role
+     families to seven hues chosen in PowerPoint. Reproducing them meant either
+     raw hex in a component, which brand_lint refuses and rightly, or naming
+     them here. Named, they are one place to restyle, one place to re-measure,
+     and one place a reader can see how many there are.
+
+     THE SET IS THE SLIDE'S OWN, UNCHANGED, AT THE PROJECT OWNER'S EXPLICIT AND
+     TWICE-REPEATED INSTRUCTION — AND THREE OF THE SEVEN SIT UNDER THE 3:1 MARK
+     FLOOR. That is a real deviation, recorded here rather than softened, and it
+     is on the blocked list for ANSR to see.
+
+     The history is what makes the instruction the right call. They shipped
+     darkened across the board, every hue at 4.7:1 or better on white, and were
+     read as dirty. They were: darkening costs chroma as well as lightness, so
+     seven hues held to one contrast level are seven muted hues. A second pass
+     darkened only the three that failed, to the 3:1 line and no further, and was
+     read as unchanged — correctly, because the three it moved are exactly the
+     three anybody looks at. A yellow at 3:1 is olive; the slide's amber is
+     unreachable at any lightness that clears; and pushing it toward orange
+     clears while making it inseparable from role-1's red.
+
+     WHAT PAYS FOR IT is the same thing that licensed a categorical palette at
+     all, and it has to stay true or this becomes indefensible: THE COLOUR IS
+     NEVER THE ONLY READING. The legend names every family in text beside its own
+     swatch; every dot carries its family AND its demand level in its own
+     accessible name; and nothing on the chart is encoded by hue alone. Under
+     1.4.11 the floor binds a graphical object REQUIRED to understand the
+     content, and this one is a shortcut back to the legend. Break that — draw a
+     family that the legend does not name, or a dot whose name omits it — and the
+     floor binds again.
+
+     Ratios below are on `--ansr-surface-tint`, the established field and the
+     darker of the two band fills. The warm field is 0.34 better and white 0.87.
+     Each value is sampled from the CORE of that family's largest disc in
+     `Slide4.jpg`, never from a blob mean — an edge pixel is half the pale field.
+
+     THEY DO NOT SEPARATE IN GREYSCALE, and that is accepted rather than
+     overlooked: eight hues at one contrast level are eight similar
+     luminances by construction, and the two cannot both be had. What pays for
+     it is that the colour is never the only reading — the legend names every
+     family in TEXT beside its own swatch, and each mark carries its family in
+     its accessible name. The colour is a shortcut back to the legend, not the
+     encoding.
+
+     Ordered as the slide's own legend runs. `8` has no family on the shipped
+     dataset and is the room to add one without a token edit; the schema caps
+     families at eight for that reason.                                    */
+  /* Every value is the slide's own, sampled from the core of its largest disc.
+     Ratios are on `--ansr-surface-tint`, the darker of the two band fills. */
+  --ansr-role-1: #E0492C; /* red     — 3.20:1 */
+  --ansr-role-2: #0E7C7B; /* teal    — 3.94:1 */
+  --ansr-role-3: #2EA7C7; /* blue    — 2.21:1  UNDER THE MARK FLOOR, instructed */
+  --ansr-role-4: #6B7A7A; /* slate   — 3.52:1 */
+  --ansr-role-5: #E7A200; /* gold    — 1.73:1  UNDER THE MARK FLOOR, instructed */
+  --ansr-role-6: #3BA34C; /* green   — 2.53:1  UNDER THE MARK FLOOR, instructed */
+  --ansr-role-7: #7A5FA6; /* purple  — 4.11:1 */
+  --ansr-role-8: #C42C7A; /* magenta — 4.14:1 (no family on the dataset) */
+
+  /* ---- Headroom: four more, and NOT the slide's ------------------------
+     The eight above are `Slide4.jpg`'s own. These four are not, and the
+     distinction matters: they exist so an admin can add a ninth role group
+     without a deploy, and they are ours rather than ANSR's.
+
+     THEY ARE CHOSEN BY MEASUREMENT AGAINST TWO BARS READ OFF THE SHIPPED
+     SET, not by eye. Each clears 3:1 on `--ansr-surface-tint`, the darker
+     wash — which is more than three of the slide's own manage. And the
+     worst pair in the resulting TWELVE is still `teal`/`slate` at Oklab
+     0.079, exactly the tightest pair among the eight, so adding them makes
+     nothing harder to tell apart than what already ships. The four were
+     picked by exhausting every choice of four from ten candidates and
+     maximising the worst pair in the whole set.
+
+     A NINTH GROUP IS POSSIBLE, NOT RECOMMENDED. The legibility argument
+     above is unchanged: the slide uses seven, and a reader holds about that
+     many against a legend. Twelve is the ceiling the code can honour, not a
+     suggestion to fill it — the admin hint says so.
+
+     Ratios are on `--ansr-surface-tint`; the warm field is ~0.4 better and
+     white ~0.9. Hues are deliberately in the gaps the slide leaves: no blue
+     between role-3 and role-7, no earth tone at all, nothing between gold
+     and green, and nothing dark in the red-to-magenta arc.              */
+  --ansr-role-9:  #3B4E9E; /* indigo  — 5.97:1 */
+  --ansr-role-10: #8A5230; /* brown   — 4.96:1 */
+  --ansr-role-11: #6B7A22; /* olive   — 3.73:1 */
+  --ansr-role-12: #9E2B3F; /* maroon  — 5.75:1 */
 
   /* ---- Motif ink -------------------------------------------------------
      What a brand motif may be tinted to, and how far back it sits.        */
@@ -398,23 +507,22 @@
   --ansr-font-mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo,
                     Consolas, monospace;
 
-  /* The DISPLAY family slot. ansr.com sets Moderat on every heading and
-     paragraph, and `Group 149.svg`'s outlined glyph widths match Moderat's
-     advance widths to within 1% — so the brand does have a typeface, it just
-     is not in the palette doc. Moderat is commercial and its licence for an
-     embedded tool is an open question, so this token resolves to the licensable
-     stand-in ansr.com already loads as its second family. Put Moderat at the
-     front of the list once the licence is confirmed; nothing else changes.
-     See docs/ansrx-visual-language.md §1.
+  /* The DISPLAY family slot, and it is MODERAT — the brand's own face, supplied
+     by ANSR and self-hosted. ansr.com sets it on every heading and paragraph,
+     and `Group 149.svg`'s outlined glyph widths match its advance widths to
+     within 1%, so the brand does have a typeface, it just is not in the palette
+     doc. It replaces the Hanken Grotesk stand-in that sat here while the licence
+     was unsettled. See docs/ansrx-visual-language.md §1.
 
-     The `var()` is how a self-hosted copy gets in front of the literal name.
+     The `var()` is how the self-hosted copy gets in front of the literal name.
      `next/font` registers a face under a HASHED family name and hands it back as
-     a custom property, so naming "Hanken Grotesk" here would never resolve to the
-     file the app actually loads — it would silently fall through to the sans
-     stack, which is the failure this whole token exists to prevent. The app sets
-     `--gcc-font-display-loaded`; the literal name remains the fallback so this
-     file still means something on its own, outside the build. */
-  --ansr-font-display: var(--gcc-font-display-loaded, "Hanken Grotesk"),
+     a custom property, so naming "Moderat" here would never resolve to the file
+     the app actually loads — it would silently fall through to the sans stack,
+     which is the failure this whole token exists to prevent. The app sets
+     `--gcc-font-display-loaded` in `layout.tsx`; the literal name remains the
+     fallback so this file still means something on its own, outside the build,
+     and so a designer with the family installed locally sees the right thing. */
+  --ansr-font-display: var(--gcc-font-display-loaded, "Moderat"),
                        var(--ansr-font-sans);
 
   /* Scale. Tight at the bottom for dense UI, ~1.25 at the display end. */
@@ -458,6 +566,14 @@
   --ansr-weight-light:    300;
   --ansr-weight-regular:  400;
   --ansr-weight-medium:   500;
+  /* 600. MODERAT HAS NO SEMIBOLD — its real weights are Thin 100, Light 300,
+     Regular 400, Medium 500, Bold 700, Black 900 — so this step is DRAWN BY THE
+     MEDIUM FILE, which `layout.tsx` declares across `500 600`. The token stays
+     600 rather than folding into `medium` because the two are different
+     intentions at ~130 call sites and a licensed SemiBold would light them all
+     up again; what must not happen is the default, which is CSS matching
+     resolving 600 upward onto Bold. That would make a semibold label and a bold
+     figure one ink, and `IndexTable` marks its base column with weight alone. */
   --ansr-weight-semibold: 600;
   --ansr-weight-bold:     700;
 

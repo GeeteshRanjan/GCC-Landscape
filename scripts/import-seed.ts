@@ -604,6 +604,11 @@ async function main(): Promise<void> {
     companies,
     businessTypes,
     peerOverrides,
+    /* Nothing in code to seed these from, so the importer starts them empty exactly as the
+       schema's own default would. Preserving a stored list here is the decision
+       `peerOverrides` above already makes, and it belongs with the rest of that feature's
+       wiring rather than here. */
+    peerNoteRules: [],
     metrics,
     siteContent,
   };

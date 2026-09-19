@@ -1,5 +1,6 @@
 import { Fragment } from "react";
 
+import { figureParts } from "@/data/screen2";
 import { cn } from "@/lib/utils";
 
 /**
@@ -134,6 +135,59 @@ const TRACKED_FILL: Record<BarTone, string> = {
   reference: "bg-action",
   muted: "bg-grey-500",
 };
+
+/**
+ * A figure with its unit set a step under the numeral.
+ *
+ * **A SCALE LETTER IS NOT A DIGIT, and this is the rule the card charts were missing.**
+ * `SummaryFigures`, `snapshot.tsx` and `impact-band.tsx` all set a `K`, an `M`, a `%` or a
+ * trailing `+` below the numeral it qualifies; the charts in this file drew it at the
+ * numeral's own size, so on the graduate pair the `M` in "1.5M" was the same 30px Bold as
+ * the "1.5" and read as a second numeral rather than as a unit. At ANSR's request every
+ * figure in the product now states its unit the same way.
+ *
+ * **The split is `figureParts`, imported rather than reimplemented**, which is what keeps
+ * one closed alphabet (`%`, `K`, `M`, and either with a trailing `+`) in one place. It
+ * lives in `screen2.ts` because that module's own formatters produce these strings —
+ * Screen 1's produce them through the same `formatCompact`, so the alphabet holds for both
+ * callers. A figure that does not end in it comes back whole, which is what protects a
+ * grouped count ("1,250"), a bare index ("85") and a signed delta.
+ *
+ * **The step is the CALLER's, because the legal step depends on the numeral's size.**
+ * Two scale steps is the relationship the display figures use, and it is only available
+ * above `text-base`: two steps under a 14px row figure is off the bottom of the scale, so
+ * a dense row takes the one step it has. Passing the class rather than deriving it also
+ * keeps the size decision beside the figure's own size classes, where a reader can see
+ * both at once.
+ *
+ * `tracking-normal` on the unit for the reason `snapshot.tsx` gives: `tracking-display` is
+ * fitted to digits and closes the gap a letter at this size needs.
+ */
+function FigureUnit({
+  figure,
+  unitClassName,
+}: {
+  figure: string;
+  /** The unit's size, as the caller's own step down from the numeral. */
+  unitClassName: string;
+}) {
+  const { value, suffix } = figureParts(figure);
+  if (!suffix) return <>{figure}</>;
+  return (
+    <>
+      {value}
+      {/* `whitespace-nowrap` so a unit never breaks from its own numeral, and
+          `data-figure-unit` on the same contract as `summary-figures.tsx`'s: a stable
+          hook for a spec measuring the unit against the numeral, not a style. */}
+      <span
+        data-figure-unit=""
+        className={cn("tracking-normal whitespace-nowrap", unitClassName)}
+      >
+        {suffix}
+      </span>
+    </>
+  );
+}
 
 export function BarTrack({
   share,
@@ -494,7 +548,9 @@ export function RankedBars({
                         : "font-semibold text-text",
                   )}
                 >
-                  {row.figure}
+                  {/* One step, not two: this row is 14px and two steps is off the
+                      bottom of the scale. See `FigureUnit`. */}
+                  <FigureUnit figure={row.figure} unitClassName="text-xs" />
                 </dd>
               </div>
             ) : (
@@ -525,7 +581,7 @@ export function RankedBars({
                           : "font-semibold text-text",
                     )}
                   >
-                    {row.figure}
+                    <FigureUnit figure={row.figure} unitClassName="text-xs" />
                   </dd>
                 </div>
                 {/* Taller than a hairline and on a visible track: a 6px bar on a
@@ -608,7 +664,7 @@ export function StackedShare({
             <Swatch depth={depthFor(index, parts.length)} />
             <dt className="min-w-0 flex-1 text-sm text-text">{part.label}</dt>
             <dd className="text-sm font-semibold text-text tabular-nums">
-              {part.figure}
+              <FigureUnit figure={part.figure} unitClassName="text-xs" />
             </dd>
           </div>
         ))}
@@ -722,7 +778,7 @@ export function NestedBar({
         <div className="flex flex-wrap items-baseline justify-between gap-x-4">
           <p className="text-sm text-text">{total.label}</p>
           <p className="text-2xl font-bold tracking-display text-text tabular-nums">
-            {total.figure}
+            <FigureUnit figure={total.figure} unitClassName="text-base" />
           </p>
         </div>
         <div
@@ -740,7 +796,7 @@ export function NestedBar({
             {part.label}
           </p>
           <p className="text-sm font-semibold text-accent-teal tabular-nums">
-            {part.figure}
+            <FigureUnit figure={part.figure} unitClassName="text-xs" />
           </p>
         </div>
       </div>
@@ -870,7 +926,13 @@ export function AdjacentBlocks({
                     "bg-teal-500 text-text-inverse",
               )}
             >
-              {block.figure}
+              {/* Two steps under each of the figure's own three sizes — 12 under 16,
+                  16 under 24, 20 under 30 — so the ratio holds as the type steps down
+                  with the narrow block. */}
+              <FigureUnit
+                figure={block.figure}
+                unitClassName="text-xs sm:text-base md:text-xl"
+              />
             </p>
             <p
               className={cn(
@@ -964,7 +1026,7 @@ export function Journey({
                 ) : null}
               </dt>
               <dd className="text-sm font-semibold text-text tabular-nums">
-                {leg.figure}
+                <FigureUnit figure={leg.figure} unitClassName="text-xs" />
               </dd>
             </div>
             <div aria-hidden="true" className="relative h-2 w-full bg-surface-sunken">
@@ -1075,7 +1137,7 @@ export function NestedSteps({
                 depth step, so the distinction survives greyscale. */}
             <div className="absolute inset-0 flex items-center gap-2 px-3">
               <dd className="text-base font-bold text-text tabular-nums">
-                {step.figure}
+                <FigureUnit figure={step.figure} unitClassName="text-xs" />
               </dd>
               <dt
                 className={cn(
@@ -1368,7 +1430,7 @@ export function Containment({
             >
               <span className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
                 <span className="text-lg leading-none font-bold text-text tabular-nums md:text-2xl">
-                  {layer.figure}
+                  <FigureUnit figure={layer.figure} unitClassName="text-sm md:text-base" />
                 </span>
                 <span className="text-xs font-medium text-text md:text-sm">
                   {layer.label}
@@ -1412,7 +1474,7 @@ export function FigureRow({
           className="flex flex-col gap-1 border-t-2 border-accent-teal pt-3"
         >
           <dd className="text-3xl leading-tight font-bold tracking-display text-text tabular-nums">
-            {part.figure}
+            <FigureUnit figure={part.figure} unitClassName="text-xl" />
           </dd>
           <dt className="text-sm text-text-muted">{part.label}</dt>
         </div>
@@ -1479,7 +1541,7 @@ export function IndexLollipop({
                       : "font-semibold text-text",
                   )}
                 >
-                  {cell.figure}
+                  <FigureUnit figure={cell.figure} unitClassName="text-xs" />
                 </dd>
               </div>
             ))}
@@ -2088,7 +2150,7 @@ export function NumberGridChart({
                 <td key={columns[index]} className="py-3 ps-4 align-top">
                   <div className="flex flex-col gap-1.5">
                     <span className="text-sm font-semibold text-text tabular-nums">
-                      {cell.figure}
+                      <FigureUnit figure={cell.figure} unitClassName="text-xs" />
                     </span>
                     <span
                       aria-hidden="true"
@@ -2288,7 +2350,7 @@ export function ProportionSplit({
             <div className="flex items-baseline gap-2">
               <Swatch depth={segment.lead ? 0 : depthFor(index, 3)} />
               <dd className="text-2xl font-bold tracking-display text-text tabular-nums">
-                {segment.figure}
+                <FigureUnit figure={segment.figure} unitClassName="text-base" />
               </dd>
             </div>
             <dt className="text-sm text-text-muted">{segment.label}</dt>
@@ -2676,7 +2738,7 @@ export function MilestoneTrack({ tracks }: { tracks: readonly MilestoneTrackSpec
                     the widest thing in an item whose name has to wrap inside the same
                     cap. `--gcc-milestone-figure-gap` steps with it. */}
                 <dd className="gcc-milestones__figure text-base font-bold tracking-display text-text tabular-nums sm:text-lg">
-                  {point.figure}
+                  <FigureUnit figure={point.figure} unitClassName="text-xs sm:text-sm" />
                 </dd>
               </div>
             ))}
@@ -2824,7 +2886,7 @@ export function IndexSpread({
               share one row, and the two that matter sit 15 to 25% of the rail apart, which
               at the display step would collide on the narrowest card this draws in. */}
           <dd className="gcc-index-rail__figure text-lg leading-tight font-bold tracking-display text-accent-teal tabular-nums">
-            {point.figure}
+            <FigureUnit figure={point.figure} unitClassName="text-sm" />
           </dd>
         </div>
       ))}
@@ -2991,7 +3053,7 @@ export function IndexTable({
                         : "font-normal text-text",
                     )}
                   >
-                    {cell.figure}
+                    <FigureUnit figure={cell.figure} unitClassName="text-xs" />
                   </span>
                 </td>
               ))}

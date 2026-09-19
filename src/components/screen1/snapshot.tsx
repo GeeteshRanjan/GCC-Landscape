@@ -11,7 +11,7 @@ import type { Signal } from "./copy";
  * of error as "GCC's", which ANSR asked never to appear — the shipped copy is right and
  * the presentation was corrupting it.
  *
- * Matched as a LITERAL TOKEN, on `withBrandMark`'s argument in `ask-hero.tsx`: the
+ * Matched as a LITERAL TOKEN, on `withProductMark`'s argument in `ask-hero.tsx`: the
  * heading is admin-editable free text, so there is no position to slice at. A heading
  * with no plural in it renders unchanged.
  */
@@ -282,8 +282,26 @@ export function Snapshot({
               // Still not `tabular-nums` and still not `tracking-display`: both are fitted
               // to digits, and this cell holds a name. That, plus the one remaining step of
               // size, is what keeps a place from reading as a quantity.
-              <p className="flex h-8 min-w-0 items-end overflow-hidden text-2xl leading-tight font-semibold text-action sm:h-9 sm:text-3xl md:h-12 md:text-4xl">
-                <span className="min-w-0 truncate">{signal.value}</span>
+              // **`font-bold`, matching the three figures beside it, at ANSR's request —
+              // and the mismatch it fixes was CREATED by the typeface.** This was
+              // `font-semibold` against their `font-bold`, which on the Hanken stand-in was
+              // one real step. Moderat has no SemiBold, so 600 is drawn by the Medium file:
+              // the same markup became a TWO-step drop the moment the brand's own face
+              // landed, and the fourth cell stopped looking like one of a set. See the
+              // weight note in `tokens.css`.
+              //
+              // **And the descender is no longer clipped.** `overflow-x: clip` with
+              // `overflow-y: visible` — a legal pair, unlike `hidden`/`visible`, and the only
+              // one that keeps the ellipsis while letting the g in "Bengaluru" hang out of
+              // the box. At `leading-tight` Moderat's 0.21em descender puts that ink ~1.3px
+              // below a 48px cell, and the cell height is FIXED because it is what
+              // bottom-aligns all four cells — so the fix has to come out of the overflow
+              // rather than out of the height or the leading. What remains clipped is the
+              // horizontal axis, which is the truncation this cell actually needs.
+              <p className="flex h-8 min-w-0 items-end overflow-x-clip overflow-y-visible text-2xl leading-tight font-bold text-action sm:h-9 sm:text-3xl md:h-12 md:text-4xl">
+                <span className="min-w-0 overflow-x-clip overflow-y-visible text-ellipsis whitespace-nowrap">
+                  {signal.value}
+                </span>
               </p>
             ) : (
               /**

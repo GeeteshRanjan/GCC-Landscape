@@ -237,9 +237,18 @@ export function SummaryFigures({
                   `h3`, under this section's own `h2`. A level is an outline rather than
                   a size, and skipping one leaves a screen-reader user with a broken
                   structure. */}
+              {/* **`--ansr-text-muted`, matching the peer view's snapshot labels, at
+                  ANSR's request.** The two bands do the same job in the same place —
+                  four or five figures with one line under each, immediately under the
+                  screen's own top row — and they were the only pair on the public
+                  surface that stated it in two different inks. The figure is the loud
+                  element in both; a full-strength label under a 48px orange numeral
+                  competes with it for the cell. 8.59:1 on this zone's white ground and
+                  6.76:1 on the mint, so it clears AA for normal text at 12px either way,
+                  which is the size that governs. */}
               <h3
                 id={`metric-${cell.id}-heading`}
-                className="min-w-0 text-xs font-medium tracking-body text-pretty text-text sm:text-sm"
+                className="min-w-0 text-xs font-medium tracking-body text-pretty text-text-muted sm:text-sm"
               >
                 {cell.title}
               </h3>

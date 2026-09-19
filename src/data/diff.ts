@@ -11,6 +11,9 @@ import type {
   LatLon,
   Metric,
   PublicCopy,
+  Role,
+  RoleFamily,
+  RoleMap,
   SiteContent,
   Taxonomy,
   TaxonomyListKey,
@@ -190,6 +193,52 @@ export interface SiteContentDiff {
     added: string[];
     removed: string[];
     reordered: boolean;
+  };
+  /**
+   * The role map: the demand scale, the families and the roles, as three sub-reports.
+   *
+   * **Three rather than one, because the three fail differently and a reviewer needs to
+   * see which.** A renamed family is cosmetic; a role moved between bands changes where a
+   * dot is drawn; and a REORDERED demand scale silently re-rates all thirty-six roles at
+   * once, because `role.demand` indexes into that list. That last one is the whole reason
+   * `demandLevels` is reported with both sides in full rather than as a count — it is the
+   * change that moves the most and shows the least.
+   *
+   * Families and roles are keyed by `id` on the impact figures' argument, and `name` is
+   * carried on every entry because the id is a slug nobody chose to read.
+   */
+  roleMap: {
+    /** Both sides in full, or `null` when the scale is untouched. See above. */
+    demandLevels: { before: string[]; after: string[] } | null;
+    families: {
+      added: Array<Pick<RoleFamily, "id" | "name">>;
+      removed: Array<Pick<RoleFamily, "id" | "name">>;
+      changed: Array<{
+        id: string;
+        name: string;
+        changes: Array<{ field: keyof RoleFamily; before: string; after: string }>;
+      }>;
+      /** Lane order down the chart, so a reorder is what a visitor reads. */
+      reordered: boolean;
+    };
+    roles: {
+      added: Array<Pick<Role, "id" | "name">>;
+      removed: Array<Pick<Role, "id" | "name">>;
+      changed: Array<{
+        id: string;
+        name: string;
+        changes: Array<{ field: keyof Role; before: string; after: string }>;
+      }>;
+      /**
+       * NOT reported, and the omission is deliberate rather than missing.
+       *
+       * Every other collection here renders in its stored order, so a reorder is a real
+       * change to what a visitor sees. This one does not: the chart groups by family and
+       * positions by complexity, so the stored order reaches no reader. Reporting it
+       * would put a line in front of a reviewer that they cannot check against anything.
+       */
+      reordered?: never;
+    };
   };
   /**
    * The customer strip, keyed by `src`.
@@ -505,7 +554,29 @@ function metricsCount(diff: MetricsDiff): number {
   return diff.added.length + diff.removed.length + diff.changed.length;
 }
 
-const HERO_FIELDS: ReadonlyArray<keyof HeroCopy> = ["title", "lead"];
+/**
+ * **Three fields, not two, since the headline was split into the product's NAME and the
+ * promise under it — and a field left out of this list publishes unreported.** That is the
+ * `businessTypes` lesson on the one category whose whole reason to exist is that it changes
+ * what every visitor reads regardless of what they answered.
+ *
+ * Declaration order is the order they are drawn on the band, so the review reads top to
+ * bottom.
+ */
+const HERO_FIELDS: ReadonlyArray<keyof HeroCopy> = ["productName", "tagline", "lead"];
+
+/**
+ * What each hero field is called in the review.
+ *
+ * Same reasoning as `CLOSE_FIELD_LABELS`: `productName` and `tagline` are slots, and
+ * "Hero productName" is not a thing an admin recognises having edited. Held here rather
+ * than in the panel so the text renderer and the UI renderer name the field identically.
+ */
+export const HERO_FIELD_LABELS: Record<keyof HeroCopy, string> = {
+  productName: "product name",
+  tagline: "tagline",
+  lead: "supporting line",
+};
 const CLOSE_FIELDS: ReadonlyArray<keyof CloseCopy> = [
   "body",
   "ctaLabel",
@@ -534,6 +605,66 @@ export const CLOSE_FIELD_LABELS: Record<keyof CloseCopy, string> = {
 };
 const IMPACT_FIELDS: ReadonlyArray<keyof ImpactStat> = ["value", "label"];
 const LOGO_FIELDS: ReadonlyArray<keyof CustomerLogo> = ["name", "width", "height"];
+/**
+ * `tone` is here because it is the only thing on the chart a reviewer cannot infer from
+ * anything else — recolouring a family repaints every one of its dots and moves no text,
+ * so a diff that omitted it would put a whole-legend change live under "no site content
+ * changes". Same argument `ctaHrefPeers` is in `CLOSE_FIELDS` on.
+ */
+const ROLE_FAMILY_FIELDS: ReadonlyArray<keyof RoleFamily> = ["name", "tone"];
+
+/**
+ * Every editable field on a role. `id` is absent on `COMPANY_FIELDS`' argument.
+ *
+ * **All six others are here and every one of them moves or recolours a dot**, which is the
+ * `businessTypes` lesson applied to a chart: `familyId` changes its hue, `band` moves it to
+ * the other field, `complexity` along the axis, `lane` down it, `labelSide` flips its name
+ * across it and `demand` changes its size. There is no field on this row a reviewer could
+ * safely not be told about.
+ *
+ * **`lane` and `labelSide` were left out for a pass and that was a real defect**, not a
+ * cosmetic one: they are the fields an admin edits to stop two labels colliding, so an
+ * omitted report means somebody fixes an overlap, publishes, and the review says nothing
+ * changed — and the next person to open the map cannot tell a deliberate placement from a
+ * default.
+ */
+const ROLE_FIELDS: ReadonlyArray<keyof Role> = [
+  "name",
+  "familyId",
+  "band",
+  "complexity",
+  "lane",
+  "labelSide",
+  "demand",
+];
+
+/**
+ * What each role-map field is called in the review.
+ *
+ * Beside `CLOSE_FIELD_LABELS` and for its reason: five of these seven keys name a slot
+ * rather than a thing an admin recognises having changed — "lane" and "labelSide" most of
+ * all, and `familyId` reports a slug where what moved was a colour. Held here so the text
+ * renderer and the UI renderer name the field identically.
+ *
+ * Each says what the change DOES to the drawing, because that is the only way a reviewer
+ * can check it: nothing in this diff tells them where a bubble ended up.
+ */
+export const ROLE_FIELD_LABELS: Record<keyof Role, string> = {
+  id: "id",
+  name: "name",
+  familyId: "group, so its colour",
+  band: "band",
+  complexity: "position across",
+  lane: "position down",
+  labelSide: "which side its name sits",
+  demand: "demand, so its size",
+};
+
+export const ROLE_FAMILY_FIELD_LABELS: Record<keyof RoleFamily, string> = {
+  id: "id",
+  name: "name",
+  tone: "colour",
+};
 
 /**
  * Read off the gate rather than typed out, and that is the lesson from
@@ -655,6 +786,8 @@ function diffSiteContent(
       !sameValue(previous.commonFunctions, next.commonFunctions),
   };
 
+  const roleMap = diffRoleMap(next.roleMap, previous.roleMap);
+
   const logos = diffLogos(next.logos, previous.logos);
 
   const before = new Map(previous.impactStats.map((stat) => [stat.id, stat]));
@@ -695,8 +828,100 @@ function diffSiteContent(
     close,
     copy,
     commonFunctions,
+    roleMap,
     logos,
     impactStats: { added, removed, changed, reordered },
+  };
+}
+
+/**
+ * A keyed collection of named rows, diffed field by field. One implementation, two
+ * callers.
+ *
+ * **Extracted rather than written twice, because the role map holds two of them** — the
+ * families and the roles — and the third copy of `diffLogos`'s body is where the
+ * `businessTypes` defect gets a fourth chance: a field list applied in one loop and
+ * forgotten in the next. The field list is the only thing that varies, so it is the only
+ * thing passed in.
+ *
+ * Every value is stringified, because a reviewer reads `62 → 70` the same way whether it
+ * arrived as a number or a string, and the two callers between them carry strings,
+ * numbers and an enum.
+ */
+function diffKeyedRows<T extends { id: string; name: string }>(
+  next: readonly T[],
+  previous: readonly T[],
+  fields: ReadonlyArray<keyof T>,
+): {
+  added: Array<Pick<T, "id" | "name">>;
+  removed: Array<Pick<T, "id" | "name">>;
+  changed: Array<{
+    id: string;
+    name: string;
+    changes: Array<{ field: keyof T; before: string; after: string }>;
+  }>;
+  reordered: boolean;
+} {
+  const before = new Map(previous.map((row) => [row.id, row]));
+  const after = new Map(next.map((row) => [row.id, row]));
+
+  const added: Array<Pick<T, "id" | "name">> = [];
+  const changed: Array<{
+    id: string;
+    name: string;
+    changes: Array<{ field: keyof T; before: string; after: string }>;
+  }> = [];
+  for (const [id, row] of after) {
+    const old = before.get(id);
+    if (!old) {
+      added.push({ id, name: row.name } as Pick<T, "id" | "name">);
+      continue;
+    }
+    const changes = fields
+      .filter((field) => !sameValue(row[field], old[field]))
+      .map((field) => ({
+        field,
+        before: String(old[field]),
+        after: String(row[field]),
+      }));
+    // The NEW name, so a reviewer reads the row by what it is called after the edit —
+    // and a rename still shows up as one of the changes under it.
+    if (changes.length > 0) changed.push({ id, name: String(row.name), changes });
+  }
+
+  const removed: Array<Pick<T, "id" | "name">> = [];
+  for (const [id, row] of before) {
+    // The OLD name: there is no new row to read one off.
+    if (!after.has(id)) removed.push({ id, name: row.name } as Pick<T, "id" | "name">);
+  }
+
+  return {
+    added,
+    removed,
+    changed,
+    // Membership first, the guard every keyed collection here carries: an added row
+    // shifts the ids after it, so a naive order comparison counts every addition twice.
+    reordered:
+      added.length === 0 &&
+      removed.length === 0 &&
+      !sameValue(
+        previous.map((row) => row.id),
+        next.map((row) => row.id),
+      ),
+  };
+}
+
+/** The role map's three sub-reports. See `SiteContentDiff.roleMap`. */
+function diffRoleMap(next: RoleMap, previous: RoleMap): SiteContentDiff["roleMap"] {
+  const families = diffKeyedRows(next.families, previous.families, ROLE_FAMILY_FIELDS);
+  const roles = diffKeyedRows(next.roles, previous.roles, ROLE_FIELDS);
+  return {
+    demandLevels: sameValue(previous.demandLevels, next.demandLevels)
+      ? null
+      : { before: [...previous.demandLevels], after: [...next.demandLevels] },
+    families,
+    /* The role order reaches no reader, so it is not reported. See the field's own note. */
+    roles: { added: roles.added, removed: roles.removed, changed: roles.changed },
   };
 }
 
@@ -755,6 +980,17 @@ function siteContentCount(diff: SiteContentDiff): number {
     diff.commonFunctions.added.length +
     diff.commonFunctions.removed.length +
     (diff.commonFunctions.reordered ? 1 : 0) +
+    /* The demand scale counts as ONE change however many words moved, because it is one
+       list and a reviewer approves it as one. The re-rating it causes is not counted
+       separately either — no role's own `demand` changed. */
+    (diff.roleMap.demandLevels ? 1 : 0) +
+    diff.roleMap.families.added.length +
+    diff.roleMap.families.removed.length +
+    diff.roleMap.families.changed.length +
+    (diff.roleMap.families.reordered ? 1 : 0) +
+    diff.roleMap.roles.added.length +
+    diff.roleMap.roles.removed.length +
+    diff.roleMap.roles.changed.length +
     diff.logos.added.length +
     diff.logos.removed.length +
     diff.logos.changed.length +
@@ -831,6 +1067,30 @@ export function diffDatasets(
           removed: [],
           reordered: false,
         },
+        /* The two collections are genuinely new rows, so they are listed. The demand
+           SCALE is the hero's case rather than the impact figures': a fixed-length list
+           with nothing to compare it against, which would report as "changed" against
+           nothing. */
+        roleMap: {
+          demandLevels: null,
+          families: {
+            added: next.siteContent.roleMap.families.map((f) => ({
+              id: f.id,
+              name: f.name,
+            })),
+            removed: [],
+            changed: [],
+            reordered: false,
+          },
+          roles: {
+            added: next.siteContent.roleMap.roles.map((r) => ({
+              id: r.id,
+              name: r.name,
+            })),
+            removed: [],
+            changed: [],
+          },
+        },
         logos: {
           added: next.siteContent.logos.map((logo) => ({
             name: logo.name,
@@ -868,6 +1128,8 @@ export function diffDatasets(
         siteContent:
           next.siteContent.impactStats.length +
           next.siteContent.commonFunctions.length +
+          next.siteContent.roleMap.families.length +
+          next.siteContent.roleMap.roles.length +
           next.siteContent.logos.length,
       },
     };
@@ -1001,6 +1263,11 @@ export const PUBLIC_COPY_LABELS: Record<keyof PublicCopy, string> = {
   askRevenueHint: "Revenue control, hint",
   askHqPlaceholder: "Headquarters control, unanswered text",
   askFilterPlaceholder: "Dropdown filter, unanswered text",
+  askGroupCommon: "Dropdown group, leading tier",
+  askGroupIndustriesAll: "Dropdown group, all industries",
+  askGroupCountriesAll: "Dropdown group, all countries",
+  askGroupRevenue: "Dropdown group, revenue bands",
+  askSubIndustryPlural: "Industry control, sub-industry word",
   askSubmitError: "Form submit error",
   askFieldRequired: "Form field, unanswered error",
   filterEmpty: "Dropdown filter, nothing matched",
@@ -1011,6 +1278,7 @@ export const PUBLIC_COPY_LABELS: Record<keyof PublicCopy, string> = {
   viewPeers: "Peer view switch",
   viewFunctions: "Function view switch",
   pillIndustry: "Answer pill, industry",
+  pillSubIndustry: "Answer pill, sub-industry",
   pillHeadquarters: "Answer pill, headquarters",
   pillRevenueBand: "Answer pill, revenue band",
   functionPanelLabel: "Function view, panel description",
@@ -1028,6 +1296,7 @@ export const PUBLIC_COPY_LABELS: Record<keyof PublicCopy, string> = {
   snapshotHeading: "Snapshot heading",
   peersTitle: "Peer grid heading",
   peersNarrowNote: "Peer grid, sub-industry note",
+  peersBroadenedNote: "Peer grid, broadened-set note",
   largestTitle: "Largest GCCs heading",
   mapTitle: "City map heading",
   cityScopeAll: "City map, all-cities scope",
@@ -1042,6 +1311,14 @@ export const PUBLIC_COPY_LABELS: Record<keyof PublicCopy, string> = {
   snapshotCitiesLabel: "Snapshot, city spread",
   snapshotLeadingCityLabel: "Snapshot, leading city",
   figureUnavailable: "Snapshot, missing figure",
+  rolesTitle: "Role map heading",
+  rolesBandEmerging: "Role map, emerging band",
+  rolesBandEstablished: "Role map, established band",
+  rolesAxisLabel: "Role map, axis name",
+  rolesAxisLow: "Role map, axis low end",
+  rolesAxisHigh: "Role map, axis high end",
+  rolesDemandKey: "Role map, demand key framing",
+  rolesBasisNote: "Role map, basis note",
   scaleTitle: "Scale strip heading",
   scaleFortuneLabel: "Scale strip, Fortune sentence",
   scaleForbesLabel: "Scale strip, Forbes sentence",
@@ -1240,7 +1517,7 @@ export function renderDiffText(diff: DatasetDiff): string {
      before-and-after a reviewer has to actually READ rather than count — an id
      list would tell them the headline changed without telling them to what. */
   for (const change of diff.siteContent.hero) {
-    lines.push(`  hero ${change.field}:`);
+    lines.push(`  hero ${HERO_FIELD_LABELS[change.field]}:`);
     lines.push(`    - ${change.before}`);
     lines.push(`    + ${change.after}`);
   }
@@ -1263,6 +1540,42 @@ export function renderDiffText(diff: DatasetDiff): string {
   sample("functions removed", diff.siteContent.commonFunctions.removed);
   if (diff.siteContent.commonFunctions.reordered) {
     lines.push("  functions reordered");
+  }
+  /* The role map. The demand scale goes first and spelled out on both sides, because it
+     re-rates every role that indexes into it — the one change here a reviewer cannot
+     infer from anything else in this block. */
+  if (diff.siteContent.roleMap.demandLevels) {
+    const { before, after } = diff.siteContent.roleMap.demandLevels;
+    lines.push("  role demand scale:");
+    lines.push(`    - ${before.join(" · ")}`);
+    lines.push(`    + ${after.join(" · ")}`);
+  }
+  sample(
+    "role families added",
+    diff.siteContent.roleMap.families.added.map((f) => f.name),
+  );
+  sample(
+    "role families removed",
+    diff.siteContent.roleMap.families.removed.map((f) => f.name),
+  );
+  for (const family of diff.siteContent.roleMap.families.changed) {
+    for (const change of family.changes) {
+      lines.push(
+        `  role family ${family.id} ${change.field}: ${change.before} -> ${change.after}`,
+      );
+    }
+  }
+  if (diff.siteContent.roleMap.families.reordered) {
+    lines.push("  role families reordered");
+  }
+  sample("roles added", diff.siteContent.roleMap.roles.added.map((r) => r.name));
+  sample("roles removed", diff.siteContent.roleMap.roles.removed.map((r) => r.name));
+  for (const role of diff.siteContent.roleMap.roles.changed) {
+    for (const change of role.changes) {
+      lines.push(
+        `  role ${role.id} ${change.field}: ${change.before} -> ${change.after}`,
+      );
+    }
   }
   sample(
     "logos added",

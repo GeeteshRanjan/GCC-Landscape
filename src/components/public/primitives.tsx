@@ -820,19 +820,92 @@ export function PanelAction({
       {/* **A chevron, not an arrow.** `→` is the glyph for going somewhere, and this
           control goes nowhere: it expands a region in place, on a tool that does not
           own the URL bar. A reader who reads it as navigation is being told the wrong
-          thing by the one character that is not a word. `⌄` and `⌃` are the disclosure
-          pair, so the collapsed and expanded states are the same glyph rotated rather
-          than an arrow becoming a dash — which is what it was, and a dash reads as
-          "minus" or as an em rule rather than as "this closes". */}
-      <span
+          thing by the one character that is not a word. Rotated rather than swapped, so
+          the two states are one mark at two angles — it was an arrow becoming a dash,
+          and a dash reads as "minus" or as an em rule rather than as "this closes".
+
+          **IT IS A DRAWN MARK RATHER THAN THE `⌄` CHARACTER, AND THAT IS WHAT FIXED THE
+          ALIGNMENT.** U+2304 DOWNWARDS ARROWHEAD is not in Moderat, so it resolved
+          through the fallback stack to whatever the OS had — a glyph drawn high in its
+          own em box, so it sat visibly above the label's midline on a row that was
+          already `items-center`. No flex alignment could fix that: the BOX was centred
+          and the ink inside it was not. An SVG has no font metrics and no substitution,
+          so its box is its ink, and a `viewBox` centred on the stroke lands the mark on
+          the label's own optical centre at every size. `size-3.5` is the cap height of
+          the 14px label beside it, which is the rule the pencil in `ContextPanels`
+          follows.
+
+          **Inline rather than `lucide-react`, and that is a constraint rather than a
+          preference.** This module has no `"use client"` and is imported by server
+          components — and by the unit suite, which resolves the `react-server`
+          condition. `lucide-react` reaches for `createContext` at module load, so
+          importing an icon here fails four unit files at COLLECTION, before any
+          assertion runs. `screen-header.tsx` is a client component and may use it;
+          this file may not.
+
+          **`items-center` CENTRES THE BOX AND THE BOX IS NOT THE INK, which is why there
+          is a translate below.** The drawn mark fixed the substitution problem and left
+          the alignment one: a line box is its content area plus half-leading, and Moderat's
+          content area is asymmetric about its own ink — ascent 0.90em against descent
+          0.25em, so the box's midline sits 1.5px further up than the letters'. Measured on
+          a real render of this exact markup at 14px: the label's line box is 21px tall with
+          its midline at 22.000 and the mark's box centred on the same 22.000, while the
+          baseline is at 26.500 and the ink runs 0.690em above it to 0.215em below — a true
+          ink midline of 23.175. So the mark drew 1.2px high while both boxes agreed
+          perfectly, which is the same class of error the rank row's `items-center` note
+          records.
+
+          **THE MEASUREMENT HAD TO COME FROM SCANNED INK AND A BASELINE STRUT, and the
+          first two attempts were confidently wrong.** `measureText`'s
+          `fontBoundingBoxAscent` reported 1.00em/0.20em in one probe and 0.90em/0.25em in
+          another for the same face, and an inline span's client rect is the LINE box rather
+          than the content area — so a correction derived from those came out at 0.145em,
+          73% too far, and would have pushed the mark as far below the letters as it started
+          above them. What settles it: the ink scanned off a canvas at 200px for the ascent
+          and descent, and a zero-height `inline-block` strut for where the baseline actually
+          is. */}
+      <svg
         aria-hidden="true"
+        viewBox="0 0 16 16"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth={2}
+        strokeLinecap="round"
+        strokeLinejoin="round"
         className={cn(
-          "text-base leading-none transition-transform duration-fast ease-standard",
+          /* **0.084em DOWN, stated in `em` of the LABEL and never in pixels.** It is the
+             distance from the line box's midline to the label's own ink midline — 1.175px
+             at 14px — so it holds at any size this control is ever set at. `size-3.5` is
+             14px today because that is the label's cap height, and a `translate-y-[1px]`
+             would go wrong the moment either moved. Verified by re-running the same
+             measurement with the shift applied: 23.176 against the letters' 23.175.
+
+             **The x-height band was the other candidate target and it does not disagree** —
+             its midline is 0.230em above the baseline against the full ink's 0.2375em, so
+             there is nothing to choose between them and no judgement hiding in this number.
+             Aligning to the CAP band would be a different decision and a wrong one here: it
+             sits 0.335em up, which is within 0.14px of where the mark already was.
+
+             **A transform rather than a margin**, because `items-center` centres the MARGIN
+             box: a `mt` of 0.084em would move the border box by half of it and read as very
+             nearly fixed, which is the worst kind of wrong. Tailwind composes `translate`
+             before `rotate`, so the shift stays downward in both states. */
+          "size-3.5 shrink-0 translate-y-[0.084em]",
+          "transition-transform duration-fast ease-standard",
           expanded === true ? "rotate-180" : "",
         )}
       >
-        {"\u2304"}
-      </span>
+        {/* **The ink is centred in the box, and it was NOT before — the comment here
+            claimed it was.** With `strokeWidth` 2 and round caps the drawn mark reaches a
+            unit past each endpoint, so `M3.5 6 … 10.5 …` spanned y 5 to 11.5 in a 16-unit
+            box and centred at 8.25 rather than 8. A quarter unit is 0.22px at 14px, which
+            is a fifth of the 1.175px correction above it rather than a rounding error; it
+            also made `rotate-180`, which turns about the box centre, move the mark by half
+            a pixel between states. Shifted up a quarter unit, the ink spans 4.75
+            to 11.25 and its centre IS the box's, so the translate above is the only
+            correction and it is the one that is measured. */}
+        <path d="M3.5 5.75 8 10.25 12.5 5.75" />
+      </svg>
     </button>
   );
 }

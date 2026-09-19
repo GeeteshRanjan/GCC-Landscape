@@ -435,7 +435,34 @@ describe("the snapshot's labels are an argument", () => {
     // heading had a no-name branch. That is this test's own rule applied to a
     // removal rather than an addition — a key whose consumer is gone is a change an
     // admin can make and never see.
-    expect(Object.keys(DEFAULT_PUBLIC_COPY)).toHaveLength(67);
+    //
+    // **68 with the broadened-set note**, `peersBroadenedNote` — `broadenedLine`'s
+    // wording made editable, the mirror of the sub-industry note: a derived quantity
+    // (here the axis) injected through a slot, the frame around it left to an admin.
+    //
+    // **69 with `pillSubIndustry`**, the answer pills' fourth label. It is a CONDITIONAL
+    // pill, which is the shape `pillCompany` had — and it is not that key returning: a
+    // company name was read by nothing, where a sub-industry is the primary ordering
+    // signal behind the peer set, so the row was echoing every answer except the one that
+    // most changed the screen. Its consumer is `answerFacts` in `screen-header.tsx`, drawn
+    // on both result screens.
+    //
+    // **74 with the dropdowns' own five strings** — `askGroupCommon`,
+    // `askGroupIndustriesAll`, `askGroupCountriesAll`, `askGroupRevenue` and
+    // `askSubIndustryPlural`, the last visitor-facing strings on the form that an admin
+    // could not touch. Four are tier headings and one is the word the industry popup uses
+    // for its second level, in three places at once. All five are drawn by
+    // `input-panel.tsx` and `select-field.tsx`.
+    //
+    // **`askGroupRevenue` IS THE ONE DELIBERATE EXCEPTION TO THIS TEST'S OWN RULE, and it
+    // is worth knowing why rather than being told it passes.** A popup with a single group
+    // draws no tier heading — one label above one flat list is a redundant heading — so the
+    // revenue list's group name reaches the component and is not painted. It is a key
+    // anyway so the four group names are one decision in one place, and it becomes visible
+    // the moment that list gains a second tier. That is the difference from
+    // `snapshotShareLabel`, which was deleted under this rule: that string had no consumer
+    // at all, where this one has a consumer whose current contents happen not to need it.
+    expect(Object.keys(DEFAULT_PUBLIC_COPY)).toHaveLength(82);
   });
 });
 
