@@ -20,6 +20,14 @@ import { hashPassword } from "../../src/lib/admin/password";
 import { generateTotpSecret } from "../../src/lib/admin/totp";
 
 export const TEST_PASSWORD = "e2e-test-password-not-a-real-one";
+/**
+ * The one extra framing origin the suite builds with. SET rather than blanked, so the
+ * header assertions in `1-auth.spec.ts` prove the opt-in reaches the public CSP AND
+ * that `/admin` stays `'none'` while one is configured — and so a value in a
+ * developer's `.env.local` cannot leak into the build (a process variable wins over
+ * the file). `.example` is reserved and can never be a real site.
+ */
+export const TEST_FRAME_ANCESTOR = "https://portfolio.example";
 const TMP = path.join(process.cwd(), "tests", "browser", ".tmp");
 
 async function main(): Promise<void> {
@@ -38,6 +46,7 @@ async function main(): Promise<void> {
     // Second factor off for the main suite; the auth spec turns it on separately
     // by talking to a server started with it.
     ADMIN_TOTP_SECRET: "",
+    GCC_FRAME_ANCESTORS_EXTRA: TEST_FRAME_ANCESTOR,
   };
 
   writeFileSync(path.join(TMP, "env.json"), `${JSON.stringify(env, null, 2)}\n`, "utf8");

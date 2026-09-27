@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 
-import { TEST_PASSWORD } from "./prepare";
+import { TEST_FRAME_ANCESTOR, TEST_PASSWORD } from "./prepare";
 
 /**
  * The boundary around admin. Runs without a saved session on purpose.
@@ -47,22 +47,51 @@ test.describe("unauthenticated access", () => {
   });
 });
 
-test.describe("headers", () => {
-  test("admin is unframeable and unindexed", async ({ request }) => {
-    const response = await request.get("/admin/login");
-    const headers = response.headers();
+/** The source list of one CSP directive, or null if the policy does not declare it. */
+function directive(csp: string | undefined, name: string): string[] | null {
+  for (const part of (csp ?? "").split(";")) {
+    const [key, ...sources] = part.trim().split(/\s+/);
+    if (key === name) return sources;
+  }
+  return null;
+}
 
-    expect(headers["content-security-policy"]).toContain("frame-ancestors 'none'");
-    expect(headers["x-robots-tag"]).toContain("noindex");
+/**
+ * The suite is built with `GCC_FRAME_ANCESTORS_EXTRA` set to `TEST_FRAME_ANCESTOR`
+ * (see `prepare.ts`), so both tests below run with an extra origin CONFIGURED — which
+ * is the state in which admin leaking a framing origin would actually be possible.
+ * The parser's refusals are unit-tested in `tests/unit/frame-ancestors.test.ts`.
+ */
+test.describe("headers", () => {
+  test("admin is unframeable and unindexed, even with an extra origin configured", async ({
+    request,
+  }) => {
+    for (const route of ["/admin/login", "/admin"]) {
+      const response = await request.get(route, { maxRedirects: 0 });
+      const headers = response.headers();
+      const csp = headers["content-security-policy"];
+
+      expect(directive(csp, "frame-ancestors"), route).toEqual(["'none'"]);
+      expect(csp, route).not.toContain(TEST_FRAME_ANCESTOR);
+      expect(headers["x-robots-tag"], route).toContain("noindex");
+    }
   });
 
-  test("the public surface allows only the ansr origins to frame it", async ({ request }) => {
+  test("the public surface is framed by ansr.com plus the configured extras, and nobody else", async ({
+    request,
+  }) => {
     const csp = (await request.get("/")).headers()["content-security-policy"];
 
-    expect(csp).toContain("frame-ancestors");
-    expect(csp).toContain("ansr.com");
-    // The public tool is embedded in an ansr.com page, so 'none' here would break it.
-    expect(csp).not.toContain("'none'");
+    // Exact, so a widened policy fails here rather than shipping. The public tool is
+    // embedded in an ansr.com page, so dropping ansr.com (or 'none') would break it.
+    expect(directive(csp, "frame-ancestors")).toEqual([
+      "'self'",
+      "https://ansr.com",
+      "https://*.ansr.com",
+      TEST_FRAME_ANCESTOR,
+    ]);
+    // The extra origin is appended to frame-ancestors and to nothing else.
+    expect(csp?.split(TEST_FRAME_ANCESTOR)).toHaveLength(2);
   });
 });
 
